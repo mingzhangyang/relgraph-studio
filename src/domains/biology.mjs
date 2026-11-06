@@ -34,6 +34,10 @@ export function validateBiologyDocument(doc){
    if(!object(ev)||typeof ev.source!=='string'||!ev.source.trim()||typeof ev.recordId!=='string'||!ev.recordId.trim())fail('EVIDENCE_REF',path+'.evidence['+i+']',rec.id,'Evidence requires source and recordId','Use traceable database or article identifiers.');
   });
  };
+ doc.compartments.forEach((c,i)=>{
+  if(!object(c)||typeof c.name!=='string'||!c.name.trim())
+   fail('COMPARTMENT_NAME','compartments['+i+'].name',c?.id,'Compartment name is required','Provide a non-empty compartment name.');
+ });
  doc.entities.forEach((e,i)=>{
   const path='entities['+i+']';if(!object(e)){fail('ENTITY',path,'','Expected object','Provide an entity.');return;}
   if(!entityKinds.has(e.kind))fail('ENTITY_KIND',path+'.kind',e.id,'Unsupported entity kind','Use protein, protein-state, complex, small-molecule or gene.');
@@ -70,6 +74,7 @@ export function validateBiologyDocument(doc){
    const path='presentation['+i+']';
    if(!object(scene)||!finite(scene.durationSec)||scene.durationSec<=0)fail('DURATION',path+'.durationSec',scene?.id,'Invalid duration','Provide positive seconds.');
    if(!object(scene))return;
+   if(typeof scene.title!=='string'||!scene.title.trim())fail('SCENE_TITLE',path+'.title',scene.id,'Scene title is required','Provide a non-empty presentation title.');
    if(object(scene.camera)&&scene.camera.zoom!==undefined&&(!finite(scene.camera.zoom)||scene.camera.zoom<=0))
     fail('CAMERA_ZOOM',path+'.camera.zoom',scene.id,'Camera zoom must be a positive finite number','Provide a finite positive number or omit zoom.');
    for(const [field,keys] of [['camera',['fitIds']],['highlight',['nodeIds','edgeIds']]]){

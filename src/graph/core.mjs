@@ -19,17 +19,24 @@ export function validateVisualGraph(graph){
  }
  function interval(v,path,id){if(v===undefined)return;if(!object(v)||(v.from!==undefined&&!finite(v.from))||(v.to!==undefined&&!finite(v.to))||(v.from!==undefined&&v.to!==undefined&&v.from>v.to))fail('INTERVAL',path,id,'Invalid visibility interval','Provide finite from <= to, or omit it.');}
  graph.nodes.forEach((n,i)=>{if(!object(n)||!n.id)return;
-  if(typeof n.label!=='string'||!n.label)fail('LABEL','nodes['+i+'].label',n.id,'Node label required','Provide a display label.');
+  if(typeof n.label!=='string'||!n.label.trim())fail('LABEL','nodes['+i+'].label',n.id,'Node label required','Provide a display label.');
+  if(typeof n.kind!=='string'||!n.kind.trim())fail('NODE_KIND','nodes['+i+'].kind',n.id,'Node kind is required','Provide a non-empty node kind.');
   if(n.groupId&&!ids.groups.has(n.groupId))fail('GROUP_REF','nodes['+i+'].groupId',n.id,'Missing group','Use an existing group id.');
   if(n.position&&(!finite(n.position.x)||!finite(n.position.y)))fail('POSITION','nodes['+i+'].position',n.id,'Invalid coordinates','Use finite numbers.');
   interval(n.visibility,'nodes['+i+'].visibility',n.id);
  });
+ graph.groups.forEach((g,i)=>{if(!object(g)||!g.id)return;
+  if(typeof g.label!=='string'||!g.label.trim())fail('GROUP_LABEL','groups['+i+'].label',g.id,'Group label is required','Provide a non-empty group name.');
+  if(typeof g.kind!=='string'||!g.kind.trim())fail('GROUP_KIND','groups['+i+'].kind',g.id,'Group kind is required','Provide a non-empty group kind.');
+ });
  graph.edges.forEach((e,i)=>{if(!object(e)||!e.id)return;
+  if(typeof e.kind!=='string'||!e.kind.trim())fail('EDGE_KIND','edges['+i+'].kind',e.id,'Edge kind is required','Provide a non-empty relationship kind.');
   if(!ids.nodes.has(e.source)||!ids.nodes.has(e.target))fail('EDGE_REF','edges['+i+']',e.id,'Missing source/target','Reference existing node ids.');
   if(e.source===e.target)fail('SELF_LOOP','edges['+i+']',e.id,'Self loop forbidden','Model state transition as a process.');
   interval(e.visibility,'edges['+i+'].visibility',e.id);
  });
  graph.scenes.forEach((s,i)=>{if(!object(s)||!s.id)return;const path='scenes['+i+']';
+  if(typeof s.title!=='string'||!s.title.trim())fail('SCENE_TITLE',path+'.title',s.id,'Scene title is required','Provide a non-empty scene title.');
   if(!finite(s.durationSec)||s.durationSec<=0)fail('DURATION',path+'.durationSec',s.id,'Invalid duration','Use positive seconds.');
   if(s.transitionMs!==undefined&&(!finite(s.transitionMs)||s.transitionMs<0))fail('TRANSITION',path+'.transitionMs',s.id,'Invalid transition','Use nonnegative milliseconds.');
   if(s.domainAt!==undefined&&!finite(s.domainAt))fail('DOMAIN_TIME',path+'.domainAt',s.id,'Invalid domain time','Use finite domain time, separate from playback seconds.');
@@ -56,11 +63,20 @@ export function projectVisualGraph(graph,domainAt=null){
 }
 /** Absolute-time scene evaluation; deterministic for any arbitrary video frame. */
 export function sceneAtSecond(graph,second){
- const scenes=graph.scenes,totalSec=scenes.reduce((n,s)=>n+s.durationSec,0);
+ const scenes=graph.scenes;
+ // Compensated prefix sums prevent cumulative drift across hundreds of decimal scenes.
+ let totalSec=0,correction=0;
+ const ends=scenes.map(scene=>{
+  const adjusted=scene.durationSec-correction;
+  const next=totalSec+adjusted;
+  correction=(next-totalSec)-adjusted;
+  totalSec=next;
+  return totalSec;
+ });
  if(!scenes.length)return {scene:null,index:-1,elapsedSec:0,progress:0,domainAt:null,totalSec:0,startSec:0};
  const time=Math.max(0,Math.min(finite(second)?second:0,totalSec));
  let start=0,domainAt=null;
- for(let i=0;i<scenes.length;i++){const s=scenes[i];if(s.domainAt!==undefined)domainAt=s.domainAt;const end=start+s.durationSec;
+ for(let i=0;i<scenes.length;i++){const s=scenes[i];if(s.domainAt!==undefined)domainAt=s.domainAt;const end=ends[i];
   // Decimal arithmetic can represent the 0.3s boundary as 0.30000000000000004.
    const tolerance=8*Number.EPSILON*Math.max(1,Math.abs(time),Math.abs(end));
    if(time<end-tolerance||i===scenes.length-1){

@@ -86,8 +86,11 @@ export function visibleStory(doc,chapter=null,spoilerSafe=true){
       if(!spoilerSafe)return c;
       const bio={...c.bio};
       delete bio.fate;
+      // A complete character arc is also a potential future spoiler.
+      delete bio.arc;
       if(bio.quotes)bio.quotes=bio.quotes.filter(visibleQuote).map(q=>({...q}));
-      return {...c,bio};
+      // v0.1 has no timestamp for a death event. Do not leak mortality status.
+      return {...c,bio,status:c.status==='deceased'?'unknown':c.status};
     });
   const ids=new Set(characters.map(c=>c.id));
   const relations=doc.relations
