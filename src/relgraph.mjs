@@ -42,7 +42,8 @@ export function validateRelGraph(doc){
     if(!chars.has(r.target))fail("semantic","UNKNOWN_TARGET",`${path}.target`,r.id,`Unknown target ${r.target}`,"改为已有的人物 id。");
     if(r.source===r.target)fail("semantic","SELF_LOOP",path,r.id,"Self-loop forbidden","改写到人物小传。");
     if(r.type==="other"&&!r.label)fail("semantic","OTHER_LABEL",`${path}.label`,r.id,"other requires a label","提供关系短标签。");
-    const signature=[r.source,r.target].sort().join("|")+"|"+r.type+"|"+(r.label||"");
+    const endpoints=r.directed===true?[r.source,r.target]:[r.source,r.target].sort();
+    const signature=JSON.stringify([r.directed===true,...endpoints,r.type,r.label||""]);
     if(signatures.has(signature))fail("semantic","DUPLICATE_RELATION",path,r.id,`Duplicate of ${signatures.get(signature)}`,"合并相同人物对、type、label 的关系。");
     signatures.set(signature,r.id);
     if(chars.has(r.source))degree[r.source]++;
@@ -76,14 +77,28 @@ export function validateRelGraph(doc){
 }
 export function visibleStory(doc,chapter=null,spoilerSafe=true){
   const point=Number.isFinite(chapter)?chapter:null;
-  const characters=doc.characters.filter(c=>point===null||c.firstAppearance===undefined||c.firstAppearance<=point);
+  // Quotations without a known chapter remain hidden whenever a chapter is selected.
+  // Never change the source document.
+  const visibleQuote=q=>point===null||(q.at!==undefined&&q.at<=point);
+  const characters=doc.characters
+    .filter(c=>point===null||c.firstAppearance===undefined||c.firstAppearance<=point)
+    .map(c=>{
+      if(!spoilerSafe)return c;
+      const bio={...c.bio};
+      delete bio.fate;
+      if(bio.quotes)bio.quotes=bio.quotes.filter(visibleQuote).map(q=>({...q}));
+      return {...c,bio};
+    });
   const ids=new Set(characters.map(c=>c.id));
-  const relations=doc.relations.filter(r=>ids.has(r.source)&&ids.has(r.target)&&(point===null||((r.chapters?.from??1)<=point&&(r.chapters?.to??Infinity)>=point)));
-  const bios=Object.fromEntries(characters.map(c=>{
-    const bio={...c.bio};
-    if(spoilerSafe){delete bio.fate;bio.quotes=(c.bio.quotes||[]).filter(q=>point===null||q.at!==undefined&&q.at<=point);}
-    return [c.id,bio];
-  }));
+  const relations=doc.relations
+    .filter(r=>ids.has(r.source)&&ids.has(r.target)&&(point===null||((r.chapters?.from??1)<=point&&(r.chapters?.to??Infinity)>=point)))
+    .map(r=>{
+      if(!spoilerSafe)return r;
+      const safe={...r};
+      if(r.evidence)safe.evidence=r.evidence.filter(visibleQuote).map(q=>({...q}));
+      return safe;
+    });
+  const bios=Object.fromEntries(characters.map(c=>[c.id,c.bio]));
   return {characters,relations,bios};
 }
 export function timelineScenes(doc){

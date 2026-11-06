@@ -344,7 +344,7 @@ async function boot(){
     play.onclick=()=>{if(frame>=TOTAL_FRAMES-1)setFrame(0);setPlaying(!playing)};
     document.getElementById('restart').onclick=()=>{setPlaying(false);setFrame(0)};
     scrub.oninput=()=>{setPlaying(false);setFrame(Number(scrub.value))};
-    window.addEventListener('keydown',e=>{if(e.target instanceof HTMLInputElement)return;if(e.code==='Space'){e.preventDefault();play.click()}if(e.code==='ArrowRight')setFrame(frame+FPS);if(e.code==='ArrowLeft')setFrame(frame-FPS)});
+    window.addEventListener('keydown',e=>{if(e.altKey||e.ctrlKey||e.metaKey||e.isComposing||e.repeat)return;const t=e.target;if(t instanceof Element&&t.closest('button,input,textarea,select,[contenteditable],[role="button"]'))return;if(e.code==='Space'){e.preventDefault();play.click()}if(e.code==='ArrowRight')setFrame(frame+FPS);if(e.code==='ArrowLeft')setFrame(frame-FPS)});
     // Headless/export API: all visuals depend solely on integer frame and local JSON.
     window.renderAt=(f)=>{setPlaying(false);setFrame(f);return true};
     window.__STORY_READY__=true;
