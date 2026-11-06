@@ -11,7 +11,7 @@ Use Node.js 22+ for tests and Python 3 for the local development server. There a
 python3 -m http.server 8000 --bind 127.0.0.1
 ```
 
-Open **http://127.0.0.1:8000/demo/** in a desktop browser. The workspace loads the provisional literary example at startup; switch to the synthetic biology example or select a local JSON file. The file is read locally in the browser. Native ES modules and example loading require HTTP, so opening `demo/index.html` using `file://` is not supported. The older [standalone prototype](demo/standalone.html) remains available as a historical, directly openable demo; it is not the integrated player.
+Open **http://127.0.0.1:8000/demo/** in a desktop browser. The workspace loads the provisional literary example at startup; switch to the synthetic biology example, or select / drag-and-drop a local JSON file. The file is read locally in the browser. Native ES modules and example loading require HTTP, so opening `demo/index.html` using `file://` is not supported. The older [standalone prototype](demo/standalone.html) remains available as a historical, directly openable demo; it is not the integrated player.
 
 - Play, pause, restart, drag the frame timeline, or select a shot. Space toggles playback outside focused controls; left/right arrows seek by one second.
 - Both source formats use the same validation → domain adapter → `VisualGraph` → deterministic Canvas renderer. Errors and warnings appear separately with a field path, object ID when available, explanation and repair advice.
