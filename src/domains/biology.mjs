@@ -66,7 +66,18 @@ export function validateBiologyDocument(doc){
   }
   evidence(p,path);interval(p.visibleFrom,p.visibleTo,path+'.visibility',p.id);
  });
- (doc.presentation||[]).forEach((s,i)=>{if(!object(s)||!finite(s.durationSec)||s.durationSec<=0)fail('DURATION','presentation['+i+'].durationSec',s?.id,'Invalid duration','Provide positive seconds.');});
+ (doc.presentation||[]).forEach((scene,i)=>{
+   const path='presentation['+i+']';
+   if(!object(scene)||!finite(scene.durationSec)||scene.durationSec<=0)fail('DURATION',path+'.durationSec',scene?.id,'Invalid duration','Provide positive seconds.');
+   if(!object(scene))return;
+   for(const [field,keys] of [['camera',['fitIds']],['highlight',['nodeIds','edgeIds']]]){
+    const config=scene[field];
+    if(config===undefined)continue;
+    if(!object(config)){fail('SCENE_OBJECT_TYPE',path+'.'+field,scene.id,field+' must be an object','Supply an object or omit it.');continue;}
+    for(const key of keys)if(config[key]!==undefined&&!Array.isArray(config[key]))
+     fail('SCENE_LIST_TYPE',path+'.'+field+'.'+key,scene.id,key+' must be an array','Use an array of IDs or omit it.');
+   }
+  });
  return {valid:errors.length===0,errors,warnings:[]};
 }
 /** Reactions are explicit nodes with participant arcs, not invented binary PPIs. */
@@ -74,18 +85,24 @@ export function adaptBiologyDocument(doc){
  const diagnostics=validateBiologyDocument(doc);
  if(!diagnostics.valid)throw Object.assign(new Error('Invalid biological document'),{issues:diagnostics.errors});
  const windowFor=o=>o.visibleFrom!==undefined||o.visibleTo!==undefined?{from:o.visibleFrom,to:o.visibleTo}:undefined;
+ const processAlias=new Map(doc.processes.map(p=>['process-'+p.id,'bio:process:'+p.id]));
+ const entityIds=new Set(doc.entities.map(e=>e.id));
+ const interactionIds=new Set(doc.interactions.map(r=>r.id));
+ const edgeAlias=new Map();
+ const nodeRef=id=>entityIds.has(id)?id:(processAlias.get(id)??id);
+ const edgeRef=id=>interactionIds.has(id)?id:(edgeAlias.get(id)??id);
  const nodes=doc.entities.map(e=>({id:e.id,label:e.name,kind:e.kind,groupId:e.compartmentId,position:e.position?{...e.position}:undefined,visibility:windowFor(e)}));
  const edges=doc.interactions.map(r=>({id:r.id,source:r.source,target:r.target,kind:r.kind,label:r.label||r.kind,directed:r.kind!=='physical-association',visibility:windowFor(r)}));
  for(const p of doc.processes){
-  const id='process-'+p.id;
+  const id='bio:process:'+p.id;
   nodes.push({id,label:p.label||p.kind,kind:'reaction',groupId:p.compartmentId,visibility:windowFor(p)});
-  for(const part of p.reactants)edges.push({id:p.id+'-input-'+part.entityId,source:part.entityId,target:id,kind:'consumption',directed:true,label:part.stoichiometry===undefined?undefined:String(part.stoichiometry)});
-  for(const part of p.products)edges.push({id:p.id+'-output-'+part.entityId,source:id,target:part.entityId,kind:'production',directed:true,label:part.stoichiometry===undefined?undefined:String(part.stoichiometry)});
-  for(const part of p.modifiers||[])edges.push({id:p.id+'-modifier-'+part.entityId,source:part.entityId,target:id,kind:part.role,directed:true});
+  for(const part of p.reactants){const alias=p.id+'-input-'+part.entityId;const edgeId='bio:arc:input:'+p.id+':'+part.entityId;edgeAlias.set(alias,edgeAlias.has(alias)?null:edgeId);edges.push({id:edgeId,source:part.entityId,target:id,kind:'consumption',directed:true,label:part.stoichiometry===undefined?undefined:String(part.stoichiometry)});}
+  for(const part of p.products){const alias=p.id+'-output-'+part.entityId;const edgeId='bio:arc:output:'+p.id+':'+part.entityId;edgeAlias.set(alias,edgeAlias.has(alias)?null:edgeId);edges.push({id:edgeId,source:id,target:part.entityId,kind:'production',directed:true,label:part.stoichiometry===undefined?undefined:String(part.stoichiometry)});}
+  for(const part of p.modifiers||[]){const alias=p.id+'-modifier-'+part.entityId;const edgeId='bio:arc:modifier:'+p.id+':'+part.entityId;edgeAlias.set(alias,edgeAlias.has(alias)?null:edgeId);edges.push({id:edgeId,source:part.entityId,target:id,kind:part.role,directed:true});}
  }
  const graph={domain:'biology',meta:{title:doc.meta.title,description:doc.meta.description,sourceNote:doc.meta.sourceNote},timeline:doc.timeline?{...doc.timeline}:undefined,
   groups:doc.compartments.map(c=>({id:c.id,label:c.name,kind:'compartment',color:c.color})),nodes,edges,
-  scenes:(doc.presentation||[]).map(s=>({id:s.id,title:s.title,narration:s.narration,durationSec:s.durationSec,transitionMs:s.transitionMs,domainAt:s.domainAt,camera:s.camera,highlight:s.highlight,openDetailNodeId:s.openDetailNodeId}))};
+  scenes:(doc.presentation||[]).map(s=>({id:s.id,title:s.title,narration:s.narration,durationSec:s.durationSec,transitionMs:s.transitionMs,domainAt:s.domainAt,camera:s.camera?{...s.camera,focusNodeId:s.camera.focusNodeId===undefined?undefined:nodeRef(s.camera.focusNodeId),fitIds:s.camera.fitIds?.map(nodeRef)}:undefined,highlight:s.highlight?{...s.highlight,nodeIds:s.highlight.nodeIds?.map(nodeRef),edgeIds:s.highlight.edgeIds?.map(edgeRef)}:undefined,openDetailNodeId:s.openDetailNodeId===undefined?undefined:nodeRef(s.openDetailNodeId)}))};
  const check=validateVisualGraph(graph);if(!check.valid)throw Object.assign(new Error('Biological projection invalid'),{issues:check.errors});
  return {graph,diagnostics};
 }
