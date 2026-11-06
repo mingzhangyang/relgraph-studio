@@ -53,6 +53,32 @@ interface DisplayList {width:number; height:number; background:Paint; items:Disp
 - Tests assert on `DisplayList` values (snapshots and targeted queries) instead of recording Canvas calls.
 - `a11y` carries the visible, spoiler-filtered text (titles, narration, detail summary, visible nodes/relations) so the workspace transcript and live region come from the same source as the pixels.
 
+##### Rendering backend: Canvas 2D primary, SVG secondary, no three.js
+
+The deliverable is a video, so backends are judged on frame-exact raster output, headless batch rendering and stable CJK text, not on DOM interactivity.
+
+| | Canvas 2D | SVG | three.js (WebGL) |
+|---|---|---|---|
+| Frames for video | Direct raster frames | Each frame must be rasterized (e.g. resvg) | Possible, via GPU read-back |
+| Headless export | skia-canvas: near-identical API; Chrome also rasterizes with Skia | resvg: fast and deterministic, but a different engine from browser preview | Needs headless-gl or a GPU |
+| Cross-machine reproducibility | Good with vendored fonts and one backend version | Good (resvg) | Poor: output varies by GPU and driver |
+| CJK text and label avoidance | `measureText` in browser and headless | `getBBox` needs a DOM; headless needs separate metrics | Hard: thousands of glyphs need an SDF atlas (e.g. troika-three-text) |
+| Glows and gradients | Cheap | SVG filters are expensive in browsers | Cheap |
+| Per-frame redraw | Full redraw of hundreds of nodes is trivial | Mutating many DOM attributes per frame gets slow | Fastest, unnecessary at this scale |
+| Accessibility, selection, hit-testing | Weak; supplemented separately | Strong | Weak |
+| Vector output (papers, print) | No | Native | No |
+
+Decision:
+
+- **Canvas 2D is the primary backend.** The browser preview uses Canvas 2D and headless export uses skia-canvas, so both share one drawing API and both rasterize through Skia, which keeps preview and final frames closest. Existing label avoidance, glow effects and determinism tests already target this model.
+- **SVG is a later secondary backend** for vector stills, posters, paper figures and inspectable debugging output. With the display list in place it is cheap to add. It is not the video path, because preview and export would then use different rasterizers. Its accessibility advantage is already covered by `DisplayList.a11y`.
+- **three.js is rejected.** The graphs are two-dimensional, so its strengths (3D scenes, lighting, very large object counts) bring no benefit, while CJK text, GPU-dependent headless export and GPU-varying pixels would break the reproducible-frame foundation.
+- **Revisit triggers:**
+  - Graphs beyond roughly 10k visible elements: add a GPU 2D backend such as PixiJS or regl, not a 3D engine.
+  - Three-dimensional molecular structures: render them with a specialised viewer (Mol\*, NGL) as a separate clip and cut it into the film, instead of turning the graph renderer 3D.
+
+Because backends only translate a `DisplayList` into drawing calls, adding SVG or a GPU backend later does not change composition, timeline or domain code.
+
 #### D2. Parameterize frame geometry with a `FrameSpec`
 
 ```ts
@@ -141,6 +167,7 @@ A scene-per-section Markdown script (title, narration, front-matter for camera/h
 
 - **Keep the imperative Canvas renderer and export via browser screen capture.** Lowest effort, but couples export to a browser, cannot render in parallel, and keeps tests tied to drawing-call order.
 - **SVG/DOM rendering with CSS animation.** Easy to inspect, but frame-exact seeking and identical raster output for video are harder; still viable as a later backend of the display list.
+- **WebGL via three.js.** Rejected for a 2D graph film: CJK text, GPU-dependent headless export and non-reproducible pixels outweigh speed that is not needed at this scale (see D1, Rendering backend).
 - **One universal ontology across domains.** Rejected again for the reasons in ADR 002; styles and vocabularies stay per domain.
 - **Adopt a UI framework now.** Deferred: the workspace is small. Revisit when the studio gains a timeline editor or position tweaking; Preact or Svelte would fit the size.
 
