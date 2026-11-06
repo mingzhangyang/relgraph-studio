@@ -1,37 +1,39 @@
 # RelGraph Studio · 关系叙事工作室
 
-**Video-first, data-driven visualization of complex relationships.** A shared graph and film engine for narrative literature and, eventually, molecular biology. Domain-specific source semantics remain separate.
+**Video-first, data-driven visualization of complex relationships.** RelGraph Studio turns domain data and declarative shots into a shared Canvas film. Literary and molecular-biology source semantics remain separate.
 
-## Current milestone (v0.1 draft)
+## Run the director workspace
 
-- **[Offline director demo](demo/standalone.html)** — open the HTML file directly in a browser to preview a 40-second / five-scene silent technical storyboard (Canvas 2D, 1280×720, 24 FPS).
-- **[JSON Schema](schema/relationship-graph.schema.json)** and **[TypeScript types](types/relationship-graph.ts)** — structural contract for `schemaVersion: "0.1"`.
-- **[Validator and chapter projection](src/relgraph.mjs)** — structural and semantic checks, spoiler-safe character/edge filtering, declarative scene timing.
-- **[Provisional Honglou data](examples/honglou-provisional.relgraph.json)** — 17 characters / 17 links / 5 scenes, migrated from the visual demo. **Not source-verified; do not treat as literary scholarship.**
-- **[Neutral graph and frame-state engine](src/graph/core.mjs)** — renderer-independent nodes, edges, groups, timeline and safe frame projection.
-- **[Literature adapter](src/domains/literature.mjs)** — maps literary v0.1 into a visual graph while retaining separate spoiler-safe biographies.
-- **[Biology adapter](src/domains/biology.mjs)** and **[synthetic example](examples/biology-signaling-synthetic.json)** — experimental protein states, typed physical vs functional interactions, multi-participant reaction nodes and evidence metadata. The example is invented, not a verified scientific dataset.
-
-### Run tests
+Use Node.js 22+ for tests and Python 3 for the local development server. There are no runtime packages, accounts, databases, or network requests other than the local server serving the project files.
 
 ```bash
-node --test tests/*.test.mjs
+# From the repository root
+python3 -m http.server 8000 --bind 127.0.0.1
 ```
 
-Node.js 22+ recommended. No dependencies or network required for the core tests or offline demo.
+Open **http://127.0.0.1:8000/demo/** in a desktop browser. The workspace loads the provisional literary example at startup; switch to the synthetic biology example, or select / drag-and-drop a local JSON file. The file is read locally in the browser. Native ES modules and example loading require HTTP, so opening `demo/index.html` using `file://` is not supported. The older [standalone prototype](demo/standalone.html) remains available as a historical, directly openable demo; it is not the integrated player.
 
-## Architecture and scope
+- The workspace and the rendered film share a light (paper) or dark theme. It follows the operating system until you pick one with the theme button; the choice is remembered in this browser. `renderAt` draws with the current theme, and `createCanvasRenderer(..., {theme: 'light' | 'dark'})` takes it as an explicit input, so a frame stays deterministic per theme.
+- Play, pause, restart, drag the frame timeline, or select a shot. Space toggles playback outside focused controls; left/right arrows seek by one second.
+- Both source formats use the same validation → domain adapter → `VisualGraph` → deterministic Canvas renderer. Errors and warnings appear separately with a field path, object ID when available, explanation and repair advice.
+- The time in the player is **video time**; `chapterAt` / `domainAt` is **domain time**. If any objects have visibility intervals, the first shot must specify a domain time. Future graph objects and references are filtered before rendering. If a shot explicitly refers to an invisible object, its title and narration are withheld as well. Non-active shot titles are withheld because scene order can move backward in domain time.
+- Author-provided free text is not automatically fact-checked or semantically censored: write titles, narration, biography summaries and relationship labels for the intended point in the story. Untimed source data cannot provide reliable chapter-level spoiler protection. The provisional Honglou example intentionally has no invented chapter timestamps.
+- Node positions provided in JSON are preserved. Missing positions use a deterministic static fallback; no physics runs during playback. Overlapping authored positions and very dense graphs can still need manual editing.
 
-The offline HTML is an **existing visual proof of concept**; it currently embeds its legacy fixture rather than loading the v0.1 contract. The reusable validator/schema and v0.1 example are separate foundational artifacts. Integrating them into the renderer and video-export pipeline is the next development task, **not a completed claim**.
+### Local verification
 
-The 40-second MP4 export has been tested locally, but rendered media and frame sequences are intentionally excluded from Git history. See [architecture](docs/ARCHITECTURE.md), [cross-domain decision](docs/ADR-002-domain-adapters.md) and [roadmap](docs/ROADMAP.md).
+```bash
+npm test
+```
 
-## Design principles
+The dependency-free Node suite covers adapters, source diagnostics, spoiler projections, reaction roles, camera interpolation, static layouts and deterministic Canvas drawing commands. The browser workspace additionally exposes `window.renderAt(frame)` for a validated integer frame in the loaded film and `window.studioFrame()` for its current safe state. The canvas is 1280 × 720 at 24 FPS; `renderAt` pauses playback and redraws independently of prior frames. Pixel identity is expected within the same browser, fonts, and rendering environment, not across different operating systems or font rasterizers. A packaged batch PNG/MP4 exporter is not yet included.
 
-1. Accuracy over completeness. Do not invent relations, quotation evidence, chapter timestamps or outcomes.
-2. Spoiler safety is first-class. Hide future characters, relations, ending information and future quotations at the selected chapter.
-3. Deterministic, declarative scenes. Source of truth is JSON, never an interaction recording.
-4. Preserve human-authored layout positions; offline/local-first input and export.
-5. The application goals lead; the draft schema may still evolve before 1.0.
+## Source data and scope
+
+- [Literary draft and example](examples/honglou-provisional.relgraph.json): 17 characters, 17 relations and five shots. **This is provisional, not source-verified literary scholarship.** See the [JSON Schema](schema/relationship-graph.schema.json) and [TypeScript types](types/relationship-graph.ts).
+- [Biology draft and synthetic example](examples/biology-signaling-synthetic.json): fictional molecules, typed interactions and a multi-participant reaction. It makes **no experimental claim** and `relgraph.bio/0.1-draft` is not PSI-MI, SBGN, SBML or BioPAX.
+- [Neutral graph contract](src/graph/core.mjs), [literature adapter](src/domains/literature.mjs), [biology adapter](src/domains/biology.mjs), [director state](src/director/state.mjs) and [Canvas renderer](src/render/canvas.mjs) are reusable modules.
+
+See [architecture](docs/ARCHITECTURE.md), [cross-domain decision](docs/ADR-002-domain-adapters.md), [proposed render pipeline and foundations](docs/ADR-003-render-pipeline-and-foundations.md) and [roadmap](docs/ROADMAP.md). The project has no GitHub Actions workflow; validation is local.
 
 **License:** not selected yet. A public repository does not by itself grant an open-source or commercial-use license.

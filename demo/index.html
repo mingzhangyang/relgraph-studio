@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>RelGraph Studio · 导演工作台</title>
+  <script>
+    // Apply a saved theme before first paint; otherwise CSS follows the OS.
+    try{const t=localStorage.getItem('relgraph-theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t;}catch{}
+  </script>
+  <link rel="stylesheet" href="studio.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="7" r="3"/><circle cx="7" cy="23" r="3"/><circle cx="25" cy="23" r="3"/><path d="M16 10 8.6 20.4M16 10l7.4 10.4M10 23h12"/></svg>
+    <div><b>RelGraph Studio</b><small>关系叙事 · 导演工作台</small></div>
+  </div>
+  <div class="top-meta">
+    <span class="top-note">本地运行 · 不上传数据</span>
+    <span class="pill">B1 · 逐帧预览</span>
+    <button id="themeToggle" class="theme-toggle" type="button" aria-label="切换浅色 / 深色模式"><svg class="theme-icon" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.25"/><path d="M8 1.75a6.25 6.25 0 0 1 0 12.5z"/></svg><span class="theme-label">主题</span></button>
+  </div>
+</header>
+
+<main class="layout">
+  <section class="workspace" aria-labelledby="previewHeading">
+    <div class="sectionline">
+      <div><span class="section-index">01</span><h1 id="previewHeading">导演预览</h1></div>
+      <span id="status" class="status" data-state="loading" role="status">正在加载…</span>
+    </div>
+
+    <div class="stage-shell">
+      <canvas id="stage" width="1280" height="720" role="img" aria-label="关系叙事视频预览" aria-describedby="sceneDescription">当前分镜和关系见画面文字说明。</canvas>
+    </div>
+    <p id="sceneDescription" class="sr-only" role="status" aria-live="polite"></p>
+
+    <div class="transport" role="group" aria-label="播放控制">
+      <button id="play" class="icon-button play" type="button" aria-label="播放">▶</button>
+      <button id="restart" class="icon-button" type="button" aria-label="重开">↺</button>
+      <div class="scrub">
+        <div id="sceneStrip" class="scene-strip" aria-hidden="true"></div>
+        <input id="scrubber" type="range" min="0" max="0" value="0" step="1" aria-label="视频时间轴">
+      </div>
+      <div class="readout">
+        <span id="time" class="time">00:00.00 / 00:00.00</span>
+        <span class="frame-meta"><span id="frameNumber">FRAME 0</span> · 24 FPS</span>
+      </div>
+    </div>
+    <p class="hint">
+      <span><kbd>Space</kbd> 播放 / 暂停</span>
+      <span><kbd>←</kbd><kbd>→</kbd> 前后 1 秒</span>
+      <span class="hint-note">播放器显示视频时间；章节 / 阶段为领域时间，二者独立计算。</span>
+    </p>
+
+    <div class="sectionline shots-heading">
+      <div><span class="section-index">02</span><h2>分镜时间轴</h2></div>
+      <span class="small">未播放到的分镜标题会被隐藏，防止剧透</span>
+    </div>
+    <div id="shots" class="shot-list" role="group" aria-label="分镜列表"></div>
+    <details class="transcript"><summary>当前画面文字说明</summary><div id="transcript"></div></details>
+  </section>
+
+  <aside class="rightbar" aria-label="数据与校验信息">
+    <section class="info-card source-card" aria-labelledby="sourceHeading">
+      <h2 id="sourceHeading" class="card-title"><span class="section-index">03</span>数据来源</h2>
+      <div class="source-buttons" role="group" aria-label="示例数据">
+        <button id="exampleLiterature" type="button" aria-pressed="false"><b>红楼梦</b><small>文学 · 演示数据</small></button>
+        <button id="exampleBiology" type="button" aria-pressed="false"><b>生物信号</b><small>生物 · 合成数据</small></button>
+      </div>
+      <label class="dropzone" for="fileInput" id="dropzone">
+        <span class="dropzone-title">导入本地 JSON</span>
+        <span class="dropzone-sub">点击选择，或将文件拖到此处</span>
+      </label>
+      <input id="fileInput" class="sr-only" type="file" accept=".json,application/json">
+      <p class="source-current"><span class="muted-label">当前</span><span id="sourceName">尚未加载</span></p>
+    </section>
+
+    <section class="info-card" aria-labelledby="shotHeading">
+      <h2 id="shotHeading" class="card-title">当前分镜</h2>
+      <p id="currentShot" class="card-body">—</p>
+      <p id="domainTime" class="muted">领域时间：—</p>
+      <dl class="mini-stats">
+        <div><dt>可见节点</dt><dd id="nodeCount">0</dd></div>
+        <div><dt>可见关系</dt><dd id="edgeCount">0</dd></div>
+        <div><dt>分镜</dt><dd id="sceneCount">0</dd></div>
+      </dl>
+    </section>
+
+    <section class="info-card caution" aria-labelledby="noteHeading">
+      <h2 id="noteHeading" class="card-title">数据说明</h2>
+      <p id="sourceNote" class="card-body">—</p>
+    </section>
+
+    <section id="diagnostics" class="info-card diagnostics" aria-labelledby="diagHeading" aria-live="polite">
+      <h2 id="diagHeading" class="card-title">校验提示 <span id="diagCount" class="count" hidden></span></h2>
+      <div id="errors"></div>
+      <div id="warnings"></div>
+    </section>
+  </aside>
+</main>
+
+<footer>RelGraph Studio <span aria-hidden="true">·</span> video-first · data-driven</footer>
+<script type="module" src="studio.mjs"></script>
+</body>
+</html>
