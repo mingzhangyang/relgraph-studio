@@ -31,3 +31,13 @@
 - [ ] Video/image batch exports; defer the consumer graph editor until proven demand
 
 No GitHub Actions workflow is included in this baseline; local verification only.
+
+## B0.5 — Cross-domain kernel (prototype)
+
+- [x] Preserve literary v0.1, add domain-neutral graph/scene contract
+- [x] Literature and experimental biology source adapters
+- [x] Semantic distinction: binary physical association versus activity influence versus multi-party reaction
+- [x] Separate biology stage time from video time, filter hidden nodes/highlights
+- [x] Synthetic-only biology fixture and local adapter tests
+- [ ] Wire the offline studio to adapter output; no claim of end-to-end renderer compatibility yet
+- [ ] Establish evidence-source provenance rules and choose standard-based bio import formats
