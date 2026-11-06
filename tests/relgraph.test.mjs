@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {validateRelGraph,visibleStory,timelineScenes} from '../src/relgraph.mjs';
+import doc from '../examples/honglou-provisional.relgraph.json' with {type:'json'};
+const fixture={schemaVersion:'0.1',meta:{title:'Test'},timeline:{unit:'章',total:10},characters:[{id:'a',name:'A',importance:5,bio:{summary:'A',fate:'A future ending',quotes:[{text:'later',at:9}]}},{id:'b',name:'B',importance:3,bio:{summary:'B'},firstAppearance:4}],relations:[{id:'r',source:'a',target:'b',type:'friendship',strength:3,chapters:{from:4,to:6}}],presentation:[{id:'scene',title:'Scene',durationSec:5,chapterAt:4}]};
+test('provisional data passes both validation layers',()=>assert.equal(validateRelGraph(doc).valid,true));
+test('unsupported versions and unknown fields fail',()=>{assert.equal(validateRelGraph({...fixture,schemaVersion:'1.0'}).valid,false);assert.equal(validateRelGraph({...fixture,unexpected:true}).valid,false);});
+test('missing references and self loops fail with ids and repair suggestions',()=>{for(const r of [{...fixture.relations[0],target:'missing'},{...fixture.relations[0],target:'a'}]){const found=validateRelGraph({...fixture,relations:[r]}).errors;assert.ok(found.some(x=>x.id==='r'&&x.fix));}});
+test('chapter boundary hides future nodes and edges',()=>{assert.equal(visibleStory(fixture,3).characters.length,1);assert.equal(visibleStory(fixture,3).relations.length,0);assert.equal(visibleStory(fixture,4).relations.length,1);assert.equal(visibleStory(fixture,7).relations.length,0);});
+test('spoiler-safe biography suppresses fate and later quotations',()=>{const bio=visibleStory(fixture,4).bios.a;assert.equal(bio.fate,undefined);assert.deepEqual(bio.quotes,[]);assert.equal(visibleStory(fixture,4,false).bios.a.fate,'A future ending');});
+test('declarative scene time is cumulative',()=>assert.deepEqual(timelineScenes(fixture).map(s=>[s.startSec,s.endSec,s.chapter]),[[0,5,4]]));

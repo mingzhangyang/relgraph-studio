@@ -1,0 +1,28 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {validateRelGraph,visibleStory} from '../src/relgraph.mjs';
+import {validateVisualGraph,frameStateAt} from '../src/graph/core.mjs';
+import {validateBiologyDocument,adaptBiologyDocument} from '../src/domains/biology.mjs';
+import biology from '../examples/biology-signaling-synthetic.json' with {type:'json'};
+const literature={schemaVersion:'0.1',meta:{title:'Test'},characters:[{id:'a',name:'A',importance:4,bio:{summary:'A',fate:'SECRET',quotes:[{text:'LATE',at:9},{text:'EARLY',at:2},{text:'UNDATED'}]}},{id:'b',name:'B',importance:3,bio:{summary:'B'}}],relations:[{id:'one',source:'a',target:'b',type:'service',label:'reports to',directed:true,strength:2,evidence:[{text:'FUTURE-EVIDENCE',at:9},{text:'KNOWN-EVIDENCE',at:2}]}]};
+test('reciprocal directed relations differ, undirected reversals duplicate',()=>{const d=structuredClone(literature);d.relations.push({...d.relations[0],id:'two',source:'b',target:'a'});assert.equal(validateRelGraph(d).valid,true);d.relations[0].directed=false;d.relations[1].directed=false;assert.ok(validateRelGraph(d).errors.some(e=>e.code==='DUPLICATE_RELATION'));});
+test('spoiler safety protects characters, bios and relation evidence without source mutation',()=>{const before=structuredClone(literature);const v=visibleStory(literature,4,true);assert.equal(v.characters[0].bio.fate,undefined);assert.deepEqual(v.characters[0].bio.quotes.map(x=>x.text),['EARLY']);assert.deepEqual(v.relations[0].evidence.map(x=>x.text),['KNOWN-EVIDENCE']);assert.equal(v.bios.a,v.characters[0].bio);assert.ok(!JSON.stringify(v).includes('SECRET'));assert.ok(!JSON.stringify(v).includes('FUTURE-EVIDENCE'));assert.deepEqual(literature,before);assert.equal(visibleStory(literature,4,false).characters[0].bio.fate,'SECRET');});
+test('malformed scene lists return precise structured graph errors',()=>{const {graph}=adaptBiologyDocument(biology);graph.scenes[0].camera.fitIds='bad';graph.scenes[0].highlight={nodeIds:'bad',edgeIds:false};const errors=validateVisualGraph(graph).errors;assert.equal(errors.filter(e=>e.code==='SCENE_LIST_TYPE').length,3);for(const e of errors.filter(e=>e.code==='SCENE_LIST_TYPE'))assert.ok(e.path&&e.id&&e.fix);});
+test('biology adapter rejects malformed scene input before mapping',()=>{const d=structuredClone(biology);d.presentation[0].camera.fitIds='bad';d.presentation[0].highlight={nodeIds:'bad',edgeIds:42};const result=validateBiologyDocument(d);assert.equal(result.errors.filter(e=>e.code==='SCENE_LIST_TYPE').length,3);assert.throws(()=>adaptBiologyDocument(d),e=>e.issues?.some(x=>x.code==='SCENE_LIST_TYPE'));});
+test('generated biology IDs cannot collide with source data or hyphen concatenation',()=>{
+ const d=structuredClone(biology);
+ d.entities.push({id:'process-phosphorylation-test',name:'Colliding entity',kind:'protein'},{id:'c',name:'C',kind:'protein'},{id:'b-c',name:'BC',kind:'protein'});
+ d.interactions.push({id:'phosphorylation-test-input-substrate-s',source:'kinase-k',target:'substrate-s',kind:'physical-association',evidenceStatus:'hypothesis'});
+ const p=structuredClone(d.processes[0]);
+ d.processes.push({...p,id:'a-b',reactants:[{entityId:'c'}]},{...p,id:'a',reactants:[{entityId:'b-c'}]});
+ assert.equal(validateBiologyDocument(d).valid,true);
+ const {graph}=adaptBiologyDocument(d);
+ assert.equal(validateVisualGraph(graph).valid,true);
+ assert.equal(new Set(graph.nodes.map(n=>n.id)).size,graph.nodes.length);
+ assert.equal(new Set(graph.edges.map(e=>e.id)).size,graph.edges.length);
+ assert.ok(graph.nodes.some(n=>n.id==='bio:process:phosphorylation-test'));
+ assert.ok(graph.edges.some(e=>e.id==='bio:arc:input:a-b:c'));
+ assert.ok(graph.edges.some(e=>e.id==='bio:arc:input:a:b-c'));
+ assert.equal(graph.scenes[1].camera.focusNodeId,'bio:process:phosphorylation-test');
+});
+test('rewritten identifiers retain deterministic frame-state evaluation',()=>{const {graph}=adaptBiologyDocument(biology);assert.deepEqual(frameStateAt(graph,96),frameStateAt(graph,96));});
