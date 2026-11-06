@@ -1,4 +1,4 @@
-import test from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import {validateRelGraph,visibleStory,timelineScenes} from '../src/relgraph.mjs';
 import doc from '../examples/honglou-provisional.relgraph.json' with {type:'json'};
