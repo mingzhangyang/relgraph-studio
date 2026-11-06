@@ -142,7 +142,7 @@ dropzone.addEventListener('drop',event=>{event.preventDefault();dropzone.classNa
 play.addEventListener('click',()=>{if(!playing&&frame>=totalFrames-1)setFrame(0);setPlaying(!playing);});
 restart.addEventListener('click',()=>{setPlaying(false);setFrame(0);});
 scrubber.addEventListener('input',()=>{setPlaying(false);setFrame(Number(scrubber.value));});
-window.addEventListener('keydown',event=>{if(event.altKey||event.ctrlKey||event.metaKey||event.isComposing||event.repeat)return;const target=event.target;if(target instanceof Element&&target.closest('button,input,textarea,select,[contenteditable],[role="button"]'))return;if(event.code==='Space'){event.preventDefault();play.click();}else if(event.code==='ArrowRight'){setPlaying(false);setFrame(frame+FPS);}else if(event.code==='ArrowLeft'){setPlaying(false);setFrame(frame-FPS);}});
+window.addEventListener('keydown',event=>{if(event.altKey||event.ctrlKey||event.metaKey||event.isComposing||event.repeat)return;const target=event.target;if(target instanceof Element&&target.closest('button,input,textarea,select,summary,[contenteditable],[role="button"]'))return;if(event.code==='Space'){event.preventDefault();play.click();}else if(event.code==='ArrowRight'){setPlaying(false);setFrame(frame+FPS);}else if(event.code==='ArrowLeft'){setPlaying(false);setFrame(frame-FPS);}});
 function applyTheme(next,persist){
   theme=next==='light'?'light':'dark';
   if(persist){try{globalThis.localStorage?.setItem(THEME_KEY,theme);}catch{}document.documentElement?.setAttribute('data-theme',theme);}
