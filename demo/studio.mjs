@@ -7,7 +7,12 @@ const FPS=24;
 const $=id=>document.getElementById(id);
 const canvas=$('stage'),play=$('play'),restart=$('restart'),scrubber=$('scrubber'),shots=$('shots'),strip=$('sceneStrip');
 let graph=null,renderer=null,frame=0,totalFrames=1,playing=false,animationId=null,lastTick=null,position=0,announcedScene=-1,requestSerial=0;
-let currentFrameState=null,currentDetailAt=()=>undefined;
+let currentFrameState=null,currentDetailAt=()=>undefined,currentLayout=null,emptyMessage='';
+// Workspace and video share one theme. Without a saved choice it follows the OS.
+const THEME_KEY='relgraph-theme',lightQuery=globalThis.matchMedia?.('(prefers-color-scheme: light)');
+const EMPTY_STAGE={dark:{bg:'#101b2a',kicker:'#cfae84',text:'#c4d0d1'},light:{bg:'#f6f1e8',kicker:'#a0672a',text:'#3f4c57'}};
+function savedTheme(){try{const value=globalThis.localStorage?.getItem(THEME_KEY);return value==='light'||value==='dark'?value:null;}catch{return null;}}
+let theme=savedTheme()||(lightQuery?.matches?'light':'dark');
 const setStatus=(text,state)=>{$('status').textContent=text;$('status').setAttribute('data-state',state);};
 const stamp=seconds=>{const t=Math.max(0,seconds),minutes=Math.floor(t/60),s=(t%60).toFixed(2).padStart(5,'0');return `${String(minutes).padStart(2,'0')}:${s}`;};
 function setPlaying(next){
@@ -96,12 +101,13 @@ function setFrame(next,updatePosition=true){
   return state;
 }
 function paintEmptyStage(message){
-  const ctx=canvas.getContext('2d');ctx.fillStyle='#0a1320';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.textAlign='center';
-  ctx.fillStyle='#cfae84';ctx.font='600 13px system-ui';ctx.fillText('RELGRAPH  /  DIRECTOR STUDIO',640,330);
-  ctx.fillStyle='#c4d0d1';ctx.font='22px system-ui';ctx.fillText(message,640,372);ctx.textAlign='left';
+  const ctx=canvas.getContext('2d'),colors=EMPTY_STAGE[theme];emptyMessage=message;
+  ctx.fillStyle=colors.bg;ctx.fillRect(0,0,canvas.width,canvas.height);ctx.textAlign='center';
+  ctx.fillStyle=colors.kicker;ctx.font='600 13px system-ui';ctx.fillText('RELGRAPH  /  DIRECTOR STUDIO',640,330);
+  ctx.fillStyle=colors.text;ctx.font='22px system-ui';ctx.fillText(message,640,372);ctx.textAlign='left';
 }
 function clearStudio(){
-  setPlaying(false);graph=null;renderer=null;currentFrameState=null;currentDetailAt=()=>undefined;frame=0;position=0;totalFrames=1;announcedScene=-1;
+  setPlaying(false);graph=null;renderer=null;currentLayout=null;currentFrameState=null;currentDetailAt=()=>undefined;frame=0;position=0;totalFrames=1;announcedScene=-1;
   play.disabled=true;restart.disabled=true;scrubber.disabled=true;scrubber.max='0';scrubber.value='0';scrubber.setAttribute('style','--fill:0%');shots.replaceChildren();strip.replaceChildren();
   paintEmptyStage('请选择示例或导入有效的 JSON 数据');
   $('currentShot').textContent='—';$('domainTime').textContent='领域时间：—';$('nodeCount').textContent='0';$('edgeCount').textContent='0';$('sceneCount').textContent='0';$('sourceNote').textContent='—';$('transcript').replaceChildren();$('sceneDescription').textContent='没有已加载的有效数据。';$('time').textContent='00:00.00 / 00:00.00';$('frameNumber').textContent='FRAME 0';
@@ -109,7 +115,7 @@ function clearStudio(){
 function applyResult(result,name){
   clearStudio();renderDiagnostics(result);$('sourceName').textContent=name;
   if(!result.valid){setStatus('数据校验失败','error');paintEmptyStage('数据校验失败 · 请查看右侧校验提示');return;}
-  graph=result.graph;currentDetailAt=result.detailAt||(()=>undefined);renderer=createCanvasRenderer(canvas,graph,layoutGraph(graph),{fps:FPS,detailAt:currentDetailAt});
+  graph=result.graph;currentDetailAt=result.detailAt||(()=>undefined);currentLayout=layoutGraph(graph);renderer=createCanvasRenderer(canvas,graph,currentLayout,{fps:FPS,detailAt:currentDetailAt,theme});
   totalFrames=frameCount(graph,FPS);scrubber.max=String(totalFrames-1);scrubber.disabled=false;play.disabled=false;restart.disabled=false;
   buildShots();
   $('sceneCount').textContent=String(graph.scenes.length);$('sourceNote').textContent=graph.meta.sourceNote||graph.meta.description||'此数据未提供来源说明。';
@@ -137,7 +143,19 @@ play.addEventListener('click',()=>{if(!playing&&frame>=totalFrames-1)setFrame(0)
 restart.addEventListener('click',()=>{setPlaying(false);setFrame(0);});
 scrubber.addEventListener('input',()=>{setPlaying(false);setFrame(Number(scrubber.value));});
 window.addEventListener('keydown',event=>{if(event.altKey||event.ctrlKey||event.metaKey||event.isComposing||event.repeat)return;const target=event.target;if(target instanceof Element&&target.closest('button,input,textarea,select,[contenteditable],[role="button"]'))return;if(event.code==='Space'){event.preventDefault();play.click();}else if(event.code==='ArrowRight'){setPlaying(false);setFrame(frame+FPS);}else if(event.code==='ArrowLeft'){setPlaying(false);setFrame(frame-FPS);}});
+function applyTheme(next,persist){
+  theme=next==='light'?'light':'dark';
+  if(persist){try{globalThis.localStorage?.setItem(THEME_KEY,theme);}catch{}document.documentElement?.setAttribute('data-theme',theme);}
+  const toggle=$('themeToggle'),other=theme==='light'?'深色':'浅色';
+  toggle.setAttribute('aria-label',`切换到${other}模式`);toggle.lastElementChild&&(toggle.lastElementChild.textContent=theme==='light'?'浅色':'深色');
+  // The theme is a renderer input: rebuild it and redraw the same frame
+  // without disturbing the fractional playback position.
+  if(renderer){renderer=createCanvasRenderer(canvas,graph,currentLayout,{fps:FPS,detailAt:currentDetailAt,theme});setFrame(frame,false);}
+  else paintEmptyStage(emptyMessage);
+}
+$('themeToggle').addEventListener('click',()=>applyTheme(theme==='light'?'dark':'light',true));
+lightQuery?.addEventListener?.('change',event=>{if(!savedTheme())applyTheme(event.matches?'light':'dark',false);});
 // Headless frame export and independent frame inspection; no recording or animation state.
 window.renderAt=f=>{if(!renderer||!Number.isInteger(f)||f<0||f>=totalFrames)return false;setPlaying(false);setFrame(f);return true;};
 window.studioFrame=()=>currentFrameState?structuredClone(currentFrameState):null;
-clearStudio();await document.fonts.ready;markSource('exampleLiterature');await loadExample('../examples/honglou-provisional.relgraph.json','红楼梦 · 未经原著核实的技术演示');
+applyTheme(theme,false);clearStudio();await document.fonts.ready;markSource('exampleLiterature');await loadExample('../examples/honglou-provisional.relgraph.json','红楼梦 · 未经原著核实的技术演示');
