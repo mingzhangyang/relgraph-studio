@@ -54,25 +54,25 @@
     --line-strong: #d3c7b2;
     --text: #1d2733;
     --text-2: #3f4c57;
-    --muted: #6d7a84;
-    --gold: #a8722f;
-    --gold-strong: #8c5a1e;
-    --gold-soft: rgba(168, 114, 47, .12);
-    --gold-line: rgba(168, 114, 47, .45);
+    --muted: #5c6973;
+    --gold: #8a5a1f;
+    --gold-strong: #7a4e19;
+    --gold-soft: rgba(138, 90, 31, .1);
+    --gold-line: rgba(138, 90, 31, .42);
     --on-gold: #fffdf8;
-    --ok: #3f8a5a;
-    --warn: #9a6a12;
-    --error: #b8473d;
+    --ok: #36764d;
+    --warn: #865b0c;
+    --error: #a23b32;
     --shadow: 0 24px 50px -28px rgba(80, 60, 30, .35);
     --track: #ddd3c2;
     --topbar-bg: rgba(245, 241, 232, .88);
     --stage-frame: linear-gradient(180deg, #fffdf8, #f1ebdf);
     --stage-bg: #f8f4ec;
     --glow: rgba(214, 170, 112, .18);
-    --warn-soft: rgba(154, 106, 18, .12);
-    --warn-line: rgba(154, 106, 18, .45);
-    --error-soft: rgba(184, 71, 61, .1);
-    --error-line: rgba(184, 71, 61, .4);
+    --warn-soft: rgba(134, 91, 12, .1);
+    --warn-line: rgba(134, 91, 12, .45);
+    --error-soft: rgba(162, 59, 50, .08);
+    --error-line: rgba(162, 59, 50, .4);
   }
 }
 :root[data-theme="light"] {
@@ -86,25 +86,25 @@
   --line-strong: #d3c7b2;
   --text: #1d2733;
   --text-2: #3f4c57;
-  --muted: #6d7a84;
-  --gold: #a8722f;
-  --gold-strong: #8c5a1e;
-  --gold-soft: rgba(168, 114, 47, .12);
-  --gold-line: rgba(168, 114, 47, .45);
+  --muted: #5c6973;
+  --gold: #8a5a1f;
+  --gold-strong: #7a4e19;
+  --gold-soft: rgba(138, 90, 31, .1);
+  --gold-line: rgba(138, 90, 31, .42);
   --on-gold: #fffdf8;
-  --ok: #3f8a5a;
-  --warn: #9a6a12;
-  --error: #b8473d;
+  --ok: #36764d;
+  --warn: #865b0c;
+  --error: #a23b32;
   --shadow: 0 24px 50px -28px rgba(80, 60, 30, .35);
   --track: #ddd3c2;
   --topbar-bg: rgba(245, 241, 232, .88);
   --stage-frame: linear-gradient(180deg, #fffdf8, #f1ebdf);
   --stage-bg: #f8f4ec;
   --glow: rgba(214, 170, 112, .18);
-  --warn-soft: rgba(154, 106, 18, .12);
-  --warn-line: rgba(154, 106, 18, .45);
-  --error-soft: rgba(184, 71, 61, .1);
-  --error-line: rgba(184, 71, 61, .4);
+  --warn-soft: rgba(134, 91, 12, .1);
+  --warn-line: rgba(134, 91, 12, .45);
+  --error-soft: rgba(162, 59, 50, .08);
+  --error-line: rgba(162, 59, 50, .4);
 }
 :root[data-theme="dark"] { color-scheme: dark; }
 

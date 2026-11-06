@@ -29,7 +29,7 @@ export const VIDEO_THEMES=Object.freeze({
     nodeFill:'#fffdf8',labelHalo:'#f8f3ea',labelActive:'#1d2733',labelMuted:'#6d7c86',
     edgeLabelBox:'#fffaf0ee',edgeLabelText:'#7a5a33',
     card:'#fffbf4f5',cardStroke:'#c9a77c',cardTitle:'#8a5a22',cardText:'#3d4a54',
-    band:'rgba(251,248,241,.94)',bandRule:'rgba(160,120,70,.32)',kicker:'#a0672a',title:'#1f2a36',meta:'#6c7c86',
+    band:'rgba(251,248,241,.94)',bandRule:'rgba(160,120,70,.32)',kicker:'#a0672a',title:'#1f2a36',meta:'#5c6973',
     sceneLabel:'#a0672a',sceneTitle:'#1a2430',narration:'#4a5862',track:'rgba(60,70,80,.14)',progress:'#b9803f',
   }),
 });
@@ -76,12 +76,14 @@ function scaledDifference(value,center,scale){
   // Opposite but finite world coordinates can overflow on subtraction.
   return Number.isFinite(difference)?difference*scale:value*scale-center*scale;
 }
-function shotAttention(item,highlight,view) {
+export function shotAttention(item,highlight,view) {
   const ids=highlight.nodeIds,edges=highlight.edgeIds,group=highlight.groupId;
   const active=ids.length||edges.length||group;
   if(!active)return 1;
   if(item.source!==undefined) return edges.includes(item.id)||(group&&view.nodes.some(n=>n.id===item.source&&n.groupId===group)&&view.nodes.some(n=>n.id===item.target&&n.groupId===group))?1:.2;
-  return ids.includes(item.id)||item.groupId===group||view.edges.some(edge=>edges.includes(edge.id)&&(edge.source===item.id||edge.target===item.id))?1:.24;
+  // Only a highlighted group may match: ungrouped nodes (groupId null or
+  // undefined) must not equal an absent group and stay dimmed.
+  return ids.includes(item.id)||(group&&item.groupId===group)||view.edges.some(edge=>edges.includes(edge.id)&&(edge.source===item.id||edge.target===item.id))?1:.24;
 }
 function radius(node,scale) {return clamp((node.kind==='reaction'?13:node.importance>=5?16:node.importance>=3?13:11)*Math.sqrt(scale),8,19);}
 
