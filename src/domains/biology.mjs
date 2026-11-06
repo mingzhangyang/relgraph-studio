@@ -70,6 +70,8 @@ export function validateBiologyDocument(doc){
    const path='presentation['+i+']';
    if(!object(scene)||!finite(scene.durationSec)||scene.durationSec<=0)fail('DURATION',path+'.durationSec',scene?.id,'Invalid duration','Provide positive seconds.');
    if(!object(scene))return;
+   if(object(scene.camera)&&scene.camera.zoom!==undefined&&(!finite(scene.camera.zoom)||scene.camera.zoom<=0))
+    fail('CAMERA_ZOOM',path+'.camera.zoom',scene.id,'Camera zoom must be a positive finite number','Provide a finite positive number or omit zoom.');
    for(const [field,keys] of [['camera',['fitIds']],['highlight',['nodeIds','edgeIds']]]){
     const config=scene[field];
     if(config===undefined)continue;
