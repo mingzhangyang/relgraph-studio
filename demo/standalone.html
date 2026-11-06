@@ -7,6 +7,16 @@
 <title>故事之网 · 视频导演工作台</title>
 <style>:root{color-scheme:dark;--bg:#0b111b;--surface:#111a25;--border:#253341;--text:#ebede9;--muted:#91a2ad;--gold:#cda87b}*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:"Noto Sans CJK SC",system-ui,sans-serif;color:var(--text)}button,input{font:inherit}.topbar{height:81px;border-bottom:1px solid #1f2d39;padding:0 40px;display:flex;align-items:center;justify-content:space-between;background:#0c141f}.brand{display:flex;align-items:center;gap:13px}.brand-icon{font-size:35px;color:var(--gold);line-height:1}.brand b{display:block;font-size:20px;font-weight:600;letter-spacing:2px}.brand small{display:block;color:#748b9c;font-size:11px;letter-spacing:1px;margin-top:3px}.top-meta{display:flex;align-items:center;gap:18px;color:#6e8796;font:12px ui-monospace,monospace;letter-spacing:1px}.pill{border:1px solid #5e523f;color:#d8b68b;border-radius:100px;padding:6px 12px;font:13px system-ui}.layout{display:grid;grid-template-columns:minmax(500px,1fr) 310px;gap:28px;padding:32px 38px;max-width:1740px;margin:auto}.sectionline{display:flex;align-items:center;justify-content:space-between;margin:0 0 18px}.sectionline>div{display:flex;align-items:center;gap:12px}.sectionline b{font-size:17px;letter-spacing:.4px}.section-index{color:var(--gold);font:12px ui-monospace,monospace}.small{color:#728a99;font:12px ui-monospace,monospace}.state{color:#a2c7ae;font-size:12px}.stage-shell{padding:6px;background:#1e2a34;border:1px solid #354453;border-radius:12px;box-shadow:0 24px 65px rgba(0,0,0,.32)}#stage{display:block;width:100%;aspect-ratio:16/9;height:auto;border-radius:7px;background:#08121d}.transport{display:flex;align-items:center;gap:13px;margin-top:19px}.transport button{background:#172434;border:1px solid #314354;color:#e7e4dd;border-radius:8px;min-width:39px;height:39px;cursor:pointer;font-size:19px}.transport .play{background:#c9a47b;border-color:#c9a47b;color:#121820;font-size:17px}.transport button:hover{filter:brightness(1.18)}.time{font:13px ui-monospace,monospace;color:#c7d4d9;white-space:nowrap}#scrubber{min-width:50px;flex:1;accent-color:#cda87b;cursor:pointer}.fps{color:#788e9b;font:11px ui-monospace,monospace;white-space:nowrap}.meta-note{color:#81949e;font-size:12px;margin:15px 0}.meta-note span{color:var(--gold)}.rightbar{min-width:0}.shot-list{display:flex;flex-direction:column;gap:9px}.shot{padding:14px 15px;text-align:left;background:#121c29;border:1px solid #263545;border-radius:10px;color:#e8eceb;cursor:pointer;transition:background .12s,border-color .12s}.shot:hover{background:#1a2836}.shot.active{border-color:#ac885f;background:#231f1f;box-shadow:inset 3px 0 0 #d6ab76}.shot .top{display:flex;justify-content:space-between;margin-bottom:7px;color:#8d9dab;font-size:11px}.shot.active .top{color:#d9af7b}.shot .name{font-size:14px;font-weight:600}.shot .desc{color:#7e929f;font-size:11px;margin-top:4px}.info-card{padding:18px;background:#111b26;border:1px solid #253442;border-radius:10px;margin-top:17px}.info-card .card-title{color:#dbb887;font-weight:600;font-size:13px;margin-bottom:9px}.info-card .card-body{color:#9baab3;font-size:12px;line-height:1.95}.mini-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:16px}.mini-stats>div{border-top:1px solid #31404b;padding-top:12px}.mini-stats strong{display:block;font:24px Georgia,serif;color:#f1e5d7}.mini-stats small{font-size:11px;color:#7d91a0}.info-card.caution{background:#141a21}.caution .card-title{color:#b4bdc5}footer{color:#5a7385;text-align:center;font:11px ui-monospace,monospace;padding:3px 0 28px;letter-spacing:1.2px}footer span{color:#a5825c}@media(max-width:1100px){.layout{grid-template-columns:1fr;padding:24px 18px}.rightbar{display:block}.shot-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}.topbar{padding:0 20px}.top-meta>span:last-child{display:none}}@media(max-width:600px){.topbar{height:68px}.layout{padding:20px 10px}.small,.fps{display:none}.transport{gap:7px}.time{font-size:11px}.sectionline{padding:0 7px}.sectionline b{font-size:14px}.info-card{padding:14px}}
 </style>
+<style>
+.scene-description{margin-top:14px;padding:11px 15px;border-left:3px solid #cda87b;background:#121d29;color:#d0dade;font-size:13px;line-height:1.65}
+.accessible-transcript{margin:12px 0 2px;border:1px solid #314052;border-radius:9px;background:#111d2a;color:#c1cdd4;font-size:13px}
+.accessible-transcript summary{cursor:pointer;padding:11px 15px;color:#e5c79d;font-weight:600}
+.accessible-transcript summary:focus-visible{outline:2px solid #e5c79d;outline-offset:2px}
+.accessible-transcript-body{padding:0 15px 13px;max-height:380px;overflow:auto;line-height:1.7}
+.accessible-transcript-body h3{color:#e8dfd1;font-size:13px;margin:12px 0 4px}
+.accessible-transcript-body ul{margin:0;padding-left:22px}
+.accessible-transcript-body li{padding:2px 0}
+</style>
 </head>
 <body>
 <header class="topbar">
@@ -16,7 +26,7 @@
 <main class="layout">
   <section class="workspace" aria-label="视频预览区">
     <div class="sectionline"><div><span class="section-index">01</span><b>画面预览</b><span class="small">Canvas · 1280 × 720 · 24 FPS</span></div><span id="state" class="state">就绪</span></div>
-    <div class="stage-shell"><canvas id="stage" width="1280" height="720" role="img" aria-label="《红楼梦》人物关系展示视频预览"></canvas></div>
+    <div class="stage-shell"><canvas id="stage" width="1280" height="720" role="img" aria-label="《红楼梦》人物关系展示视频预览" aria-describedby="sceneDescription">画面文字说明与完整人物关系列表见下方。</canvas></div>
     <div class="transport">
       <button id="play" class="play" type="button" aria-label="播放或暂停">▶</button>
       <button id="restart" type="button" aria-label="回到开始">↺</button>
@@ -24,6 +34,11 @@
       <input id="scrubber" type="range" min="0" max="959" step="1" value="0" aria-label="分镜时间轴" />
       <span class="fps">24 FPS</span>
     </div>
+    <div class="scene-description" id="sceneDescription" role="status" aria-live="polite" aria-atomic="true">当前分镜正在加载。</div>
+    <details class="accessible-transcript" id="transcript">
+      <summary>阅读视频分镜、人物与关系的文字稿</summary>
+      <div class="accessible-transcript-body" id="accessibleGraphTranscript"></div>
+    </details>
     <div class="meta-note"><span>◦</span> 逐帧确定性渲染；可随时拖动时间轴检查任何画面。当前样片无配音、无音乐。</div>
   </section>
   <aside class="rightbar">
@@ -295,7 +310,8 @@ const time=document.getElementById('time');
 const play=document.getElementById('play');
 const shotList=document.getElementById('shotList');
 const state=document.getElementById('state');
-let frame=0,position=0,playing=false,lastTick=0,render=null,animationFrameId=null;
+const sceneDescription=document.getElementById('sceneDescription');
+let frame=0,position=0,playing=false,lastTick=0,render=null,animationFrameId=null,announcedSceneId=null;
 const mmss=(s)=>String(Math.floor(s/60)).padStart(2,'0')+':'+String(Math.floor(s%60)).padStart(2,'0');
 
 function setFrame(f){
@@ -306,10 +322,13 @@ function setFrame(f){
   scrub.value=String(frame);
   time.textContent=`${mmss(frame/FPS)} / ${mmss(TOTAL_FRAMES/FPS)}`;
   const shot=currentShot(frame/FPS);
+  if(shot.id!==announcedSceneId){
+    sceneDescription.textContent=`当前分镜：${shot.title}。${shot.subtitle}`;
+    announcedSceneId=shot.id;
+  }
   document.querySelectorAll('.shot').forEach(e=>e.classList.toggle('active',e.dataset.id===shot.id));
 }
 function setPlaying(next){
-  // Keep a single scheduled animation callback across pause/restart transitions.
   if(animationFrameId!==null){cancelAnimationFrame(animationFrameId);animationFrameId=null;}
   playing=Boolean(next);play.textContent=playing?'Ⅱ':'▶';play.setAttribute('aria-label',playing?'暂停':'播放');
   state.textContent=playing?'播放中':'就绪';
@@ -325,6 +344,20 @@ function tick(now){
   if(next>=TOTAL_FRAMES-1){setFrame(TOTAL_FRAMES-1);setPlaying(false);return;}
   setFrame(next);
   if(playing)animationFrameId=requestAnimationFrame(tick);
+}
+function makeAccessibleTranscript(data){
+  const container=document.getElementById('accessibleGraphTranscript');
+  container.replaceChildren();
+  const addList=(title,entries)=>{
+    const section=document.createElement('section');
+    const heading=document.createElement('h3');heading.textContent=title;
+    const list=document.createElement('ul');
+    for(const entry of entries){const item=document.createElement('li');item.textContent=entry;list.appendChild(item);}
+    section.append(heading,list);container.append(section);
+  };
+  addList('分镜字幕',SHOTS.map((shot,i)=>`分镜 ${i+1}，${mmss(shot.start)} 至 ${mmss(shot.end)}：${shot.title}。${shot.subtitle}`));
+  addList('人物与所属群体',data.people.map(person=>`${person.name}（${data.groupsById[person.group]?.name||'未分类'}）`));
+  addList('人物关系',data.relations.map(relation=>`${data.peopleById[relation.source]?.name||relation.source}与${data.peopleById[relation.target]?.name||relation.target}：${relation.label||'关联'}`));
 }
 function makeShotList(){
   shotList.innerHTML='';
@@ -344,7 +377,7 @@ async function boot(){
     const data=validateGraph(raw);render=createRenderer(canvas,data);
     document.getElementById('peopleCount').textContent=String(data.people.length);
     document.getElementById('relationsCount').textContent=String(data.relations.length);
-    makeShotList();setFrame(0);
+    makeAccessibleTranscript(data);makeShotList();setFrame(0);
     play.onclick=()=>{if(frame>=TOTAL_FRAMES-1)setFrame(0);setPlaying(!playing)};
     document.getElementById('restart').onclick=()=>{setPlaying(false);setFrame(0)};
     scrub.oninput=()=>{setPlaying(false);setFrame(Number(scrub.value))};
