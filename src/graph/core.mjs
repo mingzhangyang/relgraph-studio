@@ -1,5 +1,6 @@
 /** Renderer-neutral, deterministic graph contract. Domain facts remain in source documents. */
-const slug=/^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+// ':' is reserved for internal generated IDs; source-domain IDs must remain plain slugs.
+const slug=/^[a-z0-9]+(?:[-:][a-z0-9]+)*$/;
 const object=v=>v!==null&&typeof v==='object'&&!Array.isArray(v);
 const finite=v=>typeof v==='number'&&Number.isFinite(v);
 export function validateVisualGraph(graph){
@@ -30,9 +31,15 @@ export function validateVisualGraph(graph){
   if(!finite(s.durationSec)||s.durationSec<=0)fail('DURATION',path+'.durationSec',s.id,'Invalid duration','Use positive seconds.');
   if(s.transitionMs!==undefined&&(!finite(s.transitionMs)||s.transitionMs<0))fail('TRANSITION',path+'.transitionMs',s.id,'Invalid transition','Use nonnegative milliseconds.');
   if(s.domainAt!==undefined&&!finite(s.domainAt))fail('DOMAIN_TIME',path+'.domainAt',s.id,'Invalid domain time','Use finite domain time, separate from playback seconds.');
-  if(s.camera?.focusNodeId&&s.camera?.fitIds?.length)fail('CAMERA_CONFLICT',path+'.camera',s.id,'Conflicting camera targets','Choose focusNodeId or fitIds.');
+  if(s.camera!==undefined&&!object(s.camera))fail('SCENE_OBJECT_TYPE',path+'.camera',s.id,'camera must be an object','Provide camera object or omit it.');
+  if(s.highlight!==undefined&&!object(s.highlight))fail('SCENE_OBJECT_TYPE',path+'.highlight',s.id,'highlight must be an object','Provide highlight object or omit it.');
+  if(s.camera?.focusNodeId&&Array.isArray(s.camera.fitIds)&&s.camera.fitIds.length)fail('CAMERA_CONFLICT',path+'.camera',s.id,'Conflicting camera targets','Choose focusNodeId or fitIds.');
   for(const [v,set,field] of [[s.camera?.focusNodeId,ids.nodes,'camera.focusNodeId'],[s.openDetailNodeId,ids.nodes,'openDetailNodeId'],[s.highlight?.groupId,ids.groups,'highlight.groupId']])if(v&&!set.has(v))fail('SCENE_REF',path+'.'+field,s.id,'Unknown '+v,'Use an existing id.');
-  for(const [arr,set,field] of [[s.camera?.fitIds||[],ids.nodes,'camera.fitIds'],[s.highlight?.nodeIds||[],ids.nodes,'highlight.nodeIds'],[s.highlight?.edgeIds||[],ids.edges,'highlight.edgeIds']])arr.forEach((v,j)=>{if(!set.has(v))fail('SCENE_REF',path+'.'+field+'['+j+']',s.id,'Unknown '+v,'Use an existing id.');});
+  for(const [arr,set,field] of [[s.camera?.fitIds,ids.nodes,'camera.fitIds'],[s.highlight?.nodeIds,ids.nodes,'highlight.nodeIds'],[s.highlight?.edgeIds,ids.edges,'highlight.edgeIds']]){
+    if(arr===undefined)continue;
+    if(!Array.isArray(arr)){fail('SCENE_LIST_TYPE',path+'.'+field,s.id,field+' must be an array','Provide an array of valid IDs or omit it.');continue;}
+    arr.forEach((v,j)=>{if(!set.has(v))fail('SCENE_REF',path+'.'+field+'['+j+']',s.id,'Unknown '+v,'Use an existing id.');});
+  }
  });
  return {valid:errors.length===0,errors};
 }
@@ -60,7 +67,7 @@ export function frameStateAt(graph,frame,fps=24){
  const playback=sceneAtSecond(graph,frame/fps),view=projectVisualGraph(graph,playback.domainAt),s=playback.scene;
  if(!s)return {playback,view,overlay:null,highlight:{nodeIds:[],edgeIds:[],groupId:null},camera:{}};
  const ns=new Set(view.nodes.map(n=>n.id)),es=new Set(view.edges.map(e=>e.id)),gs=new Set(view.groups.map(g=>g.id));
- const only=(xs,set)=>(xs||[]).filter(id=>set.has(id)),camera=s.camera?{...s.camera}:{};
+ const only=(xs,set)=>(Array.isArray(xs)?xs:[]).filter(id=>set.has(id)),camera=s.camera&&object(s.camera)?{...s.camera}:{};
  if(camera.focusNodeId&&!ns.has(camera.focusNodeId))delete camera.focusNodeId;
  if(camera.fitIds)camera.fitIds=only(camera.fitIds,ns);
  return {playback,view,camera,highlight:{nodeIds:only(s.highlight?.nodeIds,ns),edgeIds:only(s.highlight?.edgeIds,es),groupId:gs.has(s.highlight?.groupId)?s.highlight.groupId:null},overlay:s.openDetailNodeId&&ns.has(s.openDetailNodeId)?{nodeId:s.openDetailNodeId}:null};
