@@ -1,9 +1,9 @@
-import test from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import biology from '../examples/biology-signaling-synthetic.json' with {type:'json'};
 import {loadDocument} from '../src/director/load.mjs';
-import {layoutGraph} from '../src/director/layout.mjs';
+import {layoutGraph} from '../src/director/layout.ts';
 import {directorFrameAt} from '../src/director/state.mjs';
 import {shotAttention} from '../src/render/canvas.mjs';
 

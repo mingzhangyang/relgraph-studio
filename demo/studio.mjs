@@ -1,5 +1,5 @@
 import {parseDocument} from '../src/director/load.mjs';
-import {layoutGraph} from '../src/director/layout.mjs';
+import {layoutGraph} from '../src/director/layout.ts';
 import {frameCount} from '../src/director/state.mjs';
 import {createCanvasRenderer} from '../src/render/canvas.mjs';
 
@@ -126,7 +126,7 @@ function applyResult(result,name){
 async function loadExample(path,name){
   const serial=++requestSerial;setPlaying(false);setStatus('正在加载…','loading');
   try{const response=await fetch(path);if(!response.ok)throw new Error(`HTTP ${response.status}`);const text=await response.text();if(serial===requestSerial)applyResult(parseDocument(text),name);}
-  catch(error){if(serial===requestSerial)applyResult({valid:false,errors:[{code:'LOAD',path:'$',message:`无法读取示例：${error.message}`,fix:'从仓库根目录运行本地服务器后重新打开工作台。'}],warnings:[]},name);}
+  catch(error){if(serial===requestSerial)applyResult({valid:false,errors:[{code:'LOAD',path:'$',message:`无法读取示例：${error.message}`,fix:'从仓库根目录运行 npm run dev 或 npm run preview 后重新打开工作台。'}],warnings:[]},name);}
 }
 const markSource=id=>{for(const button of ['exampleLiterature','exampleBiology'])$(button).setAttribute('aria-pressed',String(button===id));};
 $('exampleLiterature').addEventListener('click',()=>markSource('exampleLiterature')||loadExample('../examples/honglou-provisional.relgraph.json','红楼梦 · 未经原著核实的技术演示'));

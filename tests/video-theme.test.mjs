@@ -1,8 +1,8 @@
-import test from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import literature from '../examples/honglou-provisional.relgraph.json' with {type:'json'};
 import {loadDocument} from '../src/director/load.mjs';
-import {layoutGraph} from '../src/director/layout.mjs';
+import {layoutGraph} from '../src/director/layout.ts';
 import {createCanvasRenderer,VIDEO_THEMES,themeFor} from '../src/render/canvas.mjs';
 
 function recordingCanvas(){

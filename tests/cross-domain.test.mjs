@@ -1,4 +1,4 @@
-import test from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import {validateVisualGraph,projectVisualGraph,sceneAtSecond,frameStateAt} from '../src/graph/core.mjs';
 import {adaptLiteratureDocument,literaryDetailsAt} from '../src/domains/literature.mjs';

@@ -4,14 +4,14 @@
 
 ## Run the director workspace
 
-Use Node.js 22+ for tests and Python 3 for the local development server. There are no runtime packages, accounts, databases, or network requests other than the local server serving the project files.
+Use Node.js 20.19+ on the 20.x line, 22.13+ on the 22.x line, or 24+. Install the pinned development dependencies and start the local Vite server:
 
 ```bash
-# From the repository root
-python3 -m http.server 8000 --bind 127.0.0.1
+npm ci
+npm run dev
 ```
 
-Open **http://127.0.0.1:8000/demo/** in a desktop browser. The workspace loads the provisional literary example at startup; switch to the synthetic biology example, or select / drag-and-drop a local JSON file. The file is read locally in the browser. Native ES modules and example loading require HTTP, so opening `demo/index.html` using `file://` is not supported. The older [standalone prototype](demo/standalone.html) remains available as a historical, directly openable demo; it is not the integrated player.
+Open **http://127.0.0.1:5173/demo/** in a desktop browser. The workspace loads the provisional literary example at startup; switch to the synthetic biology example, or select / drag-and-drop a local JSON file. The file is read locally in the browser. Vite compiles the TypeScript modules, so the integrated workspace cannot be served directly by `python -m http.server` or opened using `file://`. To serve a production build locally, run `npm run build` followed by `npm run preview` and open the `/demo/` URL printed by Vite. The older [standalone prototype](demo/standalone.html) remains directly openable as a historical demo; it is not the integrated player. The workspace makes no network requests other than to its local server and does not require accounts or databases.
 
 - The workspace and the rendered film share a light (paper) or dark theme. It follows the operating system until you pick one with the theme button; the choice is remembered in this browser. `renderAt` draws with the current theme, and `createCanvasRenderer(..., {theme: 'light' | 'dark'})` takes it as an explicit input, so a frame stays deterministic per theme.
 - Play, pause, restart, drag the frame timeline, or select a shot. Space toggles playback outside focused controls; left/right arrows seek by one second.
@@ -24,9 +24,18 @@ Open **http://127.0.0.1:8000/demo/** in a desktop browser. The workspace loads t
 
 ```bash
 npm test
+npm run typecheck
+npm run check:types
+npm run lint
+npm run format:check
+npm run build
 ```
 
-The dependency-free Node suite covers adapters, source diagnostics, spoiler projections, reaction roles, camera interpolation, static layouts and deterministic Canvas drawing commands. The browser workspace additionally exposes `window.renderAt(frame)` for a validated integer frame in the loaded film and `window.studioFrame()` for its current safe state. The canvas is 1280 × 720 at 24 FPS; `renderAt` pauses playback and redraws independently of prior frames. Pixel identity is expected within the same browser, fonts, and rendering environment, not across different operating systems or font rasterizers. A packaged batch PNG/MP4 exporter is not yet included.
+The Vitest suite covers adapters, source diagnostics, spoiler projections, reaction roles, camera interpolation, static layouts and deterministic Canvas drawing commands. Strict TypeScript, ESLint and Prettier currently cover the migrated TypeScript and tooling; the remaining JavaScript modules will be migrated in later batches. The literary validator reads the JSON Schema directly; after editing the schema, run `npm run generate:types` and commit the regenerated types. `npm run check:types` detects a stale generated file.
+
+The development-only `minimatch` override temporarily selects the patched 11.x release for a glob denial-of-service advisory. It crosses the lint tools' declared 10.x dependency range; keep the lint checks when updating dependencies and remove the override when those tools support a patched version themselves.
+
+The browser workspace additionally exposes `window.renderAt(frame)` for a validated integer frame in the loaded film and `window.studioFrame()` for its current safe state. The canvas is 1280 × 720 at 24 FPS; `renderAt` pauses playback and redraws independently of prior frames. Pixel identity is expected within the same browser, fonts, and rendering environment, not across different operating systems or font rasterizers. A packaged batch PNG/MP4 exporter is not yet included.
 
 ## Source data and scope
 
