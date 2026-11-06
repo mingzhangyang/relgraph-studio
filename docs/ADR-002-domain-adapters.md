@@ -16,14 +16,14 @@ Literature and molecular biology share graph layout, camera, animation, visibili
 
 ## Non-goals of this increment
 
-- The offline legacy demo still uses embedded legacy fixture; it has NOT been reconnected to these adapters yet.
+- The original offline legacy demo retains its embedded fixture. The integrated HTTP-served workspace at `demo/index.html` now uses these adapters and one shared Canvas renderer.
 - No scientific assertions are made by the intentionally synthetic biology example.
 - No direct PSI-MI, SBGN, SBML or BioPAX import/export yet. Future adapters should use those standards rather than claim this draft replaces them.
 - No audio, 4K output, browser editing or interactive biological viewer.
 
-## Planned next step
+## B1 integration
 
-Update the player to load validated JSON through the adapters and share the same frame-state engine across literature and biology. Keep original documents for export and scientific provenance.
+The director workspace now loads either source through its validator and adapter, projects the same VisualGraph at a selected domain time, and renders frame-indexed camera, highlights and captions with one Canvas module. Literary detail summaries are retrieved through the spoiler-safe source accessor only for visible detail targets. The player does not make scientific claims or perform source verification. A packaged batch export pipeline remains future work.
 
 ## Internal generated identities (November 6 review)
 

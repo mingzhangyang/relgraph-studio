@@ -94,5 +94,15 @@ export function frameStateAt(graph,frame,fps=24){
  const only=(xs,set)=>(Array.isArray(xs)?xs:[]).filter(id=>set.has(id)),camera=s.camera&&object(s.camera)?{...s.camera}:{};
  if(camera.focusNodeId&&!ns.has(camera.focusNodeId))delete camera.focusNodeId;
  if(camera.fitIds)camera.fitIds=only(camera.fitIds,ns);
- return {playback,view,camera,highlight:{nodeIds:only(s.highlight?.nodeIds,ns),edgeIds:only(s.highlight?.edgeIds,es),groupId:gs.has(s.highlight?.groupId)?s.highlight.groupId:null},overlay:s.openDetailNodeId&&ns.has(s.openDetailNodeId)?{nodeId:s.openDetailNodeId}:null};
+ const highlight={nodeIds:only(s.highlight?.nodeIds,ns),edgeIds:only(s.highlight?.edgeIds,es),groupId:gs.has(s.highlight?.groupId)?s.highlight.groupId:null};
+ const overlay=s.openDetailNodeId&&ns.has(s.openDetailNodeId)?{nodeId:s.openDetailNodeId}:null;
+ const hiddenTarget=Boolean((s.camera?.focusNodeId&&!ns.has(s.camera.focusNodeId))||
+  (Array.isArray(s.camera?.fitIds)&&s.camera.fitIds.some(id=>!ns.has(id)))||
+  (Array.isArray(s.highlight?.nodeIds)&&s.highlight.nodeIds.some(id=>!ns.has(id)))||
+  (Array.isArray(s.highlight?.edgeIds)&&s.highlight.edgeIds.some(id=>!es.has(id)))||
+  (s.highlight?.groupId&&!gs.has(s.highlight.groupId))||(s.openDetailNodeId&&!ns.has(s.openDetailNodeId)));
+ // Do not return the original scene: its camera, highlights and detail target may
+ // refer to characters or reactions which are not visible at this domain time.
+ const scene={id:hiddenTarget?undefined:s.id,title:hiddenTarget?`分镜 ${playback.index+1}（目标尚不可见）`:s.title,narration:hiddenTarget?undefined:s.narration,durationSec:s.durationSec,transitionMs:s.transitionMs,domainAt:s.domainAt,camera,highlight,redacted:hiddenTarget,...(overlay?{openDetailNodeId:overlay.nodeId}:{})};
+ return {playback:{...playback,scene},view,camera,highlight,overlay};
 }

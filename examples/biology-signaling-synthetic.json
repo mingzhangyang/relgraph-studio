@@ -88,6 +88,12 @@
       "domainAt": 1,
       "camera": {
         "focusNodeId": "substrate-s"
+      },
+      "narration": "Fictional substrate and kinase before the reaction.",
+      "highlight": {
+        "nodeIds": [
+          "substrate-s"
+        ]
       }
     },
     {
@@ -97,6 +103,18 @@
       "domainAt": 2,
       "camera": {
         "focusNodeId": "bio:process:phosphorylation-test"
+      },
+      "narration": "The input is consumed and the kinase catalyzes the process.",
+      "highlight": {
+        "nodeIds": [
+          "substrate-s",
+          "kinase-k",
+          "bio:process:phosphorylation-test"
+        ],
+        "edgeIds": [
+          "bio:arc:input:phosphorylation-test:substrate-s",
+          "bio:arc:modifier:phosphorylation-test:kinase-k"
+        ]
       }
     },
     {
@@ -106,6 +124,16 @@
       "domainAt": 3,
       "camera": {
         "focusNodeId": "substrate-sp"
+      },
+      "narration": "The fictional modified product appears after the reaction.",
+      "highlight": {
+        "nodeIds": [
+          "substrate-sp",
+          "bio:process:phosphorylation-test"
+        ],
+        "edgeIds": [
+          "bio:arc:output:phosphorylation-test:substrate-sp"
+        ]
       }
     }
   ]

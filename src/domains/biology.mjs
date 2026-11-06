@@ -37,13 +37,20 @@ export function validateBiologyDocument(doc){
  doc.compartments.forEach((c,i)=>{
   if(!object(c)||typeof c.name!=='string'||!c.name.trim())
    fail('COMPARTMENT_NAME','compartments['+i+'].name',c?.id,'Compartment name is required','Provide a non-empty compartment name.');
+  if(object(c)&&c.color!==undefined&&(typeof c.color!=='string'||!/^#[0-9a-f]{6}$/i.test(c.color)))
+   fail('COLOR','compartments['+i+'].color',c.id,'Invalid color','Use a #RRGGBB color.');
  });
+ const visual=(o,path)=>{
+  if(o.position!==undefined&&(!object(o.position)||!finite(o.position.x)||!finite(o.position.y)))fail('POSITION',path+'.position',o.id,'Invalid position','Use finite coordinates.');
+  if(o.color!==undefined&&(typeof o.color!=='string'||!/^#[0-9a-f]{6}$/i.test(o.color)))fail('COLOR',path+'.color',o.id,'Invalid color','Use a #RRGGBB color.');
+  if(o.importance!==undefined&&(!finite(o.importance)||o.importance<1||o.importance>5))fail('IMPORTANCE',path+'.importance',o.id,'Invalid node importance','Use a number from 1 to 5.');
+ };
  doc.entities.forEach((e,i)=>{
   const path='entities['+i+']';if(!object(e)){fail('ENTITY',path,'','Expected object','Provide an entity.');return;}
   if(!entityKinds.has(e.kind))fail('ENTITY_KIND',path+'.kind',e.id,'Unsupported entity kind','Use protein, protein-state, complex, small-molecule or gene.');
   if(typeof e.name!=='string'||!e.name)fail('ENTITY_NAME',path+'.name',e.id,'Missing name','Provide a display name.');
   if(e.compartmentId&&!sets.compartments.has(e.compartmentId))fail('COMPARTMENT_REF',path+'.compartmentId',e.id,'Missing compartment','Use a defined compartment.');
-  if(e.position&&(!finite(e.position.x)||!finite(e.position.y)))fail('POSITION',path+'.position',e.id,'Invalid position','Use finite coordinates.');
+  visual(e,path);
   interval(e.visibleFrom,e.visibleTo,path+'.visibility',e.id);
  });
  doc.interactions.forEach((r,i)=>{
@@ -56,6 +63,7 @@ export function validateBiologyDocument(doc){
  doc.processes.forEach((p,i)=>{
   const path='processes['+i+']';if(!object(p)){fail('PROCESS',path,'','Expected object','Provide a process.');return;}
   if(!processKinds.has(p.kind))fail('PROCESS_KIND',path+'.kind',p.id,'Invalid process kind','Use a supported biochemical process.');
+  visual(p,path);
   if(!Array.isArray(p.reactants)||!p.reactants.length||!Array.isArray(p.products)||!p.products.length||(p.modifiers!==undefined&&!Array.isArray(p.modifiers)))fail('PARTICIPANTS',path,p.id,'Process needs reactants and products','Provide input/output participants and optional modifiers.');
   if(p.compartmentId&&!sets.compartments.has(p.compartmentId))fail('COMPARTMENT_REF',path+'.compartmentId',p.id,'Missing compartment','Use a defined compartment.');
   for(const [kind,parts] of [['reactants',p.reactants],['products',p.products],['modifiers',p.modifiers]]){
@@ -98,11 +106,11 @@ export function adaptBiologyDocument(doc){
  const edgeAlias=new Map();
  const nodeRef=id=>entityIds.has(id)?id:(processAlias.get(id)??id);
  const edgeRef=id=>interactionIds.has(id)?id:(edgeAlias.get(id)??id);
- const nodes=doc.entities.map(e=>({id:e.id,label:e.name,kind:e.kind,groupId:e.compartmentId,position:e.position?{...e.position}:undefined,visibility:windowFor(e)}));
+ const nodes=doc.entities.map(e=>({id:e.id,label:e.name,kind:e.kind,groupId:e.compartmentId,importance:e.importance,color:e.color,position:e.position?{...e.position}:undefined,visibility:windowFor(e)}));
  const edges=doc.interactions.map(r=>({id:r.id,source:r.source,target:r.target,kind:r.kind,label:r.label||r.kind,directed:r.kind!=='physical-association',visibility:windowFor(r)}));
  for(const p of doc.processes){
   const id='bio:process:'+p.id;
-  nodes.push({id,label:p.label||p.kind,kind:'reaction',groupId:p.compartmentId,visibility:windowFor(p)});
+  nodes.push({id,label:p.label||p.kind,kind:'reaction',groupId:p.compartmentId,importance:p.importance,color:p.color,position:p.position?{...p.position}:undefined,visibility:windowFor(p)});
   for(const part of p.reactants){const alias=p.id+'-input-'+part.entityId;const edgeId='bio:arc:input:'+p.id+':'+part.entityId;edgeAlias.set(alias,edgeAlias.has(alias)?null:edgeId);edges.push({id:edgeId,source:part.entityId,target:id,kind:'consumption',directed:true,label:part.stoichiometry===undefined?undefined:String(part.stoichiometry)});}
   for(const part of p.products){const alias=p.id+'-output-'+part.entityId;const edgeId='bio:arc:output:'+p.id+':'+part.entityId;edgeAlias.set(alias,edgeAlias.has(alias)?null:edgeId);edges.push({id:edgeId,source:id,target:part.entityId,kind:'production',directed:true,label:part.stoichiometry===undefined?undefined:String(part.stoichiometry)});}
   for(const part of p.modifiers||[]){const alias=p.id+'-modifier-'+part.entityId;const edgeId='bio:arc:modifier:'+p.id+':'+part.entityId;edgeAlias.set(alias,edgeAlias.has(alias)?null:edgeId);edges.push({id:edgeId,source:part.entityId,target:id,kind:part.role,directed:true});}
