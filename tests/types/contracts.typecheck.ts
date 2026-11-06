@@ -31,6 +31,8 @@ const cameraScale: number = directorFrameAt(graph, layoutGraph(graph), 0).camera
 void [diagnostics, safeSceneId, selectedGroup, cameraScale];
 // @ts-expect-error Frame indices are numeric, not strings.
 frameStateAt(graph, '0');
-// @ts-expect-error A redacted scene has no guaranteed identifier.
-const unsafeSceneId: string = frame.playback.scene?.id;
-void unsafeSceneId;
+if (frame.playback.scene !== null) {
+  // @ts-expect-error A redacted scene has no guaranteed identifier.
+  const unsafeSceneId: string = frame.playback.scene.id;
+  void unsafeSceneId;
+}
