@@ -1,26 +1,34 @@
 # RelGraph Studio · 关系叙事工作室
 
-**Video-first, data-driven relationship storytelling.**
+**Video-first, data-driven relationship storytelling.** Build repeatable, frame-accurate character relationship videos from open JSON data. Later, the same model can power an interactive viewer.
 
-将文学与历史作品中的人物关系，变成可探索、可逐帧编排的动态图谱与视频。项目优先验证高质量视频创作，再按实际需求扩展成交互式应用。
+## Current milestone (v0.1 draft)
 
-## 目前状态
+- **[Offline director demo](demo/standalone.html)** — open the HTML file directly in a browser to preview a 40-second / five-scene silent technical storyboard (Canvas 2D, 1280×720, 24 FPS).
+- **[JSON Schema](schema/relationship-graph.schema.json)** and **[TypeScript types](types/relationship-graph.ts)** — structural contract for `schemaVersion: "0.1"`.
+- **[Validator and chapter projection](src/relgraph.mjs)** — structural and semantic checks, spoiler-safe character/edge filtering, declarative scene timing.
+- **[Provisional Honglou data](examples/honglou-provisional.relgraph.json)** — 17 characters / 17 links / 5 scenes, migrated from the visual demo. **Not source-verified; do not treat as literary scholarship.**
 
-- 仓库：公开，早期原型阶段（**不是可发布的《红楼梦》考据产品**）。
-- 规范：`schemaVersion: "0.1"` 草案；人物 ID 稳定，多重关系、章节时点、声明式分镜。
-- 路线：关系数据与校验 → Canvas 分镜与视频 → 可靠作品数据 → 可复用模板 → 按需交互查看器。
-- 原型中的《红楼梦》关系仅用于**技术与视觉验证**，尚未逐条核对原著；不可将其直接作为权威关系资料传播。
+### Run tests
 
-## 原则
+```bash
+node --test tests/*.test.mjs
+```
 
-1. **事实正确优先于画面完整**：不编造关系、引用、登场章节或结局。
-2. **防剧透优先**：未来章节与结局性信息不可提前展示。
-3. **视频优先，声明式分镜**：任意视频帧都应能独立、确定性地渲染。
-4. **Local-first**：数据使用开放 JSON，无账号、无云端依赖。
-5. **原始布局不被自动算法覆盖**：指定 `position` 的坐标优先，用户布局可导出。
+Node.js 22+ recommended. No dependencies or network required for the core tests or offline demo.
 
-## 协作
+## Architecture and scope
 
-原型代码、Schema 和示例通过 PR 逐步进入 `main`。不将自动生成的大型视频文件或临时帧序列放进 Git 历史；GitHub Actions 不主动触发。项目许可证尚未选定；公开可见**不等于**已授权复制或商用。
+The offline HTML is an **existing visual proof of concept**; it currently embeds its legacy fixture rather than loading the v0.1 contract. The reusable validator/schema and v0.1 example are separate foundational artifacts. Integrating them into the renderer and video-export pipeline is the next development task, **not a completed claim**.
 
-> 设计文档优先于数据规范；数据规范仍为 v0.1 草案，达到 1.0 后再遵循正式版本兼容策略。
+The 40-second MP4 export has been tested locally, but rendered media and frame sequences are intentionally excluded from Git history. See [architecture](docs/ARCHITECTURE.md) and [roadmap](docs/ROADMAP.md).
+
+## Design principles
+
+1. Accuracy over completeness. Do not invent relations, quotation evidence, chapter timestamps or outcomes.
+2. Spoiler safety is first-class. Hide future characters, relations, ending information and future quotations at the selected chapter.
+3. Deterministic, declarative scenes. Source of truth is JSON, never an interaction recording.
+4. Preserve human-authored layout positions; offline/local-first input and export.
+5. The application goals lead; the draft schema may still evolve before 1.0.
+
+**License:** not selected yet. A public repository does not by itself grant an open-source or commercial-use license.

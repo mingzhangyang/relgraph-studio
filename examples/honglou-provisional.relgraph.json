@@ -1,0 +1,506 @@
+{
+  "schemaVersion": "0.1",
+  "meta": {
+    "title": "红楼梦人物关系 · 技术演示",
+    "work": "红楼梦",
+    "author": "曹雪芹（通行署名）",
+    "description": "本示例仅用于验证渲染与分镜，非经原著核实的正式人物关系数据库。",
+    "language": "zh-CN",
+    "theme": "noir",
+    "sourceNote": "由早期 17 人/17 边视觉原型转换；未核实关系类型、关系强度或登场章节；不得作为考据资料引用。"
+  },
+  "factions": [
+    {
+      "id": "jia",
+      "name": "贾府",
+      "color": "#d9a46d"
+    },
+    {
+      "id": "lin",
+      "name": "林家",
+      "color": "#72bbb4"
+    },
+    {
+      "id": "xue",
+      "name": "薛家",
+      "color": "#ce86a8"
+    },
+    {
+      "id": "shi",
+      "name": "史家",
+      "color": "#8d9bc7"
+    }
+  ],
+  "characters": [
+    {
+      "id": "jia-baoyu",
+      "name": "贾宝玉",
+      "factionId": "jia",
+      "importance": 5,
+      "bio": {
+        "summary": "贾宝玉：本条为待核实的技术演示小传。"
+      },
+      "position": {
+        "x": 574.2,
+        "y": 513.9
+      }
+    },
+    {
+      "id": "jia-mu",
+      "name": "贾母",
+      "factionId": "jia",
+      "importance": 3,
+      "bio": {
+        "summary": "贾母：本条为待核实的技术演示小传。"
+      },
+      "position": {
+        "x": 535.2,
+        "y": 312.5
+      }
+    },
+    {
+      "id": "jia-zheng",
+      "name": "贾政",
+      "factionId": "jia",
+      "importance": 2,
+      "bio": {
+        "summary": "贾政：本条为待核实的技术演示小传。"
+      },
+      "position": {
+        "x": 425.8,
+        "y": 402.8
+      }
+    },
+    {
+      "id": "wang-furen",
+      "name": "王夫人",
+      "factionId": "jia",
+      "importance": 2,
+      "bio": {
+        "summary": "王夫人：本条为待核实的技术演示小传。"
+      },
+      "position": {
+        "x": 722.7,
+        "y": 347.2
+      }
+    },
+    {
+      "id": "jia-lian",
+      "name": "贾琏",
+      "factionId": "jia",
+      "importance": 1,
+      "bio": {
+        "summary": "贾琏：本条为待核实的技术演示小传。"
+      },
+      "position": {
+        "x": 804.7,
+        "y": 631.9
+      }
+    },
+    {
+      "id": "wang-xifeng",
+      "name": "王熙凤",
+      "factionId": "jia",
+      "importance": 3,
+      "bio": {
+        "summary": "王熙凤：本条为待核实的技术演示小传。"
+      },
+      "position": {
+        "x": 867.2,
+        "y": 812.5
+      }
+    },
+    {
+      "id": "jia-tanchun",
+      "name": "贾探春",
+      "factionId": "jia",
+      "importance": 1,
+      "bio": {
+        "summary": "贾探春：本条为待核实的技术演示小传。"
+      },
+      "position": {
+        "x": 644.5,
+        "y": 805.6
+      }
+    },
+    {
+      "id": "jia-yuanchun",
+      "name": "贾元春",
+      "factionId": "jia",
+      "importance": 1,
+      "bio": {
+        "summary": "贾元春：本条为待核实的技术演示小传。"
+      },
+      "position": {
+        "x": 468.8,
+        "y": 784.7
+      }
+    },
+    {
+      "id": "jia-yingchun",
+      "name": "贾迎春",
+      "factionId": "jia",
+      "importance": 1,
+      "bio": {
+        "summary": "贾迎春：本条为待核实的技术演示小传。"
+      },
+      "position": {
+        "x": 406.3,
+        "y": 673.6
+      }
+    },
+    {
+      "id": "jia-xichun",
+      "name": "贾惜春",
+      "factionId": "jia",
+      "importance": 1,
+      "bio": {
+        "summary": "贾惜春：本条为待核实的技术演示小传。"
+      },
+      "position": {
+        "x": 773.4,
+        "y": 787.5
+      }
+    },
+    {
+      "id": "lin-daiyu",
+      "name": "林黛玉",
+      "factionId": "lin",
+      "importance": 5,
+      "bio": {
+        "summary": "林黛玉：本条为待核实的技术演示小传。"
+      },
+      "position": {
+        "x": 223.4,
+        "y": 536.1
+      }
+    },
+    {
+      "id": "lin-ruhai",
+      "name": "林如海",
+      "factionId": "lin",
+      "importance": 1,
+      "bio": {
+        "summary": "林如海：本条为待核实的技术演示小传。"
+      },
+      "position": {
+        "x": 105.5,
+        "y": 375
+      }
+    },
+    {
+      "id": "jia-min",
+      "name": "贾敏",
+      "factionId": "lin",
+      "importance": 1,
+      "bio": {
+        "summary": "贾敏：本条为待核实的技术演示小传。"
+      },
+      "position": {
+        "x": 153.1,
+        "y": 847.2
+      }
+    },
+    {
+      "id": "xue-baochai",
+      "name": "薛宝钗",
+      "factionId": "xue",
+      "importance": 5,
+      "bio": {
+        "summary": "薛宝钗：本条为待核实的技术演示小传。"
+      },
+      "position": {
+        "x": 898.4,
+        "y": 505.6
+      }
+    },
+    {
+      "id": "xue-yima",
+      "name": "薛姨妈",
+      "factionId": "xue",
+      "importance": 1,
+      "bio": {
+        "summary": "薛姨妈：本条为待核实的技术演示小传。"
+      },
+      "position": {
+        "x": 906.3,
+        "y": 284.7
+      }
+    },
+    {
+      "id": "xue-pan",
+      "name": "薛蟠",
+      "factionId": "xue",
+      "importance": 1,
+      "bio": {
+        "summary": "薛蟠：本条为待核实的技术演示小传。"
+      },
+      "position": {
+        "x": 937.5,
+        "y": 770.8
+      }
+    },
+    {
+      "id": "shi-xiangyun",
+      "name": "史湘云",
+      "factionId": "shi",
+      "importance": 2,
+      "bio": {
+        "summary": "史湘云：本条为待核实的技术演示小传。"
+      },
+      "position": {
+        "x": 267.2,
+        "y": 341.7
+      }
+    }
+  ],
+  "relations": [
+    {
+      "id": "r01",
+      "source": "jia-baoyu",
+      "target": "jia-mu",
+      "type": "other",
+      "label": "祖孙",
+      "strength": 2,
+      "description": "未经逐条原著核实，仅供技术与画面演示。"
+    },
+    {
+      "id": "r02",
+      "source": "jia-baoyu",
+      "target": "jia-zheng",
+      "type": "other",
+      "label": "父子",
+      "strength": 2,
+      "description": "未经逐条原著核实，仅供技术与画面演示。"
+    },
+    {
+      "id": "r03",
+      "source": "jia-baoyu",
+      "target": "wang-furen",
+      "type": "other",
+      "label": "母子",
+      "strength": 2,
+      "description": "未经逐条原著核实，仅供技术与画面演示。"
+    },
+    {
+      "id": "r04",
+      "source": "jia-baoyu",
+      "target": "lin-daiyu",
+      "type": "other",
+      "label": "表亲",
+      "strength": 2,
+      "description": "未经逐条原著核实，仅供技术与画面演示。"
+    },
+    {
+      "id": "r05",
+      "source": "jia-baoyu",
+      "target": "xue-baochai",
+      "type": "other",
+      "label": "表亲",
+      "strength": 2,
+      "description": "未经逐条原著核实，仅供技术与画面演示。"
+    },
+    {
+      "id": "r06",
+      "source": "jia-mu",
+      "target": "jia-min",
+      "type": "other",
+      "label": "母女",
+      "strength": 2,
+      "description": "未经逐条原著核实，仅供技术与画面演示。"
+    },
+    {
+      "id": "r07",
+      "source": "jia-min",
+      "target": "lin-daiyu",
+      "type": "other",
+      "label": "母女",
+      "strength": 2,
+      "description": "未经逐条原著核实，仅供技术与画面演示。"
+    },
+    {
+      "id": "r08",
+      "source": "lin-ruhai",
+      "target": "lin-daiyu",
+      "type": "other",
+      "label": "父女",
+      "strength": 2,
+      "description": "未经逐条原著核实，仅供技术与画面演示。"
+    },
+    {
+      "id": "r09",
+      "source": "xue-yima",
+      "target": "xue-baochai",
+      "type": "other",
+      "label": "母女",
+      "strength": 2,
+      "description": "未经逐条原著核实，仅供技术与画面演示。"
+    },
+    {
+      "id": "r10",
+      "source": "xue-baochai",
+      "target": "xue-pan",
+      "type": "other",
+      "label": "兄妹",
+      "strength": 2,
+      "description": "未经逐条原著核实，仅供技术与画面演示。"
+    },
+    {
+      "id": "r11",
+      "source": "wang-furen",
+      "target": "xue-yima",
+      "type": "other",
+      "label": "姐妹",
+      "strength": 2,
+      "description": "未经逐条原著核实，仅供技术与画面演示。"
+    },
+    {
+      "id": "r12",
+      "source": "jia-lian",
+      "target": "wang-xifeng",
+      "type": "other",
+      "label": "夫妻",
+      "strength": 2,
+      "description": "未经逐条原著核实，仅供技术与画面演示。"
+    },
+    {
+      "id": "r13",
+      "source": "jia-zheng",
+      "target": "jia-yuanchun",
+      "type": "other",
+      "label": "父女",
+      "strength": 2,
+      "description": "未经逐条原著核实，仅供技术与画面演示。"
+    },
+    {
+      "id": "r14",
+      "source": "jia-baoyu",
+      "target": "jia-tanchun",
+      "type": "other",
+      "label": "兄妹",
+      "strength": 2,
+      "description": "未经逐条原著核实，仅供技术与画面演示。"
+    },
+    {
+      "id": "r15",
+      "source": "jia-baoyu",
+      "target": "jia-yingchun",
+      "type": "other",
+      "label": "堂亲",
+      "strength": 2,
+      "description": "未经逐条原著核实，仅供技术与画面演示。"
+    },
+    {
+      "id": "r16",
+      "source": "jia-baoyu",
+      "target": "jia-xichun",
+      "type": "other",
+      "label": "族亲",
+      "strength": 2,
+      "description": "未经逐条原著核实，仅供技术与画面演示。"
+    },
+    {
+      "id": "r17",
+      "source": "jia-lian",
+      "target": "jia-yingchun",
+      "type": "other",
+      "label": "兄妹",
+      "strength": 2,
+      "description": "未经逐条原著核实，仅供技术与画面演示。"
+    }
+  ],
+  "presentation": [
+    {
+      "id": "opening",
+      "title": "一座大观园，千丝万缕",
+      "durationSec": 7,
+      "narration": "人物如星，关系如线。先看全局，再走进每个人的故事。"
+    },
+    {
+      "id": "baoyu",
+      "title": "故事，从贾宝玉展开",
+      "durationSec": 8,
+      "narration": "选定中心人物，亲缘关系从繁复图谱里逐渐显现。",
+      "camera": {
+        "focusNodeId": "jia-baoyu",
+        "zoom": 1.26
+      },
+      "highlight": {
+        "characterIds": [
+          "jia-baoyu",
+          "jia-mu",
+          "jia-zheng",
+          "wang-furen"
+        ],
+        "relationIds": [
+          "r01",
+          "r02",
+          "r03"
+        ]
+      }
+    },
+    {
+      "id": "triangle",
+      "title": "三个人，两条亲缘",
+      "durationSec": 9,
+      "narration": "宝玉、黛玉、宝钗。镜头只呈现此刻重要的关系。",
+      "camera": {
+        "fitIds": [
+          "jia-baoyu",
+          "lin-daiyu",
+          "xue-baochai"
+        ]
+      },
+      "highlight": {
+        "characterIds": [
+          "jia-baoyu",
+          "lin-daiyu",
+          "xue-baochai"
+        ],
+        "relationIds": [
+          "r04",
+          "r05"
+        ]
+      }
+    },
+    {
+      "id": "roots",
+      "title": "沿着关系，找到来处",
+      "durationSec": 8,
+      "narration": "从人物追到家族，一条条关系串起人物群像。",
+      "camera": {
+        "fitIds": [
+          "lin-daiyu",
+          "jia-min",
+          "jia-mu",
+          "xue-baochai"
+        ]
+      },
+      "highlight": {
+        "characterIds": [
+          "lin-daiyu",
+          "jia-min",
+          "jia-mu",
+          "jia-baoyu",
+          "wang-furen",
+          "xue-yima",
+          "xue-baochai"
+        ],
+        "relationIds": [
+          "r04",
+          "r05",
+          "r06",
+          "r07",
+          "r11",
+          "r09"
+        ]
+      }
+    },
+    {
+      "id": "ending",
+      "title": "看见关系，也看见故事",
+      "durationSec": 8,
+      "narration": "让复杂的关系图，变成有节奏、有重点、能讲述的影像。"
+    }
+  ]
+}
