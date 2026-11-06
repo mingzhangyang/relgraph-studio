@@ -24,3 +24,9 @@ Literature and molecular biology share graph layout, camera, animation, visibili
 ## Planned next step
 
 Update the player to load validated JSON through the adapters and share the same frame-state engine across literature and biology. Keep original documents for export and scientific provenance.
+
+## Internal generated identities (November 6 review)
+
+Source biological identifiers are lowercase hyphenated slugs; internally generated reaction nodes use `bio:process:<process-id>` and participant arcs use `bio:arc:<role>:<process-id>:<entity-id>`. Colons are forbidden in source IDs, and the role/process/entity components cannot contain colons, so generated IDs cannot collide with source IDs or with each other. The adapter understands unambiguous older `process-<id>` camera aliases, but a real entity with that id takes precedence; use the namespaced ID to explicitly select the reaction. The synthetic example now uses the namespaced target.
+
+All optional scene camera/highlight collections are checked for array types before iteration. Invalid structures receive diagnostic paths and repair hints instead of unhandled exceptions.

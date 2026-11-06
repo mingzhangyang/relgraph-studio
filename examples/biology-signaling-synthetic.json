@@ -96,7 +96,7 @@
       "durationSec": 5,
       "domainAt": 2,
       "camera": {
-        "focusNodeId": "process-phosphorylation-test"
+        "focusNodeId": "bio:process:phosphorylation-test"
       }
     },
     {
