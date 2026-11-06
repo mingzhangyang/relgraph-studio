@@ -33,7 +33,9 @@ export const VIDEO_THEMES=Object.freeze({
     sceneLabel:'#a0672a',sceneTitle:'#1a2430',narration:'#4a5862',track:'rgba(60,70,80,.14)',progress:'#b9803f',
   }),
 });
-export const themeFor=name=>VIDEO_THEMES[name]||VIDEO_THEMES.dark;
+// Own-property check: names such as 'constructor' or '__proto__' must not
+// resolve to Object.prototype members instead of falling back to dark.
+export const themeFor=name=>typeof name==='string'&&Object.hasOwn(VIDEO_THEMES,name)?VIDEO_THEMES[name]:VIDEO_THEMES.dark;
 const edgeNames={consumption:'输入',production:'产物',catalyst:'催化',activator:'促进',inhibitor:'抑制','physical-association':'物理结合','activity-influence':'功能调控',activation:'激活',inhibition:'抑制'};
 
 function background(ctx,P) {

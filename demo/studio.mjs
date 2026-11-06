@@ -12,7 +12,9 @@ let currentFrameState=null,currentDetailAt=()=>undefined,currentLayout=null,empt
 const THEME_KEY='relgraph-theme',lightQuery=globalThis.matchMedia?.('(prefers-color-scheme: light)');
 const EMPTY_STAGE={dark:{bg:'#101b2a',kicker:'#cfae84',text:'#c4d0d1'},light:{bg:'#f6f1e8',kicker:'#a0672a',text:'#3f4c57'}};
 function savedTheme(){try{const value=globalThis.localStorage?.getItem(THEME_KEY);return value==='light'||value==='dark'?value:null;}catch{return null;}}
-let theme=savedTheme()||(lightQuery?.matches?'light':'dark');
+// The in-memory pin decides whether OS changes are followed, so a choice
+// still sticks for this page when storage is unavailable or setItem fails.
+let pinnedTheme=savedTheme(),theme=pinnedTheme||(lightQuery?.matches?'light':'dark');
 const setStatus=(text,state)=>{$('status').textContent=text;$('status').setAttribute('data-state',state);};
 const stamp=seconds=>{const t=Math.max(0,seconds),minutes=Math.floor(t/60),s=(t%60).toFixed(2).padStart(5,'0');return `${String(minutes).padStart(2,'0')}:${s}`;};
 function setPlaying(next){
@@ -145,7 +147,7 @@ scrubber.addEventListener('input',()=>{setPlaying(false);setFrame(Number(scrubbe
 window.addEventListener('keydown',event=>{if(event.altKey||event.ctrlKey||event.metaKey||event.isComposing||event.repeat)return;const target=event.target;if(target instanceof Element&&target.closest('button,input,textarea,select,summary,[contenteditable],[role="button"]'))return;if(event.code==='Space'){event.preventDefault();play.click();}else if(event.code==='ArrowRight'){setPlaying(false);setFrame(frame+FPS);}else if(event.code==='ArrowLeft'){setPlaying(false);setFrame(frame-FPS);}});
 function applyTheme(next,persist){
   theme=next==='light'?'light':'dark';
-  if(persist){try{globalThis.localStorage?.setItem(THEME_KEY,theme);}catch{}document.documentElement?.setAttribute('data-theme',theme);}
+  if(persist){pinnedTheme=theme;try{globalThis.localStorage?.setItem(THEME_KEY,theme);}catch{}document.documentElement?.setAttribute('data-theme',theme);}
   const toggle=$('themeToggle'),other=theme==='light'?'深色':'浅色';
   toggle.setAttribute('aria-label',`切换到${other}模式`);toggle.lastElementChild&&(toggle.lastElementChild.textContent=theme==='light'?'浅色':'深色');
   // The theme is a renderer input: rebuild it and redraw the same frame
@@ -154,7 +156,7 @@ function applyTheme(next,persist){
   else paintEmptyStage(emptyMessage);
 }
 $('themeToggle').addEventListener('click',()=>applyTheme(theme==='light'?'dark':'light',true));
-lightQuery?.addEventListener?.('change',event=>{if(!savedTheme())applyTheme(event.matches?'light':'dark',false);});
+lightQuery?.addEventListener?.('change',event=>{if(!pinnedTheme)applyTheme(event.matches?'light':'dark',false);});
 // Headless frame export and independent frame inspection; no recording or animation state.
 window.renderAt=f=>{if(!renderer||!Number.isInteger(f)||f<0||f>=totalFrames)return false;setPlaying(false);setFrame(f);return true;};
 window.studioFrame=()=>currentFrameState?structuredClone(currentFrameState):null;
