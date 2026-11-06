@@ -20,6 +20,14 @@
 - [ ] Packaged offline frame-sequence / MP4 export and production-quality typography QA
 - [ ] Full label placement for dense or coincident graphs; additional viewport and font coverage
 
+## B1.5 — Foundations (proposed, see [ADR 003](ADR-003-render-pipeline-and-foundations.md))
+
+- [ ] TypeScript, Vite, Vitest and Prettier; one JSON Schema source for types and validation
+- [ ] `FrameSpec` safe areas instead of 1280×720 literals; display-list composition with a Canvas backend
+- [ ] Domain style sheets and a locale table instead of edge kinds and captions in the renderer
+- [ ] Headless `relgraph render` CLI (skia-canvas + FFmpeg) with vendored fonts and golden frames
+- [ ] Track/keyframe timeline compiled from `presentation`, with default reveal animations
+
 ## B2 — Source-verified film
 
 - [ ] Curate an auditable literary dataset; verify character debuts, relationships and evidence
