@@ -41,6 +41,11 @@ function wrapText(ctx,text,maxWidth,maxLines=2) {
   return lines;
 }
 function intersects(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;}
+function scaledDifference(value,center,scale){
+  const difference=value-center;
+  // Opposite but finite world coordinates can overflow on subtraction.
+  return Number.isFinite(difference)?difference*scale:value*scale-center*scale;
+}
 function shotAttention(item,highlight,view) {
   const ids=highlight.nodeIds,edges=highlight.edgeIds,group=highlight.groupId;
   const active=ids.length||edges.length||group;
@@ -57,7 +62,7 @@ export function createCanvasRenderer(canvas,graph,positions,{fps=24,detailAt=()=
   function renderFrame(frame) {
     const state=directorFrameAt(graph,positions,frame,fps);
     const {view,playback,cameraResolved:cam,highlight,previousHighlight,transition}=state;
-    const point=node=>{const p=positions.get(node.id);return {x:640+(p.x-cam.x)*cam.scale,y:330+(p.y-cam.y)*cam.scale};};
+    const point=node=>{const p=positions.get(node.id);return {x:640+scaledDifference(p.x,cam.x,cam.scale),y:330+scaledDifference(p.y,cam.y,cam.scale)};};
     const points=new Map(view.nodes.map(n=>[n.id,point(n)]));
     const groups=new Map(view.groups.map(g=>[g.id,g]));
     const attention=item=>mix(shotAttention(item,previousHighlight,view),shotAttention(item,highlight,view),transition);
