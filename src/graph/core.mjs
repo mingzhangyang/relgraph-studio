@@ -6,6 +6,8 @@ const finite=v=>typeof v==='number'&&Number.isFinite(v);
 export function validateVisualGraph(graph){
  const errors=[],fail=(code,path,id,message,fix)=>errors.push({level:'error',layer:'graph',code,path,id:id||'',message,fix});
  if(!object(graph)||!object(graph.meta)||!['nodes','edges','groups','scenes'].every(k=>Array.isArray(graph[k]))){fail('STRUCTURE','$','','Expected meta, nodes, edges, groups and scenes','Pass data through a domain adapter.');return {valid:false,errors};}
+ if(typeof graph.domain!=='string'||!graph.domain.trim())fail('GRAPH_DOMAIN','domain','','Graph domain must be a non-empty string','Provide a domain such as literature or biology.');
+ if(typeof graph.meta.title!=='string'||!graph.meta.title.trim())fail('GRAPH_TITLE','meta.title','','Graph title must be a non-empty string','Provide a descriptive graph title.');
  const ids={};
  for(const kind of ['nodes','edges','groups','scenes']){
   ids[kind]=new Set();
@@ -32,6 +34,7 @@ export function validateVisualGraph(graph){
   if(s.transitionMs!==undefined&&(!finite(s.transitionMs)||s.transitionMs<0))fail('TRANSITION',path+'.transitionMs',s.id,'Invalid transition','Use nonnegative milliseconds.');
   if(s.domainAt!==undefined&&!finite(s.domainAt))fail('DOMAIN_TIME',path+'.domainAt',s.id,'Invalid domain time','Use finite domain time, separate from playback seconds.');
   if(s.camera!==undefined&&!object(s.camera))fail('SCENE_OBJECT_TYPE',path+'.camera',s.id,'camera must be an object','Provide camera object or omit it.');
+   if(s.camera?.zoom!==undefined&&(!finite(s.camera.zoom)||s.camera.zoom<=0))fail('CAMERA_ZOOM',path+'.camera.zoom',s.id,'Camera zoom must be a positive finite number','Provide a finite positive number or omit zoom.');
   if(s.highlight!==undefined&&!object(s.highlight))fail('SCENE_OBJECT_TYPE',path+'.highlight',s.id,'highlight must be an object','Provide highlight object or omit it.');
   if(s.camera?.focusNodeId&&Array.isArray(s.camera.fitIds)&&s.camera.fitIds.length)fail('CAMERA_CONFLICT',path+'.camera',s.id,'Conflicting camera targets','Choose focusNodeId or fitIds.');
   for(const [v,set,field] of [[s.camera?.focusNodeId,ids.nodes,'camera.focusNodeId'],[s.openDetailNodeId,ids.nodes,'openDetailNodeId'],[s.highlight?.groupId,ids.groups,'highlight.groupId']])if(v&&!set.has(v))fail('SCENE_REF',path+'.'+field,s.id,'Unknown '+v,'Use an existing id.');
@@ -58,7 +61,12 @@ export function sceneAtSecond(graph,second){
  const time=Math.max(0,Math.min(finite(second)?second:0,totalSec));
  let start=0,domainAt=null;
  for(let i=0;i<scenes.length;i++){const s=scenes[i];if(s.domainAt!==undefined)domainAt=s.domainAt;const end=start+s.durationSec;
-  if(time<end||i===scenes.length-1)return {scene:s,index:i,elapsedSec:time-start,progress:Math.max(0,Math.min(1,(time-start)/s.durationSec)),domainAt,totalSec,startSec:start};
+  // Decimal arithmetic can represent the 0.3s boundary as 0.30000000000000004.
+   const tolerance=8*Number.EPSILON*Math.max(1,Math.abs(time),Math.abs(end));
+   if(time<end-tolerance||i===scenes.length-1){
+    const elapsedSec=Math.max(0,Math.min(s.durationSec,time-start));
+    return {scene:s,index:i,elapsedSec,progress:Math.max(0,Math.min(1,elapsedSec/s.durationSec)),domainAt,totalSec,startSec:start};
+   }
   start=end;
  }
 }

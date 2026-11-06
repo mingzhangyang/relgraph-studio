@@ -295,7 +295,7 @@ const time=document.getElementById('time');
 const play=document.getElementById('play');
 const shotList=document.getElementById('shotList');
 const state=document.getElementById('state');
-let frame=0,position=0,playing=false,lastTick=0,render=null;
+let frame=0,position=0,playing=false,lastTick=0,render=null,animationFrameId=null;
 const mmss=(s)=>String(Math.floor(s/60)).padStart(2,'0')+':'+String(Math.floor(s%60)).padStart(2,'0');
 
 function setFrame(f){
@@ -309,18 +309,22 @@ function setFrame(f){
   document.querySelectorAll('.shot').forEach(e=>e.classList.toggle('active',e.dataset.id===shot.id));
 }
 function setPlaying(next){
-  playing=next;play.textContent=playing?'Ⅱ':'▶';play.setAttribute('aria-label',playing?'暂停':'播放');
+  // Keep a single scheduled animation callback across pause/restart transitions.
+  if(animationFrameId!==null){cancelAnimationFrame(animationFrameId);animationFrameId=null;}
+  playing=Boolean(next);play.textContent=playing?'Ⅱ':'▶';play.setAttribute('aria-label',playing?'暂停':'播放');
   state.textContent=playing?'播放中':'就绪';
   lastTick=0;
-  if(playing)requestAnimationFrame(tick);
+  if(playing)animationFrameId=requestAnimationFrame(tick);
 }
 function tick(now){
+  animationFrameId=null;
   if(!playing)return;
   if(!lastTick)lastTick=now;
   const elapsed=Math.min(.15,(now-lastTick)/1000);lastTick=now;
   const next=position+elapsed*FPS;
   if(next>=TOTAL_FRAMES-1){setFrame(TOTAL_FRAMES-1);setPlaying(false);return;}
-  setFrame(next);requestAnimationFrame(tick);
+  setFrame(next);
+  if(playing)animationFrameId=requestAnimationFrame(tick);
 }
 function makeShotList(){
   shotList.innerHTML='';
