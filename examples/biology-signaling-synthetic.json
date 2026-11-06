@@ -1,0 +1,112 @@
+{
+  "format": "relgraph.bio/0.1-draft",
+  "meta": {
+    "title": "Synthetic phosphorylation demo",
+    "description": "Fictional molecules, not experimentally verified.",
+    "sourceNote": "Fully synthetic technical demonstration; no scientific claim."
+  },
+  "timeline": {
+    "unit": "stage",
+    "total": 3
+  },
+  "compartments": [
+    {
+      "id": "cytoplasm",
+      "name": "Cytoplasm",
+      "color": "#56a6bb"
+    }
+  ],
+  "entities": [
+    {
+      "id": "kinase-k",
+      "name": "Kinase K (fictional)",
+      "kind": "protein",
+      "compartmentId": "cytoplasm",
+      "position": {
+        "x": 180,
+        "y": 400
+      }
+    },
+    {
+      "id": "substrate-s",
+      "name": "Substrate S",
+      "kind": "protein-state",
+      "compartmentId": "cytoplasm",
+      "position": {
+        "x": 400,
+        "y": 300
+      },
+      "visibleTo": 2
+    },
+    {
+      "id": "substrate-sp",
+      "name": "Substrate S-P",
+      "kind": "protein-state",
+      "compartmentId": "cytoplasm",
+      "position": {
+        "x": 700,
+        "y": 300
+      },
+      "visibleFrom": 3
+    }
+  ],
+  "interactions": [],
+  "processes": [
+    {
+      "id": "phosphorylation-test",
+      "kind": "phosphorylation",
+      "label": "phosphorylation",
+      "compartmentId": "cytoplasm",
+      "reactants": [
+        {
+          "entityId": "substrate-s",
+          "stoichiometry": 1
+        }
+      ],
+      "products": [
+        {
+          "entityId": "substrate-sp",
+          "stoichiometry": 1
+        }
+      ],
+      "modifiers": [
+        {
+          "entityId": "kinase-k",
+          "role": "catalyst"
+        }
+      ],
+      "evidenceStatus": "illustrative",
+      "visibleFrom": 2,
+      "visibleTo": 3
+    }
+  ],
+  "presentation": [
+    {
+      "id": "intro",
+      "title": "Before modification",
+      "durationSec": 4,
+      "domainAt": 1,
+      "camera": {
+        "focusNodeId": "substrate-s"
+      }
+    },
+    {
+      "id": "reaction",
+      "title": "Enzymatic process",
+      "durationSec": 5,
+      "domainAt": 2,
+      "camera": {
+        "focusNodeId": "process-phosphorylation-test"
+      }
+    },
+    {
+      "id": "product",
+      "title": "Modified state",
+      "durationSec": 4,
+      "domainAt": 3,
+      "camera": {
+        "focusNodeId": "substrate-sp"
+      }
+    }
+  ]
+}
