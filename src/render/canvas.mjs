@@ -1,4 +1,4 @@
-import {directorFrameAt} from '../director/state.mjs';
+import {directorFrameAt} from '../director/state.ts';
 
 export const VIDEO_WIDTH=1280, VIDEO_HEIGHT=720;
 const sans='"Noto Sans CJK SC", "PingFang SC", system-ui, sans-serif';

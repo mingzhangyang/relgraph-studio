@@ -1,5 +1,5 @@
 /** Experimental biological domain adapter, NOT PSI-MI / SBML / SBGN-ML compliant. */
-import {validateVisualGraph} from '../graph/core.mjs';
+import {validateVisualGraph} from '../graph/core.ts';
 const slug=/^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const object=v=>v!==null&&typeof v==='object'&&!Array.isArray(v);
 const finite=v=>typeof v==='number'&&Number.isFinite(v);

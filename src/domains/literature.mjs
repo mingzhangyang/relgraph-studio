@@ -1,6 +1,6 @@
 /** Adapter for the literary relgraph 0.1 draft. */
 import {validateRelGraph,visibleStory} from '../relgraph.mjs';
-import {validateVisualGraph} from '../graph/core.mjs';
+import {validateVisualGraph} from '../graph/core.ts';
 const defaults={family:'positive',marriage:'positive',romance:'positive',friendship:'positive',alliance:'neutral',rivalry:'negative',mentorship:'positive',service:'neutral',other:'neutral'};
 export function adaptLiteratureDocument(doc){
  const diagnostics=validateRelGraph(doc);

@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import biology from '../examples/biology-signaling-synthetic.json' with {type:'json'};
 import {loadDocument} from '../src/director/load.mjs';
 import {layoutGraph} from '../src/director/layout.ts';
-import {directorFrameAt} from '../src/director/state.mjs';
+import {directorFrameAt} from '../src/director/state.ts';
 import {shotAttention} from '../src/render/canvas.mjs';
 
 const css=readFileSync(new URL('../demo/studio.css',import.meta.url),'utf8');
