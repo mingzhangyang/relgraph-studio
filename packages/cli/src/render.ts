@@ -137,6 +137,14 @@ export async function renderFilm(request: RenderRequest): Promise<RenderSummary>
     throw new RenderError(
       `--frames 需要恰好一个帧号占位符，例如 out/%05d.png；收到 ${request.frames}`,
     );
+  // The CLI validates these too; the exported API must not trust its callers.
+  for (const [name, value, min] of [
+    ['from', request.from, 0],
+    ['to', request.to, 0],
+    ['jobs', request.jobs, 1],
+  ] as const)
+    if (value !== undefined && !(Number.isSafeInteger(value) && value >= min))
+      throw new RenderError(`${name} 需要不小于 ${min} 的整数，收到 ${String(value)}`);
   const { text, result } = await loadFile(request.file);
   if (!result.valid) throw new RenderError(`${formatDiagnostics(result)}文档校验失败，未渲染。`);
   if (result.warnings.length) log(formatDiagnostics({ errors: [], warnings: result.warnings }));
@@ -179,7 +187,10 @@ export async function renderFilm(request: RenderRequest): Promise<RenderSummary>
 
   if (request.frames !== undefined) {
     const pattern = resolve(request.frames);
-    await mkdir(dirname(frameFile(pattern, first)), { recursive: true });
+    // The frame number may sit in a directory name (out/%03d/frame.png), so
+    // create every directory the range writes to, not just the first.
+    for (const dir of new Set(frames.map((frame) => dirname(frameFile(pattern, frame)))))
+      await mkdir(dir, { recursive: true });
     await renderInOrder({ ...settings, text, pattern }, frames, request.jobs, async () => tick());
     return { ...summary, pattern, seconds: (performance.now() - started) / 1000 };
   }

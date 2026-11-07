@@ -220,7 +220,7 @@ await assert.rejects(import('@relgraph/core/src/graph/core.js'), { code: 'ERR_PA
       process.execPath,
       [relgraph, 'render', 'biology-signaling-synthetic.json'].concat([
         '--frames',
-        'frames/%03d.png',
+        'frames/%03d/frame.png',
         '--frame-spec',
         'landscape-720p',
         '--from',
@@ -230,7 +230,7 @@ await assert.rejects(import('@relgraph/core/src/graph/core.js'), { code: 'ERR_PA
       ]),
       { cwd: consumer, env },
     );
-    for (const file of ['frames/024.png', 'frames/025.png']) {
+    for (const file of ['frames/024/frame.png', 'frames/025/frame.png']) {
       const png = await readFile(join(consumer, file));
       assert.equal(png.subarray(1, 4).toString('latin1'), 'PNG');
       assert.equal(png.readUInt32BE(16), 1280, `${file} width`);

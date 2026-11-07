@@ -176,3 +176,24 @@ test('a golden frame reproduces its committed hash (same skia-canvas and fonts)'
   });
   assert.equal(sha256(renderer.rgbaAt(entry.frame)), entry.sha256);
 });
+
+test('renderFilm rejects non-integer ranges and job counts before writing', async () => {
+  const { renderFilm, RenderError } = await import('../packages/cli/src/render.ts');
+  const base = {
+    file: 'examples/biology-signaling-synthetic.json',
+    frames: 'output/never/%05d.png',
+    frameSpec: 'landscape-720p',
+    theme: 'light',
+    locale: 'zh-CN',
+    jobs: 1,
+  };
+  for (const bad of [
+    { to: Number.NaN },
+    { to: 0.5 },
+    { from: -1 },
+    { from: 1.5 },
+    { jobs: 0 },
+    { jobs: Number.NaN },
+  ])
+    await assert.rejects(renderFilm({ ...base, ...bad }), RenderError, JSON.stringify(bad));
+});
