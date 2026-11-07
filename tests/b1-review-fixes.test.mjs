@@ -5,7 +5,7 @@ import {runInNewContext} from 'node:vm';
 import biology from '../examples/biology-signaling-synthetic.json' with {type:'json'};
 import {loadDocument,parseDocument} from '../src/director/load.mjs';
 import {layoutGraph} from '../src/director/layout.ts';
-import {directorFrameAt,frameCount} from '../src/director/state.mjs';
+import {directorFrameAt,frameCount} from '../src/director/state.ts';
 
 function graphWith(nodes,scenes){return {domain:'test',meta:{title:'Test'},timeline:{unit:'stage'},nodes,edges:[],groups:[],scenes};}
 

@@ -24,6 +24,7 @@
 
 - [ ] TypeScript, Vite, Vitest and Prettier; one JSON Schema source for types and validation
   - [x] Establish the toolchain, migrate the layout module, and derive literary types and structural validation from the JSON Schema
+  - [x] Migrate neutral graph validation, spoiler-safe projection and director frame evaluation to strict TypeScript
   - [ ] Migrate the remaining modules to strict TypeScript and extend formatting/linting to them; complete the package layout
 - [ ] `FrameSpec` safe areas instead of 1280×720 literals; display-list composition with a Canvas backend
 - [ ] Domain style sheets and a locale table instead of edge kinds and captions in the renderer

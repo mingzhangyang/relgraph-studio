@@ -1,6 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import {validateVisualGraph,projectVisualGraph,sceneAtSecond,frameStateAt} from '../src/graph/core.mjs';
+import {validateVisualGraph,projectVisualGraph,sceneAtSecond,frameStateAt} from '../src/graph/core.ts';
 import {adaptLiteratureDocument,literaryDetailsAt} from '../src/domains/literature.mjs';
 import {adaptBiologyDocument,validateBiologyDocument} from '../src/domains/biology.mjs';
 import sample from '../examples/biology-signaling-synthetic.json' with {type:'json'};

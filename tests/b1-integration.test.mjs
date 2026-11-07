@@ -4,7 +4,7 @@ import literature from '../examples/honglou-provisional.relgraph.json' with {typ
 import biology from '../examples/biology-signaling-synthetic.json' with {type:'json'};
 import {loadDocument,parseDocument} from '../src/director/load.mjs';
 import {layoutGraph} from '../src/director/layout.ts';
-import {directorFrameAt,frameCount} from '../src/director/state.mjs';
+import {directorFrameAt,frameCount} from '../src/director/state.ts';
 import {createCanvasRenderer} from '../src/render/canvas.mjs';
 import {visibleStory} from '../src/relgraph.mjs';
 

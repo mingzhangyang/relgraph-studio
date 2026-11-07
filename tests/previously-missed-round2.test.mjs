@@ -1,7 +1,7 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {validateVisualGraph,sceneAtSecond,frameStateAt} from '../src/graph/core.mjs';
+import {validateVisualGraph,sceneAtSecond,frameStateAt} from '../src/graph/core.ts';
 import {validateRelGraph,visibleStory} from '../src/relgraph.mjs';
 import {validateBiologyDocument,adaptBiologyDocument} from '../src/domains/biology.mjs';
 import biology from '../examples/biology-signaling-synthetic.json' with {type:'json'};

@@ -9,7 +9,12 @@ export default tseslint.config(
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
   },
   {
-    files: ['scripts/**/*.mjs', '*.config.mjs', 'tests/production-build.test.mjs'],
+    files: [
+      'scripts/**/*.mjs',
+      '*.config.mjs',
+      'tests/production-build.test.mjs',
+      'tests/graph-kernel.test.mjs',
+    ],
     extends: [js.configs.recommended],
     languageOptions: { globals: globals.node },
   },
