@@ -10,15 +10,17 @@
     "typecheck": "tsc --noEmit",
     "generate:types": "node scripts/generate-types.mjs",
     "check:types": "node scripts/generate-types.mjs --check",
-    "lint": "eslint \"packages/**/*.ts\" \"apps/**/*.ts\" \"tests/types/**/*.ts\" \"scripts/**/*.mjs\" \"*.config.mjs\" tests/production-build.test.mjs tests/graph-kernel.test.mjs tests/domain-migration.test.mjs tests/canvas-renderer.test.mjs tests/render-pipeline.test.mjs tests/studio-workspace.test.mjs \"tests/helpers/**/*.mjs\" tests/package-build.test.mjs tests/film-fonts.test.mjs",
-    "format:check": "prettier --check \"packages/**/*.ts\" \"apps/**/*.ts\" \"tests/types/**/*.ts\" \"scripts/**/*.mjs\" \"*.config.mjs\" tsconfig.json package.json .prettierrc.json tests/production-build.test.mjs tests/graph-kernel.test.mjs tests/domain-migration.test.mjs tests/canvas-renderer.test.mjs tests/render-pipeline.test.mjs tests/studio-workspace.test.mjs \"tests/helpers/**/*.mjs\" tests/package-build.test.mjs tests/film-fonts.test.mjs \"packages/*/*.json\"",
-    "format:write": "prettier --write \"packages/**/*.ts\" \"apps/**/*.ts\" \"tests/types/**/*.ts\" \"scripts/**/*.mjs\" \"*.config.mjs\" tsconfig.json package.json .prettierrc.json tests/production-build.test.mjs tests/graph-kernel.test.mjs tests/domain-migration.test.mjs tests/canvas-renderer.test.mjs tests/render-pipeline.test.mjs tests/studio-workspace.test.mjs \"tests/helpers/**/*.mjs\" tests/package-build.test.mjs tests/film-fonts.test.mjs \"packages/*/*.json\"",
-    "build:packages": "npm run build --workspace=@relgraph/core && npm run build --workspace=@relgraph/render",
+    "lint": "eslint \"packages/**/*.ts\" \"apps/**/*.ts\" \"tests/types/**/*.ts\" \"scripts/**/*.mjs\" \"*.config.mjs\" tests/production-build.test.mjs tests/graph-kernel.test.mjs tests/domain-migration.test.mjs tests/canvas-renderer.test.mjs tests/render-pipeline.test.mjs tests/studio-workspace.test.mjs \"tests/helpers/**/*.mjs\" tests/package-build.test.mjs tests/film-fonts.test.mjs tests/cli.test.mjs",
+    "format:check": "prettier --check \"packages/**/*.ts\" \"apps/**/*.ts\" \"tests/types/**/*.ts\" \"scripts/**/*.mjs\" \"*.config.mjs\" tsconfig.json package.json .prettierrc.json tests/production-build.test.mjs tests/graph-kernel.test.mjs tests/domain-migration.test.mjs tests/canvas-renderer.test.mjs tests/render-pipeline.test.mjs tests/studio-workspace.test.mjs \"tests/helpers/**/*.mjs\" tests/package-build.test.mjs tests/film-fonts.test.mjs tests/cli.test.mjs \"packages/*/*.json\"",
+    "format:write": "prettier --write \"packages/**/*.ts\" \"apps/**/*.ts\" \"tests/types/**/*.ts\" \"scripts/**/*.mjs\" \"*.config.mjs\" tsconfig.json package.json .prettierrc.json tests/production-build.test.mjs tests/graph-kernel.test.mjs tests/domain-migration.test.mjs tests/canvas-renderer.test.mjs tests/render-pipeline.test.mjs tests/studio-workspace.test.mjs \"tests/helpers/**/*.mjs\" tests/package-build.test.mjs tests/film-fonts.test.mjs tests/cli.test.mjs \"packages/*/*.json\"",
+    "build:packages": "npm run build --workspace=@relgraph/core && npm run build --workspace=@relgraph/render && npm run build --workspace=@relgraph/cli",
+    "relgraph": "node packages/cli/dist/bin.js",
     "check:browser": "node scripts/browser-check.mjs",
     "subset:fonts": "node scripts/subset-fonts.mjs"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
+    "@types/node": "22.20.5",
     "eslint": "10.7.0",
     "globals": "17.14.0",
     "json-schema-to-typescript": "16.0.0",
@@ -46,6 +48,7 @@
   },
   "workspaces": [
     "packages/core",
-    "packages/render"
+    "packages/render",
+    "packages/cli"
   ]
 }

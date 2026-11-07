@@ -1,5 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { transpileModule, ModuleKind, ScriptTarget } from 'typescript';
+import {
+  diagnosticHeading,
+  diagnosticText,
+  NO_DIAGNOSTICS_TEXT,
+} from '../../packages/core/src/director/load.ts';
 
 // VM tests exercise the actual TypeScript workspace against a minimal simulated DOM.
 // The imported dependencies are supplied explicitly by each harness.
@@ -11,3 +16,7 @@ export function studioSource() {
     .outputText.replace(/^import .*;\n/gm, '')
     .replace(/^export \{\};?\n/gm, '');
 }
+
+// Pure helpers the workspace imports, supplied as-is to every VM harness so
+// harnesses only stub what touches the canvas, network or storage.
+export const studioImports = { diagnosticHeading, diagnosticText, NO_DIAGNOSTICS_TEXT };

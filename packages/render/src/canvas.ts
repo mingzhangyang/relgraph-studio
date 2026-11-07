@@ -1,6 +1,6 @@
 import { directorFrameAt, domainStyle, localeFor } from '@relgraph/core';
 import type { DirectorFrameState, DomainStyle, VisualGraph } from '@relgraph/core';
-import { canvasTextMeasurer, drawDisplayList } from './backends/canvas2d.js';
+import { canvasTextMeasurer, drawDisplayList, type Canvas2D } from './backends/canvas2d.js';
 import { composeFrame, type DetailLookup } from './compose.js';
 import type { DisplayList } from './display-list.js';
 import {
@@ -37,6 +37,16 @@ export interface CanvasRenderer {
   frameSpec: Readonly<FrameSpec>;
 }
 
+/**
+ * A canvas the renderer can size and draw on: an `HTMLCanvasElement` in the
+ * browser, a skia-canvas `Canvas` in Node.
+ */
+export interface CanvasTarget {
+  width: number;
+  height: number;
+  getContext(type: '2d', options?: object): Canvas2D | null;
+}
+
 /** Size of the default 16:9 preview frame, kept for existing consumers. */
 export const VIDEO_WIDTH = DEFAULT_FRAME_SPEC.width,
   VIDEO_HEIGHT = DEFAULT_FRAME_SPEC.height;
@@ -46,7 +56,7 @@ export const VIDEO_WIDTH = DEFAULT_FRAME_SPEC.width,
  * numbers, and draw them through the Canvas 2D backend.
  */
 export function createCanvasRenderer(
-  canvas: Pick<HTMLCanvasElement, 'getContext' | 'width' | 'height'>,
+  canvas: CanvasTarget,
   graph: VisualGraph,
   positions: ReadonlyMap<string, Point>,
   {

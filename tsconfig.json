@@ -11,7 +11,8 @@
     "baseUrl": ".",
     "paths": {
       "@relgraph/core": ["packages/core/src/index.ts"],
-      "@relgraph/render": ["packages/render/src/index.ts"]
+      "@relgraph/render": ["packages/render/src/index.ts"],
+      "@relgraph/render/skia": ["packages/render/src/backends/skia.ts"]
     }
   },
   "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/types/**/*.ts"],

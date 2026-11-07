@@ -24,43 +24,75 @@ export const FONT_STACKS: Readonly<Record<FontFamily, string>> = Object.freeze({
 export const cssFont = (font: FontRef): string =>
   `${font.weight} ${font.size}px ${FONT_STACKS[font.family]}`;
 
-/** The subset of the Canvas 2D API this backend uses (also met by skia-canvas). */
-export type Canvas2D = Pick<
-  CanvasRenderingContext2D,
-  | 'arc'
-  | 'beginPath'
-  | 'clearRect'
-  | 'clip'
-  | 'closePath'
-  | 'createLinearGradient'
-  | 'createRadialGradient'
-  | 'ellipse'
-  | 'fill'
-  | 'fillRect'
-  | 'fillText'
-  | 'lineTo'
-  | 'measureText'
-  | 'moveTo'
-  | 'quadraticCurveTo'
-  | 'rect'
-  | 'restore'
-  | 'roundRect'
-  | 'save'
-  | 'setLineDash'
-  | 'setTransform'
-  | 'stroke'
-  | 'strokeText'
-  | 'transform'
-> & {
-  fillStyle: CanvasRenderingContext2D['fillStyle'];
-  strokeStyle: CanvasRenderingContext2D['strokeStyle'];
-  font: string;
-  globalAlpha: number;
-  lineJoin: CanvasLineJoin;
-  lineWidth: number;
-  textAlign: CanvasTextAlign;
-  textBaseline: CanvasTextBaseline;
-};
+/** A gradient created by a `Canvas2D` context. */
+export interface Canvas2DGradient {
+  addColorStop(offset: number, color: string): void;
+}
+
+/**
+ * The subset of the Canvas 2D API this backend uses, with exactly the
+ * signatures it calls. Both the browser's `CanvasRenderingContext2D` and
+ * skia-canvas satisfy it; it does not depend on the DOM library.
+ */
+export interface Canvas2D {
+  arc(x: number, y: number, radius: number, startAngle: number, endAngle: number): void;
+  beginPath(): void;
+  clearRect(x: number, y: number, w: number, h: number): void;
+  clip(): void;
+  closePath(): void;
+  createLinearGradient(x0: number, y0: number, x1: number, y1: number): Canvas2DGradient;
+  createRadialGradient(
+    x0: number,
+    y0: number,
+    r0: number,
+    x1: number,
+    y1: number,
+    r1: number,
+  ): Canvas2DGradient;
+  ellipse(
+    x: number,
+    y: number,
+    radiusX: number,
+    radiusY: number,
+    rotation: number,
+    startAngle: number,
+    endAngle: number,
+  ): void;
+  fill(): void;
+  fillRect(x: number, y: number, w: number, h: number): void;
+  fillText(text: string, x: number, y: number): void;
+  lineTo(x: number, y: number): void;
+  measureText(text: string): { width: number };
+  moveTo(x: number, y: number): void;
+  quadraticCurveTo(cpx: number, cpy: number, x: number, y: number): void;
+  rect(x: number, y: number, w: number, h: number): void;
+  restore(): void;
+  roundRect(x: number, y: number, w: number, h: number, radii: number): void;
+  save(): void;
+  setLineDash(segments: number[]): void;
+  setTransform(a: number, b: number, c: number, d: number, e: number, f: number): void;
+  stroke(): void;
+  strokeText(text: string, x: number, y: number): void;
+  transform(a: number, b: number, c: number, d: number, e: number, f: number): void;
+  // Drawing state is only ever written. Readers are typed `unknown` because
+  // skia-canvas reads back wider types (textures, 'justify') than the DOM.
+  get fillStyle(): unknown;
+  set fillStyle(value: string | Canvas2DGradient);
+  get strokeStyle(): unknown;
+  set strokeStyle(value: string | Canvas2DGradient);
+  get font(): unknown;
+  set font(value: string);
+  get globalAlpha(): unknown;
+  set globalAlpha(value: number);
+  get lineJoin(): unknown;
+  set lineJoin(value: 'miter' | 'round');
+  get lineWidth(): unknown;
+  set lineWidth(value: number);
+  get textAlign(): unknown;
+  set textAlign(value: 'left' | 'center' | 'right');
+  get textBaseline(): unknown;
+  set textBaseline(value: 'top' | 'middle' | 'alphabetic');
+}
 
 export function canvasTextMeasurer(ctx: Canvas2D): TextMeasurer {
   return (text, font) => {
@@ -69,7 +101,7 @@ export function canvasTextMeasurer(ctx: Canvas2D): TextMeasurer {
   };
 }
 
-function paint(ctx: Canvas2D, value: Paint): string | CanvasGradient {
+function paint(ctx: Canvas2D, value: Paint): string | Canvas2DGradient {
   if (typeof value === 'string') return value;
   const gradient =
     value.type === 'linear'

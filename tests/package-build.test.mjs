@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 
 const run = promisify(execFile);
+const rootPackage = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const executablePath = process.env.PATH ?? process.env.Path ?? '';
 const env = {
@@ -69,6 +70,7 @@ test('separately built packages work as packed Node and TypeScript dependencies'
   const builder = join(temp, 'builder');
   const core = join(builder, 'core');
   const render = join(builder, 'render');
+  const cli = join(builder, 'cli');
   const packs = join(temp, 'packs');
   const consumer = join(temp, 'consumer');
   try {
@@ -77,12 +79,23 @@ test('separately built packages work as packed Node and TypeScript dependencies'
     await mkdir(consumer);
     await copySource(join(root, 'packages/core'), core);
     await copySource(join(root, 'packages/render'), render);
-    // The builds have their own configs. Render resolves the built core package,
-    // just as a workspace install would, without accessing the repository source.
+    await copySource(join(root, 'packages/cli'), cli);
+    // The builds have their own configs. Render and the CLI resolve the built
+    // packages, just as a workspace install would, without accessing the
+    // repository source; skia-canvas and Node types come from the root install.
     await mkdir(join(builder, 'node_modules/@relgraph'), { recursive: true });
+    await mkdir(join(builder, 'node_modules/@types'), { recursive: true });
     await symlink(core, join(builder, 'node_modules/@relgraph/core'), 'junction');
+    await symlink(render, join(builder, 'node_modules/@relgraph/render'), 'junction');
+    for (const name of ['skia-canvas', '@types/node'])
+      await symlink(
+        join(root, 'node_modules', name),
+        join(builder, 'node_modules', name),
+        'junction',
+      );
     await runNpm(['run', 'build'], { cwd: core, env });
     await runNpm(['run', 'build'], { cwd: render, env });
+    await runNpm(['run', 'build'], { cwd: cli, env });
 
     const originalSchema = JSON.parse(
       await readFile(join(core, 'schema/relationship-graph.schema.json'), 'utf8'),
@@ -93,7 +106,7 @@ test('separately built packages work as packed Node and TypeScript dependencies'
     assert.deepEqual(builtSchema, originalSchema);
 
     const tarballs = [];
-    for (const path of [core, render]) {
+    for (const path of [core, render, cli]) {
       const { stdout } = await runNpm(
         ['pack', '--ignore-scripts', '--json', '--pack-destination', packs],
         { cwd: path, env },
@@ -101,6 +114,14 @@ test('separately built packages work as packed Node and TypeScript dependencies'
       const [info] = JSON.parse(stdout);
       tarballs.push(join(packs, info.filename));
       assert.ok(info.files.some((file) => file.path.endsWith('.d.ts')));
+      if (path === render) {
+        // The headless backend registers the vendored fonts from the package.
+        const packed = new Set(info.files.map((file) => file.path));
+        for (const file of ['fonts/LICENSE', 'fonts/fonts.json', 'fonts/charset.txt'])
+          assert.ok(packed.has(file), file);
+        assert.equal([...packed].filter((file) => file.endsWith('.woff2')).length, 5);
+      }
+      if (path === cli) assert.ok(info.files.some((file) => file.path === 'dist/bin.js'));
     }
     // No ancestor of the consumer can resolve the builder or source workspace.
     await rm(builder, { recursive: true, force: true });
@@ -114,6 +135,8 @@ test('separately built packages work as packed Node and TypeScript dependencies'
         '--no-fund',
         '--package-lock=false',
         ...tarballs,
+        // Resolved from the npm cache that installing the repository filled.
+        '@types/node@' + rootPackage.devDependencies['@types/node'],
       ],
       { cwd: consumer, env },
     );
@@ -165,6 +188,55 @@ await assert.rejects(import('@relgraph/core/src/graph/core.js'), { code: 'ERR_PA
     );
     await run(process.execPath, ['check.mjs'], { cwd: consumer, env });
 
+    // The installed `relgraph` binary validates like the workspace and renders
+    // frames headlessly from the packed fonts and worker.
+    const relgraph = join(consumer, 'node_modules/@relgraph/cli/dist/bin.js');
+    const valid = await run(
+      process.execPath,
+      [relgraph, 'validate', 'biology-signaling-synthetic.json'],
+      { cwd: consumer, env },
+    );
+    assert.equal(valid.stdout, '未发现校验问题。\n');
+    const broken = JSON.parse(await readFile(join(consumer, 'honglou-provisional.relgraph.json')));
+    broken.relations[0].target = 'missing-character';
+    await writeFile(join(consumer, 'broken.json'), JSON.stringify(broken));
+    const invalid = await run(process.execPath, [relgraph, 'validate', 'broken.json'], {
+      cwd: consumer,
+      env,
+    }).then(
+      () => assert.fail('validate must exit non-zero for an invalid document'),
+      (error) => error,
+    );
+    assert.equal(invalid.code, 1);
+    assert.match(
+      invalid.stdout,
+      /^错误 · 1\n {2}✗ UNKNOWN_TARGET · r01\n {4}relations\[0\]\.target\n/,
+    );
+    const binLink = join(consumer, 'node_modules/.bin/relgraph');
+    const linked = await run(binLink, ['--version'], { cwd: consumer, env }).catch(() => null);
+    if (process.platform !== 'win32')
+      assert.match(linked?.stdout ?? '', /^relgraph 0\.0\.0 \(skia-canvas 4\.0\.0\)/);
+    await run(
+      process.execPath,
+      [relgraph, 'render', 'biology-signaling-synthetic.json'].concat([
+        '--frames',
+        'frames/%03d.png',
+        '--frame-spec',
+        'landscape-720p',
+        '--from',
+        '24',
+        '--to',
+        '25',
+      ]),
+      { cwd: consumer, env },
+    );
+    for (const file of ['frames/024.png', 'frames/025.png']) {
+      const png = await readFile(join(consumer, file));
+      assert.equal(png.subarray(1, 4).toString('latin1'), 'PNG');
+      assert.equal(png.readUInt32BE(16), 1280, `${file} width`);
+      assert.equal(png.readUInt32BE(20), 720, `${file} height`);
+    }
+
     await writeFile(
       join(consumer, 'typecheck.ts'),
       `
@@ -196,11 +268,49 @@ source.schemaVersion = '1.0';
         include: ['typecheck.ts'],
       }),
     );
-    await run(
-      process.execPath,
-      [join(root, 'node_modules/typescript/bin/tsc'), '-p', 'tsconfig.json'],
-      { cwd: consumer, env },
+    const tsc = (project) =>
+      run(process.execPath, [join(root, 'node_modules/typescript/bin/tsc'), '-p', project], {
+        cwd: consumer,
+        env,
+      }).catch((error) => assert.fail(`${project} failed:\n${error.stdout}${error.stderr}`));
+    await tsc('tsconfig.json');
+
+    // The headless API in Node. skia-canvas's own declarations need sharp and
+    // ES2025 typed arrays, so library checking is skipped for this project;
+    // the consumer code and its expected errors are still checked.
+    await writeFile(
+      join(consumer, 'headless.ts'),
+      `
+import { layoutGraph, type VisualGraph } from '@relgraph/core';
+import { createHeadlessRenderer, FILM_FONTS_DIR } from '@relgraph/render/skia';
+import { parseCommand, renderFilm, type RenderSummary } from '@relgraph/cli';
+declare const graph: VisualGraph;
+const pixels: Uint8Array = createHeadlessRenderer(graph, layoutGraph(graph), { theme: 'light' }).rgbaAt(0);
+const dir: string = FILM_FONTS_DIR;
+const summary: Promise<RenderSummary> = renderFilm({ file: 'a.json', out: 'a.mp4', frameSpec: 'landscape-1080p', theme: 'light', locale: 'zh-CN', jobs: 2 });
+void [pixels, dir, summary, parseCommand(['validate', 'a.json'])];
+// @ts-expect-error Only the preset frame specs are accepted.
+void renderFilm({ file: 'a.json', out: 'a.mp4', frameSpec: 'portrait', theme: 'light', locale: 'zh-CN', jobs: 2 });
+// @ts-expect-error The film theme is light or dark.
+void renderFilm({ file: 'a.json', out: 'a.mp4', frameSpec: 'landscape-1080p', theme: 'sepia', locale: 'zh-CN', jobs: 2 });
+`,
     );
+    await writeFile(
+      join(consumer, 'tsconfig.headless.json'),
+      JSON.stringify({
+        compilerOptions: {
+          target: 'ES2022',
+          module: 'NodeNext',
+          moduleResolution: 'NodeNext',
+          strict: true,
+          noEmit: true,
+          skipLibCheck: true,
+          types: ['node'],
+        },
+        include: ['headless.ts'],
+      }),
+    );
+    await tsc('tsconfig.headless.json');
   } finally {
     await rm(temp, { recursive: true, force: true });
   }

@@ -1,6 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { studioSource } from './helpers/studio-source.mjs';
+import { studioImports, studioSource } from './helpers/studio-source.mjs';
 import {runInNewContext} from 'node:vm';
 import biology from '../examples/biology-signaling-synthetic.json' with {type:'json'};
 import {loadDocument,parseDocument} from '../packages/core/src/director/load.ts';
@@ -87,7 +87,7 @@ async function studioHarness(){
  const jobs=new Map();let nextId=0;
  const window={addEventListener(){}};
  const createCanvasRenderer=(_canvas,graph,layout,{fps})=>({renderFrame:frame=>directorFrameAt(graph,layout,frame,fps)});
- const env={document,window,Element:FakeElement,HTMLElement:FakeElement,HTMLCanvasElement:FakeElement,HTMLButtonElement:FakeElement,HTMLInputElement:FakeElement,HTMLLabelElement:FakeElement,fetch:async()=>({ok:true,text:async()=>JSON.stringify(source)}),
+ const env={...studioImports,document,window,Element:FakeElement,HTMLElement:FakeElement,HTMLCanvasElement:FakeElement,HTMLButtonElement:FakeElement,HTMLInputElement:FakeElement,HTMLLabelElement:FakeElement,fetch:async()=>({ok:true,text:async()=>JSON.stringify(source)}),
   parseDocument,layoutGraph,frameCount,createCanvasRenderer,structuredClone,
   requestAnimationFrame:callback=>{const id=++nextId;jobs.set(id,callback);return id;},cancelAnimationFrame:id=>jobs.delete(id)};
  const script=studioSource();
