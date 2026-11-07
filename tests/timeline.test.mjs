@@ -187,5 +187,5 @@ test('display list is frame-only: random seek and prior rendering do not change 
   for (const frame of [0, 311, 2, 216, 94, 110, 48]) renderer.displayListAt(frame);
   assert.deepEqual(renderer.displayListAt(110), before);
   const later = renderer.displayListAt(128);
-  assert.ok(texts(later).includes(processLabel));
+  assert.ok(later.a11y.nodes.includes(processLabel));
 });
