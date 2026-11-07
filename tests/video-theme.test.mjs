@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import literature from '../examples/honglou-provisional.relgraph.json' with {type:'json'};
 import {loadDocument} from '../src/director/load.ts';
 import {layoutGraph} from '../src/director/layout.ts';
-import {createCanvasRenderer,VIDEO_THEMES,themeFor} from '../src/render/canvas.mjs';
+import {createCanvasRenderer,VIDEO_THEMES,themeFor} from '../src/render/canvas.ts';
 
 function recordingCanvas(){
  let commands=[];const record=(...args)=>commands.push(args);

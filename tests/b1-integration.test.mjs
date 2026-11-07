@@ -5,7 +5,7 @@ import biology from '../examples/biology-signaling-synthetic.json' with {type:'j
 import {loadDocument,parseDocument} from '../src/director/load.ts';
 import {layoutGraph} from '../src/director/layout.ts';
 import {directorFrameAt,frameCount} from '../src/director/state.ts';
-import {createCanvasRenderer} from '../src/render/canvas.mjs';
+import {createCanvasRenderer} from '../src/render/canvas.ts';
 import {visibleStory} from '../src/relgraph.ts';
 
 const fiction={schemaVersion:'0.1',meta:{title:'A fictional story'},timeline:{unit:'chapter',total:10},
