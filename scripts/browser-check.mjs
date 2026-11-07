@@ -509,16 +509,32 @@ const literatureFrames = Math.ceil(
 
 const manifestPath = join(referenceDir, 'manifest.json');
 let reference = null;
-try {
-  reference = JSON.parse(await readFile(manifestPath, 'utf8'));
-} catch {
-  // No reference has been captured yet.
+if (!updateReference) {
+  // Only a missing manifest means "no baseline yet"; a broken one must not
+  // silently turn every comparison off.
+  let manifestText = null;
+  try {
+    manifestText = await readFile(manifestPath, 'utf8');
+  } catch (error) {
+    if (error?.code !== 'ENOENT') manifestText = error;
+  }
+  if (manifestText !== null)
+    await check('local baseline manifest is readable', async () => {
+      if (manifestText instanceof Error) throw manifestText;
+      const parsed = JSON.parse(manifestText);
+      assert.equal(typeof parsed?.environment?.chromium, 'string', 'environment.chromium');
+      assert.equal(typeof parsed?.environment?.platform, 'string', 'environment.platform');
+      assert.ok(Array.isArray(parsed.frames), 'frames list');
+      reference = parsed;
+    });
 }
 const enforce =
   !updateReference &&
   reference?.environment?.chromium === environment.chromium &&
   reference?.environment?.platform === environment.platform;
 const captured = [];
+// Start empty so frames left by an earlier run cannot pass for this run's.
+await rm(join(outputDir, 'frames'), { recursive: true, force: true });
 await mkdir(join(outputDir, 'frames'), { recursive: true });
 
 for (const theme of ['dark', 'light']) {
@@ -527,13 +543,17 @@ for (const theme of ['dark', 'light']) {
     await loadExample(page, example);
     const shots = shotFrames(documents[example.key]);
     for (const [index, { mid }] of shots.entries()) {
-      await page.evaluate((f) => window.renderAt(f), mid);
       const file = `${example.key}-${theme}-shot${index + 1}-f${String(mid).padStart(4, '0')}.png`;
-      const png = await canvasPng(page);
-      await writeFile(join(outputDir, 'frames', file), png);
-      captured.push({ file, example: example.key, theme, shot: index + 1, frame: mid, png });
-      if (updateReference || !reference) continue;
-      await check(`reference frame ${file}`, async () => {
+      await check(`frame ${file}`, async () => {
+        // Never capture or compare an error stage: the example must be loaded
+        // and the requested frame actually drawn.
+        assert.equal(await status(page), 'ready', `${example.key} example loaded`);
+        assert.equal(await page.evaluate((f) => window.renderAt(f), mid), true, 'renderAt');
+        assert.equal(await frameNumber(page), mid);
+        const png = await canvasPng(page);
+        await writeFile(join(outputDir, 'frames', file), png);
+        captured.push({ file, example: example.key, theme, shot: index + 1, frame: mid, png });
+        if (!reference) return;
         let expected;
         try {
           expected = await readFile(join(referenceDir, file));
@@ -541,8 +561,8 @@ for (const theme of ['dark', 'light']) {
           assert.fail('baseline frame is missing; run with --update-reference');
         }
         const { ratio, sizeMismatch } = await compareWithReference(page, expected);
-        const summary = `${(ratio * 100).toFixed(3)}% pixels differ`;
-        if (sizeMismatch) assert.fail('reference frame has a different size');
+        const summary = `${(ratio * 100).toFixed(3)}% pixels differ from the baseline`;
+        if (sizeMismatch) assert.fail('baseline frame has a different size');
         if (!enforce) {
           console.log(`    (informational, different environment) ${summary}`);
           return;
@@ -558,7 +578,10 @@ for (const theme of ['dark', 'light']) {
   await context.close();
 }
 
-if (updateReference) {
+const failedSoFar = results.filter((result) => !result.ok).length;
+if (updateReference && failedSoFar) {
+  console.log(`Baseline not saved: ${failedSoFar} browser checks failed.`);
+} else if (updateReference) {
   await rm(referenceDir, { recursive: true, force: true });
   await mkdir(referenceDir, { recursive: true });
   for (const { file, png } of captured) await writeFile(join(referenceDir, file), png);
