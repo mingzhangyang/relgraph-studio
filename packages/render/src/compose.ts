@@ -31,6 +31,16 @@ import { edgePaint, VIDEO_THEMES, type VideoTheme } from './theme.js';
 type Point = { x: number; y: number };
 type DrawItem = VisualNode | VisualEdge;
 type EdgeLabel = Point & { text: string; alpha: number };
+
+/** Exact de Casteljau prefix [0,t] of a quadratic Bézier. No raster approximation. */
+export function quadraticPrefix(start: Point, control: Point, end: Point, progress: number): PathCommand[] {
+  const t = clamp(progress, 0, 1);
+  if (t === 1) return [['M', start.x, start.y], ['Q', control.x, control.y, end.x, end.y]];
+  const first = { x: mix(start.x, control.x, t), y: mix(start.y, control.y, t) };
+  const second = { x: mix(control.x, end.x, t), y: mix(control.y, end.y, t) };
+  const point = { x: mix(first.x, second.x, t), y: mix(first.y, second.y, t) };
+  return [['M', start.x, start.y], ['Q', first.x, first.y, point.x, point.y]];
+}
 export type DetailLookup = (
   nodeId: string,
   domainAt: number | null,
@@ -217,6 +227,9 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
     box.y + box.h <= bounds.bottom;
 
   const { view, playback, cameraResolved: cam, highlight, previousHighlight, transition } = state;
+  const nodeProgress = (id: string): number => state.reveal?.nodes[id] ?? 1;
+  const edgeProgress = (id: string): number => state.reveal?.edges[id] ?? 1;
+  const captionAlpha = state.captionOpacity ?? 1;
   const center = cameraCenterFor(spec);
   const screenScale = cam.scale * ts;
   const point = (node: VisualNode): Point => {
@@ -295,8 +308,10 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
   items.push({ type: 'path', d: hatch, stroke: P.hatch, width: u(0.6) });
 
   for (const group of view.groups) {
-    const members = view.nodes.filter((n) => n.groupId === group.id).map((n) => pointFor(n.id));
+    const groupNodes = view.nodes.filter((n) => n.groupId === group.id);
+    const members = groupNodes.map((n) => pointFor(n.id));
     if (!members.length) continue;
+    const groupProgress = Math.max(...groupNodes.map((n) => nodeProgress(n.id)));
     const minX = Math.min(...members.map((p) => p.x)),
       maxX = Math.max(...members.map((p) => p.x));
     const minY = Math.min(...members.map((p) => p.y)),
@@ -306,24 +321,29 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
       rx = Math.max(u(95), (maxX - minX) / 2 + u(75)),
       ry = Math.max(u(72), (maxY - minY) / 2 + u(65)),
       c = color(group.color, P.fallbackNode);
-    graphItems.push(ellipseGlow(x, y, rx * 1.35, ry * 1.35, c, 0.11), {
+    const decoration: DisplayItem[] = [ellipseGlow(x, y, rx * 1.35, ry * 1.35, c, 0.11), {
       type: 'path',
       d: [['E', x, y, rx, ry, 0, 0, TAU]],
       stroke: c + P.groupStroke,
       width: u(1),
       dash: [u(4), u(9)],
-    });
+    }];
     const font = sans(13, 500),
       label = fitText(measure, group.label, font, u(180));
-    if (label)
-      graphItems.push({
+    if (label && groupProgress > 0.5)
+      decoration.push({
         type: 'text',
         text: label,
         x: x - rx * 0.6,
         y: y - ry * 0.65,
         font,
         fill: c + P.groupLabel,
+        ...(groupProgress < 1 ? { alpha: (groupProgress - 0.5) * 2 } : {}),
       });
+    // The fully visible display list keeps its former flat item structure.
+    if (groupProgress === 1) graphItems.push(...decoration);
+    else if (groupProgress > 0)
+      graphItems.push({ type: 'group', alpha: groupProgress, items: decoration });
   }
 
   // Parallel and reciprocal links get stable, symmetric curve offsets.
@@ -337,6 +357,7 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
   const edgeLabels: EdgeLabel[] = [],
     edgeObstacles: Rect[] = [];
   for (const edge of view.edges) {
+    const visibility = edgeProgress(edge.id);
     const a = points.get(edge.source),
       b = points.get(edge.target),
       source = view.nodes.find((n) => n.id === edge.source),
@@ -362,11 +383,15 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
       x: (start.x + end.x) / 2 - uy * offset,
       y: (start.y + end.y) / 2 + ux * offset,
     };
-    for (let t = 0.1; t < 1; t += 0.1) {
-      const v = 1 - t,
-        x = v * v * start.x + 2 * v * t * control.x + t * t * end.x,
-        y = v * v * start.y + 2 * v * t * control.y + t * t * end.y;
-      edgeObstacles.push({ x: x - u(4), y: y - u(4), w: u(8), h: u(8) });
+    // A label appearing before halfway would disturb existing label layout.
+    // Beyond halfway, only the drawn prefix participates in avoidance.
+    if (visibility > 0.5) {
+      for (let t = 0.1; t < visibility; t += 0.1) {
+        const v = 1 - t,
+          x = v * v * start.x + 2 * v * t * control.x + t * t * end.x,
+          y = v * v * start.y + 2 * v * t * control.y + t * t * end.y;
+        edgeObstacles.push({ x: x - u(4), y: y - u(4), w: u(8), h: u(8) });
+      }
     }
     const edgeStyle = edgeStyleFor(style, edge.kind),
       highlighted = highlight.edgeIds.includes(edge.id),
@@ -376,16 +401,13 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
     const parts: DisplayItem[] = [
       {
         type: 'path',
-        d: [
-          ['M', start.x, start.y],
-          ['Q', control.x, control.y, end.x, end.y],
-        ],
+        d: quadraticPrefix(start, control, end, visibility),
         stroke,
         width,
         ...(edgeStyle.dash ? { dash: edgeStyle.dash.map(u) } : {}),
       },
     ];
-    if (edge.directed) {
+    if (edge.directed && visibility >= 1) {
       const angle = Math.atan2(end.y - control.y, end.x - control.x),
         size = u(8),
         bar = u(5);
@@ -419,28 +441,30 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
           fill: stroke,
         });
     }
-    graphItems.push({
-      type: 'group',
-      alpha: active * (highlighted ? 0.95 : 0.68),
-      items: parts,
-    });
+    if (visibility > 0)
+      graphItems.push({
+        type: 'group',
+        alpha: active * (highlighted ? 0.95 : 0.68),
+        items: parts,
+      });
     const caption = edgeStyle.caption ? localize(edgeStyle.caption, locale) : '';
     const label = caption
       ? captionWithLabel(caption, edge.label)
       : highlighted
         ? edge.label || ''
         : '';
-    if (label)
+    if (label && visibility > 0.5)
       edgeLabels.push({
         text: label,
         x: 0.25 * start.x + 0.5 * control.x + 0.25 * end.x,
         y: 0.25 * start.y + 0.5 * control.y + 0.25 * end.y,
-        alpha: active,
+        alpha: active * Math.min(1, (visibility - 0.5) * 2),
       });
   }
 
   const occupied: Rect[] = [];
   for (const node of view.nodes) {
+    const visibility = nodeProgress(node.id);
     const p = pointFor(node.id),
       r = radius(node),
       shape = nodeStyleFor(style, node.kind).shape,
@@ -449,7 +473,8 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
         P.fallbackNode,
       ),
       alpha = attention(node);
-    occupied.push({ x: p.x - r - u(4), y: p.y - r - u(4), w: r * 2 + u(8), h: r * 2 + u(8) });
+    if (visibility > 0.5)
+      occupied.push({ x: p.x - r - u(4), y: p.y - r - u(4), w: r * 2 + u(8), h: r * 2 + u(8) });
     const outline: PathCommand[] =
       shape === 'diamond'
         ? [
@@ -462,24 +487,30 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
         : shape === 'pill'
           ? [['RR', p.x - r - u(4), p.y - r * 0.75, r * 2 + u(8), r * 1.5, r * 0.65]]
           : [['A', p.x, p.y, r + u(3), 0, TAU]];
-    graphItems.push({
-      type: 'group',
-      alpha,
-      items: [
-        ...(alpha > 0.8 ? [ellipseGlow(p.x, p.y, u(45), u(45), c, 0.18)] : []),
-        { type: 'path', d: outline, fill: P.nodeFill, stroke: c, width: u(1.8) },
-        {
-          type: 'path',
-          d: [['A', p.x, p.y, shape === 'diamond' ? u(3.5) : Math.max(u(3), r * 0.48), 0, TAU]],
-          fill: c,
-        },
-      ],
-    });
+    if (visibility > 0) {
+      const scale = 0.82 + 0.18 * visibility;
+      graphItems.push({
+        type: 'group',
+        alpha: alpha * visibility,
+        ...(visibility < 1
+          ? { transform: [scale, 0, 0, scale, p.x * (1 - scale), p.y * (1 - scale)] as [number, number, number, number, number, number] }
+          : {}),
+        items: [
+          ...(alpha > 0.8 ? [ellipseGlow(p.x, p.y, u(45), u(45), c, 0.18)] : []),
+          { type: 'path', d: outline, fill: P.nodeFill, stroke: c, width: u(1.8) },
+          {
+            type: 'path',
+            d: [['A', p.x, p.y, shape === 'diamond' ? u(3.5) : Math.max(u(3), r * 0.48), 0, TAU]],
+            fill: c,
+          },
+        ],
+      });
+    }
   }
 
   // Deterministic screen-space label placement: prioritize selected and major nodes.
   const nodeLabelObstacles = [...occupied, ...edgeObstacles];
-  const sorted = [...view.nodes].sort(
+  const sorted = view.nodes.filter((node) => nodeProgress(node.id) > 0.5).sort(
     (a, b) =>
       attention(b) - attention(a) ||
       (b.importance || 0) - (a.importance || 0) ||
@@ -524,7 +555,7 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
       fill: active > 0.8 ? P.labelActive : P.labelMuted,
       baseline: 'top',
       halo: { paint: P.labelHalo, width: u(4) },
-      alpha: active,
+      alpha: active * Math.min(1, (nodeProgress(node.id) - 0.5) * 2),
     });
   }
   const edgeFont = sans(11);
@@ -624,9 +655,10 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
     font: FontRef,
     fill: Paint,
     align?: 'right',
+    alpha?: number,
   ): void => {
-    if (value)
-      items.push({ type: 'text', text: value, x, y, font, fill, ...(align ? { align } : {}) });
+    if (value && (alpha === undefined || alpha > 0))
+      items.push({ type: 'text', text: value, x, y, font, fill, ...(align ? { align } : {}), ...(alpha === undefined || alpha === 1 ? {} : { alpha }) });
   };
   const titleX = titleBand.x + u(2),
     titleRight = titleBand.x + titleBand.w;
@@ -661,10 +693,12 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
     captionBand.y + u(77),
     titleFont,
     P.sceneTitle,
+    undefined,
+    captionAlpha,
   );
   const narrationFont = sans(16);
   wrapText(measure, narration, narrationFont, captionWidth, 2).forEach((line, i) =>
-    text(line, captionX, captionBand.y + u(109) + i * u(21), narrationFont, P.narration),
+    text(line, captionX, captionBand.y + u(109) + i * u(21), narrationFont, P.narration, undefined, captionAlpha),
   );
   const trackY = captionBand.y + u(156);
   items.push({ type: 'path', d: [['R', captionX, trackY, trackWidth, u(2)]], fill: P.track });
