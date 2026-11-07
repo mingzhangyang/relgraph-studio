@@ -119,8 +119,8 @@ export function compileTimeline(graph: VisualGraph, fps = 24): Timeline {
       outSec: endSec,
       title: scene.title,
       text: scene.narration,
-      fadeInSec: CAPTION_FADE_SEC,
-      fadeOutSec: CAPTION_FADE_SEC,
+      fadeInSec: Math.min(CAPTION_FADE_SEC, scene.durationSec / 2),
+      fadeOutSec: Math.min(CAPTION_FADE_SEC, scene.durationSec / 2),
     });
 
     const nextNodes = new Set(state.view.nodes.map((node) => node.id));
@@ -222,7 +222,14 @@ export function revealProgress(
       return clamp((second - cue.inSec) / cue.durationSec);
     }
   }
-  return 1;
+  // A cue may be in the future or have ended on a backwards jump. The
+  // projected shot, not remembered drawing history, decides if a static
+  // initially-visible object exists or if this ID is currently hidden.
+  const playback = timelinePlaybackAt(timeline, second);
+  const view = timeline.shots[playback.index]?.view;
+  if (!view) return 0;
+  const objects = kind === 'node' ? view.nodes : view.edges;
+  return objects.some((item) => item.id === targetId) ? 1 : 0;
 }
 
 /** A11y includes text from fade-in start; opacity affects only pixels. */

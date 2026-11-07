@@ -107,14 +107,14 @@ test('projection removes hidden targets and withdrawn prose before track creatio
     ['secret-edge', 1, 3],
   ]);
   assert.deepEqual(timeline.shots[2].view.nodes.map((n) => n.id), ['safe']);
-  assert.equal(revealProgress(timeline, 'node', 'secret', 3), 1);
+  assert.equal(revealProgress(timeline, 'node', 'secret', 3), 0);
 });
 
 test('reveal and caption frames have exact start, before, end and exit semantics', () => {
   const timeline = compileTimeline(biologyGraph, 24);
   const id = 'bio:process:phosphorylation-test';
   const edgeId = 'bio:arc:input:phosphorylation-test:substrate-s';
-  assert.equal(revealProgress(timeline, 'node', id, 95 / 24), 1);
+  assert.equal(revealProgress(timeline, 'node', id, 95 / 24), 0);
   assert.equal(revealProgress(timeline, 'node', id, 96 / 24), 0);
   assert.ok(revealProgress(timeline, 'node', id, 105 / 24) > 0);
   assert.equal(revealProgress(timeline, 'node', id, 111 / 24), 1);
@@ -178,12 +178,14 @@ test('display list is frame-only: random seek and prior rendering do not change 
   const graph = biologyGraph;
   const renderer = createCanvasRenderer(measuringCanvas(), graph, layoutGraph(graph));
   const before = renderer.displayListAt(110);
-  assert.ok(before.a11y.nodes.includes('substrate-s'));
-  assert.ok(before.a11y.nodes.includes('bio:process:phosphorylation-test'));
-  assert.ok(!texts(renderer.displayListAt(96)).includes('bio:process:phosphorylation-test'));
-  assert.ok(renderer.displayListAt(96).a11y.nodes.includes('bio:process:phosphorylation-test'));
+  const processLabel = graph.nodes.find((node) => node.id === 'bio:process:phosphorylation-test').label;
+  const substrateLabel = graph.nodes.find((node) => node.id === 'substrate-s').label;
+  assert.ok(before.a11y.nodes.includes(substrateLabel));
+  assert.ok(before.a11y.nodes.includes(processLabel));
+  assert.ok(!texts(renderer.displayListAt(96)).includes(processLabel));
+  assert.ok(renderer.displayListAt(96).a11y.nodes.includes(processLabel));
   for (const frame of [0, 311, 2, 216, 94, 110, 48]) renderer.displayListAt(frame);
   assert.deepEqual(renderer.displayListAt(110), before);
   const later = renderer.displayListAt(128);
-  assert.ok(texts(later).includes('bio:process:phosphorylation-test'));
+  assert.ok(texts(later).includes(processLabel));
 });
