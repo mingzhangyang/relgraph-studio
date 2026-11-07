@@ -103,12 +103,14 @@ export function createCanvasRenderer(
       const { state, list } = compose(frame);
       // compose() has already rejected a missing context.
       if (ctx) drawDisplayList(ctx, list);
-      return state;
+      // The compiler's cached projections must not escape to API consumers.
+      // A caller editing the returned state cannot alter any subsequent frame.
+      return structuredClone(state);
     },
     renderFrameWithList(frame) {
       const result = compose(frame);
       if (ctx) drawDisplayList(ctx, result.list);
-      return result;
+      return { state: structuredClone(result.state), list: result.list };
     },
     displayListAt: (frame) => compose(frame).list,
     theme: palette.name,
