@@ -13,13 +13,15 @@
     "lint": "eslint \"packages/**/*.ts\" \"apps/**/*.ts\" \"tests/types/**/*.ts\" \"scripts/**/*.mjs\" \"*.config.mjs\" tests/production-build.test.mjs tests/graph-kernel.test.mjs tests/domain-migration.test.mjs tests/canvas-renderer.test.mjs tests/studio-workspace.test.mjs \"tests/helpers/**/*.mjs\" tests/package-build.test.mjs",
     "format:check": "prettier --check \"packages/**/*.ts\" \"apps/**/*.ts\" \"tests/types/**/*.ts\" \"scripts/**/*.mjs\" \"*.config.mjs\" tsconfig.json package.json .prettierrc.json tests/production-build.test.mjs tests/graph-kernel.test.mjs tests/domain-migration.test.mjs tests/canvas-renderer.test.mjs tests/studio-workspace.test.mjs \"tests/helpers/**/*.mjs\" tests/package-build.test.mjs \"packages/*/*.json\"",
     "format:write": "prettier --write \"packages/**/*.ts\" \"apps/**/*.ts\" \"tests/types/**/*.ts\" \"scripts/**/*.mjs\" \"*.config.mjs\" tsconfig.json package.json .prettierrc.json tests/production-build.test.mjs tests/graph-kernel.test.mjs tests/domain-migration.test.mjs tests/canvas-renderer.test.mjs tests/studio-workspace.test.mjs \"tests/helpers/**/*.mjs\" tests/package-build.test.mjs \"packages/*/*.json\"",
-    "build:packages": "npm run build --workspace=@relgraph/core && npm run build --workspace=@relgraph/render"
+    "build:packages": "npm run build --workspace=@relgraph/core && npm run build --workspace=@relgraph/render",
+    "check:browser": "node scripts/browser-check.mjs"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
     "eslint": "10.7.0",
     "globals": "17.14.0",
     "json-schema-to-typescript": "16.0.0",
+    "playwright": "1.63.0",
     "prettier": "3.9.10",
     "typescript": "5.8.3",
     "typescript-eslint": "8.72.1",
