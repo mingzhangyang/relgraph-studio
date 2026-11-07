@@ -527,6 +527,7 @@ if (!updateReference) {
       assert.equal(typeof parsed?.environment?.chromium, 'string', 'environment.chromium');
       assert.equal(typeof parsed?.environment?.platform, 'string', 'environment.platform');
       assert.ok(Array.isArray(parsed.frames), 'frames list');
+      for (const frame of parsed.frames) assert.equal(typeof frame?.file, 'string', 'frame file');
       reference = parsed;
     });
 }
@@ -535,6 +536,9 @@ const enforce =
   reference?.environment?.chromium === environment.chromium &&
   reference?.environment?.platform === environment.platform;
 const captured = [];
+// Every frame this run is expected to produce, captured or not.
+const expectedFiles = [];
+const baselineFiles = new Set(reference?.frames.map((frame) => frame.file) ?? []);
 // Start empty so frames left by an earlier run cannot pass for this run's.
 await rm(join(outputDir, 'frames'), { recursive: true, force: true });
 await mkdir(join(outputDir, 'frames'), { recursive: true });
@@ -546,6 +550,7 @@ for (const theme of ['dark', 'light']) {
     const shots = shotFrames(documents[example.key]);
     for (const [index, { mid }] of shots.entries()) {
       const file = `${example.key}-${theme}-shot${index + 1}-f${String(mid).padStart(4, '0')}.png`;
+      expectedFiles.push(file);
       await check(`frame ${file}`, async () => {
         // Never capture or compare an error stage: the example must be loaded
         // and the requested frame actually drawn.
@@ -555,12 +560,13 @@ for (const theme of ['dark', 'light']) {
         const png = await canvasPng(page);
         await writeFile(join(outputDir, 'frames', file), png);
         captured.push({ file, example: example.key, theme, shot: index + 1, frame: mid, png });
-        if (!reference) return;
+        // Frames absent from the manifest are reported by the inventory check.
+        if (!reference || !baselineFiles.has(file)) return;
         let expected;
         try {
           expected = await readFile(join(referenceDir, file));
-        } catch {
-          assert.fail('baseline frame is missing; run with --update-reference');
+        } catch (error) {
+          assert.fail(`baseline frame listed in the manifest is unreadable: ${error.message}`);
         }
         const { ratio, size, baselineSize } = await compareWithReference(page, expected);
         const summary =
@@ -581,6 +587,28 @@ for (const theme of ['dark', 'light']) {
   });
   await context.close();
 }
+
+// Added or removed shots change the frame inventory; both need an explicit
+// baseline refresh instead of passing on the frames that remain.
+if (reference)
+  await check('captured frames match the baseline inventory', async () => {
+    const expected = new Set(expectedFiles);
+    const missing = [...baselineFiles].filter((file) => !expected.has(file));
+    const added = expectedFiles.filter((file) => !baselineFiles.has(file));
+    if (!missing.length && !added.length) return;
+    const summary =
+      [
+        missing.length && `not captured: ${missing.join(', ')}`,
+        added.length && `not in baseline: ${added.join(', ')}`,
+      ]
+        .filter(Boolean)
+        .join('; ') + ' (run with --update-reference if the change is intended)';
+    if (!enforce) {
+      console.log(`    (informational, different environment) ${summary}`);
+      return;
+    }
+    assert.fail(summary);
+  });
 
 const failedSoFar = results.filter((result) => !result.ok).length;
 if (updateReference && failedSoFar) {
