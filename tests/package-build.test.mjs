@@ -230,6 +230,38 @@ await assert.rejects(import('@relgraph/core/src/graph/core.js'), { code: 'ERR_PA
       ]),
       { cwd: consumer, env },
     );
+    if (process.platform !== 'win32') {
+      // FFmpeg dying mid-stream is reported with its exit code and stderr.
+      const fake = join(consumer, 'fake-ffmpeg');
+      await writeFile(
+        fake,
+        [
+          '#!/bin/sh',
+          'case "$*" in',
+          '  *-version*) echo "ffmpeg version fake"; exit 0;;',
+          '  *-encoders*) echo " V....D libx264  libx264 H.264"; exit 0;;',
+          'esac',
+          'head -c 4000000 > /dev/null',
+          'echo "fake encoder crashed" >&2',
+          'exit 3',
+        ].join('\n') + '\n',
+        { mode: 0o755 },
+      );
+      const crashed = await run(
+        process.execPath,
+        [relgraph, 'render', 'biology-signaling-synthetic.json'].concat(
+          ['--out', 'crash.mp4', '--ffmpeg', fake, '--frame-spec', 'landscape-720p'],
+          ['--to', '23'],
+        ),
+        { cwd: consumer, env },
+      ).then(
+        () => assert.fail('render must fail when FFmpeg exits early'),
+        (error) => error,
+      );
+      assert.equal(crashed.code, 1);
+      assert.match(crashed.stderr, /退出码 3/);
+      assert.match(crashed.stderr, /fake encoder crashed/);
+    }
     for (const file of ['frames/024/frame.png', 'frames/025/frame.png']) {
       const png = await readFile(join(consumer, file));
       assert.equal(png.subarray(1, 4).toString('latin1'), 'PNG');

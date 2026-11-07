@@ -220,16 +220,19 @@ export async function renderFilm(request: RenderRequest): Promise<RenderSummary>
   finished.catch(() => undefined);
   // A write error (EPIPE) means FFmpeg exited; `finished` reports why.
   encoder.stdin.on('error', () => undefined);
+  // Wait until each frame is handed to FFmpeg before sending the next, so at
+  // most one frame sits in the pipe buffer and nothing outlives its write.
+  // Only a failed write consults `finished`, for FFmpeg's own error message.
   const write = (bytes: Uint8Array): Promise<void> =>
     new Promise((resolveWrite, rejectWrite) => {
-      if (encoder.stdin.write(bytes)) resolveWrite();
-      else {
-        encoder.stdin.once('drain', resolveWrite);
-        finished.then(
-          () => rejectWrite(new RenderError('FFmpeg 提前结束')),
-          (error: unknown) => rejectWrite(error),
-        );
-      }
+      encoder.stdin.write(bytes, (error) => {
+        if (!error) resolveWrite();
+        else
+          finished.then(
+            () => rejectWrite(new RenderError(`FFmpeg 提前结束：${error.message}`)),
+            (reason: unknown) => rejectWrite(reason),
+          );
+      });
     });
   try {
     await renderInOrder({ ...settings, text }, frames, request.jobs, async (frame, reply) => {
