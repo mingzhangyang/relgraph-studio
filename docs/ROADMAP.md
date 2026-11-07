@@ -29,7 +29,8 @@
   - [x] Migrate the Canvas renderer to strict TypeScript while retaining the existing rendering API
   - [x] Migrate the director workspace to strict TypeScript, including DOM, playback, import and theme state
   - [x] Organize current code under `packages/core`, `packages/render` and `apps/studio`; keep one literary schema for validation and generated types
-  - [ ] Establish independently buildable packages with explicit exports and package-level TypeScript builds; add the CLI when its functionality exists
+  - [x] Establish separately buildable core and render packages with explicit exports and package-level TypeScript builds
+  - [ ] Add the CLI when its functionality exists
   - [ ] Verify the migrated production build in a real browser across both examples, file imports, playback, seeking and themes
 - [ ] `FrameSpec` safe areas instead of 1280×720 literals; display-list composition with a Canvas backend
 - [ ] Domain style sheets and a locale table instead of edge kinds and captions in the renderer

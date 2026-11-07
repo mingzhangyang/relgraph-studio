@@ -2,7 +2,7 @@
 
 Status: **Proposed** · 2026-11-06 · Supersedes nothing; refines [ADR 001](ARCHITECTURE.md) and [ADR 002](ADR-002-domain-adapters.md)
 
-The context and paths below describe the project when this ADR was proposed. For the current source layout and migration status, see the [README](../README.md) and [roadmap](ROADMAP.md). The source is now grouped into core, render and studio directories; independent package builds and exports remain future work.
+The context and paths below describe the project when this ADR was proposed. For the current source layout and migration status, see the [README](../README.md) and [roadmap](ROADMAP.md). Core and render now have separate builds and exports; the CLI and later rendering changes remain future work.
 
 ## Context
 

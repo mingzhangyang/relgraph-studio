@@ -1,11 +1,11 @@
-import { frameStateAt } from '../graph/core';
+import { frameStateAt } from '../graph/core.js';
 import type {
   DirectorFrameState,
   ProjectedVisualGraph,
   ResolvedHighlight,
   VisualCamera,
   VisualGraph,
-} from '../../types/visual-graph';
+} from '../../types/visual-graph.js';
 
 type Position = { x: number; y: number };
 const clamp = (n: number, min = 0, max = 1): number => Math.max(min, Math.min(max, n));

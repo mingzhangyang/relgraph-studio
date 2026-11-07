@@ -1,4 +1,4 @@
-import type { VisualGraph } from '../../types/visual-graph';
+import type { VisualGraph } from '../../types/visual-graph.js';
 
 type Position = { x: number; y: number };
 

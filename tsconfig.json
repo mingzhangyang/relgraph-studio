@@ -7,7 +7,13 @@
     "strict": true,
     "noEmit": true,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": ".",
+    "paths": {
+      "@relgraph/core": ["packages/core/src/index.ts"],
+      "@relgraph/render": ["packages/render/src/index.ts"]
+    }
   },
-  "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/types/**/*.ts"]
+  "include": ["packages/**/*.ts", "apps/**/*.ts", "tests/types/**/*.ts"],
+  "exclude": ["packages/*/dist", "node_modules"]
 }

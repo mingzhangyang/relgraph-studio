@@ -3,7 +3,7 @@ import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['dist/**', 'node_modules/**'] },
+  { ignores: ['**/dist/**', 'node_modules/**'] },
   {
     files: ['packages/**/*.ts', 'apps/**/*.ts', 'tests/types/**/*.ts'],
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
@@ -17,6 +17,7 @@ export default tseslint.config(
       'tests/domain-migration.test.mjs',
       'tests/canvas-renderer.test.mjs',
       'tests/studio-workspace.test.mjs',
+      'tests/package-build.test.mjs',
       'tests/helpers/**/*.mjs',
     ],
     extends: [js.configs.recommended],

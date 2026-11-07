@@ -1,8 +1,8 @@
-import { adaptLiteratureDocument, literaryDetailsAt } from '../domains/literature';
-import { inspectRelGraph } from '../relgraph';
-import { adaptBiologyDocument, validateBiologyDocument } from '../domains/biology';
-import type { Bio } from '../../types/relationship-graph';
-import type { VisualGraph } from '../../types/visual-graph';
+import { adaptLiteratureDocument, literaryDetailsAt } from '../domains/literature.js';
+import { inspectRelGraph } from '../relgraph.js';
+import { adaptBiologyDocument, validateBiologyDocument } from '../domains/biology.js';
+import type { Bio } from '../../types/relationship-graph.js';
+import type { VisualGraph } from '../../types/visual-graph.js';
 
 interface Diagnostic {
   level: 'error' | 'warning';

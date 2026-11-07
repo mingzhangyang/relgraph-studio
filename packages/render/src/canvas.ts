@@ -1,4 +1,4 @@
-import { directorFrameAt } from '../../core/src/director/state';
+import { directorFrameAt } from '@relgraph/core';
 import type {
   DirectorFrameState,
   ProjectedVisualGraph,
@@ -6,7 +6,7 @@ import type {
   VisualEdge,
   VisualGraph,
   VisualNode,
-} from '../../core/types/visual-graph';
+} from '@relgraph/core';
 
 type Point = { x: number; y: number };
 type Rectangle = Point & { w: number; h: number };

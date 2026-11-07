@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 
 // Keep the shipped examples as files: users can inspect and load them as JSON.
@@ -6,6 +7,19 @@ const exampleFiles = ['honglou-provisional.relgraph.json', 'biology-signaling-sy
 
 export default defineConfig({
   base: './',
+  // The studio consumes workspace sources; installed packages use their built exports.
+  resolve: {
+    alias: [
+      {
+        find: /^@relgraph\/core$/,
+        replacement: fileURLToPath(new URL('./packages/core/src/index.ts', import.meta.url)),
+      },
+      {
+        find: /^@relgraph\/render$/,
+        replacement: fileURLToPath(new URL('./packages/render/src/index.ts', import.meta.url)),
+      },
+    ],
+  },
   build: {
     rollupOptions: { input: 'demo/index.html' },
   },
