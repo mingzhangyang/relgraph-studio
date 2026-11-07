@@ -7,7 +7,7 @@ import type {
   PresentationStep,
   Quote,
   Relation,
-} from '../types/relationship-graph';
+} from '../types/relationship-graph.js';
 
 export interface LiteraryDiagnostic {
   level: 'error' | 'warning';

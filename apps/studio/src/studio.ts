@@ -1,14 +1,9 @@
-import { parseDocument, type LoadResult } from '../../../packages/core/src/director/load';
-import { layoutGraph } from '../../../packages/core/src/director/layout';
-import { frameCount } from '../../../packages/core/src/director/state';
-import type { Bio } from '../../../packages/core/types/relationship-graph';
-import type {
-  DirectorFrameState,
-  ScenePlayback,
-  FrameScene,
-  VisualGraph,
-} from '../../../packages/core/types/visual-graph';
-import { createCanvasRenderer, type CanvasRenderer } from '../../../packages/render/src/canvas';
+import { parseDocument, type LoadResult } from '@relgraph/core';
+import { layoutGraph } from '@relgraph/core';
+import { frameCount } from '@relgraph/core';
+import type { Bio } from '@relgraph/core';
+import type { DirectorFrameState, ScenePlayback, FrameScene, VisualGraph } from '@relgraph/core';
+import { createCanvasRenderer, type CanvasRenderer } from '@relgraph/render';
 
 declare global {
   interface Window {

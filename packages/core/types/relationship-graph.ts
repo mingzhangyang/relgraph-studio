@@ -1,5 +1,5 @@
 /** Public aliases for the generated literary source contract. */
-import type { Character, Relation } from './generated/relationship-graph';
+import type { Character, Relation } from './generated/relationship-graph.js';
 
 export type {
   RelGraphV01Draft as GraphDoc,
@@ -11,7 +11,7 @@ export type {
   Quote,
   Relation,
   Step as PresentationStep,
-} from './generated/relationship-graph';
+} from './generated/relationship-graph.js';
 
 export type Slug = string;
 export type CharacterStatus = NonNullable<Character['status']>;

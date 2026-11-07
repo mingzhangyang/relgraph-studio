@@ -9,7 +9,7 @@ import type {
   VisualGraph,
   VisualNode,
   VisualScene,
-} from '../../types/visual-graph';
+} from '../../types/visual-graph.js';
 
 // ':' is reserved for internal generated IDs; source-domain IDs must remain plain slugs.
 const slug = /^[a-z0-9]+(?:[-:][a-z0-9]+)*$/;

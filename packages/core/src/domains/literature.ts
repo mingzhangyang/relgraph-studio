@@ -1,8 +1,8 @@
 /** Adapter for the literary relgraph 0.1 draft. */
-import { inspectRelGraph, visibleStory } from '../relgraph';
-import type { Bio, GraphDoc } from '../../types/relationship-graph';
-import type { VisualGraph } from '../../types/visual-graph';
-import { validateVisualGraph } from '../graph/core';
+import { inspectRelGraph, visibleStory } from '../relgraph.js';
+import type { Bio, GraphDoc } from '../../types/relationship-graph.js';
+import type { VisualGraph } from '../../types/visual-graph.js';
+import { validateVisualGraph } from '../graph/core.js';
 const defaults = {
   family: 'positive',
   marriage: 'positive',

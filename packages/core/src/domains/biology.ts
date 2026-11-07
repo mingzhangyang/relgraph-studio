@@ -1,5 +1,5 @@
 /** Experimental biological domain adapter, NOT PSI-MI / SBML / SBGN-ML compliant. */
-import { validateVisualGraph } from '../graph/core';
+import { validateVisualGraph } from '../graph/core.js';
 import type {
   VisualCamera,
   VisualEdge,
@@ -7,7 +7,7 @@ import type {
   VisualHighlight,
   VisualNode,
   Visibility,
-} from '../../types/visual-graph';
+} from '../../types/visual-graph.js';
 
 const slug = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const object = (v: unknown): v is Record<string, unknown> =>
