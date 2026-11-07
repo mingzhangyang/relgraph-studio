@@ -392,7 +392,12 @@ export function sceneAtSecond(graph: VisualGraph, second: number): ScenePlayback
 export function frameStateAt(graph: VisualGraph, frame: number, fps = 24): FrameState {
   if (!Number.isInteger(frame) || frame < 0 || !finite(fps) || fps <= 0)
     throw new RangeError('Invalid frame or fps');
-  const playback = sceneAtSecond(graph, frame / fps),
+  return frameStateAtSecond(graph, frame / fps);
+}
+
+/** Evaluate a spoiler-safe scene at any video second, including sub-frame shot boundaries. */
+export function frameStateAtSecond(graph: VisualGraph, second: number): FrameState {
+  const playback = sceneAtSecond(graph, second),
     view = projectVisualGraph(graph, playback.domainAt),
     s = playback.scene;
   if (!s)

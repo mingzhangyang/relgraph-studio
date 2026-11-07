@@ -1,0 +1,235 @@
+import { frameStateAtSecond } from '../graph/core.js';
+import type {
+  FrameScene,
+  ProjectedVisualGraph,
+  ResolvedHighlight,
+  ScenePlayback,
+  VisualCamera,
+  VisualGraph,
+} from '../../types/visual-graph.js';
+
+/** Authored shot durations are preserved; keyframe evaluation never advances state. */
+export interface Keyframe<T> {
+  atSec: number;
+  value: T;
+  ease?: 'linear' | 'smooth' | 'hold';
+}
+
+export interface CameraKeyframe extends Keyframe<VisualCamera> {
+  /** Smooth transition to this shot's target, capped at its own duration. */
+  transitionSec: number;
+}
+
+export interface RevealCue {
+  targetId: string;
+  kind: 'node' | 'edge';
+  inSec: number;
+  /** First instant the object is no longer projected, if any. */
+  outSec?: number;
+  durationSec: number;
+  effect: 'fade' | 'draw' | 'grow';
+}
+
+export interface CaptionCue {
+  inSec: number;
+  outSec: number;
+  title?: string;
+  text?: string;
+  fadeInSec: number;
+  fadeOutSec: number;
+}
+
+export interface CompiledShot {
+  startSec: number;
+  endSec: number;
+  domainAt: number | null;
+  /** Includes redacted scene prose; never includes unprojected object references. */
+  scene: FrameScene;
+  view: ProjectedVisualGraph;
+  overlay: { nodeId: string } | null;
+}
+
+export interface Timeline {
+  fps: number;
+  durationSec: number;
+  camera: CameraKeyframe[];
+  highlight: Keyframe<ResolvedHighlight>[];
+  domainTime: Keyframe<number | null>[];
+  reveal: RevealCue[];
+  captions: CaptionCue[];
+  /** Pre-projected, safe shot payloads; no source scenes are retained. */
+  shots: CompiledShot[];
+}
+
+export const NODE_REVEAL_SEC = 0.6;
+export const EDGE_REVEAL_SEC = 0.8;
+export const CAPTION_FADE_SEC = 0.3;
+
+const clamp = (x: number): number => Math.max(0, Math.min(1, x));
+
+/**
+ * Compile the authoring presentation into safe, absolute-time tracks.
+ *
+ * Every shot is projected and redacted BEFORE its camera/highlight/caption
+ * tracks are collected. A reveal cue is created only for an object absent
+ * from the previous projection, never by observing previous rendered frames.
+ * If domain time moves backward, disappearing objects simply leave the
+ * projection; a later reappearance starts a new cue.
+ */
+export function compileTimeline(graph: VisualGraph, fps = 24): Timeline {
+  if (!Number.isFinite(fps) || fps <= 0) throw new RangeError('Invalid timeline fps');
+  const camera: CameraKeyframe[] = [];
+  const highlight: Keyframe<ResolvedHighlight>[] = [];
+  const domainTime: Keyframe<number | null>[] = [];
+  const reveal: RevealCue[] = [];
+  const captions: CaptionCue[] = [];
+  const shots: CompiledShot[] = [];
+  let startSec = 0;
+  let correction = 0;
+  let previousNodes = new Set<string>();
+  let previousEdges = new Set<string>();
+
+  for (const [index, source] of graph.scenes.entries()) {
+    // The same compensated summation and boundary tolerance as sceneAtSecond.
+    const adjusted = source.durationSec - correction;
+    const endSec = startSec + adjusted;
+    correction = endSec - startSec - adjusted;
+    const state = frameStateAtSecond(graph, startSec + (endSec - startSec) / 2);
+    const scene = state.playback.scene;
+    if (!scene) throw new Error('Unable to compile a presentation shot');
+    const shot: CompiledShot = {
+      startSec,
+      endSec,
+      domainAt: state.playback.domainAt,
+      scene,
+      view: state.view,
+      overlay: state.overlay,
+    };
+    shots.push(shot);
+    camera.push({
+      atSec: startSec,
+      value: state.camera,
+      ease: 'smooth',
+      transitionSec: Math.min((scene.transitionMs ?? 1200) / 1000, scene.durationSec),
+    });
+    highlight.push({ atSec: startSec, value: state.highlight, ease: 'smooth' });
+    domainTime.push({ atSec: startSec, value: shot.domainAt, ease: 'hold' });
+    captions.push({
+      inSec: startSec,
+      outSec: endSec,
+      title: scene.title,
+      text: scene.narration,
+      fadeInSec: CAPTION_FADE_SEC,
+      fadeOutSec: CAPTION_FADE_SEC,
+    });
+
+    const nextNodes = new Set(state.view.nodes.map((node) => node.id));
+    const nextEdges = new Set(state.view.edges.map((edge) => edge.id));
+    // A prior cue must stop immediately when the domain projection withdraws
+    // its object; no fade-out is produced, even on backward time jumps.
+    for (const cue of reveal) {
+      if (cue.outSec !== undefined) continue;
+      const visible = cue.kind === 'node' ? nextNodes : nextEdges;
+      if (!visible.has(cue.targetId)) cue.outSec = startSec;
+    }
+    if (index > 0) {
+      for (const id of nextNodes) {
+        if (!previousNodes.has(id))
+          reveal.push({
+            targetId: id,
+            kind: 'node',
+            inSec: startSec,
+            durationSec: NODE_REVEAL_SEC,
+            effect: 'fade',
+          });
+      }
+      for (const id of nextEdges) {
+        if (!previousEdges.has(id))
+          reveal.push({
+            targetId: id,
+            kind: 'edge',
+            inSec: startSec,
+            durationSec: EDGE_REVEAL_SEC,
+            effect: 'draw',
+          });
+      }
+    }
+    previousNodes = nextNodes;
+    previousEdges = nextEdges;
+    startSec = endSec;
+  }
+  return {
+    fps,
+    durationSec: startSec,
+    camera,
+    highlight,
+    domainTime,
+    reveal,
+    captions,
+    shots,
+  };
+}
+
+/** Match the original half-open scene boundary tolerance (including final frame). */
+export function timelinePlaybackAt(timeline: Timeline, second: number): ScenePlayback<FrameScene> {
+  const { shots, durationSec } = timeline;
+  if (!shots.length)
+    return {
+      scene: null,
+      index: -1,
+      elapsedSec: 0,
+      progress: 0,
+      domainAt: null,
+      totalSec: 0,
+      startSec: 0,
+    };
+  const time = Math.max(0, Math.min(Number.isFinite(second) ? second : 0, durationSec));
+  for (const [index, shot] of shots.entries()) {
+    const tolerance =
+      8 * Number.EPSILON * Math.max(1, Math.abs(time), Math.abs(shot.endSec));
+    if (time < shot.endSec - tolerance || index === shots.length - 1) {
+      const elapsedSec = Math.max(0, Math.min(shot.scene.durationSec, time - shot.startSec));
+      return {
+        scene: shot.scene,
+        index,
+        elapsedSec,
+        progress: clamp(elapsedSec / shot.scene.durationSec),
+        domainAt: timeline.domainTime[index].value,
+        totalSec: durationSec,
+        startSec: shot.startSec,
+      };
+    }
+  }
+  throw new Error('Unable to evaluate timeline shot');
+}
+
+/** Always return a frame-local value; no previous frame or renderer memory is read. */
+export function revealProgress(
+  timeline: Timeline,
+  kind: RevealCue['kind'],
+  targetId: string,
+  second: number,
+): number {
+  const tolerance = 8 * Number.EPSILON * Math.max(1, Math.abs(second));
+  const cue = timeline.reveal.findLast(
+    (item) =>
+      item.kind === kind &&
+      item.targetId === targetId &&
+      item.inSec <= second + tolerance &&
+      (item.outSec === undefined || second < item.outSec - tolerance),
+  );
+  return cue ? clamp((second - cue.inSec) / cue.durationSec) : 1;
+}
+
+/** A11y includes text from fade-in start; opacity affects only pixels. */
+export function captionOpacity(timeline: Timeline, sceneIndex: number, second: number): number {
+  const cue = timeline.captions[sceneIndex];
+  if (!cue || second < cue.inSec || second >= cue.outSec) return 0;
+  return clamp(
+    Math.min(
+      1,
+      (second - cue.inSec) / cue.fadeInSec,
+      (cue.outSec - second) / cue.fadeOutSec,
+    ),
+  );
+}

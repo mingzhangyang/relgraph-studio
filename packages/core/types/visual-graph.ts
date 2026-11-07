@@ -108,4 +108,13 @@ export interface DirectorFrameState extends FrameState {
   cameraResolved: { x: number; y: number; scale: number };
   transition: number;
   previousHighlight: ResolvedHighlight;
+  reveal: FrameReveal;
+  /** Opacity of the current shot title and narration, 0–1. */
+  captionOpacity: number;
+}
+
+/** Deterministic reveal progress, evaluated from a compiled timeline and frame index. */
+export interface FrameReveal {
+  nodes: Record<string, number>;
+  edges: Record<string, number>;
 }
