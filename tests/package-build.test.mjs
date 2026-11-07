@@ -117,7 +117,12 @@ test('separately built packages work as packed Node and TypeScript dependencies'
       if (path === render) {
         // The headless backend registers the vendored fonts from the package.
         const packed = new Set(info.files.map((file) => file.path));
-        for (const file of ['fonts/LICENSE', 'fonts/fonts.json', 'fonts/charset.txt'])
+        for (const file of [
+          'fonts/LICENSE',
+          'fonts/fonts.json',
+          'fonts/charset.txt',
+          'fonts/coverage.txt',
+        ])
           assert.ok(packed.has(file), file);
         assert.equal([...packed].filter((file) => file.endsWith('.woff2')).length, 5);
       }
@@ -231,7 +236,8 @@ await assert.rejects(import('@relgraph/core/src/graph/core.js'), { code: 'ERR_PA
       { cwd: consumer, env },
     );
     if (process.platform !== 'win32') {
-      // FFmpeg dying mid-stream is reported with its exit code and stderr.
+      // FFmpeg dying mid-stream is reported with its exit code and stderr. The
+      // bare relative name must run the file in the working directory.
       const fake = join(consumer, 'fake-ffmpeg');
       await writeFile(
         fake,
@@ -250,7 +256,7 @@ await assert.rejects(import('@relgraph/core/src/graph/core.js'), { code: 'ERR_PA
       const crashed = await run(
         process.execPath,
         [relgraph, 'render', 'biology-signaling-synthetic.json'].concat(
-          ['--out', 'crash.mp4', '--ffmpeg', fake, '--frame-spec', 'landscape-720p'],
+          ['--out', 'crash.mp4', '--ffmpeg', 'fake-ffmpeg', '--frame-spec', 'landscape-720p'],
           ['--to', '23'],
         ),
         { cwd: consumer, env },

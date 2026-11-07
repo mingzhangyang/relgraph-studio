@@ -2,7 +2,7 @@ import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
-import { buildCharset, charsetText, FACES } from '../scripts/subset-fonts.mjs';
+import { buildCharset, charsetText, FACES, TEXT_SOURCES } from '../scripts/subset-fonts.mjs';
 import { FONT_STACKS } from '../packages/render/src/backends/canvas2d.ts';
 import { FILM_FONT_FACES, FILM_FONT_FAMILIES } from '../packages/render/src/fonts.ts';
 
@@ -71,4 +71,22 @@ test('the workspace declares every face with the same family, weight and file', 
     FILM_FONT_FACES.map(faceKey),
   );
   for (const rule of rules) assert.equal(rule.display, 'block', rule.file);
+});
+
+test('coverage.txt lists the glyphs every face has and covers the examples', async () => {
+  const text = await readFile(new URL('coverage.txt', fontsDir), 'utf8');
+  assert.equal(manifest.coverage.sha256, sha256(text));
+  const coverage = new Set(text.replaceAll('\n', ''));
+  assert.equal(coverage.size, manifest.coverage.characters);
+  // A few requested punctuation marks do not exist in Noto CJK.
+  for (const ch of '‣‽⁄') assert.ok(!coverage.has(ch), ch);
+  // Everything the shipped examples, style sheets and renderer copy use is drawn.
+  const used = new Set();
+  for (const path of TEXT_SOURCES)
+    for (const ch of await readFile(new URL(`../${path}`, import.meta.url), 'utf8'))
+      if (ch.codePointAt(0) >= 0x20 && ch !== '\x7f') used.add(ch);
+  assert.deepEqual(
+    [...used].filter((ch) => !coverage.has(ch)),
+    [],
+  );
 });

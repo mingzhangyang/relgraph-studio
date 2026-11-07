@@ -145,6 +145,8 @@ test('the vendored fonts cover both examples', () => {
         : [];
   assert.deepEqual(uncoveredCharacters([...strings(literature), ...strings(biology)]), []);
   assert.deepEqual(uncoveredCharacters(['龘 ok']), ['龘']);
+  // Requested in charset.txt but absent from every source font.
+  assert.deepEqual(uncoveredCharacters(['1⁄2', 'why‽', '‣ item']), ['‣', '‽', '⁄']);
 });
 
 test('a golden frame reproduces its committed hash (same skia-canvas and fonts)', async (context) => {

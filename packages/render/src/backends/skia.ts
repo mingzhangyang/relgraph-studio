@@ -58,9 +58,13 @@ export function registerFilmFonts(): void {
   registered = true;
 }
 
-/** Characters of `texts` that the vendored fonts do not cover. */
+/**
+ * Characters of `texts` that some vendored face has no glyph for. Reads
+ * coverage.txt, which lists what every face really contains (charset.txt is
+ * the request, and the sources lack a few requested punctuation marks).
+ */
 export function uncoveredCharacters(texts: Iterable<string>): string[] {
-  const charset = new Set(readFileSync(join(FILM_FONTS_DIR, 'charset.txt'), 'utf8'));
+  const charset = new Set(readFileSync(join(FILM_FONTS_DIR, 'coverage.txt'), 'utf8'));
   const missing = new Set<string>();
   for (const text of texts)
     for (const ch of text) if (!charset.has(ch) && !/\s/u.test(ch)) missing.add(ch);

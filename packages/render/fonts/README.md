@@ -15,12 +15,13 @@ name is "Source", so the subsets keep their original family names.
 | `NotoSansMonoCJKsc-Regular.subset.woff2` | Noto Sans Mono CJK SC | 400 | `Sans/Mono/NotoSansMonoCJKsc-Regular.otf` |
 
 `fonts.json` records the source commit, the source and output SHA-256 of
-every face, the tool versions and the charset digest. Golden-frame hashes are
+every face, the tool versions and the charset and coverage digests. Golden-frame hashes are
 enforced only for the same font digest (see `examples/golden-frames.json`).
 
 ## Character set
 
-`charset.txt` (4,835 characters) is the union of:
+`charset.txt` is what is requested from the sources (4,835 characters), the
+union of:
 
 - every character in the two shipped examples, the domain style sheets and the
   renderer's own text (`packages/render/src/locale.ts`);
@@ -31,7 +32,13 @@ enforced only for the same font digest (see `examples/golden-frames.json`).
 - printable ASCII and Latin-1, general punctuation, arrows, CJK symbols and
   punctuation, and half- and full-width forms.
 
-Characters outside the subset fall back to the next font in `FONT_STACKS`,
+`coverage.txt` is what every face actually contains: 4,798 characters, read
+from the output fonts' character maps. It differs from the request because 39
+requested punctuation marks in U+2017–U+205E (for example ‣ U+2023, ‽ U+203D,
+⁄ U+2044) do not exist in Noto CJK, while feature closure keeps two extra
+symbols (∋ U+220B, ≅ U+2245).
+
+Characters outside `coverage.txt` fall back to the next font in `FONT_STACKS`,
 which differs between machines; `relgraph render` warns about them. When an
 example or the renderer copy gains new characters, `npm test` fails until the
 fonts are regenerated.
@@ -55,6 +62,9 @@ git -C noto-cjk sparse-checkout set --no-cone /Sans/LICENSE \
   /Sans/Mono/NotoSansMonoCJKsc-Regular.otf
 npm run subset:fonts -- --source noto-cjk --python .venv-fonts/bin/python
 ```
+
+To recompute only `coverage.txt` from the committed fonts, without the
+sources: `npm run subset:fonts -- --coverage-only --python .venv-fonts/bin/python`.
 
 The output is byte-for-byte reproducible for the same sources, charset and tool
 versions. After regenerating, refresh the golden frames

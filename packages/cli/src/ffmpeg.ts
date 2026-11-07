@@ -1,7 +1,7 @@
 import { execFile, spawn, type ChildProcessByStdio } from 'node:child_process';
 import { constants } from 'node:fs';
 import { access } from 'node:fs/promises';
-import { delimiter, join } from 'node:path';
+import { delimiter, join, resolve } from 'node:path';
 import type { Readable, Writable } from 'node:stream';
 import { promisify } from 'node:util';
 
@@ -30,9 +30,12 @@ async function executable(path: string): Promise<boolean> {
 export async function findFfmpeg(explicit?: string): Promise<{ path: string; version: string }> {
   let path: string | undefined;
   if (explicit !== undefined) {
-    if (!(await executable(explicit)))
+    // Check and run the same file: a bare name such as `custom-ffmpeg` is
+    // relative to the working directory, whereas spawning it would search PATH.
+    const resolved = resolve(explicit);
+    if (!(await executable(resolved)))
       throw new FfmpegError(`--ffmpeg 指定的文件不存在或不可执行：${explicit}\n${INSTALL_HINT}`);
-    path = explicit;
+    path = resolved;
   } else {
     const names =
       process.platform === 'win32'

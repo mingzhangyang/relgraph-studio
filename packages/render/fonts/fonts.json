@@ -14,6 +14,11 @@
     "characters": 4835,
     "sha256": "d91ddd8a76a1e3df1e4cc968b5fc80effacc480c88ee2b1dd0bcd39ab48094a7"
   },
+  "coverage": {
+    "file": "coverage.txt",
+    "characters": 4798,
+    "sha256": "253f1c5d432e29a50acc966ea94017f95f37a8162a969a72a4ebf7cfb49ff3e7"
+  },
   "faces": [
     {
       "family": "Noto Sans CJK SC",
