@@ -92,6 +92,19 @@ export const DEFAULT_FRAME_SPEC: Readonly<FrameSpec> = FRAME_SPECS['landscape-72
 // Scaled rectangles may exceed an exact edge by floating-point rounding.
 const EPSILON = 1e-6;
 
+/**
+ * Smallest band heights, in 720p reference units, that hold the composer's
+ * band layout: the title band's two text rows and rule, and the caption
+ * band's scene label, title, two narration lines and progress track.
+ */
+export const MIN_BAND_HEIGHT = Object.freeze({ title: 88, caption: 158 });
+
+const contains = (outer: Rect, inner: Rect): boolean =>
+  inner.x >= outer.x - EPSILON &&
+  inner.y >= outer.y - EPSILON &&
+  inner.x + inner.w <= outer.x + outer.w + EPSILON &&
+  inner.y + inner.h <= outer.y + outer.h + EPSILON;
+
 const isFrameSpecName = (name: string): name is FrameSpecName => Object.hasOwn(FRAME_SPECS, name);
 
 /** Resolve a preset name or validate a custom spec. */
@@ -124,6 +137,17 @@ export function frameSpecFor(spec: FrameSpecName | FrameSpec | undefined): Reado
     )
   )
     throw new RangeError(`Invalid frame spec ${String(spec.name)}`);
+  // The camera centres nodes in the graph safe area, so the stage that clips
+  // the graph must contain it; the bands must hold their text rows.
+  if (!contains(spec.stage, spec.safe.graph))
+    throw new RangeError(
+      `Invalid frame spec ${String(spec.name)}: safe.graph must lie within the stage`,
+    );
+  for (const band of ['title', 'caption'] as const)
+    if (spec.safe[band].h < MIN_BAND_HEIGHT[band] * spec.typeScale - EPSILON)
+      throw new RangeError(
+        `Invalid frame spec ${String(spec.name)}: safe.${band} is shorter than ${MIN_BAND_HEIGHT[band] * spec.typeScale}px`,
+      );
   return spec;
 }
 

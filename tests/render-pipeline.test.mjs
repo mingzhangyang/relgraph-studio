@@ -436,3 +436,42 @@ test('multi-rectangle fills keep path semantics; a lone rectangle uses fillRect'
     ['fillRect', 1, 1, 2, 2],
   );
 });
+
+test('frame specs keep the graph safe area on stage and bands tall enough for their rows', () => {
+  const variant = (edit) => {
+    const spec = structuredClone(DEFAULT_FRAME_SPEC);
+    edit(spec);
+    return spec;
+  };
+  assert.throws(
+    () => frameSpecFor(variant((s) => (s.stage.h = 100))),
+    /safe\.graph must lie within the stage/,
+  );
+  assert.throws(
+    () => frameSpecFor(variant((s) => (s.safe.graph.x = 10))),
+    /safe\.graph must lie within the stage/,
+  );
+  assert.throws(
+    () => frameSpecFor(variant((s) => (s.safe.caption = { x: 62, y: 600, w: 1156, h: 120 }))),
+    /safe\.caption is shorter than 158px/,
+  );
+  assert.throws(
+    () => frameSpecFor(variant((s) => (s.safe.title.h = 60))),
+    /safe\.title is shorter than 88px/,
+  );
+  // Minimums scale with the type scale; the presets satisfy them.
+  for (const spec of Object.values(FRAME_SPECS))
+    assert.doesNotThrow(() => frameSpecFor(structuredClone(spec)));
+  const hd = structuredClone(FRAME_SPECS['landscape-1080p']);
+  hd.safe.caption.h = 158;
+  assert.throws(() => frameSpecFor(hd), /shorter than 237px/);
+  // The caption track of the tallest allowed short band stays on the canvas.
+  const tight = variant((s) => {
+    s.safe.caption = { x: 62, y: 720 - 158, w: 1156, h: 158 };
+    s.stage.h = 720 - 158 - 108 - 4;
+    s.safe.graph.h = s.stage.h - 54;
+  });
+  const list = compose(examples[0], 0, frameSpecFor(tight));
+  const track = paths(list).find((p) => p.fill === VIDEO_THEMES.light.track);
+  assert.ok(track.d[0][2] + track.d[0][4] <= 720);
+});
