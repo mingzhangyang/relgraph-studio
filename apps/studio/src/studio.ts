@@ -9,7 +9,12 @@ import { layoutGraph } from '@relgraph/core';
 import { frameCount } from '@relgraph/core';
 import type { Bio } from '@relgraph/core';
 import type { DirectorFrameState, ScenePlayback, FrameScene, VisualGraph } from '@relgraph/core';
-import { createCanvasRenderer, type CanvasRenderer } from '@relgraph/render';
+import {
+  createCanvasRenderer,
+  FILM_FONT_FACES,
+  filmFontQuery,
+  type CanvasRenderer,
+} from '@relgraph/render';
 
 declare global {
   interface Window {
@@ -527,10 +532,30 @@ window.renderAt = (f) => {
   return true;
 };
 window.studioFrame = () => (currentFrameState ? structuredClone(currentFrameState) : null);
+/**
+ * The film fonts declared in studio.css load on first use. Request every face
+ * before the first frame so text measurement and pixels match the headless
+ * export instead of a fallback font.
+ */
+async function loadFilmFonts(): Promise<void> {
+  try {
+    const loaded = await Promise.all(
+      FILM_FONT_FACES.map((face) => document.fonts.load(filmFontQuery(face))),
+    );
+    const missing = FILM_FONT_FACES.filter((_, index) => !loaded[index]?.length);
+    if (missing.length)
+      console.warn(`Film fonts unavailable: ${missing.map(filmFontQuery).join(', ')}`);
+  } catch (error) {
+    console.warn('Film fonts failed to load; frames use fallback fonts.', error);
+  }
+  await document.fonts.ready;
+}
 applyTheme(theme, false);
 clearStudio();
 const startupSerial = requestSerial;
-await document.fonts.ready;
+await loadFilmFonts();
+// A film chosen while the fonts loaded was drawn with fallbacks; redraw it.
+if (renderer) setFrame(frame, false);
 if (startupSerial === requestSerial) {
   markSource('exampleLiterature');
   await loadExample(

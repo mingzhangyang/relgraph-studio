@@ -5,6 +5,7 @@ import {
   diagnosticText,
   NO_DIAGNOSTICS_TEXT,
 } from '../../packages/core/src/director/load.ts';
+import { FILM_FONT_FACES, filmFontQuery } from '../../packages/render/src/fonts.ts';
 
 // VM tests exercise the actual TypeScript workspace against a minimal simulated DOM.
 // The imported dependencies are supplied explicitly by each harness.
@@ -19,4 +20,10 @@ export function studioSource() {
 
 // Pure helpers the workspace imports, supplied as-is to every VM harness so
 // harnesses only stub what touches the canvas, network or storage.
-export const studioImports = { diagnosticHeading, diagnosticText, NO_DIAGNOSTICS_TEXT };
+export const studioImports = {
+  diagnosticHeading,
+  diagnosticText,
+  NO_DIAGNOSTICS_TEXT,
+  FILM_FONT_FACES,
+  filmFontQuery,
+};

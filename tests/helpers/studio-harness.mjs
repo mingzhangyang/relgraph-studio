@@ -19,6 +19,7 @@ export function deferred() {
 export function makeStudio({
   source = studioSource(),
   fonts = Promise.resolve(),
+  loadFont = async () => [{}],
   fetcher,
   storage,
   light = false,
@@ -111,7 +112,7 @@ export function makeStudio({
   document = {
     activeElement: null,
     documentElement: new Element('html'),
-    fonts: { ready: fonts },
+    fonts: { ready: fonts, load: loadFont },
     getElementById(id) {
       if (id === missingId) return null;
       if (!elements.has(id))

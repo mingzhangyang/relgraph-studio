@@ -79,7 +79,7 @@ test('production build includes both examples and the bundled workspace loads th
     const elements = new Map();
     const document = {
       documentElement: new Element(),
-      fonts: { ready: Promise.resolve() },
+      fonts: { ready: Promise.resolve(), load: async () => [{}] },
       getElementById(id) {
         if (!elements.has(id)) elements.set(id, new Element());
         return elements.get(id);

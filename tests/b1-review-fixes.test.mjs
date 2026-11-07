@@ -75,7 +75,7 @@ class FakeElement {
 }
 
 async function studioHarness(){
- const nodes=new Map(),document={activeElement:null,fonts:{ready:Promise.resolve()},getElementById(id){if(!nodes.has(id))nodes.set(id,new FakeElement('div',document));return nodes.get(id);},createElement(tag){return new FakeElement(tag,document);}};
+ const nodes=new Map(),document={activeElement:null,fonts:{ready:Promise.resolve(),load:async()=>[{}]},getElementById(id){if(!nodes.has(id))nodes.set(id,new FakeElement('div',document));return nodes.get(id);},createElement(tag){return new FakeElement(tag,document);}};
  const source={schemaVersion:'0.1',meta:{title:'Story'},timeline:{unit:'chapter',total:10},characters:[
   {id:'a',name:'A',importance:4,bio:{summary:'Safe early summary',fate:'SECRET FATE'},position:{x:0,y:0}},
   {id:'b',name:'B',importance:3,bio:{summary:'Future summary'},firstAppearance:5,position:{x:200,y:0}}

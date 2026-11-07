@@ -57,3 +57,18 @@ test('the subset charset covers the examples and renderer text and is current', 
   const hanzi = chars.filter((ch) => /\p{Script=Han}/u.test(ch)).length;
   assert.ok(hanzi >= 3755 && hanzi < 4500, `${hanzi} hanzi`);
 });
+
+test('the workspace declares every face with the same family, weight and file', async () => {
+  const css = await readFile(new URL('../demo/studio.css', import.meta.url), 'utf8');
+  const rules = [...css.matchAll(/@font-face\s*\{([^}]*)\}/g)].map(([, body]) => ({
+    family: /font-family:\s*"([^"]+)"/.exec(body)?.[1],
+    weight: Number(/font-weight:\s*(\d+)/.exec(body)?.[1]),
+    file: /url\("\.\.\/packages\/render\/fonts\/([^"]+)"\)/.exec(body)?.[1],
+    display: /font-display:\s*(\w+)/.exec(body)?.[1],
+  }));
+  assert.deepEqual(
+    rules.map(({ family, weight, file }) => `${family}|${weight}|${file}`),
+    FILM_FONT_FACES.map(faceKey),
+  );
+  for (const rule of rules) assert.equal(rule.display, 'block', rule.file);
+});
