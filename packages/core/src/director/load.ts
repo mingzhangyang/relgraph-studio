@@ -4,7 +4,7 @@ import { adaptBiologyDocument, validateBiologyDocument } from '../domains/biolog
 import type { Bio } from '../../types/relationship-graph.js';
 import type { VisualGraph } from '../../types/visual-graph.js';
 
-interface Diagnostic {
+export interface Diagnostic {
   level: 'error' | 'warning';
   layer: string;
   code: string;
@@ -13,6 +13,34 @@ interface Diagnostic {
   message: string;
   fix: string;
 }
+
+/** One diagnostic as the workspace and the CLI show it. */
+export interface DiagnosticText {
+  /** Code and record ID, e.g. `UNKNOWN_TARGET · r01`. */
+  title: string;
+  /** JSON path of the offending value. */
+  path: string;
+  message: string;
+  /** Suggested fix, prefixed with 建议：. */
+  fix: string;
+}
+export function diagnosticText(entry: Partial<Diagnostic>): DiagnosticText {
+  const id = entry.id;
+  const displayId =
+    typeof id === 'string' || typeof id === 'number' || typeof id === 'boolean' ? String(id) : '';
+  return {
+    title: `${entry.code || '提示'}${displayId ? ' · ' + displayId : ''}`,
+    path: entry.path || '$',
+    message: entry.message || '数据无效',
+    fix: '建议：' + (entry.fix || '检查数据并重试。'),
+  };
+}
+/** Heading of a diagnostics list, e.g. `错误 · 2`. */
+export const diagnosticHeading = (kind: 'errors' | 'warnings', count: number): string =>
+  `${kind === 'errors' ? '错误' : '警告'} · ${count}`;
+/** Shown when a document has neither errors nor warnings. */
+export const NO_DIAGNOSTICS_TEXT = '未发现校验问题。';
+
 type DetailAt = (id: string, at: number | null) => Bio | undefined;
 export type LoadResult =
   | {

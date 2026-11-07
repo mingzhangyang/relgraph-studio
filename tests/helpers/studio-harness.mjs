@@ -4,7 +4,7 @@ import { layoutGraph } from '../../packages/core/src/director/layout.ts';
 import { directorFrameAt, frameCount } from '../../packages/core/src/director/state.ts';
 import literature from '../../examples/honglou-provisional.relgraph.json' with { type: 'json' };
 import biology from '../../examples/biology-signaling-synthetic.json' with { type: 'json' };
-import { studioSource } from './studio-source.mjs';
+import { studioImports, studioSource } from './studio-source.mjs';
 
 export function deferred() {
   let resolve;
@@ -19,6 +19,7 @@ export function deferred() {
 export function makeStudio({
   source = studioSource(),
   fonts = Promise.resolve(),
+  loadFont = async () => [{}],
   fetcher,
   storage,
   light = false,
@@ -111,7 +112,7 @@ export function makeStudio({
   document = {
     activeElement: null,
     documentElement: new Element('html'),
-    fonts: { ready: fonts },
+    fonts: { ready: fonts, load: loadFont },
     getElementById(id) {
       if (id === missingId) return null;
       if (!elements.has(id))
@@ -141,6 +142,7 @@ export function makeStudio({
     text: async () => JSON.stringify(path.includes('biology') ? biology : literature),
   });
   const context = {
+    ...studioImports,
     document,
     window,
     Element,

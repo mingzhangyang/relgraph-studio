@@ -1,0 +1,30 @@
+{
+  "name": "@relgraph/cli",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Validate RelGraph documents and render films headlessly",
+  "type": "module",
+  "bin": {
+    "relgraph": "./dist/bin.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "dependencies": {
+    "@relgraph/core": "0.0.0",
+    "@relgraph/render": "0.0.0",
+    "skia-canvas": "4.0.0"
+  },
+  "scripts": {
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.build.json"
+  },
+  "engines": {
+    "node": "^20.19.0 || ^22.13.0 || >=24.0.0"
+  }
+}

@@ -19,6 +19,8 @@ export default tseslint.config(
       'tests/render-pipeline.test.mjs',
       'tests/studio-workspace.test.mjs',
       'tests/package-build.test.mjs',
+      'tests/film-fonts.test.mjs',
+      'tests/cli.test.mjs',
       'tests/helpers/**/*.mjs',
     ],
     extends: [js.configs.recommended],
@@ -26,7 +28,7 @@ export default tseslint.config(
   },
   {
     // Playwright evaluates some callbacks of this Node script inside the page.
-    files: ['scripts/browser-check.mjs'],
+    files: ['scripts/browser-check.mjs', 'scripts/check-export.mjs'],
     languageOptions: { globals: { ...globals.node, ...globals.browser } },
   },
 );

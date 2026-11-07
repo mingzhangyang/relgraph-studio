@@ -1,6 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { studioSource } from './helpers/studio-source.mjs';
+import { studioImports, studioSource } from './helpers/studio-source.mjs';
 import {runInNewContext} from 'node:vm';
 import biology from '../examples/biology-signaling-synthetic.json' with {type:'json'};
 import {loadDocument,parseDocument} from '../packages/core/src/director/load.ts';
@@ -75,7 +75,7 @@ class FakeElement {
 }
 
 async function studioHarness(){
- const nodes=new Map(),document={activeElement:null,fonts:{ready:Promise.resolve()},getElementById(id){if(!nodes.has(id))nodes.set(id,new FakeElement('div',document));return nodes.get(id);},createElement(tag){return new FakeElement(tag,document);}};
+ const nodes=new Map(),document={activeElement:null,fonts:{ready:Promise.resolve(),load:async()=>[{}]},getElementById(id){if(!nodes.has(id))nodes.set(id,new FakeElement('div',document));return nodes.get(id);},createElement(tag){return new FakeElement(tag,document);}};
  const source={schemaVersion:'0.1',meta:{title:'Story'},timeline:{unit:'chapter',total:10},characters:[
   {id:'a',name:'A',importance:4,bio:{summary:'Safe early summary',fate:'SECRET FATE'},position:{x:0,y:0}},
   {id:'b',name:'B',importance:3,bio:{summary:'Future summary'},firstAppearance:5,position:{x:200,y:0}}
@@ -87,7 +87,7 @@ async function studioHarness(){
  const jobs=new Map();let nextId=0;
  const window={addEventListener(){}};
  const createCanvasRenderer=(_canvas,graph,layout,{fps})=>({renderFrame:frame=>directorFrameAt(graph,layout,frame,fps)});
- const env={document,window,Element:FakeElement,HTMLElement:FakeElement,HTMLCanvasElement:FakeElement,HTMLButtonElement:FakeElement,HTMLInputElement:FakeElement,HTMLLabelElement:FakeElement,fetch:async()=>({ok:true,text:async()=>JSON.stringify(source)}),
+ const env={...studioImports,document,window,Element:FakeElement,HTMLElement:FakeElement,HTMLCanvasElement:FakeElement,HTMLButtonElement:FakeElement,HTMLInputElement:FakeElement,HTMLLabelElement:FakeElement,fetch:async()=>({ok:true,text:async()=>JSON.stringify(source)}),
   parseDocument,layoutGraph,frameCount,createCanvasRenderer,structuredClone,
   requestAnimationFrame:callback=>{const id=++nextId;jobs.set(id,callback);return id;},cancelAnimationFrame:id=>jobs.delete(id)};
  const script=studioSource();

@@ -1,8 +1,8 @@
 # ADR 003 — Display-list rendering, track timeline and project foundations
 
-Status: **Accepted** · proposed 2026-11-06, accepted 2026-11-07 with migration step 2 · Supersedes nothing; refines [ADR 001](ARCHITECTURE.md) and [ADR 002](ADR-002-domain-adapters.md)
+Status: **Accepted** · proposed 2026-11-06, accepted 2026-11-07 with migration step 2; step 3 complete 2026-11-07 · Supersedes nothing; refines [ADR 001](ARCHITECTURE.md) and [ADR 002](ADR-002-domain-adapters.md)
 
-The context and paths below describe the project when this ADR was proposed. For the current source layout and migration status, see the [README](../README.md) and [roadmap](ROADMAP.md). Migration steps 1 and 2 are complete: core and render have separate builds, frames are composed into display lists from a `FrameSpec`, and edge and node vocabularies live in domain style sheets. The CLI, headless backend and track timeline remain future work.
+The context and paths below describe the project when this ADR was proposed. For the current source layout and migration status, see the [README](../README.md) and [roadmap](ROADMAP.md). Migration steps 1–3 are complete: core and render have separate builds, frames are composed into display lists from a `FrameSpec`, edge and node vocabularies live in domain style sheets, and `relgraph render` exports MP4s headlessly through skia-canvas with vendored fonts and golden frames. The track timeline (step 4) and layout CLI (step 5) remain future work.
 
 ## Context
 
@@ -144,6 +144,7 @@ relgraph render   story.json --aspect 16:9 --theme light --out film.mp4   # or -
 - Uses the skia-canvas backend (no browser), renders frames in parallel, encodes with FFmpeg.
 - Fonts (subset Noto Sans/Serif CJK SC) are vendored and registered by both backends, making pixel output reproducible across machines with the same backend version.
 - A golden-frame test renders a handful of frames per example and compares hashes in CI-less local runs.
+- *Implemented in step 3:* the frame size is chosen with `--frame-spec <preset>` (default `landscape-1080p`) rather than `--aspect`, because portrait and square need their own safe areas (B3). The skia backend reuses `createCanvasRenderer`, `drawDisplayList` and `canvasTextMeasurer` unchanged on a CPU skia-canvas canvas. Fonts are WOFF2 subsets of Noto Sans, Serif and Sans Mono CJK SC; the mono family was added so frame metadata does not depend on system fonts. Golden hashes are SHA-256 of RGBA pixels, enforced for the same skia-canvas version and font digest and otherwise reported, and checked by `npm run check:export`, outside `npm test`.
 
 #### D7. Engineering foundations
 
@@ -198,6 +199,6 @@ A scene-per-section Markdown script (title, narration, front-matter for camera/h
 
 ## Open questions
 
-1. Is 1080p the default export size, with 720p reserved for preview?
-2. Should the light "paper" palette be the default film theme, independent of the workspace theme?
-3. Is `zh-CN` the only required locale for B2, with `en` best-effort?
+1. ~~Is 1080p the default export size, with 720p reserved for preview?~~ **Resolved in step 3: yes.** `relgraph render` defaults to `landscape-1080p`, and the workspace preview stays `landscape-720p`. Both compose from the same 720p design (1080p is exactly 1.5×), and `--frame-spec landscape-720p` exports at preview size.
+2. ~~Should the light "paper" palette be the default film theme, independent of the workspace theme?~~ **Resolved in step 3: yes.** Films default to `light`, with `--theme dark` available. The workspace theme (OS preference or the pinned toggle) only affects the preview.
+3. Is `zh-CN` the only required locale for B2, with `en` best-effort? Still open. `relgraph render --locale` accepts both renderer locales, and the vendored fonts cover Latin text, but source diagnostics and the workspace UI are not localized yet.

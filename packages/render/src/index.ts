@@ -1,6 +1,7 @@
 export * from './canvas.js';
 export * from './compose.js';
 export * from './display-list.js';
+export * from './fonts.js';
 export * from './frame-spec.js';
 export * from './locale.js';
 export * from './theme.js';

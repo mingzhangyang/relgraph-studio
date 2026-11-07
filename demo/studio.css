@@ -3,6 +3,15 @@
    dark "screening room" ink-blue and light "rice paper" ivory, both with
    warm gold for selection and sage for healthy state.
    Default follows the OS; [data-theme] on <html> pins a choice. */
+/* Vendored film fonts (packages/render/fonts, SIL OFL 1.1). The headless
+   exporter registers the same files under the same names, so preview and
+   export measure and draw the same glyphs. The studio loads every face
+   before its first frame. */
+@font-face { font-family: "Noto Sans CJK SC"; font-style: normal; font-weight: 400; font-display: block; src: url("../packages/render/fonts/NotoSansCJKsc-Regular.subset.woff2") format("woff2"); }
+@font-face { font-family: "Noto Sans CJK SC"; font-style: normal; font-weight: 500; font-display: block; src: url("../packages/render/fonts/NotoSansCJKsc-Medium.subset.woff2") format("woff2"); }
+@font-face { font-family: "Noto Sans CJK SC"; font-style: normal; font-weight: 700; font-display: block; src: url("../packages/render/fonts/NotoSansCJKsc-Bold.subset.woff2") format("woff2"); }
+@font-face { font-family: "Noto Serif CJK SC"; font-style: normal; font-weight: 600; font-display: block; src: url("../packages/render/fonts/NotoSerifCJKsc-SemiBold.subset.woff2") format("woff2"); }
+@font-face { font-family: "Noto Sans Mono CJK SC"; font-style: normal; font-weight: 400; font-display: block; src: url("../packages/render/fonts/NotoSansMonoCJKsc-Regular.subset.woff2") format("woff2"); }
 :root {
   color-scheme: dark;
   --bg: #0a1019;

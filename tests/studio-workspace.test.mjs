@@ -26,6 +26,36 @@ test('startup does not replace a selection made while fonts are loading', async 
   assert.equal(app.node('exampleBiology').attributes['aria-pressed'], 'true');
 });
 
+test('every film font face is loaded before the first frame is drawn', async () => {
+  const pending = deferred();
+  const queries = [];
+  const app = makeStudio({
+    loadFont: (query) => {
+      queries.push(query);
+      return pending.promise;
+    },
+  });
+  await flush();
+  assert.deepEqual(queries, [
+    '400 16px "Noto Sans CJK SC"',
+    '500 16px "Noto Sans CJK SC"',
+    '700 16px "Noto Sans CJK SC"',
+    '600 16px "Noto Serif CJK SC"',
+    '400 16px "Noto Sans Mono CJK SC"',
+  ]);
+  assert.deepEqual(app.themes, [], 'no renderer before the fonts load');
+  pending.resolve([{}]);
+  await app.ready;
+  assert.equal(app.themes.length, 1);
+  assert.equal(app.node('status').attributes['data-state'], 'ready');
+});
+
+test('a failed font load still opens the workspace with fallback fonts', async () => {
+  const app = makeStudio({ loadFont: () => Promise.reject(new Error('offline')) });
+  await app.ready;
+  assert.equal(app.node('status').attributes['data-state'], 'ready');
+});
+
 test('latest local read wins, pauses playback, and stale failures do not replace the film', async () => {
   const app = makeStudio();
   await app.ready;

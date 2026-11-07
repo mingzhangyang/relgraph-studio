@@ -1,0 +1,268 @@
+{
+  "note": "SHA-256 of RGBA pixels of headless key frames; regenerate with npm run check:export -- --update. Enforced only for the same skia-canvas version and font digest.",
+  "environment": {
+    "skiaCanvas": "4.0.0",
+    "fonts": "b9c7c2b43b1d9cce17c6660834043a0f0815bdc1e00a4482d469a3199f343cff",
+    "platform": "linux-x64"
+  },
+  "frameSpec": "landscape-1080p",
+  "locale": "zh-CN",
+  "frames": [
+    {
+      "example": "literature",
+      "theme": "light",
+      "shot": 1,
+      "kind": "mid",
+      "frame": 84,
+      "sha256": "164882f3e7e325bb0bd59017331c7c1679cfee51113ddd12ae60f904acb9091d"
+    },
+    {
+      "example": "literature",
+      "theme": "light",
+      "shot": 2,
+      "kind": "transition",
+      "frame": 183,
+      "sha256": "bd2f101e157466f372b47384ee3fcd3f133ae184a179659387ff451d93eea2c4"
+    },
+    {
+      "example": "literature",
+      "theme": "light",
+      "shot": 2,
+      "kind": "mid",
+      "frame": 264,
+      "sha256": "c79c4ccdfe0e159e27ba11b79b1df914ad1f227038bc354a6ea7c704415bdf49"
+    },
+    {
+      "example": "literature",
+      "theme": "light",
+      "shot": 3,
+      "kind": "transition",
+      "frame": 375,
+      "sha256": "b4a31d82406b7297ecd2478391101e551149cbd55e41ce4f5afb4edbfdf5063c"
+    },
+    {
+      "example": "literature",
+      "theme": "light",
+      "shot": 3,
+      "kind": "mid",
+      "frame": 468,
+      "sha256": "f85bd208ab536dda2c92d1960786b18a2ea2c5daca034274257f83f0867fd5a9"
+    },
+    {
+      "example": "literature",
+      "theme": "light",
+      "shot": 4,
+      "kind": "transition",
+      "frame": 591,
+      "sha256": "fc44d9473860a8d5c45c4465d08868e482d38087c4c1c3caef116cffe443fea3"
+    },
+    {
+      "example": "literature",
+      "theme": "light",
+      "shot": 4,
+      "kind": "mid",
+      "frame": 672,
+      "sha256": "f80fae7b150baf9ff0368a8b9ff27a503c4555100c63dd6c2e4fe9eb06c4086f"
+    },
+    {
+      "example": "literature",
+      "theme": "light",
+      "shot": 5,
+      "kind": "transition",
+      "frame": 783,
+      "sha256": "ec2fdd43988a506daaf6c1c06d69bc08f2545000563ea479e71de4da29a6cdb4"
+    },
+    {
+      "example": "literature",
+      "theme": "light",
+      "shot": 5,
+      "kind": "mid",
+      "frame": 864,
+      "sha256": "a3505bdc6a8c6ed702324629ab22de2a924f2d4feee0cd57f1ee0b58f27d662e"
+    },
+    {
+      "example": "literature",
+      "theme": "light",
+      "shot": 5,
+      "kind": "last",
+      "frame": 959,
+      "sha256": "f543ccb596a61fe49cd55ca817c667bd83635f350d1d173fcdcd1167543812a6"
+    },
+    {
+      "example": "literature",
+      "theme": "dark",
+      "shot": 1,
+      "kind": "mid",
+      "frame": 84,
+      "sha256": "9a75d925e8efa79aa7f608064c2e1894c38fb295d6b7d0ce23a45ff47cd32bd2"
+    },
+    {
+      "example": "literature",
+      "theme": "dark",
+      "shot": 2,
+      "kind": "transition",
+      "frame": 183,
+      "sha256": "08b2f48741e1f9c88153972813aed7ee76ef6d3a52fc32fcac78dbd37dc12808"
+    },
+    {
+      "example": "literature",
+      "theme": "dark",
+      "shot": 2,
+      "kind": "mid",
+      "frame": 264,
+      "sha256": "d273b2b5a5ccced2056b0c19a88ca672ccd7da2bade7dc6d21571d14bbb1c9e4"
+    },
+    {
+      "example": "literature",
+      "theme": "dark",
+      "shot": 3,
+      "kind": "transition",
+      "frame": 375,
+      "sha256": "26cdbc38102f1be0c7b5c64c85342be7fecad8f5a801dd408bb2c4f49d5fe1f9"
+    },
+    {
+      "example": "literature",
+      "theme": "dark",
+      "shot": 3,
+      "kind": "mid",
+      "frame": 468,
+      "sha256": "75570ed701a444127bace157e188fa88dbc2bb1b62873127e6f83fcd25e41d88"
+    },
+    {
+      "example": "literature",
+      "theme": "dark",
+      "shot": 4,
+      "kind": "transition",
+      "frame": 591,
+      "sha256": "1237d18cb5fd913d33963075043fad8dc143b9af70a771bb7a0f74bcf3aa3c27"
+    },
+    {
+      "example": "literature",
+      "theme": "dark",
+      "shot": 4,
+      "kind": "mid",
+      "frame": 672,
+      "sha256": "5999610ebbf03905a83eab507ae5a3759f216f0eabc3c02fd7d0e9bad133a344"
+    },
+    {
+      "example": "literature",
+      "theme": "dark",
+      "shot": 5,
+      "kind": "transition",
+      "frame": 783,
+      "sha256": "574e898e8a0e6ffa23ef48a3fb97de87cefe9ff9db63a4061cdaef52c9a5348c"
+    },
+    {
+      "example": "literature",
+      "theme": "dark",
+      "shot": 5,
+      "kind": "mid",
+      "frame": 864,
+      "sha256": "d2d0dd1d02847394ac5ebff1efc1d6001725c70a8d33e8babec9618d7ac84d7a"
+    },
+    {
+      "example": "literature",
+      "theme": "dark",
+      "shot": 5,
+      "kind": "last",
+      "frame": 959,
+      "sha256": "3b5d8e35ce983519b7eb05a01f21eb520d87539a8adafae494e8d4d65dc402b9"
+    },
+    {
+      "example": "biology",
+      "theme": "light",
+      "shot": 1,
+      "kind": "mid",
+      "frame": 48,
+      "sha256": "c806c36c5451e741630903150ca911f16a82009c6c3ab03e8d10205eb8b7b934"
+    },
+    {
+      "example": "biology",
+      "theme": "light",
+      "shot": 2,
+      "kind": "transition",
+      "frame": 111,
+      "sha256": "389d9671781362af38908ed7b52c736850c9f24be59a6bd70b4afc68b8212831"
+    },
+    {
+      "example": "biology",
+      "theme": "light",
+      "shot": 2,
+      "kind": "mid",
+      "frame": 156,
+      "sha256": "a9abc860a5edf1e47b34eb474af5178a8521ef89a0512137085045da7d393cf7"
+    },
+    {
+      "example": "biology",
+      "theme": "light",
+      "shot": 3,
+      "kind": "transition",
+      "frame": 231,
+      "sha256": "dd4d6631df39f4e022e53637a59238250b345b4eb80d5eff5ebc36f98f22e62b"
+    },
+    {
+      "example": "biology",
+      "theme": "light",
+      "shot": 3,
+      "kind": "mid",
+      "frame": 264,
+      "sha256": "9484e108867c7e7b8dc10f271effd5df93d5e8382f3681183c71f4062638ac11"
+    },
+    {
+      "example": "biology",
+      "theme": "light",
+      "shot": 3,
+      "kind": "last",
+      "frame": 311,
+      "sha256": "9ee05764182b5ebd20a8cbab7fdc6ec10281bb876f8000dd926250a4bec2ead4"
+    },
+    {
+      "example": "biology",
+      "theme": "dark",
+      "shot": 1,
+      "kind": "mid",
+      "frame": 48,
+      "sha256": "b5993bfec3a49834b88ff59a1de9bde213f8d5f66a1391b882bed1a61a0b2c0f"
+    },
+    {
+      "example": "biology",
+      "theme": "dark",
+      "shot": 2,
+      "kind": "transition",
+      "frame": 111,
+      "sha256": "7d4d46570ddc5e15dd909fff357b1fb47204ef3d992ba9f509e33011e4cabd2c"
+    },
+    {
+      "example": "biology",
+      "theme": "dark",
+      "shot": 2,
+      "kind": "mid",
+      "frame": 156,
+      "sha256": "6bc731679eec772bf46cef0db272d9b2ff2185e659e1301287a56fc7d67938b1"
+    },
+    {
+      "example": "biology",
+      "theme": "dark",
+      "shot": 3,
+      "kind": "transition",
+      "frame": 231,
+      "sha256": "1fa27fb1a342ea1ca2419a9f70c5bb0e68f3c7b0f283f55d329b59dac363acc8"
+    },
+    {
+      "example": "biology",
+      "theme": "dark",
+      "shot": 3,
+      "kind": "mid",
+      "frame": 264,
+      "sha256": "06a668c7edc20acb4875db2715b3f957caee61802d488d1eef002983aa94d0fb"
+    },
+    {
+      "example": "biology",
+      "theme": "dark",
+      "shot": 3,
+      "kind": "last",
+      "frame": 311,
+      "sha256": "d1f99f783b4c775828ae62c979927eba0d616413f61f2bdb9bf23e7c591452b6"
+    }
+  ]
+}

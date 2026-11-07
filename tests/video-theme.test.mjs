@@ -1,4 +1,4 @@
-import { studioSource } from './helpers/studio-source.mjs';
+import { studioImports, studioSource } from './helpers/studio-source.mjs';
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import literature from '../examples/honglou-provisional.relgraph.json' with {type:'json'};
@@ -52,11 +52,11 @@ class FakeElement {
 
 test('a theme picked in the workspace stays pinned when storage is unavailable',async()=>{
  const nodes=new Map(),root=new FakeElement(null);
- const document={documentElement:root,fonts:{ready:Promise.resolve()},getElementById(id){if(!nodes.has(id))nodes.set(id,new FakeElement(document));return nodes.get(id);},createElement(){return new FakeElement(document);}};
+ const document={documentElement:root,fonts:{ready:Promise.resolve(),load:async()=>[{}]},getElementById(id){if(!nodes.has(id))nodes.set(id,new FakeElement(document));return nodes.get(id);},createElement(){return new FakeElement(document);}};
  const mediaListeners=[],lightQuery={matches:false,addEventListener:(name,callback)=>mediaListeners.push(callback)};
  const blockedStorage={getItem(){throw new Error('blocked');},setItem(){throw new Error('blocked');}};
  const themes=[];
- const env={document,window:{addEventListener(){}},Element:FakeElement,HTMLElement:FakeElement,HTMLCanvasElement:FakeElement,HTMLButtonElement:FakeElement,HTMLInputElement:FakeElement,HTMLLabelElement:FakeElement,structuredClone,
+ const env={...studioImports,document,window:{addEventListener(){}},Element:FakeElement,HTMLElement:FakeElement,HTMLCanvasElement:FakeElement,HTMLButtonElement:FakeElement,HTMLInputElement:FakeElement,HTMLLabelElement:FakeElement,structuredClone,
   matchMedia:()=>lightQuery,localStorage:blockedStorage,
   fetch:async()=>({ok:true,text:async()=>JSON.stringify(literature)}),
   parseDocument:text=>loadDocument(JSON.parse(text)),layoutGraph,frameCount:()=>48,

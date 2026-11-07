@@ -1,9 +1,20 @@
-import { parseDocument, type LoadResult } from '@relgraph/core';
+import {
+  diagnosticHeading,
+  diagnosticText,
+  NO_DIAGNOSTICS_TEXT,
+  parseDocument,
+  type LoadResult,
+} from '@relgraph/core';
 import { layoutGraph } from '@relgraph/core';
 import { frameCount } from '@relgraph/core';
 import type { Bio } from '@relgraph/core';
 import type { DirectorFrameState, ScenePlayback, FrameScene, VisualGraph } from '@relgraph/core';
-import { createCanvasRenderer, type CanvasRenderer } from '@relgraph/render';
+import {
+  createCanvasRenderer,
+  FILM_FONT_FACES,
+  filmFontQuery,
+  type CanvasRenderer,
+} from '@relgraph/render';
 
 declare global {
   interface Window {
@@ -117,25 +128,21 @@ function renderDiagnostics(result: LoadResult): void {
     container.className = '';
     if (!entries.length) continue;
     const heading = document.createElement('h3');
-    heading.textContent = `${name === 'errors' ? '错误' : '警告'} · ${entries.length}`;
+    heading.textContent = diagnosticHeading(name, entries.length);
     container.append(heading);
     for (const entry of entries) {
+      const text = diagnosticText(entry);
       const item = document.createElement('div');
       item.className = `diagnostic-item ${name === 'warnings' ? 'warning' : 'error'}`;
       const title = document.createElement('strong');
-      const id = entry.id;
-      const displayId =
-        typeof id === 'string' || typeof id === 'number' || typeof id === 'boolean'
-          ? String(id)
-          : '';
-      title.textContent = `${entry.code || '提示'}${displayId ? ' · ' + displayId : ''}`;
+      title.textContent = text.title;
       const path = document.createElement('code');
-      path.textContent = entry.path || '$';
+      path.textContent = text.path;
       const message = document.createElement('p');
-      message.textContent = entry.message || '数据无效';
+      message.textContent = text.message;
       const fix = document.createElement('p');
       fix.className = 'fix';
-      fix.textContent = '建议：' + (entry.fix || '检查数据并重试。');
+      fix.textContent = text.fix;
       item.append(title, path, message, fix);
       container.append(item);
     }
@@ -147,7 +154,7 @@ function renderDiagnostics(result: LoadResult): void {
   count.textContent = String(total);
   count.setAttribute('data-level', errorCount ? 'error' : 'warning');
   if (!total) {
-    $('warnings').textContent = '未发现校验问题。';
+    $('warnings').textContent = NO_DIAGNOSTICS_TEXT;
     $('warnings').className = 'ok';
   }
 }
@@ -525,10 +532,30 @@ window.renderAt = (f) => {
   return true;
 };
 window.studioFrame = () => (currentFrameState ? structuredClone(currentFrameState) : null);
+/**
+ * The film fonts declared in studio.css load on first use. Request every face
+ * before the first frame so text measurement and pixels match the headless
+ * export instead of a fallback font.
+ */
+async function loadFilmFonts(): Promise<void> {
+  try {
+    const loaded = await Promise.all(
+      FILM_FONT_FACES.map((face) => document.fonts.load(filmFontQuery(face))),
+    );
+    const missing = FILM_FONT_FACES.filter((_, index) => !loaded[index]?.length);
+    if (missing.length)
+      console.warn(`Film fonts unavailable: ${missing.map(filmFontQuery).join(', ')}`);
+  } catch (error) {
+    console.warn('Film fonts failed to load; frames use fallback fonts.', error);
+  }
+  await document.fonts.ready;
+}
 applyTheme(theme, false);
 clearStudio();
 const startupSerial = requestSerial;
-await document.fonts.ready;
+await loadFilmFonts();
+// A film chosen while the fonts loaded was drawn with fallbacks; redraw it.
+if (renderer) setFrame(frame, false);
 if (startupSerial === requestSerial) {
   markSource('exampleLiterature');
   await loadExample(
