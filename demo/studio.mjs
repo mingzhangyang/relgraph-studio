@@ -1,4 +1,4 @@
-import {parseDocument} from '../src/director/load.mjs';
+import {parseDocument} from '../src/director/load.ts';
 import {layoutGraph} from '../src/director/layout.ts';
 import {frameCount} from '../src/director/state.ts';
 import {createCanvasRenderer} from '../src/render/canvas.mjs';

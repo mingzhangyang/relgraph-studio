@@ -31,7 +31,7 @@ npm run format:check
 npm run build
 ```
 
-The Vitest suite covers adapters, source diagnostics, spoiler projections, reaction roles, camera interpolation, static layouts and deterministic Canvas drawing commands. Strict TypeScript, ESLint and Prettier currently cover the migrated TypeScript and tooling; the remaining JavaScript modules will be migrated in later batches. The literary validator reads the JSON Schema directly; after editing the schema, run `npm run generate:types` and commit the regenerated types. `npm run check:types` detects a stale generated file.
+The Vitest suite covers adapters, source diagnostics, spoiler projections, reaction roles, camera interpolation, static layouts and deterministic Canvas drawing commands. Strict TypeScript, ESLint and Prettier currently cover the migrated TypeScript and tooling; the remaining JavaScript modules will be migrated in later batches. The literary validator reads the JSON Schema directly and derives the checked document type from it; the biological adapter checks the values it consumes before narrowing imported data. After editing the literary schema, run `npm run generate:types` and commit the regenerated types. `npm run check:types` detects a stale generated file.
 
 The development-only `minimatch` override temporarily selects the patched 11.x release for a glob denial-of-service advisory. It crosses the lint tools' declared 10.x dependency range; keep the lint checks when updating dependencies and remove the override when those tools support a patched version themselves.
 
@@ -41,7 +41,7 @@ The browser workspace additionally exposes `window.renderAt(frame)` for a valida
 
 - [Literary draft and example](examples/honglou-provisional.relgraph.json): 17 characters, 17 relations and five shots. **This is provisional, not source-verified literary scholarship.** See the [JSON Schema](schema/relationship-graph.schema.json) and [TypeScript types](types/relationship-graph.ts).
 - [Biology draft and synthetic example](examples/biology-signaling-synthetic.json): fictional molecules, typed interactions and a multi-participant reaction. It makes **no experimental claim** and `relgraph.bio/0.1-draft` is not PSI-MI, SBGN, SBML or BioPAX.
-- [Neutral graph contract](src/graph/core.ts), [literature adapter](src/domains/literature.mjs), [biology adapter](src/domains/biology.mjs), [director state](src/director/state.ts) and [Canvas renderer](src/render/canvas.mjs) are reusable modules.
+- [Neutral graph contract](src/graph/core.ts), [literature adapter](src/domains/literature.ts), [biology adapter](src/domains/biology.ts), [director state](src/director/state.ts) and [Canvas renderer](src/render/canvas.mjs) are reusable modules.
 
 See [architecture](docs/ARCHITECTURE.md), [cross-domain decision](docs/ADR-002-domain-adapters.md), [proposed render pipeline and foundations](docs/ADR-003-render-pipeline-and-foundations.md) and [roadmap](docs/ROADMAP.md). The project has no GitHub Actions workflow; validation is local.
 

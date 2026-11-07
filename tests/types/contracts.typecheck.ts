@@ -1,3 +1,6 @@
+import { inspectRelGraph, validateRelGraph, visibleStory } from '../../src/relgraph';
+import { validateBiologyDocument } from '../../src/domains/biology';
+import { loadDocument, parseDocument } from '../../src/director/load';
 import type { GraphDoc, PresentationStep } from '../../types/relationship-graph';
 import type { VisualGraph } from '../../types/visual-graph';
 import { layoutGraph } from '../../src/director/layout';
@@ -36,3 +39,23 @@ if (frame.playback.scene !== null) {
   const unsafeSceneId: string = frame.playback.scene.id;
   void unsafeSceneId;
 }
+
+const literaryCheck = validateRelGraph(untrusted);
+const biologicalCheck = validateBiologyDocument(untrusted);
+const loaded = loadDocument(untrusted);
+if (loaded.valid) {
+  const title: string = loaded.graph.meta.title;
+  const summary: string | undefined = loaded.detailAt('a', 1)?.summary;
+  void [title, summary];
+} else {
+  // @ts-expect-error A failed load does not expose a graph.
+  const missingGraph = loaded.graph;
+  void missingGraph;
+}
+const inspected = inspectRelGraph(untrusted);
+if (inspected.valid) visibleStory(inspected.document, 1);
+// @ts-expect-error Untrusted input must be validated before direct projection.
+visibleStory(untrusted, 1);
+// @ts-expect-error JSON input is text, not an arbitrary value.
+parseDocument(untrusted);
+void [literaryCheck, biologicalCheck];
