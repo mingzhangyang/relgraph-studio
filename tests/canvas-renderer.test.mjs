@@ -94,6 +94,14 @@ test('renderFrame returns the director state for the drawn frame', () => {
   const state = renderer.renderFrame(24);
   assert.equal(state.playback.index, 1);
   assert.equal(state.overlay.nodeId, 'future');
+  // Published frame data must not mutate private compiled scene snapshots.
+  state.view.nodes[0].label = 'TAMPERED';
+  state.playback.scene.title = 'TAMPERED SHOT';
+  state.camera.focusNodeId = 'known';
+  const next = renderer.renderFrame(24);
+  assert.equal(next.playback.scene.title, 'Reveal');
+  assert.deepEqual(next.view.nodes.map((node) => node.label), ['Known', 'FUTURE PERSON']);
+  assert.notEqual(next.camera.focusNodeId, 'known');
 });
 
 test('missing layout positions fail only when the node is visible', () => {
