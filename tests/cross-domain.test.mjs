@@ -1,8 +1,8 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import {validateVisualGraph,projectVisualGraph,sceneAtSecond,frameStateAt} from '../src/graph/core.ts';
-import {adaptLiteratureDocument,literaryDetailsAt} from '../src/domains/literature.mjs';
-import {adaptBiologyDocument,validateBiologyDocument} from '../src/domains/biology.mjs';
+import {adaptLiteratureDocument,literaryDetailsAt} from '../src/domains/literature.ts';
+import {adaptBiologyDocument,validateBiologyDocument} from '../src/domains/biology.ts';
 import sample from '../examples/biology-signaling-synthetic.json' with {type:'json'};
 const literary={schemaVersion:'0.1',meta:{title:'Fictional story'},timeline:{unit:'chapter',total:10},factions:[{id:'heroes',name:'Heroes'}],characters:[{id:'a',name:'A',importance:5,factionId:'heroes',bio:{summary:'A',fate:'Late ending',quotes:[{text:'Future secret',at:9}]},position:{x:12,y:34}},{id:'b',name:'B',importance:3,bio:{summary:'B'},firstAppearance:4}],relations:[{id:'kin',source:'a',target:'b',type:'family',strength:3,chapters:{from:4}},{id:'rival',source:'a',target:'b',type:'rivalry',strength:2,chapters:{from:6}}],presentation:[{id:'intro',title:'A',durationSec:2,chapterAt:1,highlight:{characterIds:['b'],relationIds:['kin']},camera:{focusNodeId:'b'}},{id:'reveal',title:'B',durationSec:2,chapterAt:4,highlight:{characterIds:['a','b'],relationIds:['kin']}}]};
 test('literary adapter preserves multi-edges and layout',()=>{const {graph}=adaptLiteratureDocument(literary);assert.equal(validateVisualGraph(graph).valid,true);assert.deepEqual(graph.nodes[0].position,{x:12,y:34});assert.equal(projectVisualGraph(graph,3).edges.length,0);assert.deepEqual(projectVisualGraph(graph,5).edges.map(e=>e.id),['kin']);assert.deepEqual(projectVisualGraph(graph,6).edges.map(e=>e.id),['kin','rival']);});

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
 import biology from '../examples/biology-signaling-synthetic.json' with {type:'json'};
-import {loadDocument,parseDocument} from '../src/director/load.mjs';
+import {loadDocument,parseDocument} from '../src/director/load.ts';
 import {layoutGraph} from '../src/director/layout.ts';
 import {directorFrameAt,frameCount} from '../src/director/state.ts';
 

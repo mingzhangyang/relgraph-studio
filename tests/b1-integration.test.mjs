@@ -2,11 +2,11 @@ import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import literature from '../examples/honglou-provisional.relgraph.json' with {type:'json'};
 import biology from '../examples/biology-signaling-synthetic.json' with {type:'json'};
-import {loadDocument,parseDocument} from '../src/director/load.mjs';
+import {loadDocument,parseDocument} from '../src/director/load.ts';
 import {layoutGraph} from '../src/director/layout.ts';
 import {directorFrameAt,frameCount} from '../src/director/state.ts';
 import {createCanvasRenderer} from '../src/render/canvas.mjs';
-import {visibleStory} from '../src/relgraph.mjs';
+import {visibleStory} from '../src/relgraph.ts';
 
 const fiction={schemaVersion:'0.1',meta:{title:'A fictional story'},timeline:{unit:'chapter',total:10},
   characters:[{id:'a',name:'A',importance:4,position:{x:0,y:0},bio:{summary:'A',fate:'SECRET FATE',quotes:[{text:'LATE BIO',at:9},{text:'EARLY BIO',at:1}]}},

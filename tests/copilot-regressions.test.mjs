@@ -1,8 +1,8 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import {validateRelGraph,visibleStory} from '../src/relgraph.mjs';
+import {validateRelGraph,visibleStory} from '../src/relgraph.ts';
 import {validateVisualGraph,frameStateAt} from '../src/graph/core.ts';
-import {validateBiologyDocument,adaptBiologyDocument} from '../src/domains/biology.mjs';
+import {validateBiologyDocument,adaptBiologyDocument} from '../src/domains/biology.ts';
 import biology from '../examples/biology-signaling-synthetic.json' with {type:'json'};
 const literature={schemaVersion:'0.1',meta:{title:'Test'},characters:[{id:'a',name:'A',importance:4,bio:{summary:'A',fate:'SECRET',quotes:[{text:'LATE',at:9},{text:'EARLY',at:2},{text:'UNDATED'}]}},{id:'b',name:'B',importance:3,bio:{summary:'B'}}],relations:[{id:'one',source:'a',target:'b',type:'service',label:'reports to',directed:true,strength:2,evidence:[{text:'FUTURE-EVIDENCE',at:9},{text:'KNOWN-EVIDENCE',at:2}]}]};
 test('reciprocal directed relations differ, undirected reversals duplicate',()=>{const d=structuredClone(literature);d.relations.push({...d.relations[0],id:'two',source:'b',target:'a'});assert.equal(validateRelGraph(d).valid,true);d.relations[0].directed=false;d.relations[1].directed=false;assert.ok(validateRelGraph(d).errors.some(e=>e.code==='DUPLICATE_RELATION'));});

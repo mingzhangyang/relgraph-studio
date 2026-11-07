@@ -14,6 +14,7 @@ export default tseslint.config(
       '*.config.mjs',
       'tests/production-build.test.mjs',
       'tests/graph-kernel.test.mjs',
+      'tests/domain-migration.test.mjs',
     ],
     extends: [js.configs.recommended],
     languageOptions: { globals: globals.node },
