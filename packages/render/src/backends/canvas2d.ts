@@ -7,16 +7,19 @@ import type {
   PathCommand,
   TextMeasurer,
 } from '../display-list.js';
+import { FILM_FONT_FAMILIES } from '../fonts.js';
 
 /**
  * Canvas 2D backend (ADR 003, D1): a thin translation of display items into
  * drawing calls. It makes no layout, style or visibility decisions.
  */
 
+// The vendored film font leads each stack; the rest only covers characters
+// outside its subset.
 export const FONT_STACKS: Readonly<Record<FontFamily, string>> = Object.freeze({
-  sans: '"Noto Sans CJK SC", "PingFang SC", system-ui, sans-serif',
-  serif: '"Noto Serif CJK SC", "Songti SC", Georgia, serif',
-  mono: 'ui-monospace, monospace',
+  sans: `"${FILM_FONT_FAMILIES.sans}", "PingFang SC", system-ui, sans-serif`,
+  serif: `"${FILM_FONT_FAMILIES.serif}", "Songti SC", Georgia, serif`,
+  mono: `"${FILM_FONT_FAMILIES.mono}", ui-monospace, monospace`,
 });
 export const cssFont = (font: FontRef): string =>
   `${font.weight} ${font.size}px ${FONT_STACKS[font.family]}`;

@@ -19,6 +19,7 @@ export default tseslint.config(
       'tests/render-pipeline.test.mjs',
       'tests/studio-workspace.test.mjs',
       'tests/package-build.test.mjs',
+      'tests/film-fonts.test.mjs',
       'tests/helpers/**/*.mjs',
     ],
     extends: [js.configs.recommended],
