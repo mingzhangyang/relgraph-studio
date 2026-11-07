@@ -23,4 +23,9 @@ export default tseslint.config(
     extends: [js.configs.recommended],
     languageOptions: { globals: globals.node },
   },
+  {
+    // Playwright evaluates some callbacks of this Node script inside the page.
+    files: ['scripts/browser-check.mjs'],
+    languageOptions: { globals: { ...globals.node, ...globals.browser } },
+  },
 );

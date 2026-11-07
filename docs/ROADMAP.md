@@ -22,7 +22,7 @@
 
 ## B1.5 — Foundations (proposed, see [ADR 003](ADR-003-render-pipeline-and-foundations.md))
 
-- [ ] TypeScript, Vite, Vitest and Prettier; one JSON Schema source for types and validation
+- [x] TypeScript, Vite, Vitest and Prettier; one JSON Schema source for types and validation
   - [x] Establish the toolchain, migrate the layout module, and derive literary types and structural validation from the JSON Schema
   - [x] Migrate neutral graph validation, spoiler-safe projection and director frame evaluation to strict TypeScript
   - [x] Migrate literary validation and spoiler-safe projections, both domain adapters and the unified document loader to strict TypeScript
@@ -30,8 +30,8 @@
   - [x] Migrate the director workspace to strict TypeScript, including DOM, playback, import and theme state
   - [x] Organize current code under `packages/core`, `packages/render` and `apps/studio`; keep one literary schema for validation and generated types
   - [x] Establish separately buildable core and render packages with explicit exports and package-level TypeScript builds
-  - [ ] Add the CLI when its functionality exists
-  - [ ] Verify the migrated production build in a real browser across both examples, file imports, playback, seeking and themes
+  - [x] Verify the migrated production build in a real browser across both examples, file imports, playback, seeking and themes (`npm run check:browser`, with a local frame baseline for the rendering refactor)
+  - The CLI package moves to the headless `relgraph render` item below, where its functionality first exists
 - [ ] `FrameSpec` safe areas instead of 1280×720 literals; display-list composition with a Canvas backend
 - [ ] Domain style sheets and a locale table instead of edge kinds and captions in the renderer
 - [ ] Headless `relgraph render` CLI (skia-canvas + FFmpeg) with vendored fonts and golden frames
