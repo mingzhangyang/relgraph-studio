@@ -1,8 +1,8 @@
 # ADR 003 — Display-list rendering, track timeline and project foundations
 
-Status: **Accepted** · proposed 2026-11-06, accepted 2026-11-07 with migration step 2; step 3 complete 2026-11-07 · Supersedes nothing; refines [ADR 001](ARCHITECTURE.md) and [ADR 002](ADR-002-domain-adapters.md)
+Status: **Accepted** · proposed 2026-11-06, accepted 2026-11-07 with migration step 2; steps 1–3 merged, step 4 implemented on a draft branch pending local acceptance checks · Supersedes nothing; refines [ADR 001](ARCHITECTURE.md) and [ADR 002](ADR-002-domain-adapters.md)
 
-The context and paths below describe the project when this ADR was proposed. For the current source layout and migration status, see the [README](../README.md) and [roadmap](ROADMAP.md). Migration steps 1–3 are complete: core and render have separate builds, frames are composed into display lists from a `FrameSpec`, edge and node vocabularies live in domain style sheets, and `relgraph render` exports MP4s headlessly through skia-canvas with vendored fonts and golden frames. The track timeline (step 4) and layout CLI (step 5) remain future work.
+The context and paths below describe the project when this ADR was proposed. For the current source layout and migration status, see the [README](../README.md) and [roadmap](ROADMAP.md). Migration steps 1–3 are complete: core and render have separate builds, frames are composed into display lists from a `FrameSpec`, edge and node vocabularies live in domain style sheets, and `relgraph render` exports MP4s headlessly through skia-canvas with vendored fonts and golden frames. The step 4 timeline compiler, reveal effects and caption track have been implemented on a draft branch; visual regression, golden hashes and MP4 re-exports must pass before acceptance. The layout CLI (step 5) remains future work.
 
 ## Context
 
@@ -113,6 +113,16 @@ interface Keyframe<T> {atSec:number; value:T; ease?:'linear'|'smooth'|'hold'}
 - Spoiler projection runs **before** compilation, so no track can reference a hidden object.
 - Later, caption timing can be driven by narration audio length without touching other tracks.
 
+##### Step 4 implementation details (draft; local acceptance pending)
+
+- `compileTimeline(graph, fps = 24)` builds safe shot projections, keyframes and reveal cues in one pure pass. Each scene is filtered and redacted *before* camera, highlight or caption track generation, ensuring invisible references and suppressed narration never enter tracks.
+- D3's sketch is refined: `domainTime` is `number | null` for untimed authored scenes; camera keys add `transitionSec`; reveal cues add target kind and duration; caption cues add fade durations; and `shots` stores safe pre-projected values for deterministic random access.
+- Forward domain steps reveal newly projected nodes (fade and 82% → 100% scale in **0.6 s**) and edges (exact quadratic Bézier prefix draw-on in **0.8 s**) together. Opening-shot objects remain fully visible. Backward steps instantly withdraw missing objects; a later reappearance gets a new cue. Directed end markers appear after the full edge.
+- Node and edge labels do not draw or participate in avoidance until more than 50% of their reveal has elapsed, then fade in. Camera and highlight transitions retain their old 1200 ms smooth default and geometry. The Canvas2D and skia backends are unchanged.
+- Each shot's title and narration fade in/out in **0.3 s** at the beginning/end; shots shorter than 0.6 s cap each fade to half their duration. Counters and global film title remain steady. The audio stream and independently muxed MP4 subtitle tracks remain B2 work.
+- **A11y:** projected nodes and edges enter `DisplayList.a11y` at the *first reveal frame*, including a zero-alpha first pixel frame; caption text enters from the beginning of its fade-in. Both are semantically active even while transition pixels have opacity zero. The workbench transcript and live region now read that same `DisplayList.a11y`, rather than reinterpreting the graph.
+- **Unverified acceptance:** the coding container could not connect to GitHub to get a checkout, so local commands, browser comparisons, skia goldens and video exports could not be executed. The previous 32 SHA hashes were deliberately left intact. On an accessible machine, save the pre-change `main` browser reference, compare the branch, refresh reference files only after reviewing real differences, re-export both MP4s, and collect reveal screenshots.
+
 #### D4. Visual encoding comes from a domain style sheet
 
 ```ts
@@ -188,7 +198,7 @@ A scene-per-section Markdown script (title, narration, front-matter for camera/h
 | 1 | D7 tooling only: TypeScript, Vite, Vitest, Prettier; mechanical port; single schema source. | Existing tests pass unchanged in behaviour; formatter clean. |
 | 2 | D2 `FrameSpec` + D1 `compose`/`DisplayList` + Canvas backend; D4 style sheets and locale table. | Same examples render visually equivalent at 16:9; tests assert on display lists. |
 | 3 | D6 skia backend, vendored fonts, `relgraph render` CLI, golden frames. | A complete MP4 of each example is produced headlessly. |
-| 4 | D3 track timeline with default reveals; caption track. | Nodes/edges animate in; random-access frames remain deterministic. |
+| 4 | D3 track timeline with default reveals; caption track. **Draft implementation; acceptance pending.** | Nodes/edges animate in, deterministic frames confirmed by browser and headless regression, refreshed golden hashes, both MP4s exported. |
 | 5 | D5 layout CLI and position tweak tool; then B2 source-verified film; D8 only if needed. | First source-verified 60–90 s film exported. |
 
 ## Non-goals
