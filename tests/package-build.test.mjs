@@ -1,24 +1,68 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
+import { realpathSync } from 'node:fs';
 import { cp, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { delimiter, dirname, join, resolve } from 'node:path';
+import { basename, delimiter, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 
 const run = promisify(execFile);
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+const executablePath = process.env.PATH ?? process.env.Path ?? '';
 const env = {
   ...process.env,
-  PATH: `${join(root, 'node_modules/.bin')}${delimiter}${process.env.PATH}`,
+  PATH: `${join(root, 'node_modules/.bin')}${delimiter}${executablePath}`,
 };
+
+// npm.cmd is a batch file on Windows, so resolve npm's JS entry and run it
+// with Node. The PATH fallback also supports invoking Vitest directly.
+function npmCliPath() {
+  const nodeDir = dirname(process.execPath);
+  const candidates = [
+    process.env.npm_execpath,
+    join(nodeDir, 'node_modules/npm/bin/npm-cli.js'),
+    join(nodeDir, '../lib/node_modules/npm/bin/npm-cli.js'),
+    ...executablePath
+      .split(delimiter)
+      .flatMap((dir) =>
+        dir ? [join(dir, 'npm'), join(dir, 'node_modules/npm/bin/npm-cli.js')] : [],
+      ),
+  ];
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    try {
+      const path = realpathSync(candidate);
+      if (basename(path).toLowerCase() === 'npm-cli.js') return path;
+    } catch {
+      // Try the next installation location.
+    }
+  }
+  throw new Error('Cannot locate npm-cli.js; run this test with npm test or put npm on PATH.');
+}
+
+function runNpm(args, options, cli = npmCliPath()) {
+  return run(process.execPath, [cli, ...args], options);
+}
 
 async function copySource(from, to) {
   const dist = join(from, 'dist');
   await cp(from, to, { recursive: true, filter: (path) => path !== dist });
 }
+
+test('npm CLI paths with spaces preserve literal arguments', async () => {
+  const temp = await mkdtemp(join(tmpdir(), 'relgraph npm cli '));
+  try {
+    const cli = join(temp, 'npm-cli.js');
+    await writeFile(cli, 'process.stdout.write(JSON.stringify(process.argv.slice(2)));\n');
+    const args = ['install', 'a file.tgz', 'a&b'];
+    const { stdout } = await runNpm(args, { cwd: temp, env }, cli);
+    assert.deepEqual(JSON.parse(stdout), args);
+  } finally {
+    await rm(temp, { recursive: true, force: true });
+  }
+});
 
 test('separately built packages work as packed Node and TypeScript dependencies', async () => {
   const temp = await mkdtemp(join(tmpdir(), 'relgraph-package-consumer-'));
@@ -37,8 +81,8 @@ test('separately built packages work as packed Node and TypeScript dependencies'
     // just as a workspace install would, without accessing the repository source.
     await mkdir(join(builder, 'node_modules/@relgraph'), { recursive: true });
     await symlink(core, join(builder, 'node_modules/@relgraph/core'), 'junction');
-    await run(npm, ['run', 'build'], { cwd: core, env });
-    await run(npm, ['run', 'build'], { cwd: render, env });
+    await runNpm(['run', 'build'], { cwd: core, env });
+    await runNpm(['run', 'build'], { cwd: render, env });
 
     const originalSchema = JSON.parse(
       await readFile(join(core, 'schema/relationship-graph.schema.json'), 'utf8'),
@@ -50,8 +94,7 @@ test('separately built packages work as packed Node and TypeScript dependencies'
 
     const tarballs = [];
     for (const path of [core, render]) {
-      const { stdout } = await run(
-        npm,
+      const { stdout } = await runNpm(
         ['pack', '--ignore-scripts', '--json', '--pack-destination', packs],
         { cwd: path, env },
       );
@@ -62,8 +105,7 @@ test('separately built packages work as packed Node and TypeScript dependencies'
     // No ancestor of the consumer can resolve the builder or source workspace.
     await rm(builder, { recursive: true, force: true });
     await writeFile(join(consumer, 'package.json'), '{"private":true,"type":"module"}\n');
-    await run(
-      npm,
+    await runNpm(
       [
         'install',
         '--offline',
