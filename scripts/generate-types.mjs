@@ -1,10 +1,11 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { compileFromFile } from 'json-schema-to-typescript';
 
-const schemaPath = 'schema/relationship-graph.schema.json';
-const outputPath = 'types/generated/relationship-graph.ts';
+const schemaPath = 'packages/core/schema/relationship-graph.schema.json';
+const outputPath = 'packages/core/types/generated/relationship-graph.ts';
 const generated = await compileFromFile(schemaPath, {
-  bannerComment: '// Generated from schema/relationship-graph.schema.json. Do not edit by hand.',
+  bannerComment:
+    '// Generated from packages/core/schema/relationship-graph.schema.json. Do not edit by hand.',
   style: { singleQuote: true, printWidth: 100 },
 });
 

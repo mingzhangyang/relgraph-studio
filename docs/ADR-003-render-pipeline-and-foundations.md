@@ -2,6 +2,8 @@
 
 Status: **Proposed** · 2026-11-06 · Supersedes nothing; refines [ADR 001](ARCHITECTURE.md) and [ADR 002](ADR-002-domain-adapters.md)
 
+The context and paths below describe the project when this ADR was proposed. For the current source layout and migration status, see the [README](../README.md) and [roadmap](ROADMAP.md). The source is now grouped into core, render and studio directories; independent package builds and exports remain future work.
+
 ## Context
 
 B1 proved the core idea: two unrelated source domains (literature, molecular biology) flow through validation → domain adapter → `VisualGraph` → frame state → one Canvas renderer, and every video frame is a pure function of its integer index. The project is still small (≈2k lines), so structural changes are cheap now and expensive later.

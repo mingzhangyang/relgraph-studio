@@ -1,13 +1,13 @@
-import { createCanvasRenderer, themeFor } from '../../src/render/canvas';
-import type { DirectorFrameState } from '../../types/visual-graph';
-import { inspectRelGraph, validateRelGraph, visibleStory } from '../../src/relgraph';
-import { validateBiologyDocument } from '../../src/domains/biology';
-import { loadDocument, parseDocument } from '../../src/director/load';
-import type { GraphDoc, PresentationStep } from '../../types/relationship-graph';
-import type { VisualGraph } from '../../types/visual-graph';
-import { layoutGraph } from '../../src/director/layout';
-import { directorFrameAt } from '../../src/director/state';
-import { frameStateAt, validateVisualGraph } from '../../src/graph/core';
+import { createCanvasRenderer, themeFor } from '../../packages/render/src/canvas';
+import type { DirectorFrameState } from '../../packages/core/types/visual-graph';
+import { inspectRelGraph, validateRelGraph, visibleStory } from '../../packages/core/src/relgraph';
+import { validateBiologyDocument } from '../../packages/core/src/domains/biology';
+import { loadDocument, parseDocument } from '../../packages/core/src/director/load';
+import type { GraphDoc, PresentationStep } from '../../packages/core/types/relationship-graph';
+import type { VisualGraph } from '../../packages/core/types/visual-graph';
+import { layoutGraph } from '../../packages/core/src/director/layout';
+import { directorFrameAt } from '../../packages/core/src/director/state';
+import { frameStateAt, validateVisualGraph } from '../../packages/core/src/graph/core';
 
 const document: GraphDoc = {
   schemaVersion: '0.1',
@@ -76,3 +76,10 @@ void [rendered, resolvedTheme];
 renderer.renderFrame('0');
 // @ts-expect-error FPS must be numeric.
 createCanvasRenderer(canvas, graph, layoutGraph(graph), { fps: '24' });
+
+// The browser frame API has a typed input and returns an independent safe state.
+const didRender: boolean = window.renderAt(0);
+const inspectedFrame: DirectorFrameState | null = window.studioFrame();
+void [didRender, inspectedFrame];
+// @ts-expect-error Frame indices are numbers.
+window.renderAt('1');

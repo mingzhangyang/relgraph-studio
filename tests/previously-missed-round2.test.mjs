@@ -1,9 +1,9 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {validateVisualGraph,sceneAtSecond,frameStateAt} from '../src/graph/core.ts';
-import {validateRelGraph,visibleStory} from '../src/relgraph.ts';
-import {validateBiologyDocument,adaptBiologyDocument} from '../src/domains/biology.ts';
+import {validateVisualGraph,sceneAtSecond,frameStateAt} from '../packages/core/src/graph/core.ts';
+import {validateRelGraph,visibleStory} from '../packages/core/src/relgraph.ts';
+import {validateBiologyDocument,adaptBiologyDocument} from '../packages/core/src/domains/biology.ts';
 import biology from '../examples/biology-signaling-synthetic.json' with {type:'json'};
 
 const graph={

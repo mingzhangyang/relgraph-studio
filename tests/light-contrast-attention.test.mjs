@@ -2,10 +2,10 @@ import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import biology from '../examples/biology-signaling-synthetic.json' with {type:'json'};
-import {loadDocument} from '../src/director/load.ts';
-import {layoutGraph} from '../src/director/layout.ts';
-import {directorFrameAt} from '../src/director/state.ts';
-import {shotAttention} from '../src/render/canvas.ts';
+import {loadDocument} from '../packages/core/src/director/load.ts';
+import {layoutGraph} from '../packages/core/src/director/layout.ts';
+import {directorFrameAt} from '../packages/core/src/director/state.ts';
+import {shotAttention} from '../packages/render/src/canvas.ts';
 
 const css=readFileSync(new URL('../demo/studio.css',import.meta.url),'utf8');
 function tokens(block){return Object.fromEntries([...block.matchAll(/--([\w-]+):\s*([^;]+);/g)].map(m=>[m[1],m[2].trim()]));}

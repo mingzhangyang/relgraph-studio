@@ -1,7 +1,7 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { createCanvasRenderer, themeFor, VIDEO_THEMES } from '../src/render/canvas.ts';
-import { layoutGraph } from '../src/director/layout.ts';
+import { createCanvasRenderer, themeFor, VIDEO_THEMES } from '../packages/render/src/canvas.ts';
+import { layoutGraph } from '../packages/core/src/director/layout.ts';
 
 function recordingCanvas() {
   let commands = [];
