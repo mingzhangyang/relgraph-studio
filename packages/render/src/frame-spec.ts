@@ -57,8 +57,10 @@ export function scaleFrameSpec(spec: FrameSpec, factor: number, name: string): F
   return {
     ...spec,
     name,
-    width: Math.round(spec.width * factor),
-    height: Math.round(spec.height * factor),
+    // Round up so the scaled rectangles always fit; the epsilon keeps an
+    // exact product such as 1280 × 1.5 from gaining a pixel.
+    width: Math.ceil(spec.width * factor - 1e-9),
+    height: Math.ceil(spec.height * factor - 1e-9),
     stage: scaleRect(spec.stage, factor),
     safe: {
       title: scaleRect(spec.safe.title, factor),
@@ -87,6 +89,9 @@ export const FRAME_SPECS = deepFreeze({
 export type FrameSpecName = keyof typeof FRAME_SPECS;
 export const DEFAULT_FRAME_SPEC: Readonly<FrameSpec> = FRAME_SPECS['landscape-720p'];
 
+// Scaled rectangles may exceed an exact edge by floating-point rounding.
+const EPSILON = 1e-6;
+
 const isFrameSpecName = (name: string): name is FrameSpecName => Object.hasOwn(FRAME_SPECS, name);
 
 /** Resolve a preset name or validate a custom spec. */
@@ -114,8 +119,8 @@ export function frameSpecFor(spec: FrameSpecName | FrameSpec | undefined): Reado
         positive(r.h) &&
         r.x >= 0 &&
         r.y >= 0 &&
-        r.x + r.w <= spec.width &&
-        r.y + r.h <= spec.height,
+        r.x + r.w <= spec.width + EPSILON &&
+        r.y + r.h <= spec.height + EPSILON,
     )
   )
     throw new RangeError(`Invalid frame spec ${String(spec.name)}`);

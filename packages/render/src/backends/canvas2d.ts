@@ -132,11 +132,19 @@ function drawItems(ctx: Canvas2D, items: readonly DisplayItem[], alpha: number):
       ctx.restore();
     } else if (item.type === 'path') {
       ctx.globalAlpha = alpha * (item.alpha ?? 1);
-      // Rectangle fills use fillRect, which antialiases fractional edges
-      // differently from a filled rect() path; keep the established pixels.
-      if (item.fill !== undefined && item.stroke === undefined && item.d.every(isRect)) {
+      // A lone rectangle fill uses fillRect, which antialiases fractional
+      // edges differently from a filled rect() path; keep the established
+      // pixels. Multi-subpath fills stay one path so overlaps and winding
+      // keep their path semantics.
+      const [only] = item.d;
+      if (
+        item.fill !== undefined &&
+        item.stroke === undefined &&
+        item.d.length === 1 &&
+        isRect(only)
+      ) {
         ctx.fillStyle = paint(ctx, item.fill);
-        for (const [, x, y, w, h] of item.d as RectCommand[]) ctx.fillRect(x, y, w, h);
+        ctx.fillRect(only[1], only[2], only[3], only[4]);
         continue;
       }
       ctx.beginPath();

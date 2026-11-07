@@ -25,6 +25,7 @@ import {
   DEFAULT_FRAME_SPEC,
   FRAME_SPECS,
   frameSpecFor,
+  scaleFrameSpec,
 } from '../packages/render/src/frame-spec.ts';
 import { VIDEO_THEMES } from '../packages/render/src/theme.ts';
 import { measure, measuringCanvas, paths, texts } from './helpers/display-list.mjs';
@@ -318,4 +319,120 @@ test('renderer sources hold no domain vocabulary or 720p pixel positions', () =>
   ])
     assert.ok(!sources.includes(word), word);
   assert.doesNotMatch(read('compose.ts'), /\b(640|330|1218|1228|1250|1152|1120|434|540|548|704)\b/);
+});
+
+test('scaled frame specs always contain their rectangles and pass validation', () => {
+  for (const factor of [0.5, 0.75, 1.01, 1.333, 1.5, 2.5, 3.7]) {
+    const spec = scaleFrameSpec(DEFAULT_FRAME_SPEC, factor, `x${factor}`);
+    assert.doesNotThrow(() => frameSpecFor(spec), String(factor));
+    assert.ok(Number.isInteger(spec.width) && Number.isInteger(spec.height));
+    assert.ok(spec.width >= 1280 * factor - 1e-9 && spec.width < 1280 * factor + 1);
+    assert.ok(spec.height >= 720 * factor - 1e-9 && spec.height < 720 * factor + 1);
+  }
+  const hd = scaleFrameSpec(DEFAULT_FRAME_SPEC, 1.5, 'hd');
+  assert.equal(hd.width, 1920);
+  assert.equal(hd.height, 1080);
+  assert.throws(() => scaleFrameSpec(DEFAULT_FRAME_SPEC, 0, 'zero'), RangeError);
+});
+
+test('the film title stays inside a narrow title safe area', () => {
+  const spec = structuredClone(DEFAULT_FRAME_SPEC);
+  spec.safe.title = { x: 600, y: 0, w: 600, h: 104 };
+  const example = examples[1];
+  const graph = {
+    ...example.graph,
+    meta: { ...example.graph.meta, title: '很长的影片标题'.repeat(12) },
+  };
+  const list = compose({ ...example, graph }, 0, frameSpecFor(spec));
+  const titleFont = { family: 'serif', size: 27, weight: 600 };
+  const title = list.items.find(
+    (item) =>
+      item.type === 'text' &&
+      item.font.family === 'serif' &&
+      item.font.size === 27 &&
+      item.y === 78,
+  );
+  const domainTime = list.items.find(
+    (item) => item.type === 'text' && item.text === list.a11y.domainTime,
+  );
+  assert.ok(list.a11y.domainTime, 'the biology example has a domain time on the title row');
+  assert.ok(title.text.endsWith('…'));
+  const right = title.x + measure(title.text, titleFont);
+  const timeLeft = domainTime.x - measure(domainTime.text, domainTime.font);
+  assert.ok(
+    right <= 1200 && right < timeLeft,
+    `title ends at ${right}, domain time starts at ${timeLeft}`,
+  );
+  // The 720p layout keeps its design maximum.
+  const wide = compose({ ...example, graph }, 0);
+  const wideTitle = wide.items.find(
+    (item) => item.type === 'text' && item.font.size === 27 && item.y === 78,
+  );
+  assert.ok(measure(wideTitle.text, titleFont) <= 850);
+});
+
+test('accessible relations keep the localized type alongside meaningful labels', () => {
+  const example = examples[1];
+  // Inputs are visible during the reaction stage, products after it.
+  const frames = [156, frameCount(example.graph) - 1];
+  const relations = (graph, extra) =>
+    frames.flatMap(
+      (frame) => compose({ ...example, graph }, frame, DEFAULT_FRAME_SPEC, extra).a11y.relations,
+    );
+  const zh = relations(example.graph);
+  const en = relations(example.graph, { locale: 'en' });
+  assert.ok(
+    zh.some((r) => r.endsWith('：输入')) && zh.some((r) => r.endsWith('：产物')),
+    zh.join(' | '),
+  );
+  assert.ok(
+    en.some((r) => r.endsWith(': input')) && en.some((r) => r.endsWith(': product')),
+    en.join(' | '),
+  );
+  assert.ok(!zh.some((r) => r.endsWith('：1')));
+  const doubled = structuredClone(example.graph);
+  doubled.edges.find((e) => e.kind === 'consumption').label = '2';
+  assert.ok(relations(doubled).some((r) => r.endsWith('：输入 · 2')));
+  // The drawn caption follows the same policy.
+  assert.ok(texts(compose({ ...example, graph: doubled }, frames[0])).includes('输入 · 2'));
+});
+
+test('multi-rectangle fills keep path semantics; a lone rectangle uses fillRect', () => {
+  const calls = [];
+  const ctx = new Proxy(
+    {},
+    {
+      get:
+        (target, key) =>
+        (...args) =>
+          calls.push([key, ...args]),
+      set: (target, key, value) => (calls.push(['set', key, value]), true),
+    },
+  );
+  drawDisplayList(ctx, {
+    width: 10,
+    height: 10,
+    a11y: {},
+    items: [
+      {
+        type: 'path',
+        d: [
+          ['R', 0, 0, 6, 6],
+          ['R', 3, 3, 6, 6],
+        ],
+        fill: '#000000',
+        alpha: 0.5,
+      },
+      { type: 'path', d: [['R', 1, 1, 2, 2]], fill: '#ffffff' },
+    ],
+  });
+  const kinds = calls.map((call) => call[0]);
+  assert.deepEqual(
+    kinds.filter((k) => k === 'rect' || k === 'fill' || k === 'fillRect'),
+    ['rect', 'rect', 'fill', 'fillRect'],
+  );
+  assert.deepEqual(
+    calls.find((call) => call[0] === 'fillRect'),
+    ['fillRect', 1, 1, 2, 2],
+  );
 });

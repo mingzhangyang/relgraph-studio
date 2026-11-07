@@ -69,6 +69,13 @@ const alphaHex = (alpha: number): string =>
     .toString(16)
     .padStart(2, '0');
 
+/**
+ * A domain caption followed by the edge's own label when that adds
+ * information; a stoichiometry of 1 adds none.
+ */
+const captionWithLabel = (caption: string, label: string | undefined): string =>
+  label && !/^1$/.test(label) ? `${caption} · ${label}` : caption;
+
 /** Attention (0–1) of a node or edge under a shot highlight. */
 export function shotAttention(
   item: DrawItem,
@@ -418,10 +425,14 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
       items: parts,
     });
     const caption = edgeStyle.caption ? localize(edgeStyle.caption, locale) : '';
-    const label = caption || (highlighted ? edge.label || '' : '');
+    const label = caption
+      ? captionWithLabel(caption, edge.label)
+      : highlighted
+        ? edge.label || ''
+        : '';
     if (label)
       edgeLabels.push({
-        text: edge.label && caption && !/^1$/.test(edge.label) ? `${label} · ${edge.label}` : label,
+        text: label,
         x: 0.25 * start.x + 0.5 * control.x + 0.25 * end.x,
         y: 0.25 * start.y + 0.5 * control.y + 0.25 * end.y,
         alpha: active,
@@ -592,14 +603,8 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
 
   // Title and caption bands keep graph labels out of overlays.
   items.push(
-    {
-      type: 'path',
-      d: [
-        ['R', 0, titleBand.y, W, titleBand.h],
-        ['R', 0, captionBand.y, W, captionBand.h],
-      ],
-      fill: P.band,
-    },
+    { type: 'path', d: [['R', 0, titleBand.y, W, titleBand.h]], fill: P.band },
+    { type: 'path', d: [['R', 0, captionBand.y, W, captionBand.h]], fill: P.band },
     {
       type: 'path',
       d: [
@@ -625,14 +630,18 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
   };
   const titleX = titleBand.x + u(2),
     titleRight = titleBand.x + titleBand.w;
-  const titleFont = serif(27, 600);
-  const filmTitle = fitText(measure, view.meta.title, titleFont, u(850));
+  const titleFont = serif(27, 600),
+    metaFont = mono(13);
   const domainTime =
     playback.domainAt === null ? '' : messages.domainTime(view.timeline?.unit, playback.domainAt);
+  // The film title shares its row with the right-aligned domain time and
+  // never exceeds the title safe area; u(850) is the design's maximum length.
+  const titleRoom = titleRight - titleX - (domainTime ? measure(domainTime, metaFont) + u(24) : 0);
+  const filmTitle = fitText(measure, view.meta.title, titleFont, Math.min(u(850), titleRoom));
   text(messages.kicker, titleX, titleBand.y + u(39), sans(13, 600), P.kicker);
   text(filmTitle, titleX, titleBand.y + u(78), titleFont, P.title);
-  text(messages.frameMeta(frame, fps), titleRight, titleBand.y + u(40), mono(13), P.meta, 'right');
-  text(domainTime, titleRight, titleBand.y + u(73), mono(13), P.meta, 'right');
+  text(messages.frameMeta(frame, fps), titleRight, titleBand.y + u(40), metaFont, P.meta, 'right');
+  text(domainTime, titleRight, titleBand.y + u(73), metaFont, P.meta, 'right');
 
   const captionX = captionBand.x + u(2),
     captionWidth = captionBand.w - u(36),
@@ -681,7 +690,7 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
         labels.get(edge.source) ?? edge.source,
         labels.get(edge.target) ?? edge.target,
         Boolean(edge.directed),
-        edge.label || (caption ? localize(caption, locale) : edge.kind),
+        caption ? captionWithLabel(localize(caption, locale), edge.label) : edge.label || edge.kind,
       );
     }),
   };
