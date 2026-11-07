@@ -7,6 +7,7 @@ import {layoutGraph} from '../packages/core/src/director/layout.ts';
 import {directorFrameAt,frameCount} from '../packages/core/src/director/state.ts';
 import {createCanvasRenderer} from '../packages/render/src/canvas.ts';
 import {visibleStory} from '../packages/core/src/relgraph.ts';
+import {measuringCanvas,texts} from './helpers/display-list.mjs';
 
 const fiction={schemaVersion:'0.1',meta:{title:'A fictional story'},timeline:{unit:'chapter',total:10},
   characters:[{id:'a',name:'A',importance:4,position:{x:0,y:0},bio:{summary:'A',fate:'SECRET FATE',quotes:[{text:'LATE BIO',at:9},{text:'EARLY BIO',at:1}]}},
@@ -83,17 +84,11 @@ test('authored coordinates stay fixed and random access reproduces camera and ca
  for(const id of a.highlight.nodeIds){const p=layout.get(id),c=a.cameraResolved;assert.ok(Math.abs((p.x-c.x)*c.scale)<540);assert.ok(Math.abs((p.y-c.y)*c.scale)<195);}
 });
 
-function recordingCanvas(){
- let commands=[];const record=(...args)=>commands.push(args);
- const gradient={addColorStop:(...args)=>record('colorStop',...args)};
- const ctx=new Proxy({}, {get(target,key){if(key==='measureText')return text=>({width:String(text).length*8});if(key==='createLinearGradient'||key==='createRadialGradient')return (...args)=>{record(key,...args);return gradient;};if(!(key in target))return (...args)=>record(key,...args);return target[key];},set(target,key,value){target[key]=value;record('set',key,value===gradient?'gradient':value);return true;}});
- return {canvas:{getContext:()=>ctx},take(){const out=commands;commands=[];return out;}};
-}
-test('Canvas draw commands are identical for repeat and random-access frames',()=>{
+test('display lists are identical for repeat and random-access frames',()=>{
  for(const source of [literature,biology]){
-  const {graph}=loadDocument(source),layout=layoutGraph(graph),rec=recordingCanvas();
-  const render=createCanvasRenderer(rec.canvas,graph,layout);render.renderFrame(100);const first=rec.take();
-  render.renderFrame(0);rec.take();render.renderFrame(200);rec.take();render.renderFrame(100);const second=rec.take();
-  assert.deepEqual(second,first);assert.ok(first.some(command=>command[0]==='fillText'));
+  const {graph}=loadDocument(source),layout=layoutGraph(graph);
+  const render=createCanvasRenderer(measuringCanvas(),graph,layout);const first=render.displayListAt(100);
+  render.displayListAt(0);render.displayListAt(200);
+  assert.deepEqual(render.displayListAt(100),first);assert.ok(texts(first).length>0);
  }
 });
