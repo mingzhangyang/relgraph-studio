@@ -17,7 +17,8 @@
 - [x] Preserve supplied layout, use static fallback coordinates and avoid label overlap when possible
 - [x] Shared 16:9 Canvas renderer with reaction role distinctions and deterministic frame API
 - [x] Local regression tests and browser checks without GitHub Actions
-- [ ] Packaged offline frame-sequence / MP4 export and production-quality typography QA
+- [x] Packaged offline frame-sequence / MP4 export (`relgraph render`, B1.5 below)
+- [ ] Production-quality typography QA
 - [ ] Full label placement for dense or coincident graphs; additional viewport and font coverage
 
 ## B1.5 — Foundations (see [ADR 003](ADR-003-render-pipeline-and-foundations.md))
@@ -37,7 +38,12 @@
   - Each display list carries its spoiler-filtered accessible text (`a11y`); switching the workspace transcript to it remains open
 - [x] Domain style sheets and a locale table instead of edge kinds and captions in the renderer
   - Renderer captions use `zh-CN` and `en`; localizing source diagnostics (currently English messages with Chinese fixes) and the workspace UI remains open
-- [ ] Headless `relgraph render` CLI (skia-canvas + FFmpeg) with vendored fonts and golden frames
+- [x] Headless `relgraph render` CLI (skia-canvas + FFmpeg) with vendored fonts and golden frames
+  - `@relgraph/render/skia` draws through the shared composition and Canvas 2D backend on skia-canvas 4.0.0 (CPU); `@relgraph/cli` provides `relgraph validate` and `relgraph render` (parallel worker threads, FFmpeg/libx264, `yuv420p`, BT.709)
+  - Both examples export as complete 1080p MP4s with `frameCount(graph, fps)` frames; any frame re-renders identically on its own
+  - Vendored OFL subsets of Noto Sans / Serif / Sans Mono CJK SC, registered by both the workspace and the exporter, with a reproducible subsetting script
+  - 32 golden frame hashes and `npm run check:export` (ffprobe, MP4 ↔ PNG round trip, informational preview ↔ export difference: about 0.3% of pixels at 720p)
+  - Follow-ups: `relgraph layout` (step 5); golden hashes confirmed on a second platform (macOS, arm64); fonts for characters outside the subset (rare hanzi in future sources) instead of a fallback warning; audio and caption tracks in the MP4 (B2); 9:16 and square presets (B3); an SVG still backend
 - [ ] Track/keyframe timeline compiled from `presentation`, with default reveal animations
 
 ## B2 — Source-verified film
