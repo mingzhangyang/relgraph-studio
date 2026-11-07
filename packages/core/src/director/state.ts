@@ -8,6 +8,24 @@ import type {
 } from '../../types/visual-graph.js';
 
 type Position = { x: number; y: number };
+
+/**
+ * Half extents of the area the camera frames nodes into, in reference pixels
+ * of the 1280×720 design (renderers multiply by their frame's type scale).
+ * Core stays independent of the renderer's FrameSpec and receives only this.
+ */
+export interface CameraFit {
+  halfWidth: number;
+  halfHeight: number;
+}
+export interface DirectorFrameOptions {
+  fit?: CameraFit;
+}
+export const DEFAULT_CAMERA_FIT: Readonly<CameraFit> = Object.freeze({
+  halfWidth: 550,
+  halfHeight: 195,
+});
+
 const clamp = (n: number, min = 0, max = 1): number => Math.max(min, Math.min(max, n));
 const ease = (t: number): number => {
   const x = clamp(t);
@@ -20,6 +38,7 @@ function cameraFor(
   spec: VisualCamera,
   positions: ReadonlyMap<string, Position>,
   highlight: ResolvedHighlight,
+  fit: CameraFit,
 ): { x: number; y: number; scale: number } {
   const visible = new Set(view.nodes.map((node) => node.id));
   const requested = spec.focusNodeId ? [spec.focusNodeId] : spec.fitIds || [];
@@ -31,14 +50,14 @@ function cameraFor(
     maxX = Math.max(...points.map((p) => p.x));
   const minY = Math.min(...points.map((p) => p.y)),
     maxY = Math.max(...points.map((p) => p.y));
-  // Graph area is between the fixed title and subtitle bands of a 1280x720 frame.
+  // The fit extents describe the frame's graph safe area.
   // Single-node shots include context instead of zooming into a microscopic point.
   // Half-spans avoid overflow for valid, very large finite coordinates.
   const halfWidth = Math.max(selected.length === 1 ? 350 : 140, maxX / 2 - minX / 2 + 125);
   const halfHeight = Math.max(selected.length === 1 ? 225 : 110, maxY / 2 - minY / 2 + 90);
   const x = minX / 2 + maxX / 2,
     y = minY / 2 + maxY / 2;
-  let scale = Math.min(550 / halfWidth, 195 / halfHeight) * (spec.zoom || 1);
+  let scale = Math.min(fit.halfWidth / halfWidth, fit.halfHeight / halfHeight) * (spec.zoom || 1);
   // A focus shot should not clip other explicitly highlighted nodes. Preserve
   // its center and reduce zoom only as much as the safe area requires.
   if (spec.focusNodeId && selected.length) {
@@ -49,7 +68,11 @@ function cameraFor(
     if (focused.length) {
       const halfDx = Math.max(...focused.map((p) => Math.abs(p.x / 2 - x / 2))),
         halfDy = Math.max(...focused.map((p) => Math.abs(p.y / 2 - y / 2)));
-      scale = Math.min(scale, 275 / (halfDx + 40), 97.5 / (halfDy + 35));
+      scale = Math.min(
+        scale,
+        fit.halfWidth / 2 / (halfDx + 40),
+        fit.halfHeight / 2 / (halfDy + 35),
+      );
     }
   }
   // Do not clamp away a necessary zoom-out for widely separated coordinates.
@@ -62,10 +85,11 @@ export function directorFrameAt(
   positions: ReadonlyMap<string, Position>,
   frame: number,
   fps = 24,
+  { fit = DEFAULT_CAMERA_FIT }: DirectorFrameOptions = {},
 ): DirectorFrameState {
   const state = frameStateAt(graph, frame, fps);
   const { playback, view } = state;
-  const target = cameraFor(view, state.camera, positions, state.highlight);
+  const target = cameraFor(view, state.camera, positions, state.highlight, fit);
   let camera = target,
     transition = 1;
   let previousHighlight: ResolvedHighlight = { nodeIds: [], edgeIds: [], groupId: null };
@@ -95,7 +119,7 @@ export function directorFrameAt(
       edges: previous.view.edges.filter((edge) => edgeIds.has(edge.id)),
       groups: previous.view.groups.filter((group) => groupIds.has(group.id)),
     };
-    const from = cameraFor(previousView, previous.camera, positions, previousHighlight);
+    const from = cameraFor(previousView, previous.camera, positions, previousHighlight, fit);
     const duration = Math.min(
       (playback.scene?.transitionMs ?? 1200) / 1000,
       playback.scene.durationSec,

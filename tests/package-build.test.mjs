@@ -128,11 +128,13 @@ test('separately built packages work as packed Node and TypeScript dependencies'
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import schema from '@relgraph/core/schema/relationship-graph.schema.json' with { type: 'json' };
-import { loadDocument, layoutGraph, frameCount, directorFrameAt, validateRelGraph } from '@relgraph/core';
-import { createCanvasRenderer, VIDEO_WIDTH } from '@relgraph/render';
+import { loadDocument, layoutGraph, frameCount, directorFrameAt, validateRelGraph, domainStyle } from '@relgraph/core';
+import { createCanvasRenderer, VIDEO_WIDTH, FRAME_SPECS } from '@relgraph/render';
 const read = async (path) => JSON.parse(await readFile(new URL(path, import.meta.url), 'utf8'));
 assert.deepEqual(schema, await read('./source-schema.json'));
 assert.equal(VIDEO_WIDTH, 1280);
+assert.equal(FRAME_SPECS['landscape-1080p'].width, 1920);
+assert.equal(domainStyle('biology').edges.catalyst.head, 'hollow-circle');
 const gradient = { addColorStop() {} };
 const ctx = new Proxy({}, { get(target, key) {
   if (key === 'measureText') return (text) => ({ width: String(text).length * 8 });
@@ -150,6 +152,9 @@ for (const [filename, domain] of [['honglou-provisional.relgraph.json', 'literat
   for (const frame of [0, Math.min(48, last), last, 0]) {
     assert.deepEqual(renderer.renderFrame(frame), directorFrameAt(result.graph, layout, frame));
   }
+  const list = renderer.displayListAt(0);
+  assert.equal(list.width, 1280);
+  assert.ok(list.items.length > 0 && list.a11y.nodes.length > 0);
   if (domain === 'literature') {
     doc.schemaVersion = 'invalid';
     assert.equal(validateRelGraph(doc).valid, false);

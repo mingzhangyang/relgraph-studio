@@ -20,7 +20,7 @@
 - [ ] Packaged offline frame-sequence / MP4 export and production-quality typography QA
 - [ ] Full label placement for dense or coincident graphs; additional viewport and font coverage
 
-## B1.5 — Foundations (proposed, see [ADR 003](ADR-003-render-pipeline-and-foundations.md))
+## B1.5 — Foundations (see [ADR 003](ADR-003-render-pipeline-and-foundations.md))
 
 - [x] TypeScript, Vite, Vitest and Prettier; one JSON Schema source for types and validation
   - [x] Establish the toolchain, migrate the layout module, and derive literary types and structural validation from the JSON Schema
@@ -32,8 +32,11 @@
   - [x] Establish separately buildable core and render packages with explicit exports and package-level TypeScript builds
   - [x] Verify the migrated production build in a real browser across both examples, file imports, playback, seeking and themes (`npm run check:browser`, with a local frame baseline for the rendering refactor)
   - The CLI package moves to the headless `relgraph render` item below, where its functionality first exists
-- [ ] `FrameSpec` safe areas instead of 1280×720 literals; display-list composition with a Canvas backend
-- [ ] Domain style sheets and a locale table instead of edge kinds and captions in the renderer
+- [x] `FrameSpec` safe areas instead of 1280×720 literals; display-list composition with a Canvas backend
+  - 720p and 1080p 16:9 presets; 1080p composes exactly as 720p scaled by 1.5, and 720p frames are byte-identical to the pre-refactor browser baseline
+  - Each display list carries its spoiler-filtered accessible text (`a11y`); switching the workspace transcript to it remains open
+- [x] Domain style sheets and a locale table instead of edge kinds and captions in the renderer
+  - Renderer captions use `zh-CN` and `en`; localizing source diagnostics (currently English messages with Chinese fixes) and the workspace UI remains open
 - [ ] Headless `relgraph render` CLI (skia-canvas + FFmpeg) with vendored fonts and golden frames
 - [ ] Track/keyframe timeline compiled from `presentation`, with default reveal animations
 
@@ -46,7 +49,7 @@
 ## B3 — Templates and output
 
 - [ ] Storyboard presets, cross-work typography and thematic palettes
-- [ ] 9:16 recrop and safe areas; second work exported without core code edits
+- [ ] 9:16 and square `FrameSpec` presets with their own safe areas; second work exported without core code edits
 - [ ] Production batch video/image exports; defer a full graph editor until proven demand
 
 No GitHub Actions workflow is included; local verification only.

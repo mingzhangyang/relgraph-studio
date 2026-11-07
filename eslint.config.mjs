@@ -16,6 +16,7 @@ export default tseslint.config(
       'tests/graph-kernel.test.mjs',
       'tests/domain-migration.test.mjs',
       'tests/canvas-renderer.test.mjs',
+      'tests/render-pipeline.test.mjs',
       'tests/studio-workspace.test.mjs',
       'tests/package-build.test.mjs',
       'tests/helpers/**/*.mjs',
