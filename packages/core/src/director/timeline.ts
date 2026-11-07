@@ -211,14 +211,18 @@ export function revealProgress(
   second: number,
 ): number {
   const tolerance = 8 * Number.EPSILON * Math.max(1, Math.abs(second));
-  const cue = timeline.reveal.findLast(
-    (item) =>
-      item.kind === kind &&
-      item.targetId === targetId &&
-      item.inSec <= second + tolerance &&
-      (item.outSec === undefined || second < item.outSec - tolerance),
-  );
-  return cue ? clamp((second - cue.inSec) / cue.durationSec) : 1;
+  for (let i = timeline.reveal.length - 1; i >= 0; i--) {
+    const cue = timeline.reveal[i];
+    if (
+      cue.kind === kind &&
+      cue.targetId === targetId &&
+      cue.inSec <= second + tolerance &&
+      (cue.outSec === undefined || second < cue.outSec - tolerance)
+    ) {
+      return clamp((second - cue.inSec) / cue.durationSec);
+    }
+  }
+  return 1;
 }
 
 /** A11y includes text from fade-in start; opacity affects only pixels. */

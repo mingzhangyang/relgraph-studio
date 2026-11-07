@@ -70,8 +70,11 @@ test('display lists and detail lookup respect hidden targets and rewinding domai
   assert.deepEqual(early.a11y.relations, []);
   assert.equal(early.a11y.detail, null);
 
-  const revealed = renderer.displayListAt(24);
-  assert.deepEqual(calls, [['future', 2]]);
+  const entering = renderer.displayListAt(24);
+  assert.ok(!texts(entering).includes('FUTURE PERSON'));
+  assert.deepEqual(entering.a11y.nodes, ['Known', 'FUTURE PERSON']);
+  const revealed = renderer.displayListAt(40);
+  assert.deepEqual(calls, [['future', 2], ['future', 2]]);
   assert.ok(texts(revealed).includes('FUTURE PERSON'));
   assert.ok(texts(revealed).includes('FUTURE BIOGRAPHY'));
   assert.deepEqual(revealed.a11y.detail, { label: 'FUTURE PERSON', summary: 'FUTURE BIOGRAPHY' });
@@ -82,7 +85,7 @@ test('display lists and detail lookup respect hidden targets and rewinding domai
   assert.doesNotMatch(readable(rewind), /FUTURE PERSON|FUTURE BIOGRAPHY/);
   // Random access reproduces the same values.
   assert.deepEqual(renderer.displayListAt(0), early);
-  assert.deepEqual(renderer.displayListAt(24), revealed);
+  assert.deepEqual(renderer.displayListAt(40), revealed);
 });
 
 test('renderFrame returns the director state for the drawn frame', () => {
