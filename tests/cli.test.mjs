@@ -146,3 +146,33 @@ test('the vendored fonts cover both examples', () => {
   assert.deepEqual(uncoveredCharacters([...strings(literature), ...strings(biology)]), []);
   assert.deepEqual(uncoveredCharacters(['龘 ok']), ['龘']);
 });
+
+test('a golden frame reproduces its committed hash (same skia-canvas and fonts)', async (context) => {
+  const { readFile } = await import('node:fs/promises');
+  const { join } = await import('node:path');
+  const { FILM_FONT_FACES } = await import('../packages/render/src/fonts.ts');
+  const { FILM_FONTS_DIR } = await import('../packages/render/src/backends/skia.ts');
+  const manifest = JSON.parse(
+    await readFile(new URL('../examples/golden-frames.json', import.meta.url), 'utf8'),
+  );
+  const fonts = createHash('sha256');
+  for (const face of FILM_FONT_FACES)
+    fonts.update(
+      `${face.name}|${face.weight}|${sha256(await readFile(join(FILM_FONTS_DIR, face.file)))}\n`,
+    );
+  // Like check:export, other versions are not a failure; the full check reports them.
+  if (
+    manifest.environment.skiaCanvas !== SKIA_CANVAS_VERSION ||
+    manifest.environment.fonts !== fonts.digest('hex')
+  )
+    return context.skip();
+  const entry = manifest.frames.find((f) => f.example === 'biology' && f.kind === 'transition');
+  const result = loadDocument(biology);
+  const renderer = createHeadlessRenderer(result.graph, layoutGraph(result.graph), {
+    detailAt: result.detailAt,
+    frameSpec: manifest.frameSpec,
+    theme: entry.theme,
+    locale: manifest.locale,
+  });
+  assert.equal(sha256(renderer.rgbaAt(entry.frame)), entry.sha256);
+});

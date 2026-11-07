@@ -28,7 +28,7 @@ export default tseslint.config(
   },
   {
     // Playwright evaluates some callbacks of this Node script inside the page.
-    files: ['scripts/browser-check.mjs'],
+    files: ['scripts/browser-check.mjs', 'scripts/check-export.mjs'],
     languageOptions: { globals: { ...globals.node, ...globals.browser } },
   },
 );

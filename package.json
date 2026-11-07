@@ -16,6 +16,7 @@
     "build:packages": "npm run build --workspace=@relgraph/core && npm run build --workspace=@relgraph/render && npm run build --workspace=@relgraph/cli",
     "relgraph": "node packages/cli/dist/bin.js",
     "check:browser": "node scripts/browser-check.mjs",
+    "check:export": "node scripts/check-export.mjs",
     "subset:fonts": "node scripts/subset-fonts.mjs"
   },
   "devDependencies": {
