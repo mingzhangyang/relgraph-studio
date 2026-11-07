@@ -1,4 +1,4 @@
-import { directorFrameAt } from '../director/state';
+import { directorFrameAt } from '../../core/src/director/state';
 import type {
   DirectorFrameState,
   ProjectedVisualGraph,
@@ -6,7 +6,7 @@ import type {
   VisualEdge,
   VisualGraph,
   VisualNode,
-} from '../../types/visual-graph';
+} from '../../core/types/visual-graph';
 
 type Point = { x: number; y: number };
 type Rectangle = Point & { w: number; h: number };

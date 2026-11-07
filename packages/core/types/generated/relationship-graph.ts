@@ -1,4 +1,4 @@
-// Generated from schema/relationship-graph.schema.json. Do not edit by hand.
+// Generated from packages/core/schema/relationship-graph.schema.json. Do not edit by hand.
 
 /**
  * Narrative relationship graph interchange format. Early draft; semantic checks are separate.

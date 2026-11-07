@@ -31,7 +31,9 @@ npm run format:check
 npm run build
 ```
 
-The Vitest suite covers adapters, source diagnostics, spoiler projections, reaction roles, camera interpolation, static layouts and deterministic Canvas drawing commands. Strict TypeScript, ESLint and Prettier currently cover the migrated TypeScript and tooling; the remaining JavaScript modules will be migrated in later batches. The literary validator reads the JSON Schema directly and derives the checked document type from it; the biological adapter checks the values it consumes before narrowing imported data. After editing the literary schema, run `npm run generate:types` and commit the regenerated types. `npm run check:types` detects a stale generated file.
+The Vitest suite covers adapters, source diagnostics, spoiler projections, reaction roles, camera interpolation, static layouts, deterministic Canvas drawing commands and workspace behavior. The workspace, core and renderer are checked with strict TypeScript, ESLint and Prettier. Workspace tests use a simulated DOM; they do not replace testing the production build in a real browser. The literary validator reads the JSON Schema directly and derives the checked document type from it; the biological adapter checks the values it consumes before narrowing imported data. After editing the literary schema, run `npm run generate:types` and commit the regenerated types. `npm run check:types` detects a stale generated file.
+
+The source is organized under `packages/core` (model, schema, validation, domain adapters, projections, layout and director state), `packages/render` (the current Canvas renderer), and `apps/studio` (workspace behavior). `demo/index.html` remains the integrated entry point. These are source-level boundaries in one root project: independently buildable/publishable packages, package exports and a CLI have not yet been introduced. The schema at `packages/core/schema/relationship-graph.schema.json` is the one source used by both the runtime validator and generated types.
 
 The development-only `minimatch` override temporarily selects the patched 11.x release for a glob denial-of-service advisory. It crosses the lint tools' declared 10.x dependency range; keep the lint checks when updating dependencies and remove the override when those tools support a patched version themselves.
 
@@ -39,9 +41,9 @@ The browser workspace additionally exposes `window.renderAt(frame)` for a valida
 
 ## Source data and scope
 
-- [Literary draft and example](examples/honglou-provisional.relgraph.json): 17 characters, 17 relations and five shots. **This is provisional, not source-verified literary scholarship.** See the [JSON Schema](schema/relationship-graph.schema.json) and [TypeScript types](types/relationship-graph.ts).
+- [Literary draft and example](examples/honglou-provisional.relgraph.json): 17 characters, 17 relations and five shots. **This is provisional, not source-verified literary scholarship.** See the [JSON Schema](packages/core/schema/relationship-graph.schema.json) and [TypeScript types](packages/core/types/relationship-graph.ts).
 - [Biology draft and synthetic example](examples/biology-signaling-synthetic.json): fictional molecules, typed interactions and a multi-participant reaction. It makes **no experimental claim** and `relgraph.bio/0.1-draft` is not PSI-MI, SBGN, SBML or BioPAX.
-- [Neutral graph contract](src/graph/core.ts), [literature adapter](src/domains/literature.ts), [biology adapter](src/domains/biology.ts), [director state](src/director/state.ts) and [Canvas renderer](src/render/canvas.ts) are reusable modules.
+- [Neutral graph contract](packages/core/src/graph/core.ts), [literature adapter](packages/core/src/domains/literature.ts), [biology adapter](packages/core/src/domains/biology.ts), [director state](packages/core/src/director/state.ts) and [Canvas renderer](packages/render/src/canvas.ts) are reusable modules.
 
 See [architecture](docs/ARCHITECTURE.md), [cross-domain decision](docs/ADR-002-domain-adapters.md), [proposed render pipeline and foundations](docs/ADR-003-render-pipeline-and-foundations.md) and [roadmap](docs/ROADMAP.md). The project has no GitHub Actions workflow; validation is local.
 

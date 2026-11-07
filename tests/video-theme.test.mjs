@@ -1,9 +1,10 @@
+import { studioSource } from './helpers/studio-source.mjs';
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import literature from '../examples/honglou-provisional.relgraph.json' with {type:'json'};
-import {loadDocument} from '../src/director/load.ts';
-import {layoutGraph} from '../src/director/layout.ts';
-import {createCanvasRenderer,VIDEO_THEMES,themeFor} from '../src/render/canvas.ts';
+import {loadDocument} from '../packages/core/src/director/load.ts';
+import {layoutGraph} from '../packages/core/src/director/layout.ts';
+import {createCanvasRenderer,VIDEO_THEMES,themeFor} from '../packages/render/src/canvas.ts';
 
 function recordingCanvas(){
  let commands=[];const record=(...args)=>commands.push(args);
@@ -59,14 +60,14 @@ test('a theme picked in the workspace stays pinned when storage is unavailable',
  const mediaListeners=[],lightQuery={matches:false,addEventListener:(name,callback)=>mediaListeners.push(callback)};
  const blockedStorage={getItem(){throw new Error('blocked');},setItem(){throw new Error('blocked');}};
  const themes=[];
- const env={document,window:{addEventListener(){}},Element:FakeElement,structuredClone,
+ const env={document,window:{addEventListener(){}},Element:FakeElement,HTMLElement:FakeElement,HTMLCanvasElement:FakeElement,HTMLButtonElement:FakeElement,HTMLInputElement:FakeElement,HTMLLabelElement:FakeElement,structuredClone,
   matchMedia:()=>lightQuery,localStorage:blockedStorage,
   fetch:async()=>({ok:true,text:async()=>JSON.stringify(literature)}),
   parseDocument:text=>loadDocument(JSON.parse(text)),layoutGraph,frameCount:()=>48,
   createCanvasRenderer:(_canvas,graph,layout,{theme})=>{themes.push(theme);return {renderFrame:()=>({playback:{index:0,progress:0,totalSec:2,domainAt:null,scene:{title:'S'}},view:{nodes:[],edges:[]},overlay:null})};},
   requestAnimationFrame:()=>0,cancelAnimationFrame(){}};
- const {readFileSync}=await import('node:fs'),{runInNewContext}=await import('node:vm');
- const script=readFileSync(new URL('../demo/studio.mjs',import.meta.url),'utf8').replace(/^import .*;\n/gm,'');
+ const {runInNewContext}=await import('node:vm');
+ const script=studioSource();
  await runInNewContext(`(async()=>{${script}\n})()`,env);
  assert.equal(themes.at(-1),'dark','starts from the OS preference');
  document.getElementById('themeToggle').click();

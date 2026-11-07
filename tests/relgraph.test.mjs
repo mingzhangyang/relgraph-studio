@@ -1,6 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import {validateRelGraph,visibleStory,timelineScenes} from '../src/relgraph.ts';
+import {validateRelGraph,visibleStory,timelineScenes} from '../packages/core/src/relgraph.ts';
 import doc from '../examples/honglou-provisional.relgraph.json' with {type:'json'};
 const fixture={schemaVersion:'0.1',meta:{title:'Test'},timeline:{unit:'章',total:10},characters:[{id:'a',name:'A',importance:5,bio:{summary:'A',fate:'A future ending',quotes:[{text:'later',at:9}]}},{id:'b',name:'B',importance:3,bio:{summary:'B'},firstAppearance:4}],relations:[{id:'r',source:'a',target:'b',type:'friendship',strength:3,chapters:{from:4,to:6}}],presentation:[{id:'scene',title:'Scene',durationSec:5,chapterAt:4}]};
 test('provisional data passes both validation layers',()=>assert.equal(validateRelGraph(doc).valid,true));

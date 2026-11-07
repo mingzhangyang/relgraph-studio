@@ -1,11 +1,11 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
+import { studioSource } from './helpers/studio-source.mjs';
 import {runInNewContext} from 'node:vm';
 import biology from '../examples/biology-signaling-synthetic.json' with {type:'json'};
-import {loadDocument,parseDocument} from '../src/director/load.ts';
-import {layoutGraph} from '../src/director/layout.ts';
-import {directorFrameAt,frameCount} from '../src/director/state.ts';
+import {loadDocument,parseDocument} from '../packages/core/src/director/load.ts';
+import {layoutGraph} from '../packages/core/src/director/layout.ts';
+import {directorFrameAt,frameCount} from '../packages/core/src/director/state.ts';
 
 function graphWith(nodes,scenes){return {domain:'test',meta:{title:'Test'},timeline:{unit:'stage'},nodes,edges:[],groups:[],scenes};}
 
@@ -87,10 +87,10 @@ async function studioHarness(){
  const jobs=new Map();let nextId=0;
  const window={addEventListener(){}};
  const createCanvasRenderer=(_canvas,graph,layout,{fps})=>({renderFrame:frame=>directorFrameAt(graph,layout,frame,fps)});
- const env={document,window,Element:FakeElement,fetch:async()=>({ok:true,text:async()=>JSON.stringify(source)}),
+ const env={document,window,Element:FakeElement,HTMLElement:FakeElement,HTMLCanvasElement:FakeElement,HTMLButtonElement:FakeElement,HTMLInputElement:FakeElement,HTMLLabelElement:FakeElement,fetch:async()=>({ok:true,text:async()=>JSON.stringify(source)}),
   parseDocument,layoutGraph,frameCount,createCanvasRenderer,structuredClone,
   requestAnimationFrame:callback=>{const id=++nextId;jobs.set(id,callback);return id;},cancelAnimationFrame:id=>jobs.delete(id)};
- const script=readFileSync(new URL('../demo/studio.mjs',import.meta.url),'utf8').replace(/^import .*;\n/gm,'');
+ const script=studioSource();
  await runInNewContext(`(async()=>{${script}\n})()`,env);
  function tick(time){const entry=jobs.entries().next().value;assert.ok(entry,'expected a scheduled animation frame');jobs.delete(entry[0]);entry[1](time);}
  return {document,window,jobs,tick};

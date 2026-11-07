@@ -27,7 +27,10 @@
   - [x] Migrate neutral graph validation, spoiler-safe projection and director frame evaluation to strict TypeScript
   - [x] Migrate literary validation and spoiler-safe projections, both domain adapters and the unified document loader to strict TypeScript
   - [x] Migrate the Canvas renderer to strict TypeScript while retaining the existing rendering API
-  - [ ] Migrate the director workspace JavaScript to strict TypeScript and complete the package layout
+  - [x] Migrate the director workspace to strict TypeScript, including DOM, playback, import and theme state
+  - [x] Organize current code under `packages/core`, `packages/render` and `apps/studio`; keep one literary schema for validation and generated types
+  - [ ] Establish independently buildable packages with explicit exports and package-level TypeScript builds; add the CLI when its functionality exists
+  - [ ] Verify the migrated production build in a real browser across both examples, file imports, playback, seeking and themes
 - [ ] `FrameSpec` safe areas instead of 1280×720 literals; display-list composition with a Canvas backend
 - [ ] Domain style sheets and a locale table instead of edge kinds and captions in the renderer
 - [ ] Headless `relgraph render` CLI (skia-canvas + FFmpeg) with vendored fonts and golden frames

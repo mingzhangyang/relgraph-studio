@@ -2,10 +2,10 @@ import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import literature from '../examples/honglou-provisional.relgraph.json' with { type: 'json' };
 import biology from '../examples/biology-signaling-synthetic.json' with { type: 'json' };
-import { validateRelGraph, visibleStory } from '../src/relgraph.ts';
-import { validateBiologyDocument } from '../src/domains/biology.ts';
-import { loadDocument, parseDocument } from '../src/director/load.ts';
-import { frameStateAt } from '../src/graph/core.ts';
+import { validateRelGraph, visibleStory } from '../packages/core/src/relgraph.ts';
+import { validateBiologyDocument } from '../packages/core/src/domains/biology.ts';
+import { loadDocument, parseDocument } from '../packages/core/src/director/load.ts';
+import { frameStateAt } from '../packages/core/src/graph/core.ts';
 
 const fiction = {
   schemaVersion: '0.1',

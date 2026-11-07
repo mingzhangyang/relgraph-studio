@@ -1,8 +1,8 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { frameStateAt, validateVisualGraph } from '../src/graph/core.ts';
-import { directorFrameAt, frameCount } from '../src/director/state.ts';
-import { layoutGraph } from '../src/director/layout.ts';
+import { frameStateAt, validateVisualGraph } from '../packages/core/src/graph/core.ts';
+import { directorFrameAt, frameCount } from '../packages/core/src/director/state.ts';
+import { layoutGraph } from '../packages/core/src/director/layout.ts';
 
 function timelineGraph() {
   return {
