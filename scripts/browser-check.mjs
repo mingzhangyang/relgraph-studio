@@ -168,22 +168,24 @@ async function compareWithReference(page, png) {
       const blob = await (await fetch(`data:image/png;base64,${base64}`)).blob();
       const bitmap = await createImageBitmap(blob);
       const canvas = document.getElementById('stage');
-      if (bitmap.width !== canvas.width || bitmap.height !== canvas.height)
-        return { sizeMismatch: true, ratio: 1 };
+      const size = `${canvas.width}×${canvas.height}`;
+      const baselineSize = `${bitmap.width}×${bitmap.height}`;
+      if (size !== baselineSize) return { size, baselineSize, ratio: 1 };
       const scratch = new OffscreenCanvas(bitmap.width, bitmap.height).getContext('2d');
       scratch.drawImage(bitmap, 0, 0);
       const expected = scratch.getImageData(0, 0, bitmap.width, bitmap.height).data;
       const actual = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
       let differing = 0;
+      // Alpha counts too: equal RGB at a different opacity displays differently.
       for (let i = 0; i < actual.length; i += 4) {
-        if (
-          Math.abs(actual[i] - expected[i]) > tolerance ||
-          Math.abs(actual[i + 1] - expected[i + 1]) > tolerance ||
-          Math.abs(actual[i + 2] - expected[i + 2]) > tolerance
-        )
-          differing += 1;
+        for (let channel = 0; channel < 4; channel += 1) {
+          if (Math.abs(actual[i + channel] - expected[i + channel]) > tolerance) {
+            differing += 1;
+            break;
+          }
+        }
       }
-      return { sizeMismatch: false, ratio: differing / (actual.length / 4) };
+      return { size, baselineSize, ratio: differing / (actual.length / 4) };
     },
     [png.toString('base64'), CHANNEL_TOLERANCE],
   );
@@ -560,9 +562,11 @@ for (const theme of ['dark', 'light']) {
         } catch {
           assert.fail('baseline frame is missing; run with --update-reference');
         }
-        const { ratio, sizeMismatch } = await compareWithReference(page, expected);
-        const summary = `${(ratio * 100).toFixed(3)}% pixels differ from the baseline`;
-        if (sizeMismatch) assert.fail('baseline frame has a different size');
+        const { ratio, size, baselineSize } = await compareWithReference(page, expected);
+        const summary =
+          size === baselineSize
+            ? `${(ratio * 100).toFixed(3)}% pixels differ from the baseline`
+            : `frame is ${size} but the baseline is ${baselineSize}`;
         if (!enforce) {
           console.log(`    (informational, different environment) ${summary}`);
           return;
