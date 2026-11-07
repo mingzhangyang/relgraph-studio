@@ -1,8 +1,8 @@
 # ADR 003 — Display-list rendering, track timeline and project foundations
 
-Status: **Proposed** · 2026-11-06 · Supersedes nothing; refines [ADR 001](ARCHITECTURE.md) and [ADR 002](ADR-002-domain-adapters.md)
+Status: **Accepted** · proposed 2026-11-06, accepted 2026-11-07 with migration step 2 · Supersedes nothing; refines [ADR 001](ARCHITECTURE.md) and [ADR 002](ADR-002-domain-adapters.md)
 
-The context and paths below describe the project when this ADR was proposed. For the current source layout and migration status, see the [README](../README.md) and [roadmap](ROADMAP.md). Core and render now have separate builds and exports; the CLI and later rendering changes remain future work.
+The context and paths below describe the project when this ADR was proposed. For the current source layout and migration status, see the [README](../README.md) and [roadmap](ROADMAP.md). Migration steps 1 and 2 are complete: core and render have separate builds, frames are composed into display lists from a `FrameSpec`, and edge and node vocabularies live in domain style sheets. The CLI, headless backend and track timeline remain future work.
 
 ## Context
 

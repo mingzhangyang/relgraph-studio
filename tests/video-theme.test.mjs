@@ -5,24 +5,20 @@ import literature from '../examples/honglou-provisional.relgraph.json' with {typ
 import {loadDocument} from '../packages/core/src/director/load.ts';
 import {layoutGraph} from '../packages/core/src/director/layout.ts';
 import {createCanvasRenderer,VIDEO_THEMES,themeFor} from '../packages/render/src/canvas.ts';
+import {measuringCanvas} from './helpers/display-list.mjs';
 
-function recordingCanvas(){
- let commands=[];const record=(...args)=>commands.push(args);
- const gradient={addColorStop:(...args)=>record('colorStop',...args)};
- const ctx=new Proxy({},{get(target,key){if(key==='measureText')return text=>({width:String(text).length*8});if(key==='createLinearGradient'||key==='createRadialGradient')return (...args)=>{record(key,...args);return gradient;};if(!(key in target))return (...args)=>record(key,...args);return target[key];},set(target,key,value){target[key]=value;record('set',key,value===gradient?'gradient':value);return true;}});
- return {canvas:{getContext:()=>ctx},take(){const out=commands;commands=[];return out;}};
-}
 
 test('video theme is an explicit, deterministic renderer input',()=>{
  const {graph}=loadDocument(literature),layout=layoutGraph(graph);
- const draw=theme=>{const rec=recordingCanvas(),renderer=createCanvasRenderer(rec.canvas,graph,layout,{theme});renderer.renderFrame(200);return {renderer,commands:rec.take()};};
+ const draw=theme=>{const renderer=createCanvasRenderer(measuringCanvas(),graph,layout,{theme});return {renderer,list:renderer.displayListAt(200)};};
  const dark=draw('dark'),light=draw('light'),fallback=draw('unknown'),defaulted=draw(undefined);
  assert.equal(dark.renderer.theme,'dark');assert.equal(light.renderer.theme,'light');assert.equal(fallback.renderer.theme,'dark');
- assert.deepEqual(fallback.commands,dark.commands);assert.deepEqual(defaulted.commands,dark.commands);
- assert.notDeepEqual(light.commands,dark.commands);assert.deepEqual(draw('light').commands,light.commands);
+ assert.deepEqual(fallback.list,dark.list);assert.deepEqual(defaulted.list,dark.list);
+ assert.notDeepEqual(light.list,dark.list);assert.deepEqual(draw('light').list,light.list);
  // The light film actually starts from the paper background, not a dark one.
- assert.ok(light.commands.some(([kind,offset,value])=>kind==='colorStop'&&offset===0&&value===VIDEO_THEMES.light.bg[0]));
- assert.ok(!light.commands.some(([,,value])=>VIDEO_THEMES.dark.bg.includes(value)));
+ const background=light.list.items[0].fill;
+ assert.equal(background.type,'linear');assert.deepEqual(background.stops.map(s=>s.color),VIDEO_THEMES.light.bg);
+ assert.ok(!JSON.stringify(light.list).match(new RegExp(VIDEO_THEMES.dark.bg.join('|'))));
 });
 
 test('both palettes define every colour the renderer reads',()=>{
@@ -34,9 +30,9 @@ test('both palettes define every colour the renderer reads',()=>{
 
 test('inherited property names fall back to the dark palette instead of throwing',()=>{
  for(const name of ['constructor','toString','__proto__','hasOwnProperty','valueOf'])assert.equal(themeFor(name),VIDEO_THEMES.dark,name);
- const {graph}=loadDocument(literature),rec=recordingCanvas();
- const renderer=createCanvasRenderer(rec.canvas,graph,layoutGraph(graph),{theme:'constructor'});
- assert.equal(renderer.theme,'dark');assert.doesNotThrow(()=>renderer.renderFrame(0));
+ const {graph}=loadDocument(literature);
+ const renderer=createCanvasRenderer(measuringCanvas(),graph,layoutGraph(graph),{theme:'constructor'});
+ assert.equal(renderer.theme,'dark');assert.doesNotThrow(()=>renderer.displayListAt(0));
 });
 
 // Minimal DOM for running demo/studio.mjs without a browser.
