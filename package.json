@@ -10,9 +10,9 @@
     "typecheck": "tsc --noEmit",
     "generate:types": "node scripts/generate-types.mjs",
     "check:types": "node scripts/generate-types.mjs --check",
-    "lint": "eslint \"src/**/*.ts\" \"types/**/*.ts\" \"tests/types/**/*.ts\" \"scripts/**/*.mjs\" \"*.config.mjs\" tests/production-build.test.mjs tests/graph-kernel.test.mjs tests/domain-migration.test.mjs",
-    "format:check": "prettier --check \"src/**/*.ts\" \"types/**/*.ts\" \"tests/types/**/*.ts\" \"scripts/**/*.mjs\" \"*.config.mjs\" tsconfig.json package.json .prettierrc.json tests/production-build.test.mjs tests/graph-kernel.test.mjs tests/domain-migration.test.mjs",
-    "format:write": "prettier --write \"src/**/*.ts\" \"types/**/*.ts\" \"tests/types/**/*.ts\" \"scripts/**/*.mjs\" \"*.config.mjs\" tsconfig.json package.json .prettierrc.json tests/production-build.test.mjs tests/graph-kernel.test.mjs tests/domain-migration.test.mjs"
+    "lint": "eslint \"src/**/*.ts\" \"types/**/*.ts\" \"tests/types/**/*.ts\" \"scripts/**/*.mjs\" \"*.config.mjs\" tests/production-build.test.mjs tests/graph-kernel.test.mjs tests/domain-migration.test.mjs tests/canvas-renderer.test.mjs",
+    "format:check": "prettier --check \"src/**/*.ts\" \"types/**/*.ts\" \"tests/types/**/*.ts\" \"scripts/**/*.mjs\" \"*.config.mjs\" tsconfig.json package.json .prettierrc.json tests/production-build.test.mjs tests/graph-kernel.test.mjs tests/domain-migration.test.mjs tests/canvas-renderer.test.mjs",
+    "format:write": "prettier --write \"src/**/*.ts\" \"types/**/*.ts\" \"tests/types/**/*.ts\" \"scripts/**/*.mjs\" \"*.config.mjs\" tsconfig.json package.json .prettierrc.json tests/production-build.test.mjs tests/graph-kernel.test.mjs tests/domain-migration.test.mjs tests/canvas-renderer.test.mjs"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

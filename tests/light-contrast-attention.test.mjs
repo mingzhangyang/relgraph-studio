@@ -5,7 +5,7 @@ import biology from '../examples/biology-signaling-synthetic.json' with {type:'j
 import {loadDocument} from '../src/director/load.ts';
 import {layoutGraph} from '../src/director/layout.ts';
 import {directorFrameAt} from '../src/director/state.ts';
-import {shotAttention} from '../src/render/canvas.mjs';
+import {shotAttention} from '../src/render/canvas.ts';
 
 const css=readFileSync(new URL('../demo/studio.css',import.meta.url),'utf8');
 function tokens(block){return Object.fromEntries([...block.matchAll(/--([\w-]+):\s*([^;]+);/g)].map(m=>[m[1],m[2].trim()]));}

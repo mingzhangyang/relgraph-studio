@@ -1,3 +1,5 @@
+import { createCanvasRenderer, themeFor } from '../../src/render/canvas';
+import type { DirectorFrameState } from '../../types/visual-graph';
 import { inspectRelGraph, validateRelGraph, visibleStory } from '../../src/relgraph';
 import { validateBiologyDocument } from '../../src/domains/biology';
 import { loadDocument, parseDocument } from '../../src/director/load';
@@ -59,3 +61,18 @@ visibleStory(untrusted, 1);
 // @ts-expect-error JSON input is text, not an arbitrary value.
 parseDocument(untrusted);
 void [literaryCheck, biologicalCheck];
+
+// Renderer contracts connect the typed graph, layout and browser canvas.
+declare const canvas: HTMLCanvasElement;
+const renderer = createCanvasRenderer(canvas, graph, layoutGraph(graph), {
+  fps: 24,
+  theme: 'light',
+  detailAt: (id, at) => ({ summary: `${id} ${at}` }),
+});
+const rendered: DirectorFrameState = renderer.renderFrame(0);
+const resolvedTheme: 'dark' | 'light' = themeFor(untrusted).name;
+void [rendered, resolvedTheme];
+// @ts-expect-error Frames are numeric.
+renderer.renderFrame('0');
+// @ts-expect-error FPS must be numeric.
+createCanvasRenderer(canvas, graph, layoutGraph(graph), { fps: '24' });

@@ -15,6 +15,7 @@ export default tseslint.config(
       'tests/production-build.test.mjs',
       'tests/graph-kernel.test.mjs',
       'tests/domain-migration.test.mjs',
+      'tests/canvas-renderer.test.mjs',
     ],
     extends: [js.configs.recommended],
     languageOptions: { globals: globals.node },
