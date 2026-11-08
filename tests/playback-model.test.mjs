@@ -4,6 +4,7 @@ import {
   advancePlayback,
   createPlaybackState,
   formatPlaybackTime,
+  playbackDisplay,
   seekPlayback,
   setPlaybackRunning,
   shotMarkers,
@@ -121,4 +122,16 @@ test('time label formatting retains existing workspace presentation', () => {
   assert.equal(formatPlaybackTime(0), '00:00.00');
   assert.equal(formatPlaybackTime(61.5), '01:01.50');
   assert.equal(formatPlaybackTime(-3), '00:00.00');
+});
+
+test('playback display derives seek labels and fill from the sole playback clock', () => {
+  const state = seekPlayback(createPlaybackState(49, 24), 24);
+  assert.deepEqual(playbackDisplay(state, 2, 2), {
+    frameValue: '24',
+    fillPercent: 50,
+    ariaValueText: '00:01.00，分镜 3',
+    frameLabel: 'FRAME 24',
+    timeLabel: '00:01.00 / 00:02.00',
+  });
+  assert.equal(playbackDisplay(createPlaybackState(1), 0, 0).fillPercent, 0);
 });
