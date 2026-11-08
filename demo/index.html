@@ -41,6 +41,15 @@
       <button id="layoutExport" type="button" disabled>导出含坐标 JSON</button>
       <span id="layoutNote" class="layout-note" role="status">调整模式关闭 · 只修改导出文件</span>
     </div>
+    <div id="layoutEditor" class="layout-editor" role="group" aria-label="键盘坐标调整" hidden>
+      <label for="layoutNode">当前可见节点</label>
+      <select id="layoutNode" aria-label="选择可见节点" disabled></select>
+      <label for="layoutX">X 坐标</label>
+      <input id="layoutX" type="number" step="any" inputmode="decimal" disabled>
+      <label for="layoutY">Y 坐标</label>
+      <input id="layoutY" type="number" step="any" inputmode="decimal" disabled>
+      <button id="layoutApply" type="button" disabled>应用坐标</button>
+    </div>
 
     <div class="transport" role="group" aria-label="播放控制">
       <button id="play" class="icon-button play" type="button" aria-label="播放">▶</button>

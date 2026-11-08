@@ -118,6 +118,7 @@ export function makeStudio({
   class HTMLButtonElement extends Element {}
   class HTMLInputElement extends Element {}
   class HTMLLabelElement extends Element {}
+  class HTMLSelectElement extends Element {}
   const constructors = {
     stage: HTMLCanvasElement,
     play: HTMLButtonElement,
@@ -130,6 +131,10 @@ export function makeStudio({
     layoutToggle: HTMLButtonElement,
     layoutReset: HTMLButtonElement,
     layoutExport: HTMLButtonElement,
+    layoutApply: HTMLButtonElement,
+    layoutNode: HTMLSelectElement,
+    layoutX: HTMLInputElement,
+    layoutY: HTMLInputElement,
     dropzone: HTMLLabelElement,
   };
   document = {
@@ -178,6 +183,7 @@ export function makeStudio({
     HTMLButtonElement,
     HTMLInputElement,
     HTMLLabelElement,
+    HTMLSelectElement,
     structuredClone,
     parseDocument,
     layoutGraph,
