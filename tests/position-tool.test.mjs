@@ -545,3 +545,61 @@ test('corner clipping honors reveal scaling and frame-spec scaling', () => {
     'a uniformly scaled off-corner glyph remains fully clipped',
   );
 });
+
+test('miter-joined diamond tip remains selectable when just inside stage clip', () => {
+  const spec = DEFAULT_FRAME_SPEC;
+  const style = domainStyle('biology');
+  const node = { id: 'miter-tip', label: 'Reaction', kind: 'reaction', importance: 1 };
+  const camera = { x: 0, y: 0, scale: 1 };
+  const tipCenter = { x: 640, y: 91 };
+  const justOutside = { x: 640, y: 90.5 };
+  const click = { x: 640, y: spec.stage.y + 1 };
+  const reveal = { nodes: { [node.id]: 1 }, edges: {} };
+
+  // The path has a 16px diamond radius and 1.8px miter-joined stroke.
+  // Its bottom tip extends to y = 91 + 16 + sqrt(2) * 0.9 > 108.
+  const extent = 16 + Math.SQRT2 * 0.9;
+  assert.ok(tipCenter.y + extent > spec.stage.y);
+  assert.ok(tipCenter.y + 16 + 0.9 < spec.stage.y, 'round-stroke bounds miss the tip');
+  const bounds = nodeGlyphBounds(node, tipCenter, camera.scale, spec, style);
+  assert.ok(bounds.y + bounds.h > spec.stage.y, 'miter bounds include the visible tip');
+  assert.equal(nodeGlyphIntersectsStage(node, tipCenter, camera.scale, spec, style), true);
+  assert.equal(
+    hitVisibleNode(
+      [node],
+      new Map([[node.id, graphPosition(tipCenter, camera, spec)]]),
+      reveal,
+      camera,
+      spec,
+      click,
+      24,
+      style,
+    ),
+    node.id,
+    'the exposed tip should be draggable',
+  );
+
+  assert.equal(
+    nodeGlyphIntersectsStage(node, justOutside, camera.scale, spec, style),
+    false,
+    'a diamond entirely above the stage remains unselectable',
+  );
+  assert.equal(
+    nodeGlyphIntersectsStage(node, tipCenter, camera.scale, spec, style, 0.6),
+    false,
+    'a partially revealed diamond has a smaller visible footprint',
+  );
+  assert.equal(
+    hitVisibleNode(
+      [node],
+      new Map([[node.id, graphPosition(justOutside, camera, spec)]]),
+      reveal,
+      camera,
+      spec,
+      click,
+      24,
+      style,
+    ),
+    null,
+  );
+});
