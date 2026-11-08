@@ -37,6 +37,11 @@ export function graphPosition(point: Point, camera: Camera, spec: FrameSpec): Po
   };
 }
 
+/** A single reveal threshold used by hit-testing and editing policy. */
+export function isNodeEditableNow(id: string, reveal: DirectorFrameState['reveal']): boolean {
+  return Object.hasOwn(reveal.nodes, id) && reveal.nodes[id] > 0.5;
+}
+
 /**
  * Hit-test visible, sufficiently revealed nodes, not raw source data.
  * A layout edit cannot accidentally select a still-hidden story character.
@@ -53,8 +58,7 @@ export function hitVisibleNode(
   let closest: string | null = null;
   let best = radius * radius;
   for (const node of nodes) {
-    const progress = Object.hasOwn(reveal.nodes, node.id) ? reveal.nodes[node.id] : 0;
-    if (progress <= 0.5) continue;
+    if (!isNodeEditableNow(node.id, reveal)) continue;
     const position = positions.get(node.id);
     if (!position) continue;
     const screen = screenPosition(position, camera, spec);

@@ -1,6 +1,6 @@
 import { roundPositionCoordinate, type DirectorFrameState, type VisualNode } from '@relgraph/core';
 import type { FrameSpec } from '@relgraph/render';
-import { hitVisibleNode, type Point } from './position-tool.js';
+import { hitVisibleNode, isNodeEditableNow, type Point } from './position-tool.js';
 
 /**
  * DOM-independent, spoiler-safe position editing policy.
@@ -23,9 +23,7 @@ export interface PositionDrag {
 export function editableNodes(frame: EditableFrame, positions: PositionMap): VisualNode[] {
   return frame.view.nodes.filter(
     (node) =>
-      Object.hasOwn(frame.reveal.nodes, node.id) &&
-      frame.reveal.nodes[node.id] > 0.5 &&
-      positions.has(node.id),
+      isNodeEditableNow(node.id, frame.reveal) && positions.has(node.id),
   );
 }
 
