@@ -3,6 +3,7 @@ export * from './compose.js';
 export * from './display-list.js';
 export * from './fonts.js';
 export * from './frame-spec.js';
+export * from './node-geometry.js';
 export * from './locale.js';
 export * from './theme.js';
 export * from './backends/canvas2d.js';
