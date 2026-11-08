@@ -59,3 +59,12 @@ export function renderEditorStatus(controls: EditorControls, active: boolean, di
       ? '有未保存调整 · 点击导出含坐标 JSON 保存'
       : '调整模式关闭 · 只修改导出文件';
 }
+
+
+export function renderEditorSelection(controls: EditorControls, selected: string): void {
+  controls.select.value = selected;
+}
+
+export function renderEditorMessage(controls: EditorControls, message: string): void {
+  controls.note.textContent = message;
+}

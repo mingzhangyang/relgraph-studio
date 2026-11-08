@@ -67,7 +67,8 @@ For ADR 003 step 5, position authoring is deliberately split across three bounda
 
 - `layout-editor-model.ts`: **DOM-free** editing policy, visible-node eligibility, relative drag math, coordinate validation, changes/reset. Test the model directly without browser mocks.
 - `position-tool.ts` and `@relgraph/render`: pure coordinate transforms and shared camera projection.
-- `studio.ts`: thin browser event adapters (pointer capture, form inputs, redraw, file download). No duplicate drag or visibility math.
+- `layout-editor-view.ts`: **DOM-only** rendering for the edit panel, node dropdown, status text and coordinate inputs.
+- `studio.ts`: browser event adapters (pointer capture, form input reading, redraw, file download), delegating to model + view. No duplicate drag or visibility math.
 
 The shared `tests/helpers/studio-harness.mjs` covers cross-component DOM integration; older standalone workspace DOM stubs have been migrated to it. Render/video golden tests exercise the composition layer separately. The broader playback/diagnostics DOM separation remains a later, standalone refactor rather than part of step 5.
 

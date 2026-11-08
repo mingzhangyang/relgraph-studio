@@ -28,6 +28,14 @@ import {
   updateEditableNodePosition,
   type PositionDrag,
 } from './layout-editor-model.js';
+import {
+  renderEditorFields,
+  renderEditorMessage,
+  renderEditorMode,
+  renderEditorNodes,
+  renderEditorSelection,
+  renderEditorStatus,
+} from './layout-editor-view.js';
 
 declare global {
   interface Window {
@@ -70,6 +78,17 @@ const canvas = requiredElement('stage', HTMLCanvasElement),
   dropzone = requiredElement('dropzone', HTMLLabelElement),
   shots = $('shots'),
   strip = $('sceneStrip');
+const layoutControls = {
+  canvas,
+  toggle: layoutToggle,
+  reset: layoutReset,
+  editor: layoutEditor,
+  select: layoutNode,
+  x: layoutX,
+  y: layoutY,
+  apply: layoutApply,
+  note: $('layoutNote'),
+};
 let graph: VisualGraph | null = null;
 let renderer: CanvasRenderer | null = null;
 let frame = 0,
@@ -333,13 +352,11 @@ function clearStudio(): void {
   dragging = null;
   editCamera = null;
   layoutEditing = false;
-  layoutToggle.setAttribute('aria-pressed', 'false');
   layoutToggle.disabled = true;
   layoutReset.disabled = true;
   layoutExport.disabled = true;
-  canvas.classList.remove('is-layout-editing');
-  $('layoutNote').textContent = '调整模式关闭 · 只修改导出文件';
   updateLayoutEditor();
+  updateLayoutControls();
   currentFrameState = null;
   currentDetailAt = () => undefined;
   frame = 0;
@@ -585,28 +602,17 @@ function availableNodes(): VisualGraph['nodes'] {
     : [];
 }
 function updateLayoutFields(): void {
-  const point = selectedLayoutNode ? currentLayout?.get(selectedLayoutNode) : undefined;
-  layoutX.value = point ? String(point.x) : '';
-  layoutY.value = point ? String(point.y) : '';
+  renderEditorFields(
+    layoutControls,
+    selectedLayoutNode ? currentLayout?.get(selectedLayoutNode) : undefined,
+  );
 }
 function updateLayoutEditor(): void {
   const nodes = availableNodes();
-  layoutEditor.hidden = !layoutEditing;
-  layoutNode.replaceChildren();
-  for (const node of nodes) {
-    const option = document.createElement('option');
-    option.value = node.id;
-    option.textContent = node.label;
-    layoutNode.append(option);
-  }
   if (!selectedLayoutNode || !nodes.some((node) => node.id === selectedLayoutNode))
     selectedLayoutNode = nodes[0]?.id ?? null;
-  const available = selectedLayoutNode !== null;
-  layoutNode.disabled = !available;
-  layoutX.disabled = !available;
-  layoutY.disabled = !available;
-  layoutApply.disabled = !available;
-  layoutNode.value = selectedLayoutNode ?? '';
+  renderEditorMode(layoutControls, layoutEditing);
+  renderEditorNodes(document, layoutControls, nodes, selectedLayoutNode);
   updateLayoutFields();
 }
 layoutNode.addEventListener('change', () => {
@@ -619,7 +625,7 @@ layoutApply.addEventListener('click', () => {
       !availableNodes().some((node) => node.id === selectedLayoutNode)) return;
   const point = parseCoordinateInputs(layoutX.value, layoutY.value);
   if (!point) {
-    $('layoutNote').textContent = '坐标必须是有限数字，请检查 X 和 Y';
+    renderEditorMessage(layoutControls, '坐标必须是有限数字，请检查 X 和 Y');
     return;
   }
   if (!currentFrameState || !updateEditableNodePosition(currentLayout, currentFrameState, selectedLayoutNode, point))
@@ -633,12 +639,7 @@ layoutApply.addEventListener('click', () => {
 const layoutChanged = (): boolean =>
   Boolean(currentLayout && originalLayout && layoutHasChanges(currentLayout, originalLayout));
 function updateLayoutControls(): void {
-  layoutReset.disabled = !layoutChanged();
-  $('layoutNote').textContent = layoutEditing
-    ? '拖动当前可见的节点 · ' + (layoutChanged() ? '有未保存调整' : '尚未调整') + ' · 导出后才会写入 JSON'
-    : layoutChanged()
-      ? '有未保存调整 · 点击导出含坐标 JSON 保存'
-      : '调整模式关闭 · 只修改导出文件';
+  renderEditorStatus(layoutControls, layoutEditing, layoutChanged());
 }
 function rebuildRenderer(): void {
   if (!graph || !currentLayout) return;
@@ -660,8 +661,6 @@ function stopLayoutEdit(): void {
   releaseLayoutPointer();
   layoutEditing = false;
   editCamera = null;
-  canvas.classList.remove('is-layout-editing');
-  layoutToggle.setAttribute('aria-pressed', 'false');
   rebuildRenderer();
   updateLayoutEditor();
   updateLayoutControls();
@@ -675,8 +674,6 @@ layoutToggle.addEventListener('click', () => {
   setPlaying(false);
   editCamera = { ...currentFrameState.cameraResolved };
   layoutEditing = true;
-  canvas.classList.add('is-layout-editing');
-  layoutToggle.setAttribute('aria-pressed', 'true');
   rebuildRenderer();
   updateLayoutEditor();
   updateLayoutControls();
@@ -704,7 +701,7 @@ canvas.addEventListener('pointerdown', (event) => {
   if (!nextDrag) return;
   dragging = nextDrag;
   selectedLayoutNode = nextDrag.id;
-  layoutNode.value = nextDrag.id;
+  renderEditorSelection(layoutControls, nextDrag.id);
   updateLayoutFields();
   canvas.setPointerCapture(event.pointerId);
   event.preventDefault();
@@ -752,10 +749,12 @@ layoutExport.addEventListener('click', () => {
     link.click();
     link.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
-    $('layoutNote').textContent = '已准备导出：' + link.download + '。修改仅保存在导出的 JSON 文件中。';
+    renderEditorMessage(layoutControls, '已准备导出：' + link.download + '。修改仅保存在导出的 JSON 文件中。');
   } catch (error) {
-    $('layoutNote').textContent =
-      '导出失败：' + (error instanceof Error ? error.message : String(error));
+    renderEditorMessage(
+      layoutControls,
+      '导出失败：' + (error instanceof Error ? error.message : String(error)),
+    );
   }
 });
 

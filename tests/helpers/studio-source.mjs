@@ -15,6 +15,14 @@ import {
   startPositionDrag,
   updateEditableNodePosition,
 } from '../../apps/studio/src/layout-editor-model.ts';
+import {
+  renderEditorFields,
+  renderEditorMessage,
+  renderEditorMode,
+  renderEditorNodes,
+  renderEditorSelection,
+  renderEditorStatus,
+} from '../../apps/studio/src/layout-editor-view.ts';
 
 // VM tests exercise the actual TypeScript workspace against a minimal simulated DOM.
 // The imported dependencies are supplied explicitly by each harness.
@@ -42,4 +50,10 @@ export const studioImports = {
   restoreLayoutPositions,
   startPositionDrag,
   updateEditableNodePosition,
+  renderEditorFields,
+  renderEditorMessage,
+  renderEditorMode,
+  renderEditorNodes,
+  renderEditorSelection,
+  renderEditorStatus,
 };
