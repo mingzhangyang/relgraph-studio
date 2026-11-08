@@ -17,7 +17,7 @@ import {
   type CanvasRenderer,
   type FrameText,
 } from '@relgraph/render';
-import { canvasPoint, graphPosition, hitVisibleNode } from './position-tool.js';
+import { canvasPoint, hitVisibleNode } from './position-tool.js';
 
 declare global {
   interface Window {
@@ -52,6 +52,11 @@ const canvas = requiredElement('stage', HTMLCanvasElement),
   layoutToggle = requiredElement('layoutToggle', HTMLButtonElement),
   layoutReset = requiredElement('layoutReset', HTMLButtonElement),
   layoutExport = requiredElement('layoutExport', HTMLButtonElement),
+  layoutEditor = $('layoutEditor'),
+  layoutNode = requiredElement('layoutNode', HTMLSelectElement),
+  layoutX = requiredElement('layoutX', HTMLInputElement),
+  layoutY = requiredElement('layoutY', HTMLInputElement),
+  layoutApply = requiredElement('layoutApply', HTMLButtonElement),
   dropzone = requiredElement('dropzone', HTMLLabelElement),
   shots = $('shots'),
   strip = $('sceneStrip');
@@ -72,6 +77,7 @@ let currentLayout: ReturnType<typeof layoutGraph> | null = null;
 let originalLayout: ReturnType<typeof layoutGraph> | null = null;
 let sourceDocument: unknown = null;
 let sourceFilename = 'relgraph.json';
+let selectedLayoutNode: string | null = null;
 let layoutEditing = false;
 let editCamera: DirectorFrameState['cameraResolved'] | null = null;
 let dragging: {
@@ -318,6 +324,7 @@ function clearStudio(): void {
   currentLayout = null;
   originalLayout = null;
   sourceDocument = null;
+  selectedLayoutNode = null;
   dragging = null;
   editCamera = null;
   layoutEditing = false;
@@ -327,6 +334,7 @@ function clearStudio(): void {
   layoutExport.disabled = true;
   canvas.classList.remove('is-layout-editing');
   $('layoutNote').textContent = '调整模式关闭 · 只修改导出文件';
+  updateLayoutEditor();
   currentFrameState = null;
   currentDetailAt = () => undefined;
   frame = 0;
@@ -399,6 +407,7 @@ function beginLoad(): number {
   layoutToggle.disabled = true;
   layoutReset.disabled = true;
   layoutExport.disabled = true;
+  updateLayoutEditor();
   setStatus('正在加载…', 'loading');
   return serial;
 }
@@ -558,6 +567,66 @@ function applyTheme(next: Theme, persist: boolean): void {
   } else paintEmptyStage(emptyMessage);
 }
 
+
+/**
+ * Never expose names of future/hidden nodes in the keyboard selector.
+ * Re-check the current spoiler-safe frame when applying a typed coordinate.
+ */
+function editableNodes(): VisualGraph['nodes'] {
+  if (!layoutEditing || !currentFrameState || !currentLayout) return [];
+  return currentFrameState.view.nodes.filter(
+    (node) =>
+      Object.hasOwn(currentFrameState?.reveal.nodes ?? {}, node.id) &&
+      (currentFrameState?.reveal.nodes[node.id] ?? 0) > 0.5 &&
+      currentLayout?.has(node.id),
+  );
+}
+function updateLayoutFields(): void {
+  const point = selectedLayoutNode ? currentLayout?.get(selectedLayoutNode) : undefined;
+  layoutX.value = point ? String(point.x) : '';
+  layoutY.value = point ? String(point.y) : '';
+}
+function updateLayoutEditor(): void {
+  const nodes = editableNodes();
+  layoutEditor.hidden = !layoutEditing;
+  layoutNode.replaceChildren();
+  for (const node of nodes) {
+    const option = document.createElement('option');
+    option.value = node.id;
+    option.textContent = node.label;
+    layoutNode.append(option);
+  }
+  if (!selectedLayoutNode || !nodes.some((node) => node.id === selectedLayoutNode))
+    selectedLayoutNode = nodes[0]?.id ?? null;
+  const available = selectedLayoutNode !== null;
+  layoutNode.disabled = !available;
+  layoutX.disabled = !available;
+  layoutY.disabled = !available;
+  layoutApply.disabled = !available;
+  layoutNode.value = selectedLayoutNode ?? '';
+  updateLayoutFields();
+}
+layoutNode.addEventListener('change', () => {
+  if (!editableNodes().some((node) => node.id === layoutNode.value)) return;
+  selectedLayoutNode = layoutNode.value;
+  updateLayoutFields();
+});
+layoutApply.addEventListener('click', () => {
+  if (!layoutEditing || !currentLayout || !selectedLayoutNode ||
+      !editableNodes().some((node) => node.id === selectedLayoutNode)) return;
+  const xText = layoutX.value.trim(), yText = layoutY.value.trim();
+  const x = Number(xText), y = Number(yText);
+  if (!xText || !yText || !Number.isFinite(x) || !Number.isFinite(y)) {
+    $('layoutNote').textContent = '坐标必须是有限数字，请检查 X 和 Y';
+    return;
+  }
+  const previous = currentLayout.get(selectedLayoutNode);
+  if (previous?.x === x && previous?.y === y) return;
+  currentLayout.set(selectedLayoutNode, { x, y });
+  setFrame(frame, false);
+  updateLayoutControls();
+});
+
 // A position edit uses the existing renderer but freezes the visible camera.
 // No projection, timeline or authored source data changes until explicit export.
 const roundCoordinate = (value: number): number => Math.round(value * 100) / 100;
@@ -596,6 +665,7 @@ function stopLayoutEdit(): void {
   canvas.classList.remove('is-layout-editing');
   layoutToggle.setAttribute('aria-pressed', 'false');
   rebuildRenderer();
+  updateLayoutEditor();
   updateLayoutControls();
 }
 layoutToggle.addEventListener('click', () => {
@@ -610,6 +680,7 @@ layoutToggle.addEventListener('click', () => {
   canvas.classList.add('is-layout-editing');
   layoutToggle.setAttribute('aria-pressed', 'true');
   rebuildRenderer();
+  updateLayoutEditor();
   updateLayoutControls();
 });
 layoutReset.addEventListener('click', () => {
@@ -618,6 +689,7 @@ layoutReset.addEventListener('click', () => {
   currentLayout.clear();
   for (const [id, point] of originalLayout) currentLayout.set(id, { ...point });
   rebuildRenderer();
+  updateLayoutFields();
   updateLayoutControls();
 });
 const pointerLocation = (event: PointerEvent): { x: number; y: number } | null =>
@@ -641,6 +713,9 @@ canvas.addEventListener('pointerdown', (event) => {
   const previous = id ? currentLayout.get(id) : undefined;
   if (!id || !previous) return;
   dragging = { pointerId: event.pointerId, id, previous: { ...previous }, start: point };
+  selectedLayoutNode = id;
+  layoutNode.value = id;
+  updateLayoutFields();
   canvas.setPointerCapture(event.pointerId);
   event.preventDefault();
 });
@@ -665,6 +740,7 @@ function moveLayoutNode(event: PointerEvent): void {
   if (old?.x === moved.x && old?.y === moved.y) return;
   currentLayout.set(dragging.id, moved);
   setFrame(frame, false);
+  updateLayoutFields();
   updateLayoutControls();
   event.preventDefault();
 }
@@ -680,6 +756,7 @@ canvas.addEventListener('pointercancel', (event) => {
   currentLayout.set(dragging.id, dragging.previous);
   dragging = null;
   setFrame(frame, false);
+  updateLayoutFields();
   updateLayoutControls();
 });
 layoutExport.addEventListener('click', () => {
