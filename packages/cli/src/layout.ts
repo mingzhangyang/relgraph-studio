@@ -1,10 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { stat, realpath, rename, unlink, writeFile } from 'node:fs/promises';
 import { basename, dirname, join, resolve } from 'node:path';
-import { layoutMissingNodes, parseDocument, type VisualGraph } from '@relgraph/core';
+import { applyGraphPositions, layoutMissingNodes, parseDocument, type VisualGraph } from '@relgraph/core';
 import { formatDiagnostics, loadFile } from './document.js';
 
-type Point = { x: number; y: number };
 export interface LayoutRequest {
   file: string;
   seed: number;
@@ -18,41 +17,17 @@ export interface LayoutSummary {
 }
 export class LayoutError extends Error {}
 
-const record = (value: unknown): value is Record<string, unknown> =>
-  value !== null && typeof value === 'object' && !Array.isArray(value);
-
-/** Add coordinates only where the source document has none. */
+/** Insert missing coordinates while preserving all existing authored positions. */
 export function writeBackPositions(
   input: unknown,
   graph: VisualGraph,
-  positions: ReadonlyMap<string, Point>,
+  positions: ReadonlyMap<string, { x: number; y: number }>,
 ): { document: unknown; added: number } {
-  if (!record(input)) throw new LayoutError('Invalid source document');
-  const document = structuredClone(input);
-  if (!record(document)) throw new LayoutError('Invalid source document');
+  const result = applyGraphPositions(input, graph, positions, { onlyMissing: true });
   const missing = graph.nodes.filter((node) => node.position === undefined).length;
-  let added = 0;
-  const fill = (collection: unknown, idFor: (id: string) => string): void => {
-    if (!Array.isArray(collection)) throw new LayoutError('Missing source node collection');
-    for (const entry of collection) {
-      if (!record(entry) || typeof entry.id !== 'string')
-        throw new LayoutError('Invalid source node');
-      if (entry.position !== undefined) continue;
-      const point = positions.get(idFor(entry.id));
-      if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y))
-        throw new LayoutError('No finite layout position for ' + entry.id);
-      entry.position = { x: point.x, y: point.y };
-      added++;
-    }
-  };
-  if (document.schemaVersion === '0.1') fill(document.characters, (id) => id);
-  else if (document.format === 'relgraph.bio/0.1-draft') {
-    fill(document.entities, (id) => id);
-    fill(document.processes, (id) => 'bio:process:' + id);
-  } else throw new LayoutError('Unsupported document format');
-  if (added !== missing)
-    throw new LayoutError('Position count mismatch: expected ' + missing + ', got ' + added);
-  return { document, added };
+  if (result.changed !== missing)
+    throw new LayoutError('Position count mismatch: expected ' + missing + ', got ' + result.changed);
+  return { document: result.document, added: result.changed };
 }
 
 function indentOf(text: string): string | number {
