@@ -36,6 +36,14 @@ import {
   renderEditorSelection,
   renderEditorStatus,
 } from './layout-editor-view.js';
+import {
+  advancePlayback,
+  createPlaybackState,
+  formatPlaybackTime,
+  seekPlayback,
+  setPlaybackRunning,
+  shotMarkers,
+} from './playback-model.js';
 
 declare global {
   interface Window {
@@ -91,15 +99,11 @@ const layoutControls = {
 };
 let graph: VisualGraph | null = null;
 let renderer: CanvasRenderer | null = null;
-let frame = 0,
-  totalFrames = 1,
-  playing = false,
-  position = 0,
-  announcedScene = -1,
+let playback = createPlaybackState(1, FPS);
+let announcedScene = -1,
   requestSerial = 0,
   loading = false;
 let animationId: number | null = null;
-let lastTick: number | null = null;
 let currentFrameState: DirectorFrameState | null = null;
 let currentDetailAt: DetailAt = () => undefined;
 let currentLayout: ReturnType<typeof layoutGraph> | null = null;
@@ -134,36 +138,31 @@ const setStatus = (text: string, state: Status): void => {
   $('status').textContent = text;
   $('status').setAttribute('data-state', state);
 };
-const stamp = (seconds: number): string => {
-  const t = Math.max(0, seconds),
-    minutes = Math.floor(t / 60),
-    s = (t % 60).toFixed(2).padStart(5, '0');
-  return `${String(minutes).padStart(2, '0')}:${s}`;
-};
+const stamp = formatPlaybackTime;
+function syncPlaybackControls(): void {
+  play.textContent = playback.playing ? '❚❚' : '▶';
+  play.setAttribute('aria-label', playback.playing ? '暂停' : '播放');
+  play.className = 'icon-button play' + (playback.playing ? ' is-playing' : '');
+  if (playback.playing) setStatus('播放中', 'playing');
+  else if (renderer && !loading) setStatus('就绪', 'ready');
+}
 function setPlaying(next: boolean): void {
   if (animationId !== null) cancelAnimationFrame(animationId);
   animationId = null;
-  playing = Boolean(next && renderer && !loading);
-  lastTick = null;
-  position = frame;
-  play.textContent = playing ? '❚❚' : '▶';
-  play.setAttribute('aria-label', playing ? '暂停' : '播放');
-  play.className = 'icon-button play' + (playing ? ' is-playing' : '');
-  if (playing) setStatus('播放中', 'playing');
-  else if (renderer && !loading) setStatus('就绪', 'ready');
-  if (playing) animationId = requestAnimationFrame(tick);
+  playback = setPlaybackRunning(playback, next, Boolean(renderer && !loading));
+  syncPlaybackControls();
+  if (playback.playing) animationId = requestAnimationFrame(tick);
 }
 function tick(now: number): void {
   animationId = null;
-  if (!playing) return;
-  if (lastTick !== null) position += (Math.max(0, now - lastTick) * FPS) / 1000;
-  lastTick = now;
-  setFrame(Math.floor(position), false);
-  if (position >= totalFrames - 1) {
+  if (!playback.playing) return;
+  playback = advancePlayback(playback, now);
+  setFrame(playback.frame, false);
+  if (!playback.playing) {
     setPlaying(false);
     return;
   }
-  if (playing) animationId = requestAnimationFrame(tick);
+  animationId = requestAnimationFrame(tick);
 }
 function renderDiagnostics(result: LoadResult): void {
   for (const [name, entries] of [
@@ -208,8 +207,9 @@ function renderDiagnostics(result: LoadResult): void {
 function buildShots(graph: VisualGraph): void {
   shots.replaceChildren();
   strip.replaceChildren();
-  let start = 0;
+  const markers = shotMarkers(graph.scenes, playback.totalFrames, FPS);
   graph.scenes.forEach((scene, index) => {
+    const marker = markers[index];
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'shot';
@@ -218,14 +218,14 @@ function buildShots(graph: VisualGraph): void {
       number = document.createElement('span');
     number.className = 'shot-index';
     number.textContent = String(index + 1).padStart(2, '0');
-    top.append(number, ` ${stamp(start)} · ${scene.durationSec}s`);
+    top.append(number, ` ${stamp(marker.startSec)} · ${scene.durationSec}s`);
     const progress = document.createElement('span');
     progress.className = 'shot-progress';
     progress.setAttribute('aria-hidden', 'true');
     const title = document.createElement('strong');
     title.textContent = `分镜 ${index + 1}`;
     button.append(progress, top, title);
-    const target = Math.min(totalFrames - 1, Math.ceil(start * FPS - 1e-9));
+    const target = marker.targetFrame;
     button.addEventListener('click', () => {
       if (layoutEditing) stopLayoutEdit();
       if (loading) return;
@@ -237,7 +237,6 @@ function buildShots(graph: VisualGraph): void {
     segment.className = 'segment';
     segment.setAttribute('style', `flex-grow:${scene.durationSec}`);
     strip.append(segment);
-    start += scene.durationSec;
   });
 }
 function renderShots(activeIndex: number, activeTitle: string): void {
@@ -295,8 +294,8 @@ function updateTranscript(a11y: FrameText): void {
 }
 function setFrame(next: number, updatePosition = true): DirectorFrameState | undefined {
   if (!renderer) return;
-  frame = Math.max(0, Math.min(totalFrames - 1, Math.floor(next)));
-  if (updatePosition) position = frame;
+  playback = seekPlayback(playback, next, !updatePosition);
+  const frame = playback.frame;
   const { state, list } = renderer.renderFrameWithList(frame),
     p = state.playback;
   if (!p.scene) throw new Error('A loaded film must have a current scene');
@@ -304,7 +303,7 @@ function setFrame(next: number, updatePosition = true): DirectorFrameState | und
   scrubber.value = String(frame);
   scrubber.setAttribute(
     'style',
-    `--fill:${totalFrames > 1 ? (frame / (totalFrames - 1)) * 100 : 0}%`,
+    `--fill:${playback.totalFrames > 1 ? (frame / (playback.totalFrames - 1)) * 100 : 0}%`,
   );
   scrubber.setAttribute('aria-valuetext', `${stamp(frame / FPS)}，分镜 ${p.index + 1}`);
   $('frameNumber').textContent = `FRAME ${frame}`;
@@ -359,9 +358,7 @@ function clearStudio(): void {
   updateLayoutControls();
   currentFrameState = null;
   currentDetailAt = () => undefined;
-  frame = 0;
-  position = 0;
-  totalFrames = 1;
+  playback = createPlaybackState(1, FPS);
   announcedScene = -1;
   play.disabled = true;
   restart.disabled = true;
@@ -406,8 +403,8 @@ function applyResult(result: LoadResult, name: string, sourceText?: string): voi
     detailAt: currentDetailAt,
     theme,
   });
-  totalFrames = frameCount(graph, FPS);
-  scrubber.max = String(totalFrames - 1);
+  playback = createPlaybackState(frameCount(graph, FPS), FPS);
+  scrubber.max = String(playback.totalFrames - 1);
   scrubber.disabled = false;
   play.disabled = false;
   restart.disabled = false;
@@ -512,8 +509,8 @@ dropzone.addEventListener('drop', (event) => {
 });
 play.addEventListener('click', () => {
   if (layoutEditing) stopLayoutEdit();
-  if (!playing && frame >= totalFrames - 1) setFrame(0);
-  setPlaying(!playing);
+  if (!playback.playing && playback.frame >= playback.totalFrames - 1) setFrame(0);
+  setPlaying(!playback.playing);
 });
 restart.addEventListener('click', () => {
   if (layoutEditing) stopLayoutEdit();
@@ -555,11 +552,11 @@ window.addEventListener('keydown', (event) => {
   } else if (event.code === 'ArrowRight') {
     if (layoutEditing) stopLayoutEdit();
     setPlaying(false);
-    setFrame(frame + FPS);
+    setFrame(playback.frame + FPS);
   } else if (event.code === 'ArrowLeft') {
     if (layoutEditing) stopLayoutEdit();
     setPlaying(false);
-    setFrame(frame - FPS);
+    setFrame(playback.frame - FPS);
   }
 });
 function applyTheme(next: Theme, persist: boolean): void {
@@ -587,7 +584,7 @@ function applyTheme(next: Theme, persist: boolean): void {
       detailAt: currentDetailAt,
       theme,
     });
-    setFrame(frame, false);
+    setFrame(playback.frame, false);
   } else paintEmptyStage(emptyMessage);
 }
 
@@ -630,7 +627,7 @@ layoutApply.addEventListener('click', () => {
   }
   if (!currentFrameState || !updateEditableNodePosition(currentLayout, currentFrameState, selectedLayoutNode, point))
     return;
-  setFrame(frame, false);
+  setFrame(playback.frame, false);
   updateLayoutControls();
 });
 
@@ -649,7 +646,7 @@ function rebuildRenderer(): void {
     theme,
     ...(editCamera ? { cameraOverride: editCamera } : {}),
   });
-  setFrame(frame, false);
+  setFrame(playback.frame, false);
 }
 function releaseLayoutPointer(): void {
   if (dragging && canvas.hasPointerCapture(dragging.pointerId))
@@ -714,7 +711,7 @@ function moveLayoutNode(event: PointerEvent): void {
   const moved = positionForDrag(dragging, point, currentFrameState.cameraResolved, renderer.frameSpec);
   if (!moved || !updateEditableNodePosition(currentLayout, currentFrameState, dragging.id, moved))
     return;
-  setFrame(frame, false);
+  setFrame(playback.frame, false);
   updateLayoutFields();
   updateLayoutControls();
   event.preventDefault();
@@ -729,7 +726,7 @@ canvas.addEventListener('pointercancel', (event) => {
   if (!dragging || dragging.pointerId !== event.pointerId || !currentLayout) return;
   currentLayout.set(dragging.id, dragging.previous);
   releaseLayoutPointer();
-  setFrame(frame, false);
+  setFrame(playback.frame, false);
   updateLayoutFields();
   updateLayoutControls();
 });
@@ -764,7 +761,7 @@ lightQuery?.addEventListener?.('change', (event) => {
 });
 // Headless frame export and independent frame inspection; no recording or animation state.
 window.renderAt = (f) => {
-  if (!renderer || !Number.isInteger(f) || f < 0 || f >= totalFrames) return false;
+  if (!renderer || !Number.isInteger(f) || f < 0 || f >= playback.totalFrames) return false;
   if (layoutEditing) stopLayoutEdit();
   setPlaying(false);
   setFrame(f);
@@ -794,7 +791,7 @@ clearStudio();
 const startupSerial = requestSerial;
 await loadFilmFonts();
 // A film chosen while the fonts loaded was drawn with fallbacks; redraw it.
-if (renderer) setFrame(frame, false);
+if (renderer) setFrame(playback.frame, false);
 if (startupSerial === requestSerial) {
   markSource('exampleLiterature');
   await loadExample(

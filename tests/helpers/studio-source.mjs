@@ -24,6 +24,15 @@ import {
   renderEditorStatus,
 } from '../../apps/studio/src/layout-editor-view.ts';
 
+import {
+  advancePlayback,
+  createPlaybackState,
+  formatPlaybackTime,
+  seekPlayback,
+  setPlaybackRunning,
+  shotMarkers,
+} from '../../apps/studio/src/playback-model.ts';
+
 // VM tests exercise the actual TypeScript workspace against a minimal simulated DOM.
 // The imported dependencies are supplied explicitly by each harness.
 export function studioSource() {
@@ -56,4 +65,10 @@ export const studioImports = {
   renderEditorNodes,
   renderEditorSelection,
   renderEditorStatus,
+  advancePlayback,
+  createPlaybackState,
+  formatPlaybackTime,
+  seekPlayback,
+  setPlaybackRunning,
+  shotMarkers,
 };
