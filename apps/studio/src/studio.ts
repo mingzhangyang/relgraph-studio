@@ -1,11 +1,4 @@
-import {
-  diagnosticHeading,
-  diagnosticText,
-  NO_DIAGNOSTICS_TEXT,
-  parseDocument,
-  applyGraphPositions,
-  type LoadResult,
-} from '@relgraph/core';
+import { parseDocument, applyGraphPositions, type LoadResult } from '@relgraph/core';
 import { layoutGraph } from '@relgraph/core';
 import { frameCount } from '@relgraph/core';
 import type { Bio } from '@relgraph/core';
@@ -15,7 +8,6 @@ import {
   FILM_FONT_FACES,
   filmFontQuery,
   type CanvasRenderer,
-  type FrameText,
 } from '@relgraph/render';
 import { canvasPoint } from './position-tool.js';
 import {
@@ -54,6 +46,8 @@ import {
   type WorkspaceStatus,
 } from './playback-view.js';
 import { createShotsView } from './shots-view.js';
+import { createDiagnosticsView } from './diagnostics-view.js';
+import { createTranscriptView } from './transcript-view.js';
 
 declare global {
   interface Window {
@@ -104,6 +98,18 @@ const playbackControls = {
   time: $('time'),
 };
 const shotsView = createShotsView(document, { shots, strip });
+const diagnosticsView = createDiagnosticsView(document, {
+  errors: $('errors'),
+  warnings: $('warnings'),
+  count: $('diagCount'),
+});
+const transcriptView = createTranscriptView(document, {
+  transcript: $('transcript'),
+  description: $('sceneDescription'),
+  currentShot: $('currentShot'),
+  nodeCount: $('nodeCount'),
+  edgeCount: $('edgeCount'),
+});
 const layoutControls = {
   canvas,
   toggle: layoutToggle,
@@ -118,8 +124,7 @@ const layoutControls = {
 let graph: VisualGraph | null = null;
 let renderer: CanvasRenderer | null = null;
 let playback = createPlaybackState(1, FPS);
-let transcriptScene = -1,
-  requestSerial = 0,
+let requestSerial = 0,
   loading = false;
 let animationId: number | null = null;
 let currentFrameState: DirectorFrameState | null = null;
@@ -175,82 +180,11 @@ function tick(now: number): void {
   }
   animationId = requestAnimationFrame(tick);
 }
-function renderDiagnostics(result: LoadResult): void {
-  for (const [name, entries] of [
-    ['errors', result.errors || []],
-    ['warnings', result.warnings || []],
-  ] as const) {
-    const container = $(name);
-    container.replaceChildren();
-    container.className = '';
-    if (!entries.length) continue;
-    const heading = document.createElement('h3');
-    heading.textContent = diagnosticHeading(name, entries.length);
-    container.append(heading);
-    for (const entry of entries) {
-      const text = diagnosticText(entry);
-      const item = document.createElement('div');
-      item.className = `diagnostic-item ${name === 'warnings' ? 'warning' : 'error'}`;
-      const title = document.createElement('strong');
-      title.textContent = text.title;
-      const path = document.createElement('code');
-      path.textContent = text.path;
-      const message = document.createElement('p');
-      message.textContent = text.message;
-      const fix = document.createElement('p');
-      fix.className = 'fix';
-      fix.textContent = text.fix;
-      item.append(title, path, message, fix);
-      container.append(item);
-    }
-  }
-  const errorCount = (result.errors || []).length,
-    total = errorCount + (result.warnings || []).length,
-    count = $('diagCount');
-  count.hidden = !total;
-  count.textContent = String(total);
-  count.setAttribute('data-level', errorCount ? 'error' : 'warning');
-  if (!total) {
-    $('warnings').textContent = NO_DIAGNOSTICS_TEXT;
-    $('warnings').className = 'ok';
-  }
-}
 function seekToShot(targetFrame: number): void {
   if (layoutEditing) stopLayoutEdit();
   if (loading) return;
   setPlaying(false);
   setFrame(targetFrame);
-}
-/** The scene transcript and live region are sourced only from drawn-frame a11y. */
-function updateTranscript(a11y: FrameText): void {
-  const transcript = $('transcript');
-  transcript.replaceChildren();
-  const intro = document.createElement('p');
-  intro.textContent = `${a11y.scene.title}。${a11y.scene.narration}`;
-  transcript.append(intro);
-  if (a11y.detail) {
-    const heading = document.createElement('strong');
-    heading.textContent = '当前人物简介';
-    const summary = document.createElement('p');
-    summary.textContent = `${a11y.detail.label}：${a11y.detail.summary}`;
-    transcript.append(heading, summary);
-  }
-  const add = (title: string, values: string[]): void => {
-    const heading = document.createElement('strong');
-    heading.textContent = title;
-    const list = document.createElement('ul');
-    for (const value of values) {
-      const li = document.createElement('li');
-      li.textContent = value;
-      list.append(li);
-    }
-    transcript.append(heading, list);
-  };
-  add('当前可见节点', a11y.nodes);
-  add('当前可见关系', a11y.relations);
-  const detailText = a11y.detail ? `${a11y.detail.label}：${a11y.detail.summary}` : '';
-  $('sceneDescription').textContent =
-    `${a11y.scene.title}。${a11y.scene.narration} 当前 ${a11y.nodes.length} 个节点，${a11y.relations.length} 条关系。${detailText}`;
 }
 function setFrame(next: number, updatePosition = true): DirectorFrameState | undefined {
   if (!renderer) return;
@@ -261,20 +195,12 @@ function setFrame(next: number, updatePosition = true): DirectorFrameState | und
   if (!p.scene) throw new Error('A loaded film must have a current scene');
   currentFrameState = state;
   renderPlaybackFrame(playbackControls, playbackDisplay(playback, p.index, p.totalSec));
-  $('currentShot').textContent =
-    list.a11y.scene.title + (list.a11y.scene.narration ? '\n' + list.a11y.scene.narration : '');
+  transcriptView.render(list.a11y);
   $('domainTime').textContent =
     p.domainAt === null
       ? '领域时间：未指定'
       : `领域时间：${state.view.timeline?.unit || '时点'} ${p.domainAt}`;
-  $('nodeCount').textContent = String(list.a11y.nodes.length);
-  $('edgeCount').textContent = String(list.a11y.relations.length);
   shotsView.render(p.index, list.a11y.scene.title, p.progress);
-  // Transcript updates are addressed by the second, post-merge Views PR.
-  if (p.index !== transcriptScene) {
-    transcriptScene = p.index;
-    updateTranscript(list.a11y);
-  }
   return state;
 }
 function paintEmptyStage(message: string): void {
@@ -312,23 +238,19 @@ function clearStudio(): void {
   currentFrameState = null;
   currentDetailAt = () => undefined;
   playback = createPlaybackState(1, FPS);
-  transcriptScene = -1;
   resetPlaybackView(playbackControls);
   shotsView.clear();
+  diagnosticsView.clear();
+  transcriptView.reset();
   paintEmptyStage('请选择示例或导入有效的 JSON 数据');
-  $('currentShot').textContent = '—';
   $('domainTime').textContent = '领域时间：—';
-  $('nodeCount').textContent = '0';
-  $('edgeCount').textContent = '0';
   $('sceneCount').textContent = '0';
   $('sourceNote').textContent = '—';
-  $('transcript').replaceChildren();
-  $('sceneDescription').textContent = '没有已加载的有效数据。';
 }
 function applyResult(result: LoadResult, name: string, sourceText?: string): void {
   loading = false;
   clearStudio();
-  renderDiagnostics(result);
+  diagnosticsView.render(result);
   $('sourceName').textContent = name;
   if (!result.valid) {
     setStatus('数据校验失败', 'error');
@@ -367,6 +289,8 @@ function beginLoad(): number {
   layoutReset.disabled = true;
   layoutExport.disabled = true;
   updateLayoutEditor();
+  // Only the coordinator may commit a result after checking requestSerial.
+  diagnosticsView.clear();
   setStatus('正在加载…', 'loading');
   return serial;
 }
