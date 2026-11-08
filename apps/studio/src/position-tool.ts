@@ -6,7 +6,12 @@ import {
   rectsIntersect,
   type FrameSpec,
 } from '@relgraph/render';
-import { NEUTRAL_STYLE, type DirectorFrameState, type DomainStyle, type VisualNode } from '@relgraph/core';
+import {
+  NEUTRAL_STYLE,
+  type DirectorFrameState,
+  type DomainStyle,
+  type VisualNode,
+} from '@relgraph/core';
 
 export type Point = { x: number; y: number };
 export type Camera = DirectorFrameState['cameraResolved'];
