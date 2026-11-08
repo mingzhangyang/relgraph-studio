@@ -2,6 +2,7 @@ import { runInNewContext } from 'node:vm';
 import { parseDocument } from '../../packages/core/src/director/load.ts';
 import { layoutGraph } from '../../packages/core/src/director/layout.ts';
 import { applyGraphPositions } from '../../packages/core/src/director/position-writeback.ts';
+import { roundPositionCoordinate } from '../../packages/core/src/director/seeded-layout.ts';
 import { DEFAULT_FRAME_SPEC } from '../../packages/render/src/frame-spec.ts';
 import { canvasPoint, graphPosition, hitVisibleNode } from '../../apps/studio/src/position-tool.ts';
 import { directorFrameAt, frameCount } from '../../packages/core/src/director/state.ts';
@@ -188,6 +189,7 @@ export function makeStudio({
     parseDocument,
     layoutGraph,
     applyGraphPositions,
+    roundPositionCoordinate,
     canvasPoint,
     graphPosition,
     hitVisibleNode,
