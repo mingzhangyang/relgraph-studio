@@ -229,3 +229,56 @@ test('missing or incorrectly typed workspace elements fail with their ID', async
   const wrongType = makeStudio({ wrongId: 'fileInput' });
   await assert.rejects(wrongType.ready, /Missing or invalid workspace element: #fileInput/);
 });
+
+test('shot view keeps focus and button identity and excludes future titles while seeking', async () => {
+  const app = makeStudio();
+  await app.ready;
+  const buttons = [...app.node('shots').children];
+  assert.equal(buttons.length, literature.presentation.length);
+  const futureTitle = literature.presentation.at(-1).title;
+  assert.equal(app.node('shots').textContent.includes(futureTitle), false);
+  for (const button of buttons.slice(1)) {
+    assert.match(button.lastElementChild.textContent, /^分镜 [0-9]+$/);
+    assert.match(button.attributes['aria-label'], /^跳转至分镜 [0-9]+$/);
+    assert.equal(button.attributes.title, undefined, 'no future title in tooltips');
+  }
+
+  await buttons[1].click();
+  assert.equal(app.document.activeElement, buttons[1]);
+  assert.equal(buttons[1].attributes['aria-current'], 'step');
+  assert.equal(buttons[0].attributes['aria-current'], undefined);
+  assert.equal(buttons[0].lastElementChild.textContent, '分镜 1');
+  assert.equal(app.node('shots').textContent.includes(futureTitle), false);
+  const selectedFrame = Number(app.node('scrubber').value);
+  assert.equal(app.window.renderAt(selectedFrame + 1), true);
+  assert.equal(app.document.activeElement, buttons[1], 'repaint keeps keyboard focus');
+  assert.equal(app.node('shots').children[1], buttons[1], 'render reuses buttons');
+  assert.match(buttons[1].children[0].attributes.style, /^transform:scaleX\(/);
+
+  const scrubber = app.node('scrubber');
+  scrubber.value = '0';
+  await scrubber.dispatch('input');
+  assert.equal(buttons[0].attributes['aria-current'], 'step');
+  assert.equal(buttons[1].attributes['aria-current'], undefined);
+  assert.equal(buttons[1].children[0].attributes.style, 'transform:scaleX(0)');
+  assert.equal(app.node('shots').children[0], buttons[0]);
+});
+
+test('playback view preserves accessible state through pause, end and replay', async () => {
+  const app = makeStudio();
+  await app.ready;
+  assert.equal(app.node('play').attributes['aria-label'], '播放');
+  await app.node('play').click();
+  assert.equal(app.node('play').attributes['aria-label'], '暂停');
+  assert.equal(app.node('play').className, 'icon-button play is-playing');
+  app.tick(1000);
+  app.tick(101000);
+  assert.equal(app.node('status').attributes['data-state'], 'ready');
+  assert.equal(app.node('play').attributes['aria-label'], '播放');
+  assert.equal(app.node('scrubber').value, app.node('scrubber').max);
+  await app.node('play').click();
+  assert.equal(app.node('scrubber').value, '0');
+  assert.equal(app.node('play').attributes['aria-label'], '暂停');
+  await app.node('play').click();
+  assert.equal(app.node('status').attributes['data-state'], 'ready');
+});
