@@ -15,11 +15,14 @@ const frame = () => ({
   relations: ['A interacts with B'],
 });
 
-test('pure semantic equality ignores video animation but sees in-shot reveal and backward seek', () => {
+test('semantic equality detects reveals and rewinds independent of animation', () => {
   const initial = frame();
   const previous = snapshotTranscriptSemantics(initial);
   assert.equal(sameTranscriptSemantics(previous, { ...frame(), domainTime: 'other' }), true);
-  assert.equal(sameTranscriptSemantics(previous, { ...frame(), nodes: ['Visible A', 'Visible B'] }), false);
+  assert.equal(
+    sameTranscriptSemantics(previous, { ...frame(), nodes: ['Visible A', 'Visible B'] }),
+    false,
+  );
   assert.equal(sameTranscriptSemantics(previous, { ...frame(), relations: [] }), false);
   assert.equal(sameTranscriptSemantics(previous, { ...frame(), nodes: ['Visible B'] }), false);
   assert.equal(
