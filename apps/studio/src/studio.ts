@@ -4,7 +4,6 @@ import {
   NO_DIAGNOSTICS_TEXT,
   parseDocument,
   applyGraphPositions,
-  roundPositionCoordinate,
   type LoadResult,
 } from '@relgraph/core';
 import { layoutGraph } from '@relgraph/core';
@@ -18,7 +17,17 @@ import {
   type CanvasRenderer,
   type FrameText,
 } from '@relgraph/render';
-import { canvasPoint, hitVisibleNode } from './position-tool.js';
+import { canvasPoint } from './position-tool.js';
+import {
+  editableNodes,
+  layoutHasChanges,
+  parseCoordinateInputs,
+  positionForDrag,
+  restoreLayoutPositions,
+  startPositionDrag,
+  updateEditableNodePosition,
+  type PositionDrag,
+} from './layout-editor-model.js';
 
 declare global {
   interface Window {
@@ -81,12 +90,7 @@ let sourceFilename = 'relgraph.json';
 let selectedLayoutNode: string | null = null;
 let layoutEditing = false;
 let editCamera: DirectorFrameState['cameraResolved'] | null = null;
-let dragging: {
-  pointerId: number;
-  id: string;
-  previous: { x: number; y: number };
-  start: { x: number; y: number };
-} | null = null;
+let dragging: PositionDrag | null = null;
 let emptyMessage = '';
 // Workspace and video share one theme. Without a saved choice it follows the OS.
 const THEME_KEY = 'relgraph-theme',
@@ -575,14 +579,10 @@ function applyTheme(next: Theme, persist: boolean): void {
  * Never expose names of future/hidden nodes in the keyboard selector.
  * Re-check the current spoiler-safe frame when applying a typed coordinate.
  */
-function editableNodes(): VisualGraph['nodes'] {
-  if (!layoutEditing || !currentFrameState || !currentLayout) return [];
-  return currentFrameState.view.nodes.filter(
-    (node) =>
-      Object.hasOwn(currentFrameState?.reveal.nodes ?? {}, node.id) &&
-      (currentFrameState?.reveal.nodes[node.id] ?? 0) > 0.5 &&
-      currentLayout?.has(node.id),
-  );
+function availableNodes(): VisualGraph['nodes'] {
+  return layoutEditing && currentFrameState && currentLayout
+    ? editableNodes(currentFrameState, currentLayout)
+    : [];
 }
 function updateLayoutFields(): void {
   const point = selectedLayoutNode ? currentLayout?.get(selectedLayoutNode) : undefined;
@@ -590,7 +590,7 @@ function updateLayoutFields(): void {
   layoutY.value = point ? String(point.y) : '';
 }
 function updateLayoutEditor(): void {
-  const nodes = editableNodes();
+  const nodes = availableNodes();
   layoutEditor.hidden = !layoutEditing;
   layoutNode.replaceChildren();
   for (const node of nodes) {
@@ -610,22 +610,20 @@ function updateLayoutEditor(): void {
   updateLayoutFields();
 }
 layoutNode.addEventListener('change', () => {
-  if (!editableNodes().some((node) => node.id === layoutNode.value)) return;
+  if (!availableNodes().some((node) => node.id === layoutNode.value)) return;
   selectedLayoutNode = layoutNode.value;
   updateLayoutFields();
 });
 layoutApply.addEventListener('click', () => {
   if (!layoutEditing || !currentLayout || !selectedLayoutNode ||
-      !editableNodes().some((node) => node.id === selectedLayoutNode)) return;
-  const xText = layoutX.value.trim(), yText = layoutY.value.trim();
-  const x = Number(xText), y = Number(yText);
-  if (!xText || !yText || !Number.isFinite(x) || !Number.isFinite(y)) {
+      !availableNodes().some((node) => node.id === selectedLayoutNode)) return;
+  const point = parseCoordinateInputs(layoutX.value, layoutY.value);
+  if (!point) {
     $('layoutNote').textContent = '坐标必须是有限数字，请检查 X 和 Y';
     return;
   }
-  const previous = currentLayout.get(selectedLayoutNode);
-  if (previous?.x === x && previous?.y === y) return;
-  currentLayout.set(selectedLayoutNode, { x, y });
+  if (!currentFrameState || !updateEditableNodePosition(currentLayout, currentFrameState, selectedLayoutNode, point))
+    return;
   setFrame(frame, false);
   updateLayoutControls();
 });
@@ -633,14 +631,7 @@ layoutApply.addEventListener('click', () => {
 // A position edit uses the existing renderer but freezes the visible camera.
 // No projection, timeline or authored source data changes until explicit export.
 const layoutChanged = (): boolean =>
-  Boolean(
-    currentLayout &&
-    originalLayout &&
-    [...currentLayout].some(([id, p]) => {
-      const first = originalLayout?.get(id);
-      return !first || first.x !== p.x || first.y !== p.y;
-    }),
-  );
+  Boolean(currentLayout && originalLayout && layoutHasChanges(currentLayout, originalLayout));
 function updateLayoutControls(): void {
   layoutReset.disabled = !layoutChanged();
   $('layoutNote').textContent = layoutEditing
@@ -693,8 +684,7 @@ layoutToggle.addEventListener('click', () => {
 layoutReset.addEventListener('click', () => {
   if (!currentLayout || !originalLayout) return;
   releaseLayoutPointer();
-  currentLayout.clear();
-  for (const [id, point] of originalLayout) currentLayout.set(id, { ...point });
+  restoreLayoutPositions(currentLayout, originalLayout);
   rebuildRenderer();
   updateLayoutFields();
   updateLayoutControls();
@@ -708,20 +698,13 @@ canvas.addEventListener('pointerdown', (event) => {
   if (!point) return;
   const rect = canvas.getBoundingClientRect();
   const radius = 24 * (canvas.width / Math.max(1, rect.width));
-  const id = hitVisibleNode(
-    currentFrameState.view.nodes,
-    currentLayout,
-    currentFrameState.reveal,
-    currentFrameState.cameraResolved,
-    renderer.frameSpec,
-    point,
-    radius,
+  const nextDrag = startPositionDrag(
+    currentFrameState, currentLayout, renderer.frameSpec, point, radius, event.pointerId,
   );
-  const previous = id ? currentLayout.get(id) : undefined;
-  if (!id || !previous) return;
-  dragging = { pointerId: event.pointerId, id, previous: { ...previous }, start: point };
-  selectedLayoutNode = id;
-  layoutNode.value = id;
+  if (!nextDrag) return;
+  dragging = nextDrag;
+  selectedLayoutNode = nextDrag.id;
+  layoutNode.value = nextDrag.id;
   updateLayoutFields();
   canvas.setPointerCapture(event.pointerId);
   event.preventDefault();
@@ -731,20 +714,9 @@ function moveLayoutNode(event: PointerEvent): void {
       dragging.pointerId !== event.pointerId) return;
   const point = pointerLocation(event);
   if (!point) return;
-  // Preserve the initial grab offset. A stationary pointerup is a no-op.
-  const factor = currentFrameState.cameraResolved.scale * renderer.frameSpec.typeScale;
-  const dx = (point.x - dragging.start.x) / factor;
-  const dy = (point.y - dragging.start.y) / factor;
-  if (!Number.isFinite(dx) || !Number.isFinite(dy)) return;
-  // Addition can itself overflow even when the pointer delta is finite.
-  const rawX = dragging.previous.x + dx, rawY = dragging.previous.y + dy;
-  if (!Number.isFinite(rawX) || !Number.isFinite(rawY)) return;
-  const moved = dx === 0 && dy === 0
-    ? { ...dragging.previous }
-    : { x: roundPositionCoordinate(rawX), y: roundPositionCoordinate(rawY) };
-  const old = currentLayout.get(dragging.id);
-  if (old?.x === moved.x && old?.y === moved.y) return;
-  currentLayout.set(dragging.id, moved);
+  const moved = positionForDrag(dragging, point, currentFrameState.cameraResolved, renderer.frameSpec);
+  if (!moved || !updateEditableNodePosition(currentLayout, currentFrameState, dragging.id, moved))
+    return;
   setFrame(frame, false);
   updateLayoutFields();
   updateLayoutControls();

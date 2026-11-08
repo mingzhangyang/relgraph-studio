@@ -6,6 +6,15 @@ import {
   NO_DIAGNOSTICS_TEXT,
 } from '../../packages/core/src/director/load.ts';
 import { FILM_FONT_FACES, filmFontQuery } from '../../packages/render/src/fonts.ts';
+import {
+  editableNodes,
+  layoutHasChanges,
+  parseCoordinateInputs,
+  positionForDrag,
+  restoreLayoutPositions,
+  startPositionDrag,
+  updateEditableNodePosition,
+} from '../../apps/studio/src/layout-editor-model.ts';
 
 // VM tests exercise the actual TypeScript workspace against a minimal simulated DOM.
 // The imported dependencies are supplied explicitly by each harness.
@@ -26,4 +35,11 @@ export const studioImports = {
   NO_DIAGNOSTICS_TEXT,
   FILM_FONT_FACES,
   filmFontQuery,
+  editableNodes,
+  layoutHasChanges,
+  parseCoordinateInputs,
+  positionForDrag,
+  restoreLayoutPositions,
+  startPositionDrag,
+  updateEditableNodePosition,
 };
