@@ -208,3 +208,25 @@ test('shared coordinate rounding leaves extreme finite values finite', async () 
   assert.equal(roundPositionCoordinate(1e307), 1e307);
   assert.throws(() => roundPositionCoordinate(Number.POSITIVE_INFINITY), RangeError);
 });
+
+
+test('collision fallback stays finite beside Number.MAX_VALUE anchors', () => {
+  const huge = Number.MAX_VALUE;
+  const graph = {
+    nodes: [
+      { id: 'anchor', kind: 'person', label: 'Anchor', position: { x: huge, y: huge } },
+      { id: 'extra', kind: 'person', label: 'Extra' },
+    ],
+    edges: [{ id: 'e', source: 'anchor', target: 'extra', kind: 'friendship' }],
+  };
+  const placed = layoutMissingNodes(graph, { seed: 73, iterations: 12 });
+  assert.deepEqual(placed.get('anchor'), graph.nodes[0].position);
+  assert.ok(Number.isFinite(placed.get('extra').x));
+  assert.ok(Number.isFinite(placed.get('extra').y));
+  assert.ok(
+    Math.hypot(
+      placed.get('extra').x - huge,
+      placed.get('extra').y - huge,
+    ) >= 64,
+  );
+});

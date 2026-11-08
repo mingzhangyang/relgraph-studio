@@ -170,9 +170,17 @@ export function layoutMissingNodes(
         Math.abs(point.y) * Number.EPSILON * 4,
       );
       const radius = spacing * Math.sqrt(attempt + 1);
+      const offsetX = Math.cos(offset) * radius, offsetY = Math.sin(offset) * radius;
+      const candidateX = point.x + offsetX, candidateY = point.y + offsetY;
+      // Near ±Number.MAX_VALUE even adding a finite offset can overflow.
+      // Reflect an overflowing step inward while keeping the source anchor.
       chosen = {
-        x: roundPositionCoordinate(point.x + Math.cos(offset) * radius),
-        y: roundPositionCoordinate(point.y + Math.sin(offset) * radius),
+        x: roundPositionCoordinate(
+          Number.isFinite(candidateX) ? candidateX : point.x - offsetX,
+        ),
+        y: roundPositionCoordinate(
+          Number.isFinite(candidateY) ? candidateY : point.y - offsetY,
+        ),
       };
       if (attempt === 4999) throw new RangeError('Unable to place node ' + node.id);
     }
