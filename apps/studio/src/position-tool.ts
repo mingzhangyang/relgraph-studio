@@ -2,8 +2,7 @@ import {
   cameraCenterFor,
   projectCameraPoint,
   worldWithScreenOffset,
-  nodeGlyphBounds,
-  rectsIntersect,
+  nodeGlyphIntersectsStage,
   type FrameSpec,
 } from '@relgraph/render';
 import {
@@ -88,8 +87,8 @@ export function hitVisibleNode(
     const position = positions.get(node.id);
     if (!position) continue;
     const screen = screenPosition(position, camera, spec);
-    const bounds = nodeGlyphBounds(node, screen, camera.scale, spec, style, reveal.nodes[node.id]);
-    if (!rectsIntersect(bounds, stage)) continue;
+    if (!nodeGlyphIntersectsStage(node, screen, camera.scale, spec, style, reveal.nodes[node.id]))
+      continue;
     const distance = (screen.x - point.x) ** 2 + (screen.y - point.y) ** 2;
     if (distance <= best) {
       best = distance;
