@@ -1,14 +1,10 @@
 import { test } from 'vitest';
+import { makeStudio } from './helpers/studio-harness.mjs';
 import assert from 'node:assert/strict';
-import { studioImports, studioSource } from './helpers/studio-source.mjs';
-import {runInNewContext} from 'node:vm';
 import biology from '../examples/biology-signaling-synthetic.json' with {type:'json'};
-import {loadDocument,parseDocument} from '../packages/core/src/director/load.ts';
+import {loadDocument} from '../packages/core/src/director/load.ts';
 import {layoutGraph} from '../packages/core/src/director/layout.ts';
 import {directorFrameAt,frameCount} from '../packages/core/src/director/state.ts';
-import {domainStyle} from '../packages/core/src/style.ts';
-import {composeFrame} from '../packages/render/src/compose.ts';
-import {measure} from './helpers/display-list.mjs';
 
 function graphWith(nodes,scenes){return {domain:'test',meta:{title:'Test'},timeline:{unit:'stage'},nodes,edges:[],groups:[],scenes};}
 
@@ -62,24 +58,9 @@ test('fractional scene boundaries use the preceding shot for camera and highligh
  assert.deepEqual(directorFrameAt(graph,layout,10,30),next);
 });
 
-class FakeElement {
- constructor(tag,document){this.tagName=tag.toUpperCase();this.document=document;this.children=[];this.attributes={};this.listeners={};this._text='';this.className='';this.value='';this.disabled=false;}
- append(...nodes){this.children.push(...nodes);}
- replaceChildren(...nodes){this.children=[...nodes];this._text='';}
- set textContent(value){this._text=String(value);this.children=[];}
- get textContent(){return this._text+this.children.map(child=>child.textContent).join('');}
- get lastElementChild(){return this.children.at(-1);}
- setAttribute(name,value){this.attributes[name]=String(value);}
- removeAttribute(name){delete this.attributes[name];}
- addEventListener(name,callback){(this.listeners[name]??=[]).push(callback);}
- focus(){this.document.activeElement=this;}
- click(){this.focus();for(const callback of this.listeners.click||[])callback({target:this});}
- getContext(){return {fillRect(){},fillText(){}};}
-}
-
-async function studioHarness(){
- const nodes=new Map(),document={activeElement:null,fonts:{ready:Promise.resolve(),load:async()=>[{}]},getElementById(id){if(!nodes.has(id))nodes.set(id,new FakeElement('div',document));return nodes.get(id);},createElement(tag){return new FakeElement(tag,document);}};
- const source={schemaVersion:'0.1',meta:{title:'Story'},timeline:{unit:'chapter',total:10},characters:[
+// Share the real workspace VM harness with the other studio regression suites.
+async function studioHarness() {
+  const source={schemaVersion:'0.1',meta:{title:'Story'},timeline:{unit:'chapter',total:10},characters:[
   {id:'a',name:'A',importance:4,bio:{summary:'Safe early summary',fate:'SECRET FATE'},position:{x:0,y:0}},
   {id:'b',name:'B',importance:3,bio:{summary:'Future summary'},firstAppearance:5,position:{x:200,y:0}}
  ],relations:[],presentation:[
@@ -87,23 +68,11 @@ async function studioHarness(){
   {id:'second',title:'Secret',durationSec:.2,chapterAt:1,openBioId:'b'},
   {id:'third',title:'Third',durationSec:1,chapterAt:5,openBioId:'b'}
  ]};
- const jobs=new Map();let nextId=0;
- const window={addEventListener(){}};
- const createCanvasRenderer=(_canvas,graph,layout,{fps,detailAt})=>{
-  const renderFrameWithList=frame=>{
-   const state=directorFrameAt(graph,layout,frame,fps);
-   const list=composeFrame(state,{graph,positions:layout,frame,fps,measure,style:domainStyle(graph.domain),detailAt});
-   return {state,list};
-  };
-  return {renderFrame:frame=>renderFrameWithList(frame).state,renderFrameWithList};
- };
- const env={...studioImports,document,window,Element:FakeElement,HTMLElement:FakeElement,HTMLCanvasElement:FakeElement,HTMLButtonElement:FakeElement,HTMLInputElement:FakeElement,HTMLLabelElement:FakeElement,fetch:async()=>({ok:true,text:async()=>JSON.stringify(source)}),
-  parseDocument,layoutGraph,frameCount,createCanvasRenderer,structuredClone,
-  requestAnimationFrame:callback=>{const id=++nextId;jobs.set(id,callback);return id;},cancelAnimationFrame:id=>jobs.delete(id)};
- const script=studioSource();
- await runInNewContext(`(async()=>{${script}\n})()`,env);
- function tick(time){const entry=jobs.entries().next().value;assert.ok(entry,'expected a scheduled animation frame');jobs.delete(entry[0]);entry[1](time);}
- return {document,window,jobs,tick};
+  const app = makeStudio({
+    fetcher: async () => ({ ok: true, text: async () => JSON.stringify(source) }),
+  });
+  await app.ready;
+  return { document: app.document, window: app.window, tick: app.tick, jobs: app.jobs };
 }
 
 test('shot focus survives seeking and playback, and inspection cannot stall the clock',async()=>{
