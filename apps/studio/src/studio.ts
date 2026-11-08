@@ -659,11 +659,14 @@ function rebuildRenderer(): void {
   });
   setFrame(frame, false);
 }
-function stopLayoutEdit(): void {
-  if (!layoutEditing) return;
+function releaseLayoutPointer(): void {
   if (dragging && canvas.hasPointerCapture(dragging.pointerId))
     canvas.releasePointerCapture(dragging.pointerId);
   dragging = null;
+}
+function stopLayoutEdit(): void {
+  if (!layoutEditing) return;
+  releaseLayoutPointer();
   layoutEditing = false;
   editCamera = null;
   canvas.classList.remove('is-layout-editing');
@@ -689,7 +692,7 @@ layoutToggle.addEventListener('click', () => {
 });
 layoutReset.addEventListener('click', () => {
   if (!currentLayout || !originalLayout) return;
-  dragging = null;
+  releaseLayoutPointer();
   currentLayout.clear();
   for (const [id, point] of originalLayout) currentLayout.set(id, { ...point });
   rebuildRenderer();
@@ -733,13 +736,12 @@ function moveLayoutNode(event: PointerEvent): void {
   const dx = (point.x - dragging.start.x) / factor;
   const dy = (point.y - dragging.start.y) / factor;
   if (!Number.isFinite(dx) || !Number.isFinite(dy)) return;
+  // Addition can itself overflow even when the pointer delta is finite.
+  const rawX = dragging.previous.x + dx, rawY = dragging.previous.y + dy;
+  if (!Number.isFinite(rawX) || !Number.isFinite(rawY)) return;
   const moved = dx === 0 && dy === 0
     ? { ...dragging.previous }
-    : {
-        x: roundPositionCoordinate(dragging.previous.x + dx),
-        y: roundPositionCoordinate(dragging.previous.y + dy),
-      };
-  if (!Number.isFinite(moved.x) || !Number.isFinite(moved.y)) return;
+    : { x: roundPositionCoordinate(rawX), y: roundPositionCoordinate(rawY) };
   const old = currentLayout.get(dragging.id);
   if (old?.x === moved.x && old?.y === moved.y) return;
   currentLayout.set(dragging.id, moved);
@@ -752,13 +754,12 @@ canvas.addEventListener('pointermove', moveLayoutNode);
 canvas.addEventListener('pointerup', (event) => {
   if (!dragging || dragging.pointerId !== event.pointerId) return;
   moveLayoutNode(event);
-  dragging = null;
-  if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
+  releaseLayoutPointer();
 });
 canvas.addEventListener('pointercancel', (event) => {
   if (!dragging || dragging.pointerId !== event.pointerId || !currentLayout) return;
   currentLayout.set(dragging.id, dragging.previous);
-  dragging = null;
+  releaseLayoutPointer();
   setFrame(frame, false);
   updateLayoutFields();
   updateLayoutControls();

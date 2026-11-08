@@ -262,3 +262,25 @@ test('scrubber captures target before edit-mode camera cleanup redraws the old f
   assert.equal(Number(app.node('scrubber').value), 250);
   assert.equal(app.node('layoutToggle').attributes['aria-pressed'], 'false');
 });
+
+
+test('editing cleanup releases pointer capture on reset and mode exit', async () => {
+  const app = makeStudio();
+  await app.ready;
+  assert.equal(app.window.renderAt(48), true);
+  const frame = app.window.studioFrame();
+  const node = frame.view.nodes.find((n) => frame.reveal.nodes[n.id] > 0.5);
+  const point = screenPosition(node.position, frame.cameraResolved, DEFAULT_FRAME_SPEC);
+  await app.node('layoutToggle').click();
+  const stage = app.node('stage');
+  const pointer = { pointerId: 91, isPrimary: true, pointerType: 'mouse', button: 0, clientX: point.x, clientY: point.y };
+  await stage.dispatch('pointerdown', pointer);
+  assert.equal(stage.hasPointerCapture(91), true);
+  await app.node('layoutToggle').click();
+  assert.equal(stage.hasPointerCapture(91), false);
+  await app.node('layoutToggle').click();
+  await stage.dispatch('pointerdown', pointer);
+  assert.equal(stage.hasPointerCapture(91), true);
+  await app.node('layoutReset').dispatch('click');
+  assert.equal(stage.hasPointerCapture(91), false);
+});
