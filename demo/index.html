@@ -35,6 +35,21 @@
       <canvas id="stage" width="1280" height="720" role="img" aria-label="关系叙事视频预览" aria-describedby="sceneDescription">当前分镜和关系见画面文字说明。</canvas>
     </div>
     <p id="sceneDescription" class="sr-only" role="status" aria-live="polite"></p>
+    <div class="layout-tools" role="group" aria-label="节点位置微调">
+      <button id="layoutToggle" type="button" aria-pressed="false" disabled>调整节点位置</button>
+      <button id="layoutReset" type="button" disabled>重置调整</button>
+      <button id="layoutExport" type="button" disabled>导出含坐标 JSON</button>
+      <span id="layoutNote" class="layout-note" role="status">调整模式关闭 · 只修改导出文件</span>
+    </div>
+    <div id="layoutEditor" class="layout-editor" role="group" aria-label="键盘坐标调整" hidden>
+      <label for="layoutNode">当前可见节点</label>
+      <select id="layoutNode" aria-label="选择可见节点" disabled></select>
+      <label for="layoutX">X 坐标</label>
+      <input id="layoutX" type="number" step="any" inputmode="decimal" disabled>
+      <label for="layoutY">Y 坐标</label>
+      <input id="layoutY" type="number" step="any" inputmode="decimal" disabled>
+      <button id="layoutApply" type="button" disabled>应用坐标</button>
+    </div>
 
     <div class="transport" role="group" aria-label="播放控制">
       <button id="play" class="icon-button play" type="button" aria-label="播放">▶</button>

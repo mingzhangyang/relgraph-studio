@@ -13,6 +13,22 @@ class Element {
     this.listeners = {};
     this._text = '';
     this.value = '';
+    this.className = '';
+    this.classList = {
+      add: (...names) => {
+        this.className = [
+          ...new Set([...this.className.split(/\s+/).filter(Boolean), ...names]),
+        ].join(' ');
+      },
+      remove: (...names) => {
+        const removed = new Set(names);
+        this.className = this.className
+          .split(/\s+/)
+          .filter((name) => name && !removed.has(name))
+          .join(' ');
+      },
+      contains: (name) => this.className.split(/\s+/).includes(name),
+    };
     this.relList = { supports: () => true };
   }
   append(...children) {
@@ -98,6 +114,7 @@ test('production build includes both examples and the bundled workspace loads th
       HTMLButtonElement: Element,
       HTMLInputElement: Element,
       HTMLLabelElement: Element,
+      HTMLSelectElement: Element,
       structuredClone,
       requestAnimationFrame: () => 1,
       cancelAnimationFrame() {},
@@ -110,6 +127,14 @@ test('production build includes both examples and the bundled workspace loads th
     await runInNewContext(`(async () => { ${script}\n})()`, env);
     assert.equal(elements.get('status').attributes['data-state'], 'ready');
     assert.ok(window.studioFrame().view.nodes.length > 0);
+    assert.equal(elements.get('layoutEditor').hidden, true, 'position tools start hidden');
+    assert.equal(elements.get('layoutToggle').attributes['aria-pressed'], 'false');
+    await elements.get('layoutToggle').click();
+    assert.equal(elements.get('layoutToggle').attributes['aria-pressed'], 'true');
+    assert.equal(elements.get('stage').classList.contains('is-layout-editing'), true);
+    await elements.get('layoutToggle').click();
+    assert.equal(elements.get('layoutToggle').attributes['aria-pressed'], 'false');
+    assert.equal(elements.get('stage').classList.contains('is-layout-editing'), false);
     assert.equal(window.renderAt(48), true);
     const frame = window.studioFrame();
     assert.equal(window.renderAt(0), true);

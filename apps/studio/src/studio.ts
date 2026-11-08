@@ -3,6 +3,7 @@ import {
   diagnosticText,
   NO_DIAGNOSTICS_TEXT,
   parseDocument,
+  applyGraphPositions,
   type LoadResult,
 } from '@relgraph/core';
 import { layoutGraph } from '@relgraph/core';
@@ -16,6 +17,33 @@ import {
   type CanvasRenderer,
   type FrameText,
 } from '@relgraph/render';
+import { canvasPoint } from './position-tool.js';
+import {
+  editableNodes,
+  layoutHasChanges,
+  parseCoordinateInputs,
+  positionForDrag,
+  restoreLayoutPositions,
+  startPositionDrag,
+  updateEditableNodePosition,
+  type PositionDrag,
+} from './layout-editor-model.js';
+import {
+  renderEditorFields,
+  renderEditorMessage,
+  renderEditorMode,
+  renderEditorNodes,
+  renderEditorSelection,
+  renderEditorStatus,
+} from './layout-editor-view.js';
+import {
+  advancePlayback,
+  createPlaybackState,
+  formatPlaybackTime,
+  seekPlayback,
+  setPlaybackRunning,
+  shotMarkers,
+} from './playback-model.js';
 
 declare global {
   interface Window {
@@ -47,23 +75,45 @@ const canvas = requiredElement('stage', HTMLCanvasElement),
   exampleLiterature = requiredElement('exampleLiterature', HTMLButtonElement),
   exampleBiology = requiredElement('exampleBiology', HTMLButtonElement),
   themeToggle = requiredElement('themeToggle', HTMLButtonElement),
+  layoutToggle = requiredElement('layoutToggle', HTMLButtonElement),
+  layoutReset = requiredElement('layoutReset', HTMLButtonElement),
+  layoutExport = requiredElement('layoutExport', HTMLButtonElement),
+  layoutEditor = $('layoutEditor'),
+  layoutNode = requiredElement('layoutNode', HTMLSelectElement),
+  layoutX = requiredElement('layoutX', HTMLInputElement),
+  layoutY = requiredElement('layoutY', HTMLInputElement),
+  layoutApply = requiredElement('layoutApply', HTMLButtonElement),
   dropzone = requiredElement('dropzone', HTMLLabelElement),
   shots = $('shots'),
   strip = $('sceneStrip');
+const layoutControls = {
+  canvas,
+  toggle: layoutToggle,
+  reset: layoutReset,
+  editor: layoutEditor,
+  select: layoutNode,
+  x: layoutX,
+  y: layoutY,
+  apply: layoutApply,
+  note: $('layoutNote'),
+};
 let graph: VisualGraph | null = null;
 let renderer: CanvasRenderer | null = null;
-let frame = 0,
-  totalFrames = 1,
-  playing = false,
-  position = 0,
-  announcedScene = -1,
+let playback = createPlaybackState(1, FPS);
+let announcedScene = -1,
   requestSerial = 0,
   loading = false;
 let animationId: number | null = null;
-let lastTick: number | null = null;
 let currentFrameState: DirectorFrameState | null = null;
 let currentDetailAt: DetailAt = () => undefined;
 let currentLayout: ReturnType<typeof layoutGraph> | null = null;
+let originalLayout: ReturnType<typeof layoutGraph> | null = null;
+let sourceDocument: unknown = null;
+let sourceFilename = 'relgraph.json';
+let selectedLayoutNode: string | null = null;
+let layoutEditing = false;
+let editCamera: DirectorFrameState['cameraResolved'] | null = null;
+let dragging: PositionDrag | null = null;
 let emptyMessage = '';
 // Workspace and video share one theme. Without a saved choice it follows the OS.
 const THEME_KEY = 'relgraph-theme',
@@ -88,36 +138,31 @@ const setStatus = (text: string, state: Status): void => {
   $('status').textContent = text;
   $('status').setAttribute('data-state', state);
 };
-const stamp = (seconds: number): string => {
-  const t = Math.max(0, seconds),
-    minutes = Math.floor(t / 60),
-    s = (t % 60).toFixed(2).padStart(5, '0');
-  return `${String(minutes).padStart(2, '0')}:${s}`;
-};
+const stamp = formatPlaybackTime;
+function syncPlaybackControls(): void {
+  play.textContent = playback.playing ? '❚❚' : '▶';
+  play.setAttribute('aria-label', playback.playing ? '暂停' : '播放');
+  play.className = 'icon-button play' + (playback.playing ? ' is-playing' : '');
+  if (playback.playing) setStatus('播放中', 'playing');
+  else if (renderer && !loading) setStatus('就绪', 'ready');
+}
 function setPlaying(next: boolean): void {
   if (animationId !== null) cancelAnimationFrame(animationId);
   animationId = null;
-  playing = Boolean(next && renderer && !loading);
-  lastTick = null;
-  position = frame;
-  play.textContent = playing ? '❚❚' : '▶';
-  play.setAttribute('aria-label', playing ? '暂停' : '播放');
-  play.className = 'icon-button play' + (playing ? ' is-playing' : '');
-  if (playing) setStatus('播放中', 'playing');
-  else if (renderer && !loading) setStatus('就绪', 'ready');
-  if (playing) animationId = requestAnimationFrame(tick);
+  playback = setPlaybackRunning(playback, next, Boolean(renderer && !loading));
+  syncPlaybackControls();
+  if (playback.playing) animationId = requestAnimationFrame(tick);
 }
 function tick(now: number): void {
   animationId = null;
-  if (!playing) return;
-  if (lastTick !== null) position += (Math.max(0, now - lastTick) * FPS) / 1000;
-  lastTick = now;
-  setFrame(Math.floor(position), false);
-  if (position >= totalFrames - 1) {
+  if (!playback.playing) return;
+  playback = advancePlayback(playback, now);
+  setFrame(playback.frame, false);
+  if (!playback.playing) {
     setPlaying(false);
     return;
   }
-  if (playing) animationId = requestAnimationFrame(tick);
+  animationId = requestAnimationFrame(tick);
 }
 function renderDiagnostics(result: LoadResult): void {
   for (const [name, entries] of [
@@ -162,8 +207,9 @@ function renderDiagnostics(result: LoadResult): void {
 function buildShots(graph: VisualGraph): void {
   shots.replaceChildren();
   strip.replaceChildren();
-  let start = 0;
+  const markers = shotMarkers(graph.scenes, playback.totalFrames, FPS);
   graph.scenes.forEach((scene, index) => {
+    const marker = markers[index];
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'shot';
@@ -172,15 +218,16 @@ function buildShots(graph: VisualGraph): void {
       number = document.createElement('span');
     number.className = 'shot-index';
     number.textContent = String(index + 1).padStart(2, '0');
-    top.append(number, ` ${stamp(start)} · ${scene.durationSec}s`);
+    top.append(number, ` ${stamp(marker.startSec)} · ${scene.durationSec}s`);
     const progress = document.createElement('span');
     progress.className = 'shot-progress';
     progress.setAttribute('aria-hidden', 'true');
     const title = document.createElement('strong');
     title.textContent = `分镜 ${index + 1}`;
     button.append(progress, top, title);
-    const target = Math.min(totalFrames - 1, Math.ceil(start * FPS - 1e-9));
+    const target = marker.targetFrame;
     button.addEventListener('click', () => {
+      if (layoutEditing) stopLayoutEdit();
       if (loading) return;
       setPlaying(false);
       setFrame(target);
@@ -190,7 +237,6 @@ function buildShots(graph: VisualGraph): void {
     segment.className = 'segment';
     segment.setAttribute('style', `flex-grow:${scene.durationSec}`);
     strip.append(segment);
-    start += scene.durationSec;
   });
 }
 function renderShots(activeIndex: number, activeTitle: string): void {
@@ -248,8 +294,8 @@ function updateTranscript(a11y: FrameText): void {
 }
 function setFrame(next: number, updatePosition = true): DirectorFrameState | undefined {
   if (!renderer) return;
-  frame = Math.max(0, Math.min(totalFrames - 1, Math.floor(next)));
-  if (updatePosition) position = frame;
+  playback = seekPlayback(playback, next, !updatePosition);
+  const frame = playback.frame;
   const { state, list } = renderer.renderFrameWithList(frame),
     p = state.playback;
   if (!p.scene) throw new Error('A loaded film must have a current scene');
@@ -257,7 +303,7 @@ function setFrame(next: number, updatePosition = true): DirectorFrameState | und
   scrubber.value = String(frame);
   scrubber.setAttribute(
     'style',
-    `--fill:${totalFrames > 1 ? (frame / (totalFrames - 1)) * 100 : 0}%`,
+    `--fill:${playback.totalFrames > 1 ? (frame / (playback.totalFrames - 1)) * 100 : 0}%`,
   );
   scrubber.setAttribute('aria-valuetext', `${stamp(frame / FPS)}，分镜 ${p.index + 1}`);
   $('frameNumber').textContent = `FRAME ${frame}`;
@@ -299,11 +345,20 @@ function clearStudio(): void {
   graph = null;
   renderer = null;
   currentLayout = null;
+  originalLayout = null;
+  sourceDocument = null;
+  selectedLayoutNode = null;
+  dragging = null;
+  editCamera = null;
+  layoutEditing = false;
+  layoutToggle.disabled = true;
+  layoutReset.disabled = true;
+  layoutExport.disabled = true;
+  updateLayoutEditor();
+  updateLayoutControls();
   currentFrameState = null;
   currentDetailAt = () => undefined;
-  frame = 0;
-  position = 0;
-  totalFrames = 1;
+  playback = createPlaybackState(1, FPS);
   announcedScene = -1;
   play.disabled = true;
   restart.disabled = true;
@@ -325,7 +380,7 @@ function clearStudio(): void {
   $('time').textContent = '00:00.00 / 00:00.00';
   $('frameNumber').textContent = 'FRAME 0';
 }
-function applyResult(result: LoadResult, name: string): void {
+function applyResult(result: LoadResult, name: string, sourceText?: string): void {
   loading = false;
   clearStudio();
   renderDiagnostics(result);
@@ -336,15 +391,20 @@ function applyResult(result: LoadResult, name: string): void {
     return;
   }
   graph = result.graph;
+  sourceDocument = sourceText ? JSON.parse(sourceText) : null;
+  sourceFilename = /\.json$/i.test(name) ? name : 'relgraph.json';
   currentDetailAt = result.detailAt || (() => undefined);
   currentLayout = layoutGraph(graph);
+  originalLayout = new Map([...currentLayout].map(([id, point]) => [id, { ...point }]));
+  layoutToggle.disabled = sourceDocument === null;
+  layoutExport.disabled = sourceDocument === null;
   renderer = createCanvasRenderer(canvas, graph, currentLayout, {
     fps: FPS,
     detailAt: currentDetailAt,
     theme,
   });
-  totalFrames = frameCount(graph, FPS);
-  scrubber.max = String(totalFrames - 1);
+  playback = createPlaybackState(frameCount(graph, FPS), FPS);
+  scrubber.max = String(playback.totalFrames - 1);
   scrubber.disabled = false;
   play.disabled = false;
   restart.disabled = false;
@@ -357,11 +417,16 @@ function applyResult(result: LoadResult, name: string): void {
 }
 function beginLoad(): number {
   const serial = ++requestSerial;
+  if (layoutEditing) stopLayoutEdit();
   loading = true;
   setPlaying(false);
   play.disabled = true;
   restart.disabled = true;
   scrubber.disabled = true;
+  layoutToggle.disabled = true;
+  layoutReset.disabled = true;
+  layoutExport.disabled = true;
+  updateLayoutEditor();
   setStatus('正在加载…', 'loading');
   return serial;
 }
@@ -394,7 +459,7 @@ async function loadExample(path: string, name: string): Promise<void> {
     const response = await fetch(path);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const text = await response.text();
-    if (serial === requestSerial) applyResult(parseDocument(text), name);
+    if (serial === requestSerial) applyResult(parseDocument(text), name, text);
   } catch (error) {
     if (serial === requestSerial) applyResult(loadFailure('LOAD', error), name);
   }
@@ -420,7 +485,7 @@ async function loadFile(file: File | undefined): Promise<void> {
   markSource(null);
   try {
     const text = await file.text();
-    if (serial === requestSerial) applyResult(parseDocument(text), file.name);
+    if (serial === requestSerial) applyResult(parseDocument(text), file.name, text);
   } catch (error) {
     if (serial === requestSerial) applyResult(loadFailure('FILE', error), file.name);
   }
@@ -443,16 +508,21 @@ dropzone.addEventListener('drop', (event) => {
   void loadFile(event.dataTransfer?.files?.[0]);
 });
 play.addEventListener('click', () => {
-  if (!playing && frame >= totalFrames - 1) setFrame(0);
-  setPlaying(!playing);
+  if (layoutEditing) stopLayoutEdit();
+  if (!playback.playing && playback.frame >= playback.totalFrames - 1) setFrame(0);
+  setPlaying(!playback.playing);
 });
 restart.addEventListener('click', () => {
+  if (layoutEditing) stopLayoutEdit();
   setPlaying(false);
   setFrame(0);
 });
 scrubber.addEventListener('input', () => {
+  // Editing teardown redraws the prior frame, so capture the requested frame first.
+  const requestedFrame = Number(scrubber.value);
+  if (layoutEditing) stopLayoutEdit();
   setPlaying(false);
-  setFrame(Number(scrubber.value));
+  setFrame(requestedFrame);
 });
 window.addEventListener('keydown', (event) => {
   if (
@@ -464,6 +534,12 @@ window.addEventListener('keydown', (event) => {
     event.repeat
   )
     return;
+  // Escape must work even while the position-mode button has keyboard focus.
+  if (event.code === 'Escape' && layoutEditing) {
+    event.preventDefault();
+    stopLayoutEdit();
+    return;
+  }
   const target = event.target;
   if (
     target instanceof Element &&
@@ -474,14 +550,18 @@ window.addEventListener('keydown', (event) => {
     event.preventDefault();
     play.click();
   } else if (event.code === 'ArrowRight') {
+    if (layoutEditing) stopLayoutEdit();
     setPlaying(false);
-    setFrame(frame + FPS);
+    setFrame(playback.frame + FPS);
   } else if (event.code === 'ArrowLeft') {
+    if (layoutEditing) stopLayoutEdit();
     setPlaying(false);
-    setFrame(frame - FPS);
+    setFrame(playback.frame - FPS);
   }
 });
 function applyTheme(next: Theme, persist: boolean): void {
+  // A theme is a normal renderer transition; never carry a frozen shot camera.
+  if (layoutEditing) stopLayoutEdit();
   theme = next;
   if (persist) {
     pinnedTheme = theme;
@@ -504,16 +584,185 @@ function applyTheme(next: Theme, persist: boolean): void {
       detailAt: currentDetailAt,
       theme,
     });
-    setFrame(frame, false);
+    setFrame(playback.frame, false);
   } else paintEmptyStage(emptyMessage);
 }
+
+
+/**
+ * Never expose names of future/hidden nodes in the keyboard selector.
+ * Re-check the current spoiler-safe frame when applying a typed coordinate.
+ */
+function availableNodes(): VisualGraph['nodes'] {
+  return layoutEditing && currentFrameState && currentLayout
+    ? editableNodes(currentFrameState, currentLayout)
+    : [];
+}
+function updateLayoutFields(): void {
+  renderEditorFields(
+    layoutControls,
+    selectedLayoutNode ? currentLayout?.get(selectedLayoutNode) : undefined,
+  );
+}
+function updateLayoutEditor(): void {
+  const nodes = availableNodes();
+  if (!selectedLayoutNode || !nodes.some((node) => node.id === selectedLayoutNode))
+    selectedLayoutNode = nodes[0]?.id ?? null;
+  renderEditorMode(layoutControls, layoutEditing);
+  renderEditorNodes(document, layoutControls, nodes, selectedLayoutNode);
+  updateLayoutFields();
+}
+layoutNode.addEventListener('change', () => {
+  if (!availableNodes().some((node) => node.id === layoutNode.value)) return;
+  selectedLayoutNode = layoutNode.value;
+  updateLayoutFields();
+});
+layoutApply.addEventListener('click', () => {
+  if (!layoutEditing || !currentLayout || !selectedLayoutNode ||
+      !availableNodes().some((node) => node.id === selectedLayoutNode)) return;
+  const point = parseCoordinateInputs(layoutX.value, layoutY.value);
+  if (!point) {
+    renderEditorMessage(layoutControls, '坐标必须是有限数字，请检查 X 和 Y');
+    return;
+  }
+  if (!currentFrameState || !updateEditableNodePosition(currentLayout, currentFrameState, selectedLayoutNode, point))
+    return;
+  setFrame(playback.frame, false);
+  updateLayoutControls();
+});
+
+// A position edit uses the existing renderer but freezes the visible camera.
+// No projection, timeline or authored source data changes until explicit export.
+const layoutChanged = (): boolean =>
+  Boolean(currentLayout && originalLayout && layoutHasChanges(currentLayout, originalLayout));
+function updateLayoutControls(): void {
+  renderEditorStatus(layoutControls, layoutEditing, layoutChanged());
+}
+function rebuildRenderer(): void {
+  if (!graph || !currentLayout) return;
+  renderer = createCanvasRenderer(canvas, graph, currentLayout, {
+    fps: FPS,
+    detailAt: currentDetailAt,
+    theme,
+    ...(editCamera ? { cameraOverride: editCamera } : {}),
+  });
+  setFrame(playback.frame, false);
+}
+function releaseLayoutPointer(): void {
+  if (dragging && canvas.hasPointerCapture(dragging.pointerId))
+    canvas.releasePointerCapture(dragging.pointerId);
+  dragging = null;
+}
+function stopLayoutEdit(): void {
+  if (!layoutEditing) return;
+  releaseLayoutPointer();
+  layoutEditing = false;
+  editCamera = null;
+  rebuildRenderer();
+  updateLayoutEditor();
+  updateLayoutControls();
+}
+layoutToggle.addEventListener('click', () => {
+  if (!renderer || !currentFrameState || !currentLayout) return;
+  if (layoutEditing) {
+    stopLayoutEdit();
+    return;
+  }
+  setPlaying(false);
+  editCamera = { ...currentFrameState.cameraResolved };
+  layoutEditing = true;
+  rebuildRenderer();
+  updateLayoutEditor();
+  updateLayoutControls();
+});
+layoutReset.addEventListener('click', () => {
+  if (!currentLayout || !originalLayout) return;
+  releaseLayoutPointer();
+  restoreLayoutPositions(currentLayout, originalLayout);
+  rebuildRenderer();
+  updateLayoutFields();
+  updateLayoutControls();
+});
+const pointerLocation = (event: PointerEvent): { x: number; y: number } | null =>
+  canvasPoint({ x: event.clientX, y: event.clientY }, canvas.getBoundingClientRect(), canvas);
+canvas.addEventListener('pointerdown', (event) => {
+  if (!layoutEditing || !renderer || !currentLayout || !currentFrameState || dragging) return;
+  if (event.isPrimary === false || (event.pointerType === 'mouse' && event.button !== 0)) return;
+  const point = pointerLocation(event);
+  if (!point) return;
+  const rect = canvas.getBoundingClientRect();
+  const radius = 24 * (canvas.width / Math.max(1, rect.width));
+  const nextDrag = startPositionDrag(
+    currentFrameState, currentLayout, renderer.frameSpec, point, radius, event.pointerId,
+  );
+  if (!nextDrag) return;
+  dragging = nextDrag;
+  selectedLayoutNode = nextDrag.id;
+  renderEditorSelection(layoutControls, nextDrag.id);
+  updateLayoutFields();
+  canvas.setPointerCapture(event.pointerId);
+  event.preventDefault();
+});
+function moveLayoutNode(event: PointerEvent): void {
+  if (!dragging || !renderer || !currentLayout || !currentFrameState ||
+      dragging.pointerId !== event.pointerId) return;
+  const point = pointerLocation(event);
+  if (!point) return;
+  const moved = positionForDrag(dragging, point, currentFrameState.cameraResolved, renderer.frameSpec);
+  if (!moved || !updateEditableNodePosition(currentLayout, currentFrameState, dragging.id, moved))
+    return;
+  setFrame(playback.frame, false);
+  updateLayoutFields();
+  updateLayoutControls();
+  event.preventDefault();
+}
+canvas.addEventListener('pointermove', moveLayoutNode);
+canvas.addEventListener('pointerup', (event) => {
+  if (!dragging || dragging.pointerId !== event.pointerId) return;
+  moveLayoutNode(event);
+  releaseLayoutPointer();
+});
+canvas.addEventListener('pointercancel', (event) => {
+  if (!dragging || dragging.pointerId !== event.pointerId || !currentLayout) return;
+  currentLayout.set(dragging.id, dragging.previous);
+  releaseLayoutPointer();
+  setFrame(playback.frame, false);
+  updateLayoutFields();
+  updateLayoutControls();
+});
+layoutExport.addEventListener('click', () => {
+  if (!graph || !currentLayout || sourceDocument === null) return;
+  try {
+    const output = applyGraphPositions(sourceDocument, graph, currentLayout);
+    const text = JSON.stringify(output.document, null, 2) + '\n';
+    const check = parseDocument(text);
+    if (!check.valid) throw new Error('导出的 JSON 没有通过数据校验');
+    const blob = new Blob([text], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = sourceFilename.replace(/\.json$/i, '') + '.positioned.json';
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    renderEditorMessage(layoutControls, '已准备导出：' + link.download + '。修改仅保存在导出的 JSON 文件中。');
+  } catch (error) {
+    renderEditorMessage(
+      layoutControls,
+      '导出失败：' + (error instanceof Error ? error.message : String(error)),
+    );
+  }
+});
+
 themeToggle.addEventListener('click', () => applyTheme(theme === 'light' ? 'dark' : 'light', true));
 lightQuery?.addEventListener?.('change', (event) => {
   if (!pinnedTheme) applyTheme(event.matches ? 'light' : 'dark', false);
 });
 // Headless frame export and independent frame inspection; no recording or animation state.
 window.renderAt = (f) => {
-  if (!renderer || !Number.isInteger(f) || f < 0 || f >= totalFrames) return false;
+  if (!renderer || !Number.isInteger(f) || f < 0 || f >= playback.totalFrames) return false;
+  if (layoutEditing) stopLayoutEdit();
   setPlaying(false);
   setFrame(f);
   return true;
@@ -542,7 +791,7 @@ clearStudio();
 const startupSerial = requestSerial;
 await loadFilmFonts();
 // A film chosen while the fonts loaded was drawn with fallbacks; redraw it.
-if (renderer) setFrame(frame, false);
+if (renderer) setFrame(playback.frame, false);
 if (startupSerial === requestSerial) {
   markSource('exampleLiterature');
   await loadExample(

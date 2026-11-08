@@ -54,7 +54,11 @@
 
 ADR 003 step 5 is split into two reviewable batches:
 - [x] **Step 5a:** seeded deterministic `relgraph layout` for missing coordinates, with opt-in validated source write-back and regression tests (PR pending).
-- [ ] **Step 5b:** director workspace position tweaks and explicit JSON export; default playback remains unchanged.
+- [x] **Step 5b:** opt-in director canvas drag adjustment for currently visible nodes, frozen preview camera, reset, and validated JSON export. Default playback and original source are unchanged (PR pending).
+
+Workspace architecture follow-up (after step 5b, in separate reviewable PRs):
+- [x] **Playback Core:** move frame clock, play/pause/seek transitions, shot-marker time math and UI timestamp formatting into DOM-free `apps/studio/src/playback-model.ts`; retain the existing director timeline as authoritative and the workspace as the animation scheduler. Pure unit regressions added (stacked PR pending local/full-browser verification).
+- [ ] **Workspace Views:** extract shot navigation, playback controls, diagnostics and transcript DOM adapters. Keep one shared DOM test harness and verify key workflows in a real browser, including changes to a11y within a shot.
 
 After step 5b comes the first source-verified 60–90 s film. Audio synchronization and independent MP4 subtitle streams remain B2 work. Audio synchronization and independent MP4 subtitle streams remain B2 work.
 
