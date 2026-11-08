@@ -47,8 +47,11 @@ function glyphGeometry(
 }
 
 function boundsFor(point: NodePoint, g: GlyphGeometry): Rect {
-  const width = g.halfWidth + g.halfStroke;
-  const height = g.halfHeight + g.halfStroke;
+  // Canvas defaults to miter joins: at a diamond's 90° tip the stroke
+  // extends by sqrt(2) times its half-width, not just the half-width.
+  const strokeExtent = g.shape === 'diamond' ? Math.SQRT2 * g.halfStroke : g.halfStroke;
+  const width = g.halfWidth + strokeExtent;
+  const height = g.halfHeight + strokeExtent;
   return { x: point.x - width, y: point.y - height, w: 2 * width, h: 2 * height };
 }
 
@@ -96,15 +99,10 @@ export function nodeGlyphIntersectsStage(
   }
 
   if (g.shape === 'diamond') {
-    // Euclidean distance to the filled diamond |x| + |y| <= halfWidth.
-    // Unlike an inflated diamond AABB, this also handles the pointed tips.
-    const radius = g.halfWidth;
-    let distance: number;
-    if (dx + dy <= radius) distance = 0;
-    else if (dx - dy >= radius) distance = Math.hypot(dx - radius, dy);
-    else if (dy - dx >= radius) distance = Math.hypot(dx, dy - radius);
-    else distance = (dx + dy - radius) / Math.SQRT2;
-    return distance < g.halfStroke;
+    // Miter-joined 90° corners extend the diamond along its axes.
+    // Every offset edge is |x| + |y| = halfWidth + sqrt(2) * halfStroke.
+    // A round-stroke distance test incorrectly clips the visible tip.
+    return dx + dy < g.halfWidth + Math.SQRT2 * g.halfStroke;
   }
 
   // Rounded rectangle: signed distance to the path's actual rounded corners.
