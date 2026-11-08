@@ -258,6 +258,28 @@ button { cursor: pointer; }
   background: var(--stage-bg);
 }
 
+.layout-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+.layout-tools button {
+  padding: 7px 11px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font-size: 12px;
+  font-weight: 600;
+}
+.layout-tools button:hover:not(:disabled) { background: var(--surface-hover); }
+.layout-tools button[aria-pressed="true"] { border-color: var(--gold); background: var(--gold-soft); }
+.layout-tools button:disabled { opacity: .4; cursor: default; }
+.layout-note { flex: 1 1 220px; color: var(--muted); font-size: 12px; }
+#stage.is-layout-editing { cursor: grab; touch-action: none; }
+#stage.is-layout-editing:active { cursor: grabbing; }
+
 /* ---------- Transport ---------- */
 .transport {
   display: flex;
