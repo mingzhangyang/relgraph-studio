@@ -50,19 +50,22 @@ test('hit-testing excludes hidden nodes even when their IDs match Object prototy
 
 test('source writeback can export entire layout without changing the imported data', () => {
   for (const source of [literature, biology]) {
+    // Snapshot before writeback, so any mutation of the imported document
+    // is caught rather than comparing an object to its own late clone.
+    const sourceBeforeWriteback = structuredClone(source);
     const loaded = loadDocument(source);
     assert.equal(loaded.valid, true);
     const positions = layoutGraph(loaded.graph);
     const first = loaded.graph.nodes[0];
+    const originalAdaptedPosition = structuredClone(first.position);
     positions.set(first.id, { x: 654.32, y: -321.12 });
     const written = applyGraphPositions(source, loaded.graph, positions);
     const checked = loadDocument(written.document);
     assert.equal(checked.valid, true);
-    assert.deepEqual(first.position, loaded.graph.nodes[0].position);
+    assert.deepEqual(first.position, originalAdaptedPosition, 'writeback must not mutate adapted graph');
     const adapted = checked.graph.nodes.find((node) => node.id === first.id);
     assert.deepEqual(adapted.position, { x: 654.32, y: -321.12 });
-    const same = structuredClone(source);
-    assert.deepEqual(same, source);
+    assert.deepEqual(source, sourceBeforeWriteback, 'writeback must not mutate source');
     const repeat = applyGraphPositions(written.document, checked.graph, positions);
     assert.equal(repeat.changed, 0);
   }

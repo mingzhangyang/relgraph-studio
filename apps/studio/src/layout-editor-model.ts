@@ -115,5 +115,10 @@ export function positionForDrag(
   const x = worldWithScreenOffset(drag.previous.x, dx, scale);
   const y = worldWithScreenOffset(drag.previous.y, dy, scale);
   if (x === null || y === null) return null;
-  return { x: roundPositionCoordinate(x), y: roundPositionCoordinate(y) };
+  // Preserve the exact authored precision on the untouched axis. Imported
+  // coordinates and keyboard X/Y edits can contain more than two decimals.
+  return {
+    x: dx === 0 ? drag.previous.x : roundPositionCoordinate(x),
+    y: dy === 0 ? drag.previous.y : roundPositionCoordinate(y),
+  };
 }

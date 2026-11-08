@@ -86,3 +86,30 @@ test('valid drag crosses opposite huge world coordinates without intermediate ov
   assert.deepEqual(moved, { x: -1e308, y: 0 });
   assert.deepEqual(positionForDrag(drag, drag.start, camera, DEFAULT_FRAME_SPEC), drag.previous);
 });
+
+test('axis-aligned drags preserve the exact untouched coordinate precision', () => {
+  const camera = { x: 0, y: 0, scale: 1 };
+  const drag = {
+    pointerId: 7,
+    id: 'edited',
+    previous: { x: 10.123456789, y: 5.67891 },
+    start: { x: 640, y: 330 },
+  };
+  const horizontal = positionForDrag(
+    drag,
+    { x: 660, y: 330 },
+    camera,
+    DEFAULT_FRAME_SPEC,
+  );
+  assert.equal(horizontal.y, drag.previous.y, 'horizontal drag must not round Y');
+  assert.notEqual(horizontal.x, drag.previous.x);
+
+  const vertical = positionForDrag(
+    drag,
+    { x: 640, y: 350 },
+    camera,
+    DEFAULT_FRAME_SPEC,
+  );
+  assert.equal(vertical.x, drag.previous.x, 'vertical drag must not round X');
+  assert.notEqual(vertical.y, drag.previous.y);
+});
