@@ -16,9 +16,9 @@ class Element {
     this.className = '';
     this.classList = {
       add: (...names) => {
-        this.className = [...new Set([...this.className.split(/\s+/).filter(Boolean), ...names])].join(
-          ' ',
-        );
+        this.className = [
+          ...new Set([...this.className.split(/\s+/).filter(Boolean), ...names]),
+        ].join(' ');
       },
       remove: (...names) => {
         const removed = new Set(names);
