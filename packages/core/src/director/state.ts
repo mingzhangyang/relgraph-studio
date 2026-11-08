@@ -1,5 +1,5 @@
 import { frameStateAt } from '../graph/core.js';
-import { captionOpacity, compileTimeline, revealProgress, timelinePlaybackAt } from './timeline.js';
+import { captionOpacity, compileTimeline, revealStateAt, timelinePlaybackAt } from './timeline.js';
 import type { FilmTimeline } from './timeline.js';
 import type {
   DirectorFrameState,
@@ -17,6 +17,10 @@ type Position = { x: number; y: number };
  * of the 1280×720 design (renderers multiply by their frame's type scale).
  * Core stays independent of the renderer's FrameSpec and receives only this.
  */
+// Available in every supported runtime (Node 20+, browsers); core builds
+// against ES2022 alone, whose library has no declaration for it.
+declare function structuredClone<T>(value: T): T;
+
 export interface CameraFit {
   halfWidth: number;
   halfHeight: number;
@@ -164,22 +168,17 @@ export function directorFrameAt(
     };
   }
   const second = frame / fps;
-  const reveal = {
-    nodes: Object.fromEntries(
-      view.nodes.map((node) => [node.id, revealProgress(timeline, 'node', node.id, second)]),
-    ),
-    edges: Object.fromEntries(
-      view.edges.map((edge) => [edge.id, revealProgress(timeline, 'edge', edge.id, second)]),
-    ),
-  };
-  return {
+  // The scene, projection, camera and highlight come from the (possibly
+  // caller-supplied, reused) timeline. Return a copy so editing a returned
+  // state can never change a later frame.
+  return structuredClone({
     ...state,
     cameraResolved: camera,
     transition,
     previousHighlight,
-    reveal,
+    reveal: revealStateAt(timeline, view, second),
     captionOpacity: captionOpacity(timeline, playback.index, second),
-  };
+  });
 }
 
 export function frameCount(graph: VisualGraph, fps = 24): number {

@@ -209,33 +209,48 @@ export function timelinePlaybackAt(
   throw new Error('Unable to evaluate timeline shot');
 }
 
-/** Always return a frame-local value; no previous frame or renderer memory is read. */
+/**
+ * Reveal progress (0–1) of every node and edge in `view`, the projection at
+ * `second`, in one pass over the cues. An object with an active cue takes the
+ * latest cue's progress; any other projected object is fully shown, including
+ * every object of a graph without shots (no presentation, a still graph).
+ * Frame-local: no previous frame or renderer memory is read.
+ */
+export function revealStateAt(
+  timeline: FilmTimeline,
+  view: Pick<ProjectedVisualGraph, 'nodes' | 'edges'>,
+  second: number,
+): { nodes: Record<string, number>; edges: Record<string, number> } {
+  const tolerance = 8 * Number.EPSILON * Math.max(1, Math.abs(second));
+  const active = { node: new Map<string, number>(), edge: new Map<string, number>() };
+  // Later cues overwrite earlier ones for the same object.
+  for (const cue of timeline.reveal)
+    if (
+      cue.inSec <= second + tolerance &&
+      (cue.outSec === undefined || second < cue.outSec - tolerance)
+    )
+      active[cue.kind].set(cue.targetId, clamp((second - cue.inSec) / cue.durationSec));
+  return {
+    nodes: Object.fromEntries(view.nodes.map((node) => [node.id, active.node.get(node.id) ?? 1])),
+    edges: Object.fromEntries(view.edges.map((edge) => [edge.id, active.edge.get(edge.id) ?? 1])),
+  };
+}
+
+/**
+ * Reveal progress of one object at `second`: 0 when the object is not in that
+ * second's projection. Frames should use `revealStateAt`, which evaluates all
+ * objects at once.
+ */
 export function revealProgress(
   timeline: FilmTimeline,
   kind: RevealCue['kind'],
   targetId: string,
   second: number,
 ): number {
-  const tolerance = 8 * Number.EPSILON * Math.max(1, Math.abs(second));
-  for (let i = timeline.reveal.length - 1; i >= 0; i--) {
-    const cue = timeline.reveal[i];
-    if (
-      cue.kind === kind &&
-      cue.targetId === targetId &&
-      cue.inSec <= second + tolerance &&
-      (cue.outSec === undefined || second < cue.outSec - tolerance)
-    ) {
-      return clamp((second - cue.inSec) / cue.durationSec);
-    }
-  }
-  // A cue may be in the future or have ended on a backwards jump. The
-  // projected shot, not remembered drawing history, decides if a static
-  // initially-visible object exists or if this ID is currently hidden.
-  const playback = timelinePlaybackAt(timeline, second);
-  const view = timeline.shots[playback.index]?.view;
+  const view = timeline.shots[timelinePlaybackAt(timeline, second).index]?.view;
   if (!view) return 0;
-  const objects = kind === 'node' ? view.nodes : view.edges;
-  return objects.some((item) => item.id === targetId) ? 1 : 0;
+  const state = revealStateAt(timeline, view, second);
+  return (kind === 'node' ? state.nodes : state.edges)[targetId] ?? 0;
 }
 
 /** A11y includes text from fade-in start; opacity affects only pixels. */

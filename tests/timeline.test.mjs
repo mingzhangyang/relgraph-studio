@@ -9,6 +9,7 @@ import {
   compileTimeline,
   captionOpacity,
   revealProgress,
+  revealStateAt,
   timelinePlaybackAt,
 } from '../packages/core/src/director/timeline.ts';
 import { directorFrameAt } from '../packages/core/src/director/state.ts';
@@ -219,5 +220,77 @@ test('the last caption holds to the final frame while earlier ones fade out', ()
     // The final frame of an earlier shot is still fading out.
     const earlierEnd = Math.round(timeline.captions[0].outSec * 24) - 1;
     assert.ok(captionOpacity(timeline, 0, earlierEnd / 24) < 1);
+  }
+});
+
+test('a graph without scenes is drawn as a still, fully revealed', () => {
+  const still = {
+    domain: 'literature',
+    meta: { title: 'Still' },
+    nodes: [
+      { id: 'a', label: 'Alpha', kind: 'person', position: { x: 0, y: 0 } },
+      { id: 'b', label: 'Beta', kind: 'person', position: { x: 200, y: 0 } },
+    ],
+    edges: [{ id: 'e', source: 'a', target: 'b', kind: 'family' }],
+    groups: [],
+    scenes: [],
+  };
+  const layout = layoutGraph(still);
+  const state = directorFrameAt(still, layout, 0);
+  assert.deepEqual(state.reveal, { nodes: { a: 1, b: 1 }, edges: { e: 1 } });
+  const labels = texts(createCanvasRenderer(measuringCanvas(), still, layout).displayListAt(0));
+  assert.ok(labels.includes('Alpha') && labels.includes('Beta'), labels.join(', '));
+});
+
+test('editing a returned frame state cannot change frames from a reused timeline', () => {
+  const layout = layoutGraph(biologyGraph);
+  const timeline = compileTimeline(biologyGraph, 24);
+  const options = { timeline };
+  const pristine = directorFrameAt(biologyGraph, layout, 100, 24, options);
+  const edited = directorFrameAt(biologyGraph, layout, 100, 24, options);
+  edited.playback.scene.title = 'EDITED';
+  edited.camera.focusNodeId = 'EDITED';
+  edited.highlight.nodeIds.push('EDITED');
+  edited.view.nodes.length = 0;
+  assert.deepEqual(directorFrameAt(biologyGraph, layout, 100, 24, options), pristine);
+});
+
+// The per-object lookup this PR first shipped, kept as the reference: the
+// one-pass evaluation must give the same progress for every projected object.
+function referenceRevealProgress(timeline, kind, targetId, second) {
+  const tolerance = 8 * Number.EPSILON * Math.max(1, Math.abs(second));
+  for (let i = timeline.reveal.length - 1; i >= 0; i--) {
+    const cue = timeline.reveal[i];
+    if (
+      cue.kind === kind &&
+      cue.targetId === targetId &&
+      cue.inSec <= second + tolerance &&
+      (cue.outSec === undefined || second < cue.outSec - tolerance)
+    )
+      return Math.min(1, Math.max(0, (second - cue.inSec) / cue.durationSec));
+  }
+  const view = timeline.shots[timelinePlaybackAt(timeline, second).index]?.view;
+  if (!view) return 0;
+  return (kind === 'node' ? view.nodes : view.edges).some((item) => item.id === targetId) ? 1 : 0;
+}
+
+test('one-pass reveal state equals the per-object reference on every frame', () => {
+  for (const graph of [literaryGraph, biologyGraph]) {
+    const timeline = compileTimeline(graph, 24);
+    const frames = Math.round(timeline.durationSec * 24);
+    for (let frame = 0; frame < frames; frame += 1) {
+      const second = frame / 24;
+      const view = timeline.shots[timelinePlaybackAt(timeline, second).index].view;
+      const state = revealStateAt(timeline, view, second);
+      for (const [kind, items, values] of [
+        ['node', view.nodes, state.nodes],
+        ['edge', view.edges, state.edges],
+      ])
+        for (const item of items) {
+          const expected = referenceRevealProgress(timeline, kind, item.id, second);
+          assert.equal(values[item.id], expected, `${kind} ${item.id} at frame ${frame}`);
+          assert.equal(revealProgress(timeline, kind, item.id, second), expected);
+        }
+    }
   }
 });
