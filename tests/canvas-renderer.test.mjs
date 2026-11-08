@@ -74,7 +74,10 @@ test('display lists and detail lookup respect hidden targets and rewinding domai
   assert.ok(!texts(entering).includes('FUTURE PERSON'));
   assert.deepEqual(entering.a11y.nodes, ['Known', 'FUTURE PERSON']);
   const revealed = renderer.displayListAt(40);
-  assert.deepEqual(calls, [['future', 2], ['future', 2]]);
+  assert.deepEqual(calls, [
+    ['future', 2],
+    ['future', 2],
+  ]);
   assert.ok(texts(revealed).includes('FUTURE PERSON'));
   assert.ok(texts(revealed).includes('FUTURE BIOGRAPHY'));
   assert.deepEqual(revealed.a11y.detail, { label: 'FUTURE PERSON', summary: 'FUTURE BIOGRAPHY' });
@@ -100,7 +103,10 @@ test('renderFrame returns the director state for the drawn frame', () => {
   state.camera.focusNodeId = 'known';
   const next = renderer.renderFrame(24);
   assert.equal(next.playback.scene.title, 'Reveal');
-  assert.deepEqual(next.view.nodes.map((node) => node.label), ['Known', 'FUTURE PERSON']);
+  assert.deepEqual(
+    next.view.nodes.map((node) => node.label),
+    ['Known', 'FUTURE PERSON'],
+  );
   assert.notEqual(next.camera.focusNodeId, 'known');
 });
 

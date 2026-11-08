@@ -33,13 +33,25 @@ type DrawItem = VisualNode | VisualEdge;
 type EdgeLabel = Point & { text: string; alpha: number };
 
 /** Exact de Casteljau prefix [0,t] of a quadratic Bézier. No raster approximation. */
-export function quadraticPrefix(start: Point, control: Point, end: Point, progress: number): PathCommand[] {
+export function quadraticPrefix(
+  start: Point,
+  control: Point,
+  end: Point,
+  progress: number,
+): PathCommand[] {
   const t = clamp(progress, 0, 1);
-  if (t === 1) return [['M', start.x, start.y], ['Q', control.x, control.y, end.x, end.y]];
+  if (t === 1)
+    return [
+      ['M', start.x, start.y],
+      ['Q', control.x, control.y, end.x, end.y],
+    ];
   const first = { x: mix(start.x, control.x, t), y: mix(start.y, control.y, t) };
   const second = { x: mix(control.x, end.x, t), y: mix(control.y, end.y, t) };
   const point = { x: mix(first.x, second.x, t), y: mix(first.y, second.y, t) };
-  return [['M', start.x, start.y], ['Q', first.x, first.y, point.x, point.y]];
+  return [
+    ['M', start.x, start.y],
+    ['Q', first.x, first.y, point.x, point.y],
+  ];
 }
 export type DetailLookup = (
   nodeId: string,
@@ -321,13 +333,16 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
       rx = Math.max(u(95), (maxX - minX) / 2 + u(75)),
       ry = Math.max(u(72), (maxY - minY) / 2 + u(65)),
       c = color(group.color, P.fallbackNode);
-    const decoration: DisplayItem[] = [ellipseGlow(x, y, rx * 1.35, ry * 1.35, c, 0.11), {
-      type: 'path',
-      d: [['E', x, y, rx, ry, 0, 0, TAU]],
-      stroke: c + P.groupStroke,
-      width: u(1),
-      dash: [u(4), u(9)],
-    }];
+    const decoration: DisplayItem[] = [
+      ellipseGlow(x, y, rx * 1.35, ry * 1.35, c, 0.11),
+      {
+        type: 'path',
+        d: [['E', x, y, rx, ry, 0, 0, TAU]],
+        stroke: c + P.groupStroke,
+        width: u(1),
+        dash: [u(4), u(9)],
+      },
+    ];
     const font = sans(13, 500),
       label = fitText(measure, group.label, font, u(180));
     if (label && groupProgress > 0.5)
@@ -493,7 +508,16 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
         type: 'group',
         alpha: alpha * visibility,
         ...(visibility < 1
-          ? { transform: [scale, 0, 0, scale, p.x * (1 - scale), p.y * (1 - scale)] as [number, number, number, number, number, number] }
+          ? {
+              transform: [scale, 0, 0, scale, p.x * (1 - scale), p.y * (1 - scale)] as [
+                number,
+                number,
+                number,
+                number,
+                number,
+                number,
+              ],
+            }
           : {}),
         items: [
           ...(alpha > 0.8 ? [ellipseGlow(p.x, p.y, u(45), u(45), c, 0.18)] : []),
@@ -510,12 +534,14 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
 
   // Deterministic screen-space label placement: prioritize selected and major nodes.
   const nodeLabelObstacles = [...occupied, ...edgeObstacles];
-  const sorted = view.nodes.filter((node) => nodeProgress(node.id) > 0.5).sort(
-    (a, b) =>
-      attention(b) - attention(a) ||
-      (b.importance || 0) - (a.importance || 0) ||
-      a.id.localeCompare(b.id, 'en'),
-  );
+  const sorted = view.nodes
+    .filter((node) => nodeProgress(node.id) > 0.5)
+    .sort(
+      (a, b) =>
+        attention(b) - attention(a) ||
+        (b.importance || 0) - (a.importance || 0) ||
+        a.id.localeCompare(b.id, 'en'),
+    );
   for (const node of sorted) {
     const p = pointFor(node.id),
       r = radius(node),
@@ -658,7 +684,16 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
     alpha?: number,
   ): void => {
     if (value && (alpha === undefined || alpha > 0))
-      items.push({ type: 'text', text: value, x, y, font, fill, ...(align ? { align } : {}), ...(alpha === undefined || alpha === 1 ? {} : { alpha }) });
+      items.push({
+        type: 'text',
+        text: value,
+        x,
+        y,
+        font,
+        fill,
+        ...(align ? { align } : {}),
+        ...(alpha === undefined || alpha === 1 ? {} : { alpha }),
+      });
   };
   const titleX = titleBand.x + u(2),
     titleRight = titleBand.x + titleBand.w;
@@ -698,7 +733,15 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
   );
   const narrationFont = sans(16);
   wrapText(measure, narration, narrationFont, captionWidth, 2).forEach((line, i) =>
-    text(line, captionX, captionBand.y + u(109) + i * u(21), narrationFont, P.narration, undefined, captionAlpha),
+    text(
+      line,
+      captionX,
+      captionBand.y + u(109) + i * u(21),
+      narrationFont,
+      P.narration,
+      undefined,
+      captionAlpha,
+    ),
   );
   const trackY = captionBand.y + u(156);
   items.push({ type: 'path', d: [['R', captionX, trackY, trackWidth, u(2)]], fill: P.track });

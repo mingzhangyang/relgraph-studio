@@ -1,6 +1,6 @@
 import { frameStateAt } from '../graph/core.js';
 import { captionOpacity, compileTimeline, revealProgress, timelinePlaybackAt } from './timeline.js';
-import type { Timeline } from './timeline.js';
+import type { FilmTimeline } from './timeline.js';
 import type {
   DirectorFrameState,
   FrameState,
@@ -24,7 +24,7 @@ export interface CameraFit {
 export interface DirectorFrameOptions {
   fit?: CameraFit;
   /** A compiled timeline reused for random-access frames; never mutated. */
-  timeline?: Timeline;
+  timeline?: FilmTimeline;
 }
 export const DEFAULT_CAMERA_FIT: Readonly<CameraFit> = Object.freeze({
   halfWidth: 550,
@@ -104,11 +104,12 @@ export function directorFrameAt(
   const view = shot?.view ?? fallback?.view;
   if (!view) throw new Error('Unable to resolve frame projection');
   const cameraSpec = timeline.camera[playback.index]?.value ?? fallback?.camera ?? {};
-  const highlight = timeline.highlight[playback.index]?.value ?? fallback?.highlight ?? {
-    nodeIds: [],
-    edgeIds: [],
-    groupId: null,
-  };
+  const highlight = timeline.highlight[playback.index]?.value ??
+    fallback?.highlight ?? {
+      nodeIds: [],
+      edgeIds: [],
+      groupId: null,
+    };
   const state: FrameState = {
     playback,
     view,

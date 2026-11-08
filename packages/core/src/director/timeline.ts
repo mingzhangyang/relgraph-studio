@@ -49,7 +49,7 @@ export interface CompiledShot {
   overlay: { nodeId: string } | null;
 }
 
-export interface Timeline {
+export interface FilmTimeline {
   fps: number;
   durationSec: number;
   camera: CameraKeyframe[];
@@ -76,7 +76,7 @@ const clamp = (x: number): number => Math.max(0, Math.min(1, x));
  * If domain time moves backward, disappearing objects simply leave the
  * projection; a later reappearance starts a new cue.
  */
-export function compileTimeline(graph: VisualGraph, fps = 24): Timeline {
+export function compileTimeline(graph: VisualGraph, fps = 24): FilmTimeline {
   if (!Number.isFinite(fps) || fps <= 0) throw new RangeError('Invalid timeline fps');
   const camera: CameraKeyframe[] = [];
   const highlight: Keyframe<ResolvedHighlight>[] = [];
@@ -171,7 +171,10 @@ export function compileTimeline(graph: VisualGraph, fps = 24): Timeline {
 }
 
 /** Match the original half-open scene boundary tolerance (including final frame). */
-export function timelinePlaybackAt(timeline: Timeline, second: number): ScenePlayback<FrameScene> {
+export function timelinePlaybackAt(
+  timeline: FilmTimeline,
+  second: number,
+): ScenePlayback<FrameScene> {
   const { shots, durationSec } = timeline;
   if (!shots.length)
     return {
@@ -185,8 +188,7 @@ export function timelinePlaybackAt(timeline: Timeline, second: number): ScenePla
     };
   const time = Math.max(0, Math.min(Number.isFinite(second) ? second : 0, durationSec));
   for (const [index, shot] of shots.entries()) {
-    const tolerance =
-      8 * Number.EPSILON * Math.max(1, Math.abs(time), Math.abs(shot.endSec));
+    const tolerance = 8 * Number.EPSILON * Math.max(1, Math.abs(time), Math.abs(shot.endSec));
     if (time < shot.endSec - tolerance || index === shots.length - 1) {
       const elapsedSec = Math.max(0, Math.min(shot.scene.durationSec, time - shot.startSec));
       return {
@@ -205,7 +207,7 @@ export function timelinePlaybackAt(timeline: Timeline, second: number): ScenePla
 
 /** Always return a frame-local value; no previous frame or renderer memory is read. */
 export function revealProgress(
-  timeline: Timeline,
+  timeline: FilmTimeline,
   kind: RevealCue['kind'],
   targetId: string,
   second: number,
@@ -233,14 +235,10 @@ export function revealProgress(
 }
 
 /** A11y includes text from fade-in start; opacity affects only pixels. */
-export function captionOpacity(timeline: Timeline, sceneIndex: number, second: number): number {
+export function captionOpacity(timeline: FilmTimeline, sceneIndex: number, second: number): number {
   const cue = timeline.captions[sceneIndex];
   if (!cue || second < cue.inSec || second >= cue.outSec) return 0;
   return clamp(
-    Math.min(
-      1,
-      (second - cue.inSec) / cue.fadeInSec,
-      (cue.outSec - second) / cue.fadeOutSec,
-    ),
+    Math.min(1, (second - cue.inSec) / cue.fadeInSec, (cue.outSec - second) / cue.fadeOutSec),
   );
 }

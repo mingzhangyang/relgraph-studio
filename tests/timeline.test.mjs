@@ -5,7 +5,12 @@ import biology from '../examples/biology-signaling-synthetic.json' with { type: 
 import { loadDocument } from '../packages/core/src/director/load.ts';
 import { layoutGraph } from '../packages/core/src/director/layout.ts';
 import { frameStateAt } from '../packages/core/src/graph/core.ts';
-import { compileTimeline, captionOpacity, revealProgress, timelinePlaybackAt } from '../packages/core/src/director/timeline.ts';
+import {
+  compileTimeline,
+  captionOpacity,
+  revealProgress,
+  timelinePlaybackAt,
+} from '../packages/core/src/director/timeline.ts';
 import { directorFrameAt } from '../packages/core/src/director/state.ts';
 import { createCanvasRenderer } from '../packages/render/src/canvas.ts';
 import { quadraticPrefix } from '../packages/render/src/compose.ts';
@@ -58,7 +63,10 @@ test('compiled shot, track and reveal snapshots for both authored examples', () 
     assert.equal(timeline.highlight.length, graph.scenes.length);
     assert.equal(timeline.captions.length, graph.scenes.length);
     assert.deepEqual(compileTimeline(graph), timeline);
-    assert.deepEqual(graph.scenes.map((s) => s.id), expected.shots);
+    assert.deepEqual(
+      graph.scenes.map((s) => s.id),
+      expected.shots,
+    );
   }
 });
 
@@ -100,13 +108,22 @@ test('projection removes hidden targets and withdrawn prose before track creatio
   assert.equal(timeline.camera[0].value.focusNodeId, undefined);
   assert.deepEqual(timeline.highlight[0].value.nodeIds, []);
   assert.deepEqual(timeline.highlight[0].value.edgeIds, []);
-  assert.deepEqual(timeline.shots[0].view.nodes.map((n) => n.id), ['safe']);
+  assert.deepEqual(
+    timeline.shots[0].view.nodes.map((n) => n.id),
+    ['safe'],
+  );
   assert.doesNotMatch(JSON.stringify(timeline.captions), /FUTURE SCENE TITLE|FUTURE NARRATION/);
-  assert.deepEqual(timeline.reveal.map((r) => [r.targetId, r.inSec, r.outSec]), [
-    ['secret', 1, 3],
-    ['secret-edge', 1, 3],
-  ]);
-  assert.deepEqual(timeline.shots[2].view.nodes.map((n) => n.id), ['safe']);
+  assert.deepEqual(
+    timeline.reveal.map((r) => [r.targetId, r.inSec, r.outSec]),
+    [
+      ['secret', 1, 3],
+      ['secret-edge', 1, 3],
+    ],
+  );
+  assert.deepEqual(
+    timeline.shots[2].view.nodes.map((n) => n.id),
+    ['safe'],
+  );
   assert.equal(revealProgress(timeline, 'node', 'secret', 3), 0);
 });
 
@@ -178,7 +195,9 @@ test('display list is frame-only: random seek and prior rendering do not change 
   const graph = biologyGraph;
   const renderer = createCanvasRenderer(measuringCanvas(), graph, layoutGraph(graph));
   const before = renderer.displayListAt(110);
-  const processLabel = graph.nodes.find((node) => node.id === 'bio:process:phosphorylation-test').label;
+  const processLabel = graph.nodes.find(
+    (node) => node.id === 'bio:process:phosphorylation-test',
+  ).label;
   const substrateLabel = graph.nodes.find((node) => node.id === 'substrate-s').label;
   assert.ok(before.a11y.nodes.includes(substrateLabel));
   assert.ok(before.a11y.nodes.includes(processLabel));
