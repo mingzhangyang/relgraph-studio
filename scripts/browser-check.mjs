@@ -708,6 +708,45 @@ const literatureFrames = Math.ceil(
   await context.close();
 }
 
+// The curated dataset is a local import, not a replacement built-in example.
+for (const theme of ['light', 'dark']) {
+  const { context, page, problems } = await openStudio({ colorScheme: theme });
+  await check(`source-verified local dataset respects chapter boundaries (${theme})`, async () => {
+    const path = join(root, 'datasets/honglou-chengjia-opening/graph.relgraph.json');
+    await page.locator('#fileInput').setInputFiles(path);
+    await page.waitForFunction(
+      () => document.getElementById('sourceName').textContent === 'graph.relgraph.json',
+    );
+    await waitReady(page);
+    assert.equal(await status(page), 'ready');
+    assert.equal(await page.locator('#errors .diagnostic-item').count(), 0);
+    assert.equal(await page.locator('#warnings .diagnostic-item').count(), 0);
+    const names = ['林如海', '贾敏', '林黛玉', '贾母', '贾政', '贾宝玉'];
+    for (const [frame, nodes, edges] of [
+      [0, 0, 0],
+      [24, 6, 6],
+      [48, 6, 9],
+      [0, 0, 0],
+    ]) {
+      assert.equal(await page.evaluate((f) => window.renderAt(f), frame), true);
+      assert.equal(await text(page, '#nodeCount'), String(nodes));
+      assert.equal(await text(page, '#edgeCount'), String(edges));
+      const markup = await page.locator('body').innerHTML();
+      if (frame === 0) for (const name of names) assert.ok(!markup.includes(name));
+      if (frame === 24) assert.doesNotMatch(markup, /外祖母与外孙女|姑表兄妹/);
+      if (frame === 48) assert.match(await page.locator('#transcript').textContent(), /亲缘推导/);
+    }
+    await page.evaluate(() => window.renderAt(48));
+    const direct = await canvasPng(page);
+    await page.evaluate(() => window.renderAt(0));
+    await page.evaluate(() => window.renderAt(48));
+    assert.deepEqual(await canvasPng(page), direct, 'local dataset pixels reproduce after rewind');
+    await page.screenshot({ path: join(outputDir, `dataset-${theme}.png`), fullPage: true });
+    assert.deepEqual(problems, []);
+  });
+  await context.close();
+}
+
 // ---------------------------------------------------------- reference frames
 
 const manifestPath = join(referenceDir, 'manifest.json');

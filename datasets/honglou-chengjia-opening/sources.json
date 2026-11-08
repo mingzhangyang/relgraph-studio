@@ -1,0 +1,670 @@
+{
+  "datasetId": "honglou-chengjia-opening-v1",
+  "reviewedThrough": 3,
+  "verifiedAt": "2026-11-08",
+  "edition": {
+    "id": "chengjia-1791",
+    "work": "红楼梦",
+    "version": "乾隆五十六年（1791）萃文书屋木活字程甲本；扫描第一册",
+    "attribution": "前八十回通常归属曹雪芹；程伟元、高鹗整理刊行120回本。后四十回作者归属有争议，本批不引用81–120回，不把目录合署当作争议已解决。",
+    "catalogUrl": "https://www.nlcpress.com/ProductView.aspx?Id=3837",
+    "catalogRole": "国家图书馆出版社2007影印本书目说明1791程甲初印本背景；未使用现代校注正文。",
+    "transcriptionIndexUrl": "https://zh.wikisource.org/wiki/紅樓夢（程甲本）",
+    "scan": {
+      "fileTitle": "NLC892-003290079-43280 紅樓夢 第1冊.pdf",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/0/09/NLC892-003290079-43280_%E7%B4%85%E6%A8%93%E5%A4%A2_%E7%AC%AC1%E5%86%8A.pdf",
+      "sha1": "6e1c4be57eeaa74b13b8baee24f6eaa28f53a3f2",
+      "sha256": "18d5e5b6380faa64319d11e1a106a072f2a3b57c769af81d1d83c256509915ba",
+      "bytes": 21937106,
+      "commonsUrl": "https://commons.wikimedia.org/wiki/File:NLC892-003290079-43280_%E7%B4%85%E6%A8%93%E5%A4%A2_%E7%AC%AC1%E5%86%8A.pdf",
+      "pageNumberConvention": "PDF页号，从1开始；不是印本叶码。"
+    },
+    "rights": "1791原著正文公版；只摘短证据，保留原字形和转录标点。数字转录来自维基文库，按其署名/相同方式共享条款保留出处；未复制现代校注或出版社前言。扫描和完整转录不入Git。"
+  },
+  "readingWindow": [
+    {
+      "chapter": 1,
+      "pdfPages": [43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56],
+      "boundary": "43页起至56页B1节；56页A2节为第二回。"
+    },
+    {
+      "chapter": 2,
+      "pdfPages": [56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66],
+      "boundary": "56页A2节起至66页；章节 transclusion 不用作唯一版本锁。"
+    },
+    {
+      "chapter": 3,
+      "pdfPages": [67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81],
+      "boundary": "67–81页。"
+    }
+  ],
+  "sources": [
+    {
+      "id": "page-43",
+      "pageTitle": "Page:NLC892-003290079-43280 紅樓夢 第1冊.pdf/43",
+      "revisionId": 2441180,
+      "revisionTimestamp": "2024-07-28T03:45:06Z",
+      "revisionUrl": "https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F43&oldid=2441180",
+      "wikitextSha256": "820e23832aa2b39209313be353f7e86bb089ab918d644a4df6cbb069de9ffcac",
+      "pdfPage": 43,
+      "scanUrl": "https://upload.wikimedia.org/wikipedia/commons/0/09/NLC892-003290079-43280_%E7%B4%85%E6%A8%93%E5%A4%A2_%E7%AC%AC1%E5%86%8A.pdf#page=43",
+      "siteProofreadLevel": 1,
+      "scanReview": "not-independently-checked"
+    },
+    {
+      "id": "page-44",
+      "pageTitle": "Page:NLC892-003290079-43280 紅樓夢 第1冊.pdf/44",
+      "revisionId": 2441181,
+      "revisionTimestamp": "2024-07-28T03:45:49Z",
+      "revisionUrl": "https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F44&oldid=2441181",
+      "wikitextSha256": "b1b756b5c3bd008d8dfc511c0a1494c4884336031a8b5071d2da6851cad39fb6",
+      "pdfPage": 44,
+      "scanUrl": "https://upload.wikimedia.org/wikipedia/commons/0/09/NLC892-003290079-43280_%E7%B4%85%E6%A8%93%E5%A4%A2_%E7%AC%AC1%E5%86%8A.pdf#page=44",
+      "siteProofreadLevel": 1,
+      "scanReview": "not-independently-checked"
+    },
+    {
+      "id": "page-45",
+      "pageTitle": "Page:NLC892-003290079-43280 紅樓夢 第1冊.pdf/45",
+      "revisionId": 2441182,
+      "revisionTimestamp": "2024-07-28T03:46:26Z",
+      "revisionUrl": "https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F45&oldid=2441182",
+      "wikitextSha256": "4332e27dd0781da4923e0476f2d58dd0e0665f80b5c65c01af3b0fcfe53597f1",
+      "pdfPage": 45,
+      "scanUrl": "https://upload.wikimedia.org/wikipedia/commons/0/09/NLC892-003290079-43280_%E7%B4%85%E6%A8%93%E5%A4%A2_%E7%AC%AC1%E5%86%8A.pdf#page=45",
+      "siteProofreadLevel": 1,
+      "scanReview": "not-independently-checked"
+    },
+    {
+      "id": "page-46",
+      "pageTitle": "Page:NLC892-003290079-43280 紅樓夢 第1冊.pdf/46",
+      "revisionId": 2441184,
+      "revisionTimestamp": "2024-07-28T03:46:49Z",
+      "revisionUrl": "https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F46&oldid=2441184",
+      "wikitextSha256": "f25963ef55d7c7f6ebe7767ea9db97855ee42c49cf4c1acb91729cecdd48bbd2",
+      "pdfPage": 46,
+      "scanUrl": "https://upload.wikimedia.org/wikipedia/commons/0/09/NLC892-003290079-43280_%E7%B4%85%E6%A8%93%E5%A4%A2_%E7%AC%AC1%E5%86%8A.pdf#page=46",
+      "siteProofreadLevel": 1,
+      "scanReview": "not-independently-checked"
+    },
+    {
+      "id": "page-47",
+      "pageTitle": "Page:NLC892-003290079-43280 紅樓夢 第1冊.pdf/47",
+      "revisionId": 2441185,
+      "revisionTimestamp": "2024-07-28T03:47:08Z",
+      "revisionUrl": "https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F47&oldid=2441185",
+      "wikitextSha256": "ca922d7ff3a08042003f4cdfb0d08363f517833db8198093048aa4823b490106",
+      "pdfPage": 47,
+      "scanUrl": "https://upload.wikimedia.org/wikipedia/commons/0/09/NLC892-003290079-43280_%E7%B4%85%E6%A8%93%E5%A4%A2_%E7%AC%AC1%E5%86%8A.pdf#page=47",
+      "siteProofreadLevel": 1,
+      "scanReview": "not-independently-checked"
+    },
+    {
+      "id": "page-48",
+      "pageTitle": "Page:NLC892-003290079-43280 紅樓夢 第1冊.pdf/48",
+      "revisionId": 2441186,
+      "revisionTimestamp": "2024-07-28T03:48:03Z",
+      "revisionUrl": "https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F48&oldid=2441186",
+      "wikitextSha256": "0f8008cc03ffa925243af8a9a4439f90ff1a0b90728630257493397a32dd75df",
+      "pdfPage": 48,
+      "scanUrl": "https://upload.wikimedia.org/wikipedia/commons/0/09/NLC892-003290079-43280_%E7%B4%85%E6%A8%93%E5%A4%A2_%E7%AC%AC1%E5%86%8A.pdf#page=48",
+      "siteProofreadLevel": 1,
+      "scanReview": "not-independently-checked"
+    },
+    {
+      "id": "page-49",
+      "pageTitle": "Page:NLC892-003290079-43280 紅樓夢 第1冊.pdf/49",
+      "revisionId": 2441187,
+      "revisionTimestamp": "2024-07-28T03:49:01Z",
+      "revisionUrl": "https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F49&oldid=2441187",
+      "wikitextSha256": "b70647b0ba129200c61e622793a4781a8393b9bb7e62acf69089cbe42332016f",
+      "pdfPage": 49,
+      "scanUrl": "https://upload.wikimedia.org/wikipedia/commons/0/09/NLC892-003290079-43280_%E7%B4%85%E6%A8%93%E5%A4%A2_%E7%AC%AC1%E5%86%8A.pdf#page=49",
+      "siteProofreadLevel": 1,
+      "scanReview": "not-independently-checked"
+    },
+    {
+      "id": "page-50",
+      "pageTitle": "Page:NLC892-003290079-43280 紅樓夢 第1冊.pdf/50",
+      "revisionId": 2441188,
+      "revisionTimestamp": "2024-07-28T03:49:26Z",
+      "revisionUrl": "https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F50&oldid=2441188",
+      "wikitextSha256": "111c108bae82da028f7a31a8738129b56d9b4369cff224d175d9f4aec40a8de2",
+      "pdfPage": 50,
+      "scanUrl": "https://upload.wikimedia.org/wikipedia/commons/0/09/NLC892-003290079-43280_%E7%B4%85%E6%A8%93%E5%A4%A2_%E7%AC%AC1%E5%86%8A.pdf#page=50",
+      "siteProofreadLevel": 1,
+      "scanReview": "not-independently-checked"
+    },
+    {
+      "id": "page-51",
+      "pageTitle": "Page:NLC892-003290079-43280 紅樓夢 第1冊.pdf/51",
+      "revisionId": 2441189,
+      "revisionTimestamp": "2024-07-28T03:50:05Z",
+      "revisionUrl": "https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F51&oldid=2441189",
+      "wikitextSha256": "f168c79beacd60edb6cac0e5c051b451d9ecb4f7cb40bb3b75c8c6154019edd3",
+      "pdfPage": 51,
+      "scanUrl": "https://upload.wikimedia.org/wikipedia/commons/0/09/NLC892-003290079-43280_%E7%B4%85%E6%A8%93%E5%A4%A2_%E7%AC%AC1%E5%86%8A.pdf#page=51",
+      "siteProofreadLevel": 1,
+      "scanReview": "not-independently-checked"
+    },
+    {
+      "id": "page-52",
+      "pageTitle": "Page:NLC892-003290079-43280 紅樓夢 第1冊.pdf/52",
+      "revisionId": 2441190,
+      "revisionTimestamp": "2024-07-28T03:50:50Z",
+      "revisionUrl": "https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F52&oldid=2441190",
+      "wikitextSha256": "130c66c9059a5de14ea0296767c9b6ef2a3f0bb5bad07fe7c4ad17e053087d48",
+      "pdfPage": 52,
+      "scanUrl": "https://upload.wikimedia.org/wikipedia/commons/0/09/NLC892-003290079-43280_%E7%B4%85%E6%A8%93%E5%A4%A2_%E7%AC%AC1%E5%86%8A.pdf#page=52",
+      "siteProofreadLevel": 1,
+      "scanReview": "not-independently-checked"
+    },
+    {
+      "id": "page-53",
+      "pageTitle": "Page:NLC892-003290079-43280 紅樓夢 第1冊.pdf/53",
+      "revisionId": 2441191,
+      "revisionTimestamp": "2024-07-28T03:51:18Z",
+      "revisionUrl": "https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F53&oldid=2441191",
+      "wikitextSha256": "fb7600143094eb18813b886531b376687ab472ed720606b0b36611c2bd343a3e",
+      "pdfPage": 53,
+      "scanUrl": "https://upload.wikimedia.org/wikipedia/commons/0/09/NLC892-003290079-43280_%E7%B4%85%E6%A8%93%E5%A4%A2_%E7%AC%AC1%E5%86%8A.pdf#page=53",
+      "siteProofreadLevel": 1,
+      "scanReview": "not-independently-checked"
+    },
+    {
+      "id": "page-54",
+      "pageTitle": "Page:NLC892-003290079-43280 紅樓夢 第1冊.pdf/54",
+      "revisionId": 2441192,
+      "revisionTimestamp": "2024-07-28T03:51:51Z",
+      "revisionUrl": "https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F54&oldid=2441192",
+      "wikitextSha256": "903e3820d395fd7c5d5a38307cf6006f2bc99e3d95754e301fe5fa99a5703974",
+      "pdfPage": 54,
+      "scanUrl": "https://upload.wikimedia.org/wikipedia/commons/0/09/NLC892-003290079-43280_%E7%B4%85%E6%A8%93%E5%A4%A2_%E7%AC%AC1%E5%86%8A.pdf#page=54",
+      "siteProofreadLevel": 1,
+      "scanReview": "not-independently-checked"
+    },
+    {
+      "id": "page-55",
+      "pageTitle": "Page:NLC892-003290079-43280 紅樓夢 第1冊.pdf/55",
+      "revisionId": 2566845,
+      "revisionTimestamp": "2025-06-08T01:15:07Z",
+      "revisionUrl": "https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F55&oldid=2566845",
+      "wikitextSha256": "b56786ca55acc6389cdf0b504cc8807b4057a57e7e55fd1b72c7fe121582c65b",
+      "pdfPage": 55,
+      "scanUrl": "https://upload.wikimedia.org/wikipedia/commons/0/09/NLC892-003290079-43280_%E7%B4%85%E6%A8%93%E5%A4%A2_%E7%AC%AC1%E5%86%8A.pdf#page=55",
+      "siteProofreadLevel": 1,
+      "scanReview": "not-independently-checked"
+    },
+    {
+      "id": "page-56",
+      "pageTitle": "Page:NLC892-003290079-43280 紅樓夢 第1冊.pdf/56",
+      "revisionId": 2441194,
+      "revisionTimestamp": "2024-07-28T03:53:15Z",
+      "revisionUrl": "https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F56&oldid=2441194",
+      "wikitextSha256": "34bc081ed7ee23e5c126e7dac4d0483d0e010439bba9bb5ba4b5187e0141e164",
+      "pdfPage": 56,
+      "scanUrl": "https://upload.wikimedia.org/wikipedia/commons/0/09/NLC892-003290079-43280_%E7%B4%85%E6%A8%93%E5%A4%A2_%E7%AC%AC1%E5%86%8A.pdf#page=56",
+      "siteProofreadLevel": 1,
+      "scanReview": "not-independently-checked"
+    },
+    {
+      "id": "page-57",
+      "pageTitle": "Page:NLC892-003290079-43280 紅樓夢 第1冊.pdf/57",
+      "revisionId": 2441195,
+      "revisionTimestamp": "2024-07-28T03:54:07Z",
+      "revisionUrl": "https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F57&oldid=2441195",
+      "wikitextSha256": "b45b858cddeb329a787c1f46ceb7b075877bfdce4536ad1eb7f86067a3f39829",
+      "pdfPage": 57,
+      "scanUrl": "https://upload.wikimedia.org/wikipedia/commons/0/09/NLC892-003290079-43280_%E7%B4%85%E6%A8%93%E5%A4%A2_%E7%AC%AC1%E5%86%8A.pdf#page=57",
+      "siteProofreadLevel": 1,
+      "scanReview": "not-independently-checked"
+    },
+    {
+      "id": "page-58",
+      "pageTitle": "Page:NLC892-003290079-43280 紅樓夢 第1冊.pdf/58",
+      "revisionId": 2441196,
+      "revisionTimestamp": "2024-07-28T03:54:36Z",
+      "revisionUrl": "https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F58&oldid=2441196",
+      "wikitextSha256": "6504231aa1ebebf9101d340bb5a13bbd1d2235b052c1e85bb4d3030f0282dcd0",
+      "pdfPage": 58,
+      "scanUrl": "https://upload.wikimedia.org/wikipedia/commons/0/09/NLC892-003290079-43280_%E7%B4%85%E6%A8%93%E5%A4%A2_%E7%AC%AC1%E5%86%8A.pdf#page=58",
+      "siteProofreadLevel": 1,
+      "scanReview": "evidence-passages-checked"
+    },
+    {
+      "id": "page-59",
+      "pageTitle": "Page:NLC892-003290079-43280 紅樓夢 第1冊.pdf/59",
+      "revisionId": 2441197,
+      "revisionTimestamp": "2024-07-28T03:54:55Z",
+      "revisionUrl": "https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F59&oldid=2441197",
+      "wikitextSha256": "addb87e8970e204d05be3fe929bf6713cdf5618e5dcdfe749b5feb46146b6d90",
+      "pdfPage": 59,
+      "scanUrl": "https://upload.wikimedia.org/wikipedia/commons/0/09/NLC892-003290079-43280_%E7%B4%85%E6%A8%93%E5%A4%A2_%E7%AC%AC1%E5%86%8A.pdf#page=59",
+      "siteProofreadLevel": 1,
+      "scanReview": "not-independently-checked"
+    },
+    {
+      "id": "page-60",
+      "pageTitle": "Page:NLC892-003290079-43280 紅樓夢 第1冊.pdf/60",
+      "revisionId": 2441198,
+      "revisionTimestamp": "2024-07-28T03:55:18Z",
+      "revisionUrl": "https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F60&oldid=2441198",
+      "wikitextSha256": "9deee26012a1d9b879b6a38e7e0a69223a9d35431bd875c680e7471b1f033c15",
+      "pdfPage": 60,
+      "scanUrl": "https://upload.wikimedia.org/wikipedia/commons/0/09/NLC892-003290079-43280_%E7%B4%85%E6%A8%93%E5%A4%A2_%E7%AC%AC1%E5%86%8A.pdf#page=60",
+      "siteProofreadLevel": 1,
+      "scanReview": "not-independently-checked"
+    },
+    {
+      "id": "page-61",
+      "pageTitle": "Page:NLC892-003290079-43280 紅樓夢 第1冊.pdf/61",
+      "revisionId": 2441199,
+      "revisionTimestamp": "2024-07-28T03:55:43Z",
+      "revisionUrl": "https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F61&oldid=2441199",
+      "wikitextSha256": "0437a037f9f93419d7f86649b39acca9a0131bf9dc12166005d57bad00e26f87",
+      "pdfPage": 61,
+      "scanUrl": "https://upload.wikimedia.org/wikipedia/commons/0/09/NLC892-003290079-43280_%E7%B4%85%E6%A8%93%E5%A4%A2_%E7%AC%AC1%E5%86%8A.pdf#page=61",
+      "siteProofreadLevel": 1,
+      "scanReview": "evidence-passages-checked"
+    },
+    {
+      "id": "page-62",
+      "pageTitle": "Page:NLC892-003290079-43280 紅樓夢 第1冊.pdf/62",
+      "revisionId": 2441200,
+      "revisionTimestamp": "2024-07-28T03:56:14Z",
+      "revisionUrl": "https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F62&oldid=2441200",
+      "wikitextSha256": "e690fdd26b75f11a2b404007766532fbb1c14ffc9d29161c5730aaac200e77fc",
+      "pdfPage": 62,
+      "scanUrl": "https://upload.wikimedia.org/wikipedia/commons/0/09/NLC892-003290079-43280_%E7%B4%85%E6%A8%93%E5%A4%A2_%E7%AC%AC1%E5%86%8A.pdf#page=62",
+      "siteProofreadLevel": 1,
+      "scanReview": "not-independently-checked"
+    },
+    {
+      "id": "page-63",
+      "pageTitle": "Page:NLC892-003290079-43280 紅樓夢 第1冊.pdf/63",
+      "revisionId": 2441201,
+      "revisionTimestamp": "2024-07-28T03:56:48Z",
+      "revisionUrl": "https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F63&oldid=2441201",
+      "wikitextSha256": "c1123adf2ebe65ca9f890c14776e3fde25db353f5338aba0bc49801b70d92a04",
+      "pdfPage": 63,
+      "scanUrl": "https://upload.wikimedia.org/wikipedia/commons/0/09/NLC892-003290079-43280_%E7%B4%85%E6%A8%93%E5%A4%A2_%E7%AC%AC1%E5%86%8A.pdf#page=63",
+      "siteProofreadLevel": 1,
+      "scanReview": "evidence-passages-checked"
+    },
+    {
+      "id": "page-64",
+      "pageTitle": "Page:NLC892-003290079-43280 紅樓夢 第1冊.pdf/64",
+      "revisionId": 2441202,
+      "revisionTimestamp": "2024-07-28T03:57:04Z",
+      "revisionUrl": "https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F64&oldid=2441202",
+      "wikitextSha256": "02113b54f29d5a7572b411927297a56c554468397a75e77e02cff70339f92a2b",
+      "pdfPage": 64,
+      "scanUrl": "https://upload.wikimedia.org/wikipedia/commons/0/09/NLC892-003290079-43280_%E7%B4%85%E6%A8%93%E5%A4%A2_%E7%AC%AC1%E5%86%8A.pdf#page=64",
+      "siteProofreadLevel": 1,
+      "scanReview": "not-independently-checked"
+    },
+    {
+      "id": "page-65",
+      "pageTitle": "Page:NLC892-003290079-43280 紅樓夢 第1冊.pdf/65",
+      "revisionId": 2441203,
+      "revisionTimestamp": "2024-07-28T03:57:26Z",
+      "revisionUrl": "https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F65&oldid=2441203",
+      "wikitextSha256": "41638b93c7525dddd6e39e103a681b21dafd64fd35c6568c7ab5244588128a8b",
+      "pdfPage": 65,
+      "scanUrl": "https://upload.wikimedia.org/wikipedia/commons/0/09/NLC892-003290079-43280_%E7%B4%85%E6%A8%93%E5%A4%A2_%E7%AC%AC1%E5%86%8A.pdf#page=65",
+      "siteProofreadLevel": 1,
+      "scanReview": "evidence-passages-checked"
+    },
+    {
+      "id": "page-66",
+      "pageTitle": "Page:NLC892-003290079-43280 紅樓夢 第1冊.pdf/66",
+      "revisionId": 2441204,
+      "revisionTimestamp": "2024-07-28T03:58:01Z",
+      "revisionUrl": "https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F66&oldid=2441204",
+      "wikitextSha256": "caf4ec8dd697b74d3f13cbd393233e3374143851aac43809f33d0898f94a6f35",
+      "pdfPage": 66,
+      "scanUrl": "https://upload.wikimedia.org/wikipedia/commons/0/09/NLC892-003290079-43280_%E7%B4%85%E6%A8%93%E5%A4%A2_%E7%AC%AC1%E5%86%8A.pdf#page=66",
+      "siteProofreadLevel": 1,
+      "scanReview": "not-independently-checked"
+    },
+    {
+      "id": "page-67",
+      "pageTitle": "Page:NLC892-003290079-43280 紅樓夢 第1冊.pdf/67",
+      "revisionId": 2441205,
+      "revisionTimestamp": "2024-07-28T03:59:00Z",
+      "revisionUrl": "https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F67&oldid=2441205",
+      "wikitextSha256": "75f78692e6ece03a9f62c75fb6ad00ed8b9b6b27a1f4992f223903e912abad7d",
+      "pdfPage": 67,
+      "scanUrl": "https://upload.wikimedia.org/wikipedia/commons/0/09/NLC892-003290079-43280_%E7%B4%85%E6%A8%93%E5%A4%A2_%E7%AC%AC1%E5%86%8A.pdf#page=67",
+      "siteProofreadLevel": 3,
+      "scanReview": "not-independently-checked"
+    },
+    {
+      "id": "page-68",
+      "pageTitle": "Page:NLC892-003290079-43280 紅樓夢 第1冊.pdf/68",
+      "revisionId": 2441206,
+      "revisionTimestamp": "2024-07-28T03:59:22Z",
+      "revisionUrl": "https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F68&oldid=2441206",
+      "wikitextSha256": "814aaa441920b993d3c38ce7d7e5abd41e7487a3b7b315b7272ab18ce6e870c4",
+      "pdfPage": 68,
+      "scanUrl": "https://upload.wikimedia.org/wikipedia/commons/0/09/NLC892-003290079-43280_%E7%B4%85%E6%A8%93%E5%A4%A2_%E7%AC%AC1%E5%86%8A.pdf#page=68",
+      "siteProofreadLevel": 3,
+      "scanReview": "evidence-passages-checked"
+    },
+    {
+      "id": "page-69",
+      "pageTitle": "Page:NLC892-003290079-43280 紅樓夢 第1冊.pdf/69",
+      "revisionId": 2441207,
+      "revisionTimestamp": "2024-07-28T04:00:04Z",
+      "revisionUrl": "https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F69&oldid=2441207",
+      "wikitextSha256": "2375557a30bcb2467e6716d4ea48304c3b4c8b5befb91aa96afb9cfd7b01d30e",
+      "pdfPage": 69,
+      "scanUrl": "https://upload.wikimedia.org/wikipedia/commons/0/09/NLC892-003290079-43280_%E7%B4%85%E6%A8%93%E5%A4%A2_%E7%AC%AC1%E5%86%8A.pdf#page=69",
+      "siteProofreadLevel": 3,
+      "scanReview": "evidence-passages-checked"
+    },
+    {
+      "id": "page-70",
+      "pageTitle": "Page:NLC892-003290079-43280 紅樓夢 第1冊.pdf/70",
+      "revisionId": 2441208,
+      "revisionTimestamp": "2024-07-28T04:00:54Z",
+      "revisionUrl": "https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F70&oldid=2441208",
+      "wikitextSha256": "302e66ce643563e8813a7865bcd480a761cb29c382a33889c087064825902729",
+      "pdfPage": 70,
+      "scanUrl": "https://upload.wikimedia.org/wikipedia/commons/0/09/NLC892-003290079-43280_%E7%B4%85%E6%A8%93%E5%A4%A2_%E7%AC%AC1%E5%86%8A.pdf#page=70",
+      "siteProofreadLevel": 3,
+      "scanReview": "evidence-passages-checked"
+    },
+    {
+      "id": "page-71",
+      "pageTitle": "Page:NLC892-003290079-43280 紅樓夢 第1冊.pdf/71",
+      "revisionId": 2441209,
+      "revisionTimestamp": "2024-07-28T04:01:58Z",
+      "revisionUrl": "https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F71&oldid=2441209",
+      "wikitextSha256": "2c9ac426e956589a8b162e8dd910ac01307b24db20210bbb36285f742f6d38df",
+      "pdfPage": 71,
+      "scanUrl": "https://upload.wikimedia.org/wikipedia/commons/0/09/NLC892-003290079-43280_%E7%B4%85%E6%A8%93%E5%A4%A2_%E7%AC%AC1%E5%86%8A.pdf#page=71",
+      "siteProofreadLevel": 3,
+      "scanReview": "not-independently-checked"
+    },
+    {
+      "id": "page-72",
+      "pageTitle": "Page:NLC892-003290079-43280 紅樓夢 第1冊.pdf/72",
+      "revisionId": 2441210,
+      "revisionTimestamp": "2024-07-28T04:02:31Z",
+      "revisionUrl": "https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F72&oldid=2441210",
+      "wikitextSha256": "8503caa271fbe19ee5145b66950840939e01d125238acae41627c1c26ba877a2",
+      "pdfPage": 72,
+      "scanUrl": "https://upload.wikimedia.org/wikipedia/commons/0/09/NLC892-003290079-43280_%E7%B4%85%E6%A8%93%E5%A4%A2_%E7%AC%AC1%E5%86%8A.pdf#page=72",
+      "siteProofreadLevel": 3,
+      "scanReview": "not-independently-checked"
+    },
+    {
+      "id": "page-73",
+      "pageTitle": "Page:NLC892-003290079-43280 紅樓夢 第1冊.pdf/73",
+      "revisionId": 2441211,
+      "revisionTimestamp": "2024-07-28T04:02:58Z",
+      "revisionUrl": "https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F73&oldid=2441211",
+      "wikitextSha256": "433cec70443a34cdea9fe38e46d1b1f3696928ac7b688e24fbf11cef1d6e30f3",
+      "pdfPage": 73,
+      "scanUrl": "https://upload.wikimedia.org/wikipedia/commons/0/09/NLC892-003290079-43280_%E7%B4%85%E6%A8%93%E5%A4%A2_%E7%AC%AC1%E5%86%8A.pdf#page=73",
+      "siteProofreadLevel": 3,
+      "scanReview": "not-independently-checked"
+    },
+    {
+      "id": "page-74",
+      "pageTitle": "Page:NLC892-003290079-43280 紅樓夢 第1冊.pdf/74",
+      "revisionId": 2441212,
+      "revisionTimestamp": "2024-07-28T04:03:40Z",
+      "revisionUrl": "https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F74&oldid=2441212",
+      "wikitextSha256": "2c682ba768709bb1128ddd9c87f11fa19fb8c08ff01a092664afea2d9a3be4ba",
+      "pdfPage": 74,
+      "scanUrl": "https://upload.wikimedia.org/wikipedia/commons/0/09/NLC892-003290079-43280_%E7%B4%85%E6%A8%93%E5%A4%A2_%E7%AC%AC1%E5%86%8A.pdf#page=74",
+      "siteProofreadLevel": 3,
+      "scanReview": "not-independently-checked"
+    },
+    {
+      "id": "page-75",
+      "pageTitle": "Page:NLC892-003290079-43280 紅樓夢 第1冊.pdf/75",
+      "revisionId": 2441213,
+      "revisionTimestamp": "2024-07-28T04:04:12Z",
+      "revisionUrl": "https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F75&oldid=2441213",
+      "wikitextSha256": "ddf3197f1b3ff017c47ca4986d74a6d27de588cec13d58087406aa24b2ac8e4a",
+      "pdfPage": 75,
+      "scanUrl": "https://upload.wikimedia.org/wikipedia/commons/0/09/NLC892-003290079-43280_%E7%B4%85%E6%A8%93%E5%A4%A2_%E7%AC%AC1%E5%86%8A.pdf#page=75",
+      "siteProofreadLevel": 3,
+      "scanReview": "evidence-passages-checked"
+    },
+    {
+      "id": "page-76",
+      "pageTitle": "Page:NLC892-003290079-43280 紅樓夢 第1冊.pdf/76",
+      "revisionId": 2441214,
+      "revisionTimestamp": "2024-07-28T04:04:33Z",
+      "revisionUrl": "https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F76&oldid=2441214",
+      "wikitextSha256": "734788036f6f1af67960ac43f1a2bad8a3ae712a0318994984031ddab92c7ae3",
+      "pdfPage": 76,
+      "scanUrl": "https://upload.wikimedia.org/wikipedia/commons/0/09/NLC892-003290079-43280_%E7%B4%85%E6%A8%93%E5%A4%A2_%E7%AC%AC1%E5%86%8A.pdf#page=76",
+      "siteProofreadLevel": 3,
+      "scanReview": "evidence-passages-checked"
+    },
+    {
+      "id": "page-77",
+      "pageTitle": "Page:NLC892-003290079-43280 紅樓夢 第1冊.pdf/77",
+      "revisionId": 2441215,
+      "revisionTimestamp": "2024-07-28T04:06:06Z",
+      "revisionUrl": "https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F77&oldid=2441215",
+      "wikitextSha256": "e7da6ecaae288e801bd9b9a465a640a9b432d32ee4490fd7163776f3609bb59b",
+      "pdfPage": 77,
+      "scanUrl": "https://upload.wikimedia.org/wikipedia/commons/0/09/NLC892-003290079-43280_%E7%B4%85%E6%A8%93%E5%A4%A2_%E7%AC%AC1%E5%86%8A.pdf#page=77",
+      "siteProofreadLevel": 3,
+      "scanReview": "not-independently-checked"
+    },
+    {
+      "id": "page-78",
+      "pageTitle": "Page:NLC892-003290079-43280 紅樓夢 第1冊.pdf/78",
+      "revisionId": 2441228,
+      "revisionTimestamp": "2024-07-28T04:37:37Z",
+      "revisionUrl": "https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F78&oldid=2441228",
+      "wikitextSha256": "4db4d74fc99f0487be782abb8466a384da9d98c9d617739cd4f05b38291938d9",
+      "pdfPage": 78,
+      "scanUrl": "https://upload.wikimedia.org/wikipedia/commons/0/09/NLC892-003290079-43280_%E7%B4%85%E6%A8%93%E5%A4%A2_%E7%AC%AC1%E5%86%8A.pdf#page=78",
+      "siteProofreadLevel": 3,
+      "scanReview": "not-independently-checked"
+    },
+    {
+      "id": "page-79",
+      "pageTitle": "Page:NLC892-003290079-43280 紅樓夢 第1冊.pdf/79",
+      "revisionId": 2441218,
+      "revisionTimestamp": "2024-07-28T04:10:42Z",
+      "revisionUrl": "https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F79&oldid=2441218",
+      "wikitextSha256": "8e481b4b9b6913ababbbd30a782b077707aebf29e28e22283667612f7e1fe975",
+      "pdfPage": 79,
+      "scanUrl": "https://upload.wikimedia.org/wikipedia/commons/0/09/NLC892-003290079-43280_%E7%B4%85%E6%A8%93%E5%A4%A2_%E7%AC%AC1%E5%86%8A.pdf#page=79",
+      "siteProofreadLevel": 3,
+      "scanReview": "not-independently-checked"
+    },
+    {
+      "id": "page-80",
+      "pageTitle": "Page:NLC892-003290079-43280 紅樓夢 第1冊.pdf/80",
+      "revisionId": 2441224,
+      "revisionTimestamp": "2024-07-28T04:25:33Z",
+      "revisionUrl": "https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F80&oldid=2441224",
+      "wikitextSha256": "0e620ebb4061b0614b982d1bae274fd31fe84f75c6429e44c515b519faa7e216",
+      "pdfPage": 80,
+      "scanUrl": "https://upload.wikimedia.org/wikipedia/commons/0/09/NLC892-003290079-43280_%E7%B4%85%E6%A8%93%E5%A4%A2_%E7%AC%AC1%E5%86%8A.pdf#page=80",
+      "siteProofreadLevel": 3,
+      "scanReview": "not-independently-checked"
+    },
+    {
+      "id": "page-81",
+      "pageTitle": "Page:NLC892-003290079-43280 紅樓夢 第1冊.pdf/81",
+      "revisionId": 2441220,
+      "revisionTimestamp": "2024-07-28T04:12:12Z",
+      "revisionUrl": "https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F81&oldid=2441220",
+      "wikitextSha256": "8507d6fc0d47777765e35e888a564460932b0a131a74f20ec729071be9c232a2",
+      "pdfPage": 81,
+      "scanUrl": "https://upload.wikimedia.org/wikipedia/commons/0/09/NLC892-003290079-43280_%E7%B4%85%E6%A8%93%E5%A4%A2_%E7%AC%AC1%E5%86%8A.pdf#page=81",
+      "siteProofreadLevel": 3,
+      "scanReview": "not-independently-checked"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "lin-name",
+      "sourceId": "page-58",
+      "at": 2,
+      "text": "這林如海姓林名海，表字如海",
+      "context": "叙述者介绍盐政林如海；如海是字，海是名。",
+      "verification": "transcription-and-scan-checked",
+      "checkedAt": "2026-11-08"
+    },
+    {
+      "id": "lin-daughter",
+      "sourceId": "page-58",
+      "at": 2,
+      "text": "只嫡妻賈氏生得一女，乳名黛玉",
+      "context": "林如海家世段；父女、母女与嫡妻身份同段明确。",
+      "verification": "transcription-and-scan-checked",
+      "checkedAt": "2026-11-08"
+    },
+    {
+      "id": "min-death",
+      "sourceId": "page-58",
+      "at": 2,
+      "text": "不料女學生之母賈氏夫人一病而亡",
+      "context": "第二回叙述贾氏去世；只作已揭示背景，不扩展后事。",
+      "verification": "transcription-and-scan-checked",
+      "checkedAt": "2026-11-08"
+    },
+    {
+      "id": "shi-sons",
+      "sourceId": "page-61",
+      "at": 2,
+      "text": "娶的是金陵世家史侯的小姐爲妻，生了兩個兒子，長名賈赦，次名賈政",
+      "context": "冷子兴讲荣府：主语为贾代善之妻，后文称太夫人。",
+      "verification": "transcription-and-scan-checked",
+      "checkedAt": "2026-11-08"
+    },
+    {
+      "id": "shi-living",
+      "sourceId": "page-61",
+      "at": 2,
+      "text": "如今代善早已去世，太夫人尙在",
+      "context": "承接史侯小姐及两个儿子的同一段人物指称。",
+      "verification": "transcription-and-scan-checked",
+      "checkedAt": "2026-11-08"
+    },
+    {
+      "id": "baoyu-name",
+      "sourceId": "page-63",
+      "at": 2,
+      "text": "所以方纔你一說這寳玉",
+      "context": "雨村对冷子兴所述衔玉公子的回指；指人物，不是第一回的通灵宝玉物件。",
+      "verification": "transcription-and-scan-checked",
+      "checkedAt": "2026-11-08"
+    },
+    {
+      "id": "shi-alias",
+      "sourceId": "page-65",
+      "at": 2,
+      "text": "因史老夫人極愛孫女",
+      "context": "第二回对同一荣府太夫人的史姓称谓。",
+      "verification": "transcription-and-scan-checked",
+      "checkedAt": "2026-11-08"
+    },
+    {
+      "id": "min-identity",
+      "sourceId": "page-65",
+      "at": 2,
+      "text": "目今你貴東家林公之夫人，卽榮府中赦政二公之胞妹，在家時名字喚賈敏",
+      "context": "冷子兴明确把林公夫人、贾氏、贾敏及贾政胞妹连接起来。",
+      "verification": "transcription-and-scan-checked",
+      "checkedAt": "2026-11-08"
+    },
+    {
+      "id": "baoyu-father",
+      "sourceId": "page-65",
+      "at": 2,
+      "text": "方纔說政公已有了一個啣玉之子",
+      "context": "雨村回指冷子兴前述衔玉公子；与 baoyu-name 共同定位人物。",
+      "verification": "transcription-and-scan-checked",
+      "checkedAt": "2026-11-08"
+    },
+    {
+      "id": "zheng-alias",
+      "sourceId": "page-68",
+      "at": 3,
+      "text": "二内兄名政，字存周",
+      "context": "林如海向雨村介绍贾政；存周只在第三回以后可用于文案。",
+      "verification": "transcription-and-scan-checked",
+      "checkedAt": "2026-11-08"
+    },
+    {
+      "id": "daiyu-full-name",
+      "sourceId": "page-69",
+      "at": 3,
+      "text": "這林黛玉嘗𦗟得母親說",
+      "context": "第三回叙述者使用完整姓名；第二回已以林家之女、乳名黛玉明确提及人物。",
+      "verification": "transcription-and-scan-checked",
+      "checkedAt": "2026-11-08"
+    },
+    {
+      "id": "grandmother",
+      "sourceId": "page-70",
+      "at": 3,
+      "text": "黛玉方拜見了外祖母。當下賈母一一指與黛玉",
+      "context": "叙述者将黛玉的外祖母明确称作贾母。",
+      "verification": "transcription-and-scan-checked",
+      "checkedAt": "2026-11-08"
+    },
+    {
+      "id": "mu-min",
+      "sourceId": "page-70",
+      "at": 3,
+      "text": "我這些女兒，所疼者獨有你母",
+      "context": "贾母向黛玉说话；其母身份由第二回 min-identity / lin-daughter 锁定。",
+      "verification": "transcription-and-scan-checked",
+      "checkedAt": "2026-11-08"
+    },
+    {
+      "id": "cousin",
+      "sourceId": "page-75",
+      "at": 3,
+      "text": "舅母所說的，可是啣玉而生的這位表兄",
+      "context": "黛玉向王夫人核问宝玉；原文直接称表兄，姑表支系由亲缘链推导。",
+      "verification": "transcription-and-scan-checked",
+      "checkedAt": "2026-11-08"
+    },
+    {
+      "id": "baoyu-alias",
+      "sourceId": "page-76",
+      "at": 3,
+      "text": "這位哥哥比我大一歲，小名就呌寶玉",
+      "context": "承接上一页黛玉关于表兄的话；本批不采用年龄数值。",
+      "verification": "transcription-and-scan-checked",
+      "checkedAt": "2026-11-08"
+    }
+  ],
+  "firstMentionAudit": {
+    "definition": "正文首次命名或无歧义人物指称；不计章节标题、别名晚出或神话人物的解释性对应。",
+    "chapterOneFinding": "第一回含通灵寳玉物件，不据此认定贾宝玉已作为人物出场；本批六人均在第二回正文首次明确指称。",
+    "scope": "只对所选扫描/固定转录的第一至三回负责；对首次登台尚不作系统结论。"
+  },
+  "excludedClaims": [
+    {
+      "claim": "绛珠仙草、神瑛侍者与具体人物的身份等同",
+      "status": "inferred-or-disputed",
+      "reason": "第一部亲缘影片不采用神话身份解释。"
+    },
+    {
+      "claim": "人物年龄、后续恋爱婚姻、结局与死亡",
+      "status": "not-verified-for-this-dataset",
+      "reason": "跨回/版本问题或超过第三回；贾敏第二回已述去世仅作为开篇背景。"
+    },
+    {
+      "claim": "后四十回作者归属及脂本/程本异文的统一结论",
+      "status": "disputed",
+      "reason": "固定程甲本，不把不同文本系统拼合成一个原著。"
+    }
+  ]
+}
