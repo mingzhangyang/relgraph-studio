@@ -27,6 +27,8 @@ export interface CanvasRendererOptions {
   style?: DomainStyle;
   /** Locale for renderer captions; unknown values fall back to zh-CN. */
   locale?: unknown;
+  /** Lock the camera during an authoring drag. Not used in regular playback. */
+  cameraOverride?: DirectorFrameState['cameraResolved'];
 }
 export interface CanvasRenderer {
   /** Draw a frame and return its state. */
@@ -68,8 +70,11 @@ export function createCanvasRenderer(
     frameSpec,
     style,
     locale,
+    cameraOverride,
   }: CanvasRendererOptions = {},
 ): CanvasRenderer {
+  if (cameraOverride && (!Number.isFinite(cameraOverride.x) || !Number.isFinite(cameraOverride.y) || !(cameraOverride.scale > 0) || !Number.isFinite(cameraOverride.scale)))
+    throw new RangeError('Invalid camera override');
   const palette = themeFor(theme);
   const spec = frameSpecFor(frameSpec);
   const rate = fps ?? spec.fps;
@@ -82,7 +87,10 @@ export function createCanvasRenderer(
   canvas.width = spec.width;
   canvas.height = spec.height;
   function compose(frame: number): { state: DirectorFrameState; list: DisplayList } {
-    const state = directorFrameAt(graph, positions, frame, rate, { fit, timeline });
+    const evaluated = directorFrameAt(graph, positions, frame, rate, { fit, timeline });
+    const state = cameraOverride
+      ? { ...evaluated, cameraResolved: { ...cameraOverride } }
+      : evaluated;
     if (!ctx) throw new TypeError('Canvas 2D context is unavailable');
     const list = composeFrame(state, {
       graph,
