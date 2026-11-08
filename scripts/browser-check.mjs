@@ -340,10 +340,16 @@ const literatureFrames = Math.ceil(
         'future shot names excluded from DOM and ARIA',
       );
     }
-    // Shortcuts are ignored while a control has focus.
+    // Shortcuts are ignored while a control has focus, regardless of the
+    // current frame left by the preceding focus/spoiler checks.
+    const frameBeforeShortcut = await frameNumber(page);
     await shotButtons.nth(0).focus();
     await page.keyboard.press('ArrowRight');
-    assert.equal(await frameNumber(page), literatureShots.at(-1).start);
+    assert.equal(
+      await frameNumber(page),
+      frameBeforeShortcut,
+      'focused shot button suppresses global ArrowRight seek',
+    );
   });
 
   await check('play, pause, Space and play-from-end behave like a player', async () => {
