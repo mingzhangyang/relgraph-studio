@@ -163,3 +163,70 @@ test('finite extreme authored coordinates cannot overflow the seeded layout', ()
   assert.ok(Math.hypot(candidate.x - 1e307, candidate.y) >= 64);
   assert.deepEqual([...positions], [...layoutMissingNodes(graph, { seed: 42 })]);
 });
+
+
+test('opposite maximum finite anchors cannot poison spring forces with NaN', () => {
+  const graph = {
+    nodes: [
+      { id: 'left', kind: 'person', label: 'L', position: { x: -1.5e308, y: -1.5e308 } },
+      { id: 'right', kind: 'person', label: 'R', position: { x: 1.5e308, y: 1.5e308 } },
+      { id: 'missing', kind: 'person', label: 'M' },
+    ],
+    edges: [
+      { id: 'lm', source: 'left', target: 'missing', kind: 'friendship' },
+      { id: 'rm', source: 'right', target: 'missing', kind: 'friendship' },
+    ],
+  };
+  const points = layoutMissingNodes(graph, { seed: 123 });
+  assert.ok(Number.isFinite(points.get('missing').x));
+  assert.ok(Number.isFinite(points.get('missing').y));
+  assert.deepEqual(points.get('left'), graph.nodes[0].position);
+  assert.deepEqual(points.get('right'), graph.nodes[1].position);
+  assert.deepEqual([...points], [...layoutMissingNodes(graph, { seed: 123 })]);
+});
+
+test('layout handles thousands of fixed nodes with one missing, without fixed/fixed scans', () => {
+  const nodes = Array.from({ length: 3000 }, (_, i) => ({
+    id: 'fixed-' + String(i).padStart(5, '0'),
+    label: String(i),
+    kind: 'person',
+    position: { x: i * 130, y: i % 2 },
+  }));
+  nodes.push({ id: 'missing', kind: 'person', label: 'Missing' });
+  const positions = layoutMissingNodes({ nodes, edges: [] }, { iterations: 8 });
+  assert.equal(positions.size, nodes.length);
+  assert.ok(Number.isFinite(positions.get('missing').x));
+  assert.ok(Number.isFinite(positions.get('missing').y));
+});
+
+test('shared coordinate rounding leaves extreme finite values finite', async () => {
+  const { roundPositionCoordinate } = await import('../packages/core/src/director/seeded-layout.ts');
+  for (const value of [0, 123.456, -9.876, 1e307, -1.5e308]) {
+    assert.ok(Number.isFinite(roundPositionCoordinate(value)));
+  }
+  assert.equal(roundPositionCoordinate(123.456), 123.46);
+  assert.equal(roundPositionCoordinate(1e307), 1e307);
+  assert.throws(() => roundPositionCoordinate(Number.POSITIVE_INFINITY), RangeError);
+});
+
+
+test('collision fallback stays finite beside Number.MAX_VALUE anchors', () => {
+  const huge = Number.MAX_VALUE;
+  const graph = {
+    nodes: [
+      { id: 'anchor', kind: 'person', label: 'Anchor', position: { x: huge, y: huge } },
+      { id: 'extra', kind: 'person', label: 'Extra' },
+    ],
+    edges: [{ id: 'e', source: 'anchor', target: 'extra', kind: 'friendship' }],
+  };
+  const placed = layoutMissingNodes(graph, { seed: 73, iterations: 12 });
+  assert.deepEqual(placed.get('anchor'), graph.nodes[0].position);
+  assert.ok(Number.isFinite(placed.get('extra').x));
+  assert.ok(Number.isFinite(placed.get('extra').y));
+  assert.ok(
+    Math.hypot(
+      placed.get('extra').x - huge,
+      placed.get('extra').y - huge,
+    ) >= 64,
+  );
+});

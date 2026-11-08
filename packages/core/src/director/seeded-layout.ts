@@ -16,9 +16,16 @@ const hash = (value: string, seed: number): number => {
   }
   return state / 0x100000000;
 };
-// Keep extreme but finite source coordinates finite (value * 100 may overflow).
-const rounded = (value: number): number =>
-  Math.abs(value) > Number.MAX_VALUE / 100 ? value : Math.round(value * 100) / 100;
+/**
+ * Round authoring coordinates consistently across the CLI and the studio.
+ * Rounding must never convert valid finite world coordinates into Infinity.
+ */
+export function roundPositionCoordinate(value: number): number {
+  if (!Number.isFinite(value)) throw new RangeError('Layout coordinate must be finite');
+  return Math.abs(value) > Number.MAX_VALUE / 100
+    ? value
+    : Math.round(value * 100) / 100;
+}
 const compareIds = (a: { id: string }, b: { id: string }): number =>
   a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
 
@@ -81,32 +88,45 @@ export function layoutMissingNodes(
 
   for (let step = 0; step < iterations; step++) {
     const forces = new Map(missing.map((node) => [node.id, { x: 0, y: 0 }]));
+    // Only visit pairs that contain a movable node. In the common case of
+    // 10,000 authored positions and one missing node this is O(N), not O(N^2).
+    // Iterate first IDs in sorted order to keep seeded results deterministic.
+    const repel = (aId: string, bId: string): void => {
+      const pa = positions.get(aId), pb = positions.get(bId);
+      if (!pa || !pb) return;
+      let dx = pa.x - pb.x, dy = pa.y - pb.y;
+      if (dx === 0 && dy === 0) {
+        const angle = hash(aId + ':' + bId, seed) * Math.PI * 2;
+        dx = Math.cos(angle);
+        dy = Math.sin(angle);
+      }
+      const distance = Math.hypot(dx, dy);
+      if (!(distance > 0) || !Number.isFinite(distance) || distance >= 112) return;
+      const push = ((112 - distance) * 0.085) / distance;
+      if (!Number.isFinite(push)) return;
+      const fa = forces.get(aId), fb = forces.get(bId);
+      if (fa) { fa.x += dx * push; fa.y += dy * push; }
+      if (fb) { fb.x -= dx * push; fb.y -= dy * push; }
+    };
     for (let i = 0; i < nodes.length; i++) {
-      const a = nodes[i], pa = positions.get(a.id);
-      if (!pa) continue;
-      for (let j = i + 1; j < nodes.length; j++) {
-        const b = nodes[j], pb = positions.get(b.id);
-        if (!pb || (!movable.has(a.id) && !movable.has(b.id))) continue;
-        let dx = pa.x - pb.x, dy = pa.y - pb.y;
-        if (dx === 0 && dy === 0) {
-          const angle = hash(a.id + ':' + b.id, seed) * Math.PI * 2;
-          dx = Math.cos(angle);
-          dy = Math.sin(angle);
-        }
-        const distance = Math.hypot(dx, dy);
-        if (distance >= 112) continue;
-        const push = ((112 - distance) * 0.085) / distance;
-        const fa = forces.get(a.id), fb = forces.get(b.id);
-        if (fa) { fa.x += dx * push; fa.y += dy * push; }
-        if (fb) { fb.x -= dx * push; fb.y -= dy * push; }
+      const a = nodes[i];
+      if (movable.has(a.id)) {
+        for (let j = i + 1; j < nodes.length; j++) repel(a.id, nodes[j].id);
+      } else {
+        // A fixed node only interacts with later movable nodes.
+        for (const b of missing) if (b.id > a.id) repel(a.id, b.id);
       }
     }
     for (const edge of edges) {
       const from = positions.get(edge.source), to = positions.get(edge.target);
       if (!from || !to) continue;
       const dx = to.x - from.x, dy = to.y - from.y;
-      const distance = Math.max(1, Math.hypot(dx, dy));
-      const pull = ((distance - 160) * 0.022) / distance;
+      const distance = Math.hypot(dx, dy);
+      // Subtraction/hypot can overflow even if every authored point is finite.
+      // Skipping such a spring is better than poisoning every mobile force with NaN.
+      if (!(distance > 0) || !Number.isFinite(distance)) continue;
+      const pull = ((distance - 160) / distance) * 0.022;
+      if (!Number.isFinite(pull)) continue;
       const fa = forces.get(edge.source), fb = forces.get(edge.target);
       if (fa) { fa.x += dx * pull; fa.y += dy * pull; }
       if (fb) { fb.x -= dx * pull; fb.y -= dy * pull; }
@@ -116,9 +136,13 @@ export function layoutMissingNodes(
       const p = positions.get(node.id), f = forces.get(node.id);
       if (!p || !f) continue;
       const length = Math.hypot(f.x, f.y);
+      if (!Number.isFinite(length)) continue;
       const factor = length > maxMove ? maxMove / length : 1;
-      p.x += f.x * factor;
-      p.y += f.y * factor;
+      const x = p.x + f.x * factor, y = p.y + f.y * factor;
+      if (Number.isFinite(x) && Number.isFinite(y)) {
+        p.x = x;
+        p.y = y;
+      }
     }
   }
 
@@ -129,7 +153,7 @@ export function layoutMissingNodes(
     const point = positions.get(node.id);
     if (!point) continue;
     const angle = hash(node.id + ':collision', seed) * Math.PI * 2;
-    let chosen: LayoutPoint = { x: rounded(point.x), y: rounded(point.y) };
+    let chosen: LayoutPoint = { x: roundPositionCoordinate(point.x), y: roundPositionCoordinate(point.y) };
     for (let attempt = 0; attempt < 5000; attempt++) {
       if (
         Number.isFinite(chosen.x) &&
@@ -146,9 +170,17 @@ export function layoutMissingNodes(
         Math.abs(point.y) * Number.EPSILON * 4,
       );
       const radius = spacing * Math.sqrt(attempt + 1);
+      const offsetX = Math.cos(offset) * radius, offsetY = Math.sin(offset) * radius;
+      const candidateX = point.x + offsetX, candidateY = point.y + offsetY;
+      // Near ±Number.MAX_VALUE even adding a finite offset can overflow.
+      // Reflect an overflowing step inward while keeping the source anchor.
       chosen = {
-        x: rounded(point.x + Math.cos(offset) * radius),
-        y: rounded(point.y + Math.sin(offset) * radius),
+        x: roundPositionCoordinate(
+          Number.isFinite(candidateX) ? candidateX : point.x - offsetX,
+        ),
+        y: roundPositionCoordinate(
+          Number.isFinite(candidateY) ? candidateY : point.y - offsetY,
+        ),
       };
       if (attempt === 4999) throw new RangeError('Unable to place node ' + node.id);
     }
