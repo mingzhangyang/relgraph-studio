@@ -92,6 +92,8 @@ test('MP4 encoding states pixel format, colour tags and an exact frame rate', ()
   assert.equal(after('-c:v'), 'libx264');
   assert.equal(after('-pix_fmt'), 'yuv420p');
   assert.equal(after('-colorspace'), 'bt709');
+  assert.equal(after('-color_primaries'), 'bt709');
+  assert.equal(after('-color_trc'), 'bt709');
   assert.equal(after('-color_range'), 'tv');
   assert.equal(args.at(-1), 'film.mp4');
 });
@@ -205,12 +207,23 @@ test('renderFilm rejects non-integer ranges and job counts before writing', asyn
 // Layout argument contract must remain opt-in for destructive writes.
 test('layout command requires an explicit write mode', () => {
   assert.deepEqual(parseCommand(['layout', 'story.json']), {
-    command: 'layout', file: 'story.json', seed: 0, write: false,
+    command: 'layout',
+    file: 'story.json',
+    seed: 0,
+    write: false,
   });
   assert.deepEqual(parseCommand(['layout', 'story.json', '--seed', '42', '--write']), {
-    command: 'layout', file: 'story.json', seed: 42, write: true,
+    command: 'layout',
+    file: 'story.json',
+    seed: 42,
+    write: true,
   });
-  for (const flags of [['--seed', '-1'], ['--seed', '4294967296'], ['--seed', 'xyz'], ['--write', '--out', 'x.json']]) {
+  for (const flags of [
+    ['--seed', '-1'],
+    ['--seed', '4294967296'],
+    ['--seed', 'xyz'],
+    ['--write', '--out', 'x.json'],
+  ]) {
     assert.throws(() => parseCommand(['layout', 'story.json', ...flags]), UsageError);
   }
 });

@@ -53,21 +53,23 @@
   - [x] 44 golden frames including 12 mid-reveal samples; both MP4s re-exported and validated by `check:export`
 
 ADR 003 step 5 is split into two reviewable batches:
-- [x] **Step 5a:** seeded deterministic `relgraph layout` for missing coordinates, with opt-in validated source write-back and regression tests (PR pending).
-- [x] **Step 5b:** opt-in director canvas drag adjustment for currently visible nodes, frozen preview camera, reset, and validated JSON export. Default playback and original source are unchanged (PR pending).
+- [x] **Step 5a:** seeded deterministic `relgraph layout` for missing coordinates, with opt-in validated source write-back and regression tests (merged PR #13).
+- [x] **Step 5b:** opt-in director canvas drag adjustment for currently visible nodes, frozen preview camera, reset, and validated JSON export. Default playback and original source are unchanged (PR #14 ported to main by merged PR #15).
 
 Workspace architecture follow-up (after step 5b, in separate reviewable PRs):
-- [x] **Playback Core:** move frame clock, play/pause/seek transitions, shot-marker time math and UI timestamp formatting into DOM-free `apps/studio/src/playback-model.ts`; retain the existing director timeline as authoritative and the workspace as the animation scheduler. Pure unit regressions added (stacked PR pending local/full-browser verification).
-- [ ] **Workspace Views:** keep playback and timing rules in the pure model, and put DOM presentation behind focused adapters. Mark complete after batch 2 is merged and locally verified.
+- [x] **Playback Core:** move frame clock, play/pause/seek transitions, shot-marker time math and UI timestamp formatting into DOM-free `apps/studio/src/playback-model.ts`; retain the existing director timeline as authoritative and the workspace as the animation scheduler. PR #16 merged into the #15 stack; code is on main and locally verified with the final acceptance fixes.
+- [x] **Workspace Views:** keep playback and timing rules in the pure model, and put DOM presentation behind focused adapters. Both batches merged; locally verified together with the final acceptance fixes on 2026-11-08.
   - [x] **Batch 1 — Playback & Shot Views:** merged PR #17; stable shot buttons, safe titles and derived playback labels.
-  - [ ] **Batch 2 — Diagnostics & Transcript Views:** pending draft review and local validation. Dedicated diagnostic DOM adapter; `DisplayList.a11y`-only transcript and live region; pure semantic snapshots detect within-shot reveals and backward seeks without repeated announcements. Reuses the shared VM harness and adds Chromium regression assertions.
-  - **B2 gate:** verify both batches together, then mark Workspace Views complete before beginning source verification, narration and 1080p film work.
+  - [x] **Batch 2 — Diagnostics & Transcript Views:** merged PR #18. Dedicated diagnostic DOM adapter; `DisplayList.a11y`-only transcript and live region; pure semantic snapshots detect within-shot reveals and backward seeks without repeated announcements. Verified through pure tests, the shared VM harness and real Chromium.
+  - [ ] **Final acceptance on main / B2 gate:** merge the independent acceptance-fix Draft PR, then recheck the latest main before creating a B2-1 branch. The original `3701aef` main failed package builds, a fresh-checkout test import, a diagnostic fixture assertion and formatting; FFmpeg 7 also exposed missing MP4 colour tags. The corrected candidate passes all local checks; main is not yet released into B2.
+  - **Actual local results:** 174/174 Vitest tests (24 files), 37/37 Chromium checks, 16/16 browser PNGs byte-identical to unmodified main, 44/44 unchanged headless golden frames, 5/5 full export checks, and 8/8 short MP4 matrix checks. Typecheck, lint, formatting, generated types, package builds and studio build pass. See [final acceptance report](B1.5-FINAL-ACCEPTANCE.md) for failures, fixes, commands and limitations.
 
-After step 5b comes the first source-verified 60–90 s film. Audio synchronization and independent MP4 subtitle streams remain B2 work. Audio synchronization and independent MP4 subtitle streams remain B2 work.
+The accepted B1.5 scope is deterministic data → adapter → graph → pure timeline → DisplayList → Canvas/Skia → MP4, plus the separated workspace models and views. Native screen-reader listening, additional platforms and production typography QA are not implied by automated acceptance. The B2 entry gate requires the corrective PR to be merged; B2-1 data work has not started in this acceptance branch.
 
 ## B2 — Source-verified film
 
 - [ ] Curate an auditable literary dataset; verify character debuts, relationships and evidence
+- B2-1 starts from the latest main **after the acceptance fixes merge**. Keep the source-verified Honglou subset, evidence report, data-quality tests and B2-2 handoff separate from the provisional example. B2-2 storyboard/video work follows approval of that dataset; target 60–90 s, 1920×1080, 24 FPS, chapter-safe reveals. Audio and subtitle streams are outside B2-1.
 - [ ] Script a 60–90 second narration without premature spoilers
 - [ ] Add optional narration/audio sync, captions, credited licensed sounds and 1080p QA
 

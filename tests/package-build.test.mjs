@@ -156,7 +156,7 @@ test('separately built packages work as packed Node and TypeScript dependencies'
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import schema from '@relgraph/core/schema/relationship-graph.schema.json' with { type: 'json' };
-import { loadDocument, layoutGraph, frameCount, directorFrameAt, validateRelGraph, domainStyle } from '@relgraph/core';
+import { loadDocument, layoutGraph, frameCount, directorFrameAt, validateRelGraph, domainStyle, applyGraphPositions } from '@relgraph/core';
 import { createCanvasRenderer, VIDEO_WIDTH, FRAME_SPECS } from '@relgraph/render';
 const read = async (path) => JSON.parse(await readFile(new URL(path, import.meta.url), 'utf8'));
 assert.deepEqual(schema, await read('./source-schema.json'));
@@ -175,6 +175,12 @@ for (const [filename, domain] of [['honglou-provisional.relgraph.json', 'literat
   assert.equal(result.valid, true, filename);
   assert.equal(result.graph.domain, domain);
   const layout = layoutGraph(result.graph);
+  const positioned = applyGraphPositions(doc, result.graph, layout).document;
+  assert.equal(loadDocument(positioned).valid, true);
+  // Exercise the host clone API from the installed ES-only core package and
+  // retain independent ownership even of nested non-position source fields.
+  positioned.meta.title = 'edited export';
+  assert.notEqual(doc.meta.title, positioned.meta.title);
   const renderer = createCanvasRenderer({ getContext: () => ctx }, result.graph, layout, { detailAt: result.detailAt });
   const last = frameCount(result.graph) - 1;
   for (const frame of [0, Math.min(48, last), last, 0]) {

@@ -292,9 +292,7 @@ test('same-shot a11y reveals update transcript without repeat announcements', as
         ...a11y,
         nodes: [
           ...a11y.nodes,
-          ...(frame >= 2
-            ? [frame >= 5 ? 'VISIBLE SECOND RENAMED' : 'VISIBLE SECOND']
-            : []),
+          ...(frame >= 2 ? [frame >= 5 ? 'VISIBLE SECOND RENAMED' : 'VISIBLE SECOND'] : []),
         ],
         relations: [...a11y.relations, ...(frame >= 4 ? ['REVEALED RELATION'] : [])],
       };
@@ -393,7 +391,9 @@ test('pending and stale loads cannot expose outdated diagnostics', async () => {
   assert.equal(app.node('status').attributes['data-state'], 'loading');
   assert.equal(app.node('errors').textContent, '');
 
-  current.resolve(JSON.stringify(literature));
+  // The literary fixture intentionally warns about three importance-5 leads.
+  // Use the warning-free biology fixture to exercise the empty state.
+  current.resolve(JSON.stringify(biology));
   await flush();
   assert.equal(app.node('sourceName').textContent, 'current.json');
   assert.equal(app.node('status').attributes['data-state'], 'ready');
