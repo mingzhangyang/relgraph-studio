@@ -54,5 +54,7 @@ if (parentPort) {
     });
   } catch (error) {
     port.postMessage({ error: String((error as Error)?.stack ?? error) } satisfies WorkerReply);
+    // Initialization failed before installing the message/stop handler.
+    port.close();
   }
 }

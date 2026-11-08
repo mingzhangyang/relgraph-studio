@@ -155,6 +155,7 @@ test('separately built packages work as packed Node and TypeScript dependencies'
       `
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { Worker } from 'node:worker_threads';
 import schema from '@relgraph/core/schema/relationship-graph.schema.json' with { type: 'json' };
 import { loadDocument, layoutGraph, frameCount, directorFrameAt, validateRelGraph, domainStyle, applyGraphPositions } from '@relgraph/core';
 import { createCanvasRenderer, VIDEO_WIDTH, FRAME_SPECS } from '@relgraph/render';
@@ -195,6 +196,28 @@ for (const [filename, domain] of [['honglou-provisional.relgraph.json', 'literat
   }
 }
 await assert.rejects(import('@relgraph/core/src/graph/core.js'), { code: 'ERR_PACKAGE_PATH_NOT_EXPORTED' });
+// A startup failure precedes the normal stop handler. It must report the
+// error and close naturally, rather than leaving the parent waiting forever.
+await new Promise((resolveExit, rejectExit) => {
+  const worker = new Worker(new URL('./node_modules/@relgraph/cli/dist/worker.js', import.meta.url), {
+    workerData: { text: '{}', frameSpec: 'landscape-720p', theme: 'light', locale: 'zh-CN' },
+  });
+  let errorReported = false;
+  const deadline = setTimeout(() => {
+    void worker.terminate();
+    rejectExit(new Error('Failed render worker did not exit naturally'));
+  }, 5000);
+  worker.on('message', (reply) => { errorReported = /Document is invalid/.test(reply.error ?? ''); });
+  worker.once('error', (error) => { clearTimeout(deadline); rejectExit(error); });
+  worker.once('exit', (code) => {
+    clearTimeout(deadline);
+    try {
+      assert.equal(code, 0);
+      assert.equal(errorReported, true);
+      resolveExit();
+    } catch (error) { rejectExit(error); }
+  });
+});
 `,
     );
     await run(process.execPath, ['check.mjs'], { cwd: consumer, env });
@@ -259,20 +282,23 @@ await assert.rejects(import('@relgraph/core/src/graph/core.js'), { code: 'ERR_PA
         ].join('\n') + '\n',
         { mode: 0o755 },
       );
-      const crashed = await run(
-        process.execPath,
-        [relgraph, 'render', 'biology-signaling-synthetic.json'].concat(
-          ['--out', 'crash.mp4', '--ffmpeg', 'fake-ffmpeg', '--frame-spec', 'landscape-720p'],
-          ['--to', '23'],
-        ),
-        { cwd: consumer, env },
-      ).then(
-        () => assert.fail('render must fail when FFmpeg exits early'),
-        (error) => error,
-      );
-      assert.equal(crashed.code, 1);
-      assert.match(crashed.stderr, /退出码 3/);
-      assert.match(crashed.stderr, /fake encoder crashed/);
+      for (const jobs of [8, 2, 8]) {
+        const crashed = await run(
+          process.execPath,
+          [relgraph, 'render', 'biology-signaling-synthetic.json'].concat(
+            ['--out', 'crash.mp4', '--ffmpeg', 'fake-ffmpeg', '--frame-spec', 'landscape-720p'],
+            ['--to', '23', '--jobs', String(jobs)],
+          ),
+          { cwd: consumer, env },
+        ).then(
+          () => assert.fail('render must fail when FFmpeg exits early'),
+          (error) => error,
+        );
+        assert.equal(crashed.code, 1, `signal=${crashed.signal}; stderr=${crashed.stderr}`);
+        assert.equal(crashed.signal, null, 'encoder failure must not abort the native renderer');
+        assert.match(crashed.stderr, /退出码 3/);
+        assert.match(crashed.stderr, /fake encoder crashed/);
+      }
     }
     for (const file of ['frames/024/frame.png', 'frames/025/frame.png']) {
       const png = await readFile(join(consumer, file));
