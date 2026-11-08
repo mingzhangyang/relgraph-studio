@@ -398,3 +398,42 @@ test('hit testing ignores caption and title bands outside the renderer stage', (
     'outside',
   );
 });
+
+test('hit testing excludes fully clipped glyphs near the stage edge', () => {
+  const spec = DEFAULT_FRAME_SPEC;
+  const camera = { x: 0, y: 0, scale: 1 };
+  const nodes = [{ id: 'clipped', kind: 'person', label: 'Clipped' }];
+  const reveal = { nodes: { clipped: 1 }, edges: {} };
+  const insideStage = { x: 640, y: spec.stage.y + spec.stage.h - 1 };
+  const outsidePosition = new Map([['clipped', { x: 0, y: 232 }]]);
+  assert.deepEqual(
+    screenPosition(outsidePosition.get('clipped'), camera, spec),
+    { x: 640, y: 562 },
+  );
+  assert.equal(
+    hitVisibleNode(nodes, outsidePosition, reveal, camera, spec, insideStage, 24),
+    null,
+    'a click within hit radius must not select a fully clipped circle',
+  );
+
+  // Move the glyph just enough for its outline to overlap the clipped stage.
+  const partlyVisible = new Map([['clipped', { x: 0, y: 220 }]]);
+  assert.equal(
+    hitVisibleNode(nodes, partlyVisible, reveal, camera, spec, insideStage, 24),
+    'clipped',
+    'a partly visible glyph remains selectable at the same pointer location',
+  );
+  assert.equal(
+    hitVisibleNode(
+      nodes,
+      partlyVisible,
+      { nodes: { clipped: 0.5 }, edges: {} },
+      camera,
+      spec,
+      insideStage,
+      24,
+    ),
+    null,
+    'a node below the reveal threshold cannot be selected',
+  );
+});
