@@ -385,6 +385,7 @@ function applyResult(result: LoadResult, name: string, sourceText?: string): voi
 }
 function beginLoad(): number {
   const serial = ++requestSerial;
+  if (layoutEditing) stopLayoutEdit();
   loading = true;
   setPlaying(false);
   play.disabled = true;
