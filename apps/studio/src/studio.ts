@@ -3,6 +3,7 @@ import {
   diagnosticText,
   NO_DIAGNOSTICS_TEXT,
   parseDocument,
+  applyGraphPositions,
   type LoadResult,
 } from '@relgraph/core';
 import { layoutGraph } from '@relgraph/core';
@@ -16,6 +17,7 @@ import {
   type CanvasRenderer,
   type FrameText,
 } from '@relgraph/render';
+import { canvasPoint, graphPosition, hitVisibleNode } from './position-tool.js';
 
 declare global {
   interface Window {
@@ -47,6 +49,9 @@ const canvas = requiredElement('stage', HTMLCanvasElement),
   exampleLiterature = requiredElement('exampleLiterature', HTMLButtonElement),
   exampleBiology = requiredElement('exampleBiology', HTMLButtonElement),
   themeToggle = requiredElement('themeToggle', HTMLButtonElement),
+  layoutToggle = requiredElement('layoutToggle', HTMLButtonElement),
+  layoutReset = requiredElement('layoutReset', HTMLButtonElement),
+  layoutExport = requiredElement('layoutExport', HTMLButtonElement),
   dropzone = requiredElement('dropzone', HTMLLabelElement),
   shots = $('shots'),
   strip = $('sceneStrip');
@@ -64,6 +69,12 @@ let lastTick: number | null = null;
 let currentFrameState: DirectorFrameState | null = null;
 let currentDetailAt: DetailAt = () => undefined;
 let currentLayout: ReturnType<typeof layoutGraph> | null = null;
+let originalLayout: ReturnType<typeof layoutGraph> | null = null;
+let sourceDocument: unknown = null;
+let sourceFilename = 'relgraph.json';
+let layoutEditing = false;
+let editCamera: DirectorFrameState['cameraResolved'] | null = null;
+let dragging: { pointerId: number; id: string; previous: { x: number; y: number } } | null = null;
 let emptyMessage = '';
 // Workspace and video share one theme. Without a saved choice it follows the OS.
 const THEME_KEY = 'relgraph-theme',
@@ -181,6 +192,7 @@ function buildShots(graph: VisualGraph): void {
     button.append(progress, top, title);
     const target = Math.min(totalFrames - 1, Math.ceil(start * FPS - 1e-9));
     button.addEventListener('click', () => {
+      if (layoutEditing) stopLayoutEdit();
       if (loading) return;
       setPlaying(false);
       setFrame(target);
@@ -299,6 +311,17 @@ function clearStudio(): void {
   graph = null;
   renderer = null;
   currentLayout = null;
+  originalLayout = null;
+  sourceDocument = null;
+  dragging = null;
+  editCamera = null;
+  layoutEditing = false;
+  layoutToggle.setAttribute('aria-pressed', 'false');
+  layoutToggle.disabled = true;
+  layoutReset.disabled = true;
+  layoutExport.disabled = true;
+  canvas.classList.remove('is-layout-editing');
+  $('layoutNote').textContent = '调整模式关闭 · 只修改导出文件';
   currentFrameState = null;
   currentDetailAt = () => undefined;
   frame = 0;
@@ -325,7 +348,7 @@ function clearStudio(): void {
   $('time').textContent = '00:00.00 / 00:00.00';
   $('frameNumber').textContent = 'FRAME 0';
 }
-function applyResult(result: LoadResult, name: string): void {
+function applyResult(result: LoadResult, name: string, sourceText?: string): void {
   loading = false;
   clearStudio();
   renderDiagnostics(result);
@@ -336,8 +359,13 @@ function applyResult(result: LoadResult, name: string): void {
     return;
   }
   graph = result.graph;
+  sourceDocument = sourceText ? JSON.parse(sourceText) : null;
+  sourceFilename = /\.json$/i.test(name) ? name : 'relgraph.json';
   currentDetailAt = result.detailAt || (() => undefined);
   currentLayout = layoutGraph(graph);
+  originalLayout = new Map([...currentLayout].map(([id, point]) => [id, { ...point }]));
+  layoutToggle.disabled = sourceDocument === null;
+  layoutExport.disabled = sourceDocument === null;
   renderer = createCanvasRenderer(canvas, graph, currentLayout, {
     fps: FPS,
     detailAt: currentDetailAt,
@@ -362,6 +390,9 @@ function beginLoad(): number {
   play.disabled = true;
   restart.disabled = true;
   scrubber.disabled = true;
+  layoutToggle.disabled = true;
+  layoutReset.disabled = true;
+  layoutExport.disabled = true;
   setStatus('正在加载…', 'loading');
   return serial;
 }
@@ -394,7 +425,7 @@ async function loadExample(path: string, name: string): Promise<void> {
     const response = await fetch(path);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const text = await response.text();
-    if (serial === requestSerial) applyResult(parseDocument(text), name);
+    if (serial === requestSerial) applyResult(parseDocument(text), name, text);
   } catch (error) {
     if (serial === requestSerial) applyResult(loadFailure('LOAD', error), name);
   }
@@ -420,7 +451,7 @@ async function loadFile(file: File | undefined): Promise<void> {
   markSource(null);
   try {
     const text = await file.text();
-    if (serial === requestSerial) applyResult(parseDocument(text), file.name);
+    if (serial === requestSerial) applyResult(parseDocument(text), file.name, text);
   } catch (error) {
     if (serial === requestSerial) applyResult(loadFailure('FILE', error), file.name);
   }
@@ -443,14 +474,17 @@ dropzone.addEventListener('drop', (event) => {
   void loadFile(event.dataTransfer?.files?.[0]);
 });
 play.addEventListener('click', () => {
+  if (layoutEditing) stopLayoutEdit();
   if (!playing && frame >= totalFrames - 1) setFrame(0);
   setPlaying(!playing);
 });
 restart.addEventListener('click', () => {
+  if (layoutEditing) stopLayoutEdit();
   setPlaying(false);
   setFrame(0);
 });
 scrubber.addEventListener('input', () => {
+  if (layoutEditing) stopLayoutEdit();
   setPlaying(false);
   setFrame(Number(scrubber.value));
 });
@@ -470,7 +504,10 @@ window.addEventListener('keydown', (event) => {
     target.closest('button,input,textarea,select,summary,[contenteditable],[role="button"]')
   )
     return;
-  if (event.code === 'Space') {
+  if (event.code === 'Escape' && layoutEditing) {
+    event.preventDefault();
+    stopLayoutEdit();
+  } else if (event.code === 'Space') {
     event.preventDefault();
     play.click();
   } else if (event.code === 'ArrowRight') {
@@ -503,10 +540,147 @@ function applyTheme(next: Theme, persist: boolean): void {
       fps: FPS,
       detailAt: currentDetailAt,
       theme,
+      ...(editCamera ? { cameraOverride: editCamera } : {}),
     });
     setFrame(frame, false);
   } else paintEmptyStage(emptyMessage);
 }
+
+// A position edit uses the existing renderer but freezes the visible camera.
+// No projection, timeline or authored source data changes until explicit export.
+const roundCoordinate = (value: number): number => Math.round(value * 100) / 100;
+const layoutChanged = (): boolean =>
+  Boolean(
+    currentLayout &&
+    originalLayout &&
+    [...currentLayout].some(([id, p]) => {
+      const first = originalLayout?.get(id);
+      return !first || first.x !== p.x || first.y !== p.y;
+    }),
+  );
+function updateLayoutControls(): void {
+  layoutReset.disabled = !layoutChanged();
+  $('layoutNote').textContent = layoutEditing
+    ? '拖动当前可见的节点 · ' + (layoutChanged() ? '有未保存调整' : '尚未调整') + ' · 导出后才会写入 JSON'
+    : layoutChanged()
+      ? '有未保存调整 · 点击导出含坐标 JSON 保存'
+      : '调整模式关闭 · 只修改导出文件';
+}
+function rebuildRenderer(): void {
+  if (!graph || !currentLayout) return;
+  renderer = createCanvasRenderer(canvas, graph, currentLayout, {
+    fps: FPS,
+    detailAt: currentDetailAt,
+    theme,
+    ...(editCamera ? { cameraOverride: editCamera } : {}),
+  });
+  setFrame(frame, false);
+}
+function stopLayoutEdit(): void {
+  if (!layoutEditing) return;
+  dragging = null;
+  layoutEditing = false;
+  editCamera = null;
+  canvas.classList.remove('is-layout-editing');
+  layoutToggle.setAttribute('aria-pressed', 'false');
+  rebuildRenderer();
+  updateLayoutControls();
+}
+layoutToggle.addEventListener('click', () => {
+  if (!renderer || !currentFrameState || !currentLayout) return;
+  if (layoutEditing) {
+    stopLayoutEdit();
+    return;
+  }
+  setPlaying(false);
+  editCamera = { ...currentFrameState.cameraResolved };
+  layoutEditing = true;
+  canvas.classList.add('is-layout-editing');
+  layoutToggle.setAttribute('aria-pressed', 'true');
+  rebuildRenderer();
+  updateLayoutControls();
+});
+layoutReset.addEventListener('click', () => {
+  if (!currentLayout || !originalLayout) return;
+  dragging = null;
+  currentLayout.clear();
+  for (const [id, point] of originalLayout) currentLayout.set(id, { ...point });
+  rebuildRenderer();
+  updateLayoutControls();
+});
+const pointerLocation = (event: PointerEvent): { x: number; y: number } | null =>
+  canvasPoint({ x: event.clientX, y: event.clientY }, canvas.getBoundingClientRect(), canvas);
+canvas.addEventListener('pointerdown', (event) => {
+  if (!layoutEditing || !renderer || !currentLayout || !currentFrameState || dragging) return;
+  if (event.isPrimary === false || (event.pointerType === 'mouse' && event.button !== 0)) return;
+  const point = pointerLocation(event);
+  if (!point) return;
+  const rect = canvas.getBoundingClientRect();
+  const radius = 24 * (canvas.width / Math.max(1, rect.width));
+  const id = hitVisibleNode(
+    currentFrameState.view.nodes,
+    currentLayout,
+    currentFrameState.reveal,
+    currentFrameState.cameraResolved,
+    renderer.frameSpec,
+    point,
+    radius,
+  );
+  const previous = id ? currentLayout.get(id) : undefined;
+  if (!id || !previous) return;
+  dragging = { pointerId: event.pointerId, id, previous: { ...previous } };
+  canvas.setPointerCapture(event.pointerId);
+  event.preventDefault();
+});
+function moveLayoutNode(event: PointerEvent): void {
+  if (!dragging || !renderer || !currentLayout || !currentFrameState ||
+      dragging.pointerId !== event.pointerId) return;
+  const point = pointerLocation(event);
+  if (!point) return;
+  const moved = graphPosition(point, currentFrameState.cameraResolved, renderer.frameSpec);
+  if (!Number.isFinite(moved.x) || !Number.isFinite(moved.y)) return;
+  currentLayout.set(dragging.id, { x: roundCoordinate(moved.x), y: roundCoordinate(moved.y) });
+  setFrame(frame, false);
+  updateLayoutControls();
+  event.preventDefault();
+}
+canvas.addEventListener('pointermove', moveLayoutNode);
+canvas.addEventListener('pointerup', (event) => {
+  if (!dragging || dragging.pointerId !== event.pointerId) return;
+  moveLayoutNode(event);
+  dragging = null;
+  if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
+});
+canvas.addEventListener('pointercancel', (event) => {
+  if (!dragging || dragging.pointerId !== event.pointerId || !currentLayout) return;
+  currentLayout.set(dragging.id, dragging.previous);
+  dragging = null;
+  setFrame(frame, false);
+  updateLayoutControls();
+});
+layoutExport.addEventListener('click', () => {
+  if (!graph || !currentLayout || sourceDocument === null) return;
+  try {
+    const output = applyGraphPositions(sourceDocument, graph, currentLayout);
+    const text = JSON.stringify(output.document, null, 2) + '\n';
+    const check = parseDocument(text);
+    if (!check.valid) throw new Error('导出的 JSON 没有通过数据校验');
+    const blob = new Blob([text], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = sourceFilename.replace(/\.json$/i, '') + '.positioned.json';
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    $('layoutNote').textContent = '已准备导出：' + link.download + '。修改仅保存在导出的 JSON 文件中。';
+  } catch (error) {
+    $('layoutNote').textContent =
+      '导出失败：' + (error instanceof Error ? error.message : String(error));
+  }
+});
+
 themeToggle.addEventListener('click', () => applyTheme(theme === 'light' ? 'dark' : 'light', true));
 lightQuery?.addEventListener?.('change', (event) => {
   if (!pinnedTheme) applyTheme(event.matches ? 'light' : 'dark', false);
