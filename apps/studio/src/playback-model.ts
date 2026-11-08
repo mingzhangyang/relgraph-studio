@@ -58,10 +58,8 @@ export function seekPlayback(
 export function advancePlayback(state: PlaybackState, nowMs: number): PlaybackState {
   if (!state.playing || !Number.isFinite(nowMs)) return state;
   const elapsedMs = state.lastTickMs === null ? 0 : Math.max(0, nowMs - state.lastTickMs);
-  const position = Math.min(
-    state.totalFrames - 1,
-    state.position + (elapsedMs * state.fps) / 1000,
-  );
+  const advancedFrames = (elapsedMs * state.fps) / 1000;
+  const position = Math.min(state.totalFrames - 1, state.position + advancedFrames);
   const playing = position < state.totalFrames - 1;
   return {
     ...state,
