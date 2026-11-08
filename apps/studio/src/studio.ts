@@ -4,6 +4,7 @@ import {
   NO_DIAGNOSTICS_TEXT,
   parseDocument,
   applyGraphPositions,
+  roundPositionCoordinate,
   type LoadResult,
 } from '@relgraph/core';
 import { layoutGraph } from '@relgraph/core';
@@ -499,9 +500,11 @@ restart.addEventListener('click', () => {
   setFrame(0);
 });
 scrubber.addEventListener('input', () => {
+  // Editing teardown redraws the prior frame, so capture the requested frame first.
+  const requestedFrame = Number(scrubber.value);
   if (layoutEditing) stopLayoutEdit();
   setPlaying(false);
-  setFrame(Number(scrubber.value));
+  setFrame(requestedFrame);
 });
 window.addEventListener('keydown', (event) => {
   if (
@@ -629,7 +632,6 @@ layoutApply.addEventListener('click', () => {
 
 // A position edit uses the existing renderer but freezes the visible camera.
 // No projection, timeline or authored source data changes until explicit export.
-const roundCoordinate = (value: number): number => Math.round(value * 100) / 100;
 const layoutChanged = (): boolean =>
   Boolean(
     currentLayout &&
@@ -734,8 +736,8 @@ function moveLayoutNode(event: PointerEvent): void {
   const moved = dx === 0 && dy === 0
     ? { ...dragging.previous }
     : {
-        x: roundCoordinate(dragging.previous.x + dx),
-        y: roundCoordinate(dragging.previous.y + dy),
+        x: roundPositionCoordinate(dragging.previous.x + dx),
+        y: roundPositionCoordinate(dragging.previous.y + dy),
       };
   if (!Number.isFinite(moved.x) || !Number.isFinite(moved.y)) return;
   const old = currentLayout.get(dragging.id);

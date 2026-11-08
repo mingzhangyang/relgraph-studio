@@ -1,4 +1,4 @@
-import { cameraCenterFor, type FrameSpec } from '@relgraph/render';
+import { cameraCenterFor, projectCameraPoint, type FrameSpec } from '@relgraph/render';
 import type { DirectorFrameState, VisualNode } from '@relgraph/core';
 
 export type Point = { x: number; y: number };
@@ -23,11 +23,7 @@ export function canvasPoint(
 }
 
 export function screenPosition(point: Point, camera: Camera, spec: FrameSpec): Point {
-  const center = cameraCenterFor(spec);
-  return {
-    x: center.x + (point.x - camera.x) * camera.scale * spec.typeScale,
-    y: center.y + (point.y - camera.y) * camera.scale * spec.typeScale,
-  };
+  return projectCameraPoint(point, camera, spec);
 }
 
 export function graphPosition(point: Point, camera: Camera, spec: FrameSpec): Point {

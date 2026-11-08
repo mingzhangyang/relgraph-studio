@@ -234,3 +234,31 @@ test('keyboard selector excludes hidden nodes and X/Y inputs change only visible
   assert.equal(app.node('layoutEditor').hidden, true);
   assert.equal(select.children.length, 0, 'hidden/future labels are not kept in DOM');
 });
+
+
+test('hit-testing uses the renderer camera projection for enormous finite distances', () => {
+  const camera = { x: 1e308, y: 0, scale: 2.75e-306 };
+  const extreme = { x: -1e308, y: 0 };
+  const point = screenPosition(extreme, camera, DEFAULT_FRAME_SPEC);
+  assert.equal(point.x, 90);
+  assert.equal(
+    hitVisibleNode(
+      [{ id: 'a' }],
+      new Map([['a', extreme]]),
+      { nodes: { a: 1 }, edges: {} },
+      camera, DEFAULT_FRAME_SPEC, point, 24,
+    ),
+    'a',
+  );
+});
+
+test('scrubber captures target before edit-mode camera cleanup redraws the old frame', async () => {
+  const app = makeStudio();
+  await app.ready;
+  assert.equal(app.window.renderAt(48), true);
+  await app.node('layoutToggle').click();
+  app.node('scrubber').value = '250';
+  await app.node('scrubber').dispatch('input');
+  assert.equal(Number(app.node('scrubber').value), 250);
+  assert.equal(app.node('layoutToggle').attributes['aria-pressed'], 'false');
+});

@@ -24,7 +24,13 @@ import type {
   PathCommand,
   TextMeasurer,
 } from './display-list.js';
-import { cameraCenterFor, DEFAULT_FRAME_SPEC, type FrameSpec, type Rect } from './frame-spec.js';
+import {
+  cameraCenterFor,
+  scaledWorldDifference,
+  DEFAULT_FRAME_SPEC,
+  type FrameSpec,
+  type Rect,
+} from './frame-spec.js';
 import { RENDER_MESSAGES } from './locale.js';
 import { edgePaint, VIDEO_THEMES, type VideoTheme } from './theme.js';
 
@@ -79,11 +85,7 @@ const color = (value: unknown, fallback: string): string =>
   typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value) ? value : fallback;
 const intersects = (a: Rect, b: Rect): boolean =>
   a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
-function scaledDifference(value: number, center: number, scale: number): number {
-  const difference = value - center;
-  // Opposite but finite world coordinates can overflow on subtraction.
-  return Number.isFinite(difference) ? difference * scale : value * scale - center * scale;
-}
+
 const isEdge = (item: DrawItem): item is VisualEdge =>
   'source' in item && item.source !== undefined;
 const alphaHex = (alpha: number): string =>
@@ -248,8 +250,8 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
     const p = positions.get(node.id);
     if (!p) throw new Error(`Missing layout position for node ${node.id}`);
     return {
-      x: center.x + scaledDifference(p.x, cam.x, screenScale),
-      y: center.y + scaledDifference(p.y, cam.y, screenScale),
+      x: center.x + scaledWorldDifference(p.x, cam.x, screenScale),
+      y: center.y + scaledWorldDifference(p.y, cam.y, screenScale),
     };
   };
   const points = new Map(view.nodes.map((n) => [n.id, point(n)]));
