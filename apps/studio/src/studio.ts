@@ -74,7 +74,12 @@ let sourceDocument: unknown = null;
 let sourceFilename = 'relgraph.json';
 let layoutEditing = false;
 let editCamera: DirectorFrameState['cameraResolved'] | null = null;
-let dragging: { pointerId: number; id: string; previous: { x: number; y: number } } | null = null;
+let dragging: {
+  pointerId: number;
+  id: string;
+  previous: { x: number; y: number };
+  start: { x: number; y: number };
+} | null = null;
 let emptyMessage = '';
 // Workspace and video share one theme. Without a saved choice it follows the OS.
 const THEME_KEY = 'relgraph-theme',
@@ -499,27 +504,34 @@ window.addEventListener('keydown', (event) => {
     event.repeat
   )
     return;
+  // Escape must work even while the position-mode button has keyboard focus.
+  if (event.code === 'Escape' && layoutEditing) {
+    event.preventDefault();
+    stopLayoutEdit();
+    return;
+  }
   const target = event.target;
   if (
     target instanceof Element &&
     target.closest('button,input,textarea,select,summary,[contenteditable],[role="button"]')
   )
     return;
-  if (event.code === 'Escape' && layoutEditing) {
-    event.preventDefault();
-    stopLayoutEdit();
-  } else if (event.code === 'Space') {
+  if (event.code === 'Space') {
     event.preventDefault();
     play.click();
   } else if (event.code === 'ArrowRight') {
+    if (layoutEditing) stopLayoutEdit();
     setPlaying(false);
     setFrame(frame + FPS);
   } else if (event.code === 'ArrowLeft') {
+    if (layoutEditing) stopLayoutEdit();
     setPlaying(false);
     setFrame(frame - FPS);
   }
 });
 function applyTheme(next: Theme, persist: boolean): void {
+  // A theme is a normal renderer transition; never carry a frozen shot camera.
+  if (layoutEditing) stopLayoutEdit();
   theme = next;
   if (persist) {
     pinnedTheme = theme;
@@ -541,7 +553,6 @@ function applyTheme(next: Theme, persist: boolean): void {
       fps: FPS,
       detailAt: currentDetailAt,
       theme,
-      ...(editCamera ? { cameraOverride: editCamera } : {}),
     });
     setFrame(frame, false);
   } else paintEmptyStage(emptyMessage);
@@ -629,7 +640,7 @@ canvas.addEventListener('pointerdown', (event) => {
   );
   const previous = id ? currentLayout.get(id) : undefined;
   if (!id || !previous) return;
-  dragging = { pointerId: event.pointerId, id, previous: { ...previous } };
+  dragging = { pointerId: event.pointerId, id, previous: { ...previous }, start: point };
   canvas.setPointerCapture(event.pointerId);
   event.preventDefault();
 });
@@ -638,9 +649,21 @@ function moveLayoutNode(event: PointerEvent): void {
       dragging.pointerId !== event.pointerId) return;
   const point = pointerLocation(event);
   if (!point) return;
-  const moved = graphPosition(point, currentFrameState.cameraResolved, renderer.frameSpec);
+  // Preserve the initial grab offset. A stationary pointerup is a no-op.
+  const factor = currentFrameState.cameraResolved.scale * renderer.frameSpec.typeScale;
+  const dx = (point.x - dragging.start.x) / factor;
+  const dy = (point.y - dragging.start.y) / factor;
+  if (!Number.isFinite(dx) || !Number.isFinite(dy)) return;
+  const moved = dx === 0 && dy === 0
+    ? { ...dragging.previous }
+    : {
+        x: roundCoordinate(dragging.previous.x + dx),
+        y: roundCoordinate(dragging.previous.y + dy),
+      };
   if (!Number.isFinite(moved.x) || !Number.isFinite(moved.y)) return;
-  currentLayout.set(dragging.id, { x: roundCoordinate(moved.x), y: roundCoordinate(moved.y) });
+  const old = currentLayout.get(dragging.id);
+  if (old?.x === moved.x && old?.y === moved.y) return;
+  currentLayout.set(dragging.id, moved);
   setFrame(frame, false);
   updateLayoutControls();
   event.preventDefault();
@@ -689,6 +712,7 @@ lightQuery?.addEventListener?.('change', (event) => {
 // Headless frame export and independent frame inspection; no recording or animation state.
 window.renderAt = (f) => {
   if (!renderer || !Number.isInteger(f) || f < 0 || f >= totalFrames) return false;
+  if (layoutEditing) stopLayoutEdit();
   setPlaying(false);
   setFrame(f);
   return true;
