@@ -58,7 +58,10 @@ ADR 003 step 5 is split into two reviewable batches:
 
 Workspace architecture follow-up (after step 5b, in separate reviewable PRs):
 - [x] **Playback Core:** move frame clock, play/pause/seek transitions, shot-marker time math and UI timestamp formatting into DOM-free `apps/studio/src/playback-model.ts`; retain the existing director timeline as authoritative and the workspace as the animation scheduler. Pure unit regressions added (stacked PR pending local/full-browser verification).
-- [ ] **Workspace Views:** extract shot navigation, playback controls, diagnostics and transcript DOM adapters. Keep one shared DOM test harness and verify key workflows in a real browser, including changes to a11y within a shot.
+- [ ] **Workspace Views:** keep playback and timing rules in the pure model, and put DOM presentation behind focused adapters. Mark complete after batch 2 is merged and locally verified.
+  - [x] **Batch 1 — Playback & Shot Views:** merged PR #17; stable shot buttons, safe titles and derived playback labels.
+  - [ ] **Batch 2 — Diagnostics & Transcript Views:** pending draft review and local validation. Dedicated diagnostic DOM adapter; `DisplayList.a11y`-only transcript and live region; pure semantic snapshots detect within-shot reveals and backward seeks without repeated announcements. Reuses the shared VM harness and adds Chromium regression assertions.
+  - **B2 gate:** verify both batches together, then mark Workspace Views complete before beginning source verification, narration and 1080p film work.
 
 After step 5b comes the first source-verified 60–90 s film. Audio synchronization and independent MP4 subtitle streams remain B2 work. Audio synchronization and independent MP4 subtitle streams remain B2 work.
 

@@ -25,6 +25,7 @@ export default tseslint.config(
       'tests/layout-editor-model.test.mjs',
       'tests/position-tool.test.mjs',
       'tests/playback-model.test.mjs',
+      'tests/transcript-model.test.mjs',
       'tests/helpers/**/*.mjs',
     ],
     extends: [js.configs.recommended],

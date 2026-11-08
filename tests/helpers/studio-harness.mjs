@@ -32,6 +32,9 @@ export function makeStudio({
   light = false,
   missingId,
   wrongId,
+  // Test-only way to provide a frame with incremental a11y semantics while
+  // continuing to exercise studio.ts through this shared simulated DOM.
+  transformFrameText,
 } = {}) {
   const elements = new Map();
   const jobs = new Map();
@@ -54,6 +57,7 @@ export function makeStudio({
       this.disabled = false;
       this.hidden = false;
       this._text = '';
+      this.textWrites = 0;
       this.classList = {
         add: (name) => (this.className = [...new Set([...this.className.split(' ').filter(Boolean), name])].join(' ')),
         remove: (name) => (this.className = this.className.split(' ').filter((part) => part !== name).join(' ')),
@@ -67,6 +71,7 @@ export function makeStudio({
       this._text = '';
     }
     set textContent(value) {
+      this.textWrites++;
       this._text = String(value);
       this.children = [];
     }
@@ -207,18 +212,17 @@ export function makeStudio({
         const state = options.cameraOverride
           ? { ...evaluated, cameraResolved: { ...options.cameraOverride } }
           : evaluated;
-        return {
-          state,
-          list: composeFrame(state, {
-            graph,
-            positions: layout,
-            frame,
-            fps: options.fps,
-            measure,
-            style: domainStyle(graph.domain),
-            detailAt: options.detailAt,
-          }),
-        };
+        const list = composeFrame(state, {
+          graph,
+          positions: layout,
+          frame,
+          fps: options.fps,
+          measure,
+          style: domainStyle(graph.domain),
+          detailAt: options.detailAt,
+        });
+        if (transformFrameText) list.a11y = transformFrameText(list.a11y, frame, graph);
+        return { state, list };
       };
       return { renderFrame: (frame) => renderFrameWithList(frame).state, renderFrameWithList, frameSpec: DEFAULT_FRAME_SPEC };
     },

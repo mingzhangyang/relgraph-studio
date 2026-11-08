@@ -1,10 +1,5 @@
 import { readFileSync } from 'node:fs';
 import { transpileModule, ModuleKind, ScriptTarget } from 'typescript';
-import {
-  diagnosticHeading,
-  diagnosticText,
-  NO_DIAGNOSTICS_TEXT,
-} from '../../packages/core/src/director/load.ts';
 import { FILM_FONT_FACES, filmFontQuery } from '../../packages/render/src/fonts.ts';
 import {
   editableNodes,
@@ -42,6 +37,8 @@ import {
   resetPlaybackView,
 } from '../../apps/studio/src/playback-view.ts';
 import { createShotsView } from '../../apps/studio/src/shots-view.ts';
+import { createDiagnosticsView } from '../../apps/studio/src/diagnostics-view.ts';
+import { createTranscriptView } from '../../apps/studio/src/transcript-view.ts';
 
 // VM tests exercise the actual TypeScript workspace against a minimal simulated DOM.
 // The imported dependencies are supplied explicitly by each harness.
@@ -57,9 +54,6 @@ export function studioSource() {
 // Pure helpers the workspace imports, supplied as-is to every VM harness so
 // harnesses only stub what touches the canvas, network or storage.
 export const studioImports = {
-  diagnosticHeading,
-  diagnosticText,
-  NO_DIAGNOSTICS_TEXT,
   FILM_FONT_FACES,
   filmFontQuery,
   editableNodes,
@@ -89,4 +83,6 @@ export const studioImports = {
   renderPlaybackStatus,
   resetPlaybackView,
   createShotsView,
+  createDiagnosticsView,
+  createTranscriptView,
 };
