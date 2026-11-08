@@ -258,6 +258,60 @@ button { cursor: pointer; }
   background: var(--stage-bg);
 }
 
+.layout-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+.layout-tools button {
+  padding: 7px 11px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font-size: 12px;
+  font-weight: 600;
+}
+.layout-tools button:hover:not(:disabled) { background: var(--surface-hover); }
+.layout-tools button[aria-pressed="true"] { border-color: var(--gold); background: var(--gold-soft); }
+.layout-tools button:disabled { opacity: .4; cursor: default; }
+.layout-note { flex: 1 1 220px; color: var(--muted); font-size: 12px; }
+.layout-editor {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 8px;
+  padding: 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+}
+.layout-editor[hidden] { display: none; }
+.layout-editor label { color: var(--muted); }
+.layout-editor select, .layout-editor input {
+  min-height: 36px;
+  padding: 6px;
+  max-width: 100%;
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+}
+.layout-editor select { min-width: 125px; max-width: 240px; }
+.layout-editor input { width: 115px; }
+.layout-editor button {
+  min-height: 36px;
+  padding: 6px 12px;
+  background: var(--gold-soft);
+  border: 1px solid var(--gold);
+  border-radius: var(--radius-sm);
+}
+.layout-editor :disabled { opacity: .45; cursor: default; }
+#stage.is-layout-editing { cursor: grab; touch-action: none; }
+#stage.is-layout-editing:active { cursor: grabbing; }
+
 /* ---------- Transport ---------- */
 .transport {
   display: flex;
