@@ -477,30 +477,35 @@ test('frame specs keep the graph safe area on stage and bands tall enough for th
 });
 
 
+
 test('opt-in camera override freezes authoring gestures without changing default film frames', () => {
   const example = examples[0];
   const canvas = measuringCanvas();
+  const frame = 48;
   const base = createCanvasRenderer(canvas, example.graph, example.layout, { theme: 'light' });
-  const before = base.displayListAt(0);
-  const original = base.renderFrame(0).cameraResolved;
-  const override = { ...original };
+  const before = base.displayListAt(frame);
+  const original = directorFrameAt(example.graph, example.layout, frame, 24, {
+    fit: cameraFitFor(DEFAULT_FRAME_SPEC),
+  }).cameraResolved;
+  const override = { ...original, x: original.x + 125 };
   const edited = createCanvasRenderer(canvas, example.graph, example.layout, {
-    theme: 'light', cameraOverride: override,
+    theme: 'light',
+    cameraOverride: override,
   });
-  const first = edited.renderFrame(0);
-  assert.deepEqual(first.cameraResolved, override);
-  const nodeId = first.view.nodes[0].id;
+  const frozen = edited.displayListAt(frame);
+  assert.notDeepEqual(frozen, before, 'camera override changes only this opt-in rendering');
+  const nodeId = example.graph.nodes[0].id;
   const oldPosition = { ...example.layout.get(nodeId) };
   try {
     example.layout.set(nodeId, { x: oldPosition.x + 75, y: oldPosition.y + 40 });
-    assert.deepEqual(edited.renderFrame(0).cameraResolved, override);
+    assert.notDeepEqual(edited.displayListAt(frame), frozen, 'node movement is drawn under the fixed camera');
   } finally {
     example.layout.set(nodeId, oldPosition);
   }
   const unchanged = createCanvasRenderer(canvas, example.graph, example.layout, {
     theme: 'light',
   });
-  assert.deepEqual(unchanged.displayListAt(0), before);
+  assert.deepEqual(unchanged.displayListAt(frame), before);
   assert.throws(
     () => createCanvasRenderer(canvas, example.graph, example.layout, {
       cameraOverride: { x: 0, y: 0, scale: Number.NaN },
