@@ -8,7 +8,13 @@ export const defaultJobs = (): number => Math.max(1, Math.min(availableParalleli
 
 export const USAGE = `用法：
   relgraph validate <file> [--json]
+  relgraph layout <file> [--seed N] [--write | --out output.json]
   relgraph render <file> (--out film.mp4 | --frames out/%05d.png) [选项]
+
+layout 选项：
+  --seed <N>             无符号 32 位整数，固定种子（默认 0）
+  --write                验证后原子写回原文件；默认仅预览，不修改
+  --out <file.json>      写入新文件；目标已存在时拒绝覆盖
 
 render 选项：
   --out <file.mp4>        用 FFmpeg 编码为 H.264 MP4（yuv420p，BT.709）
@@ -30,6 +36,13 @@ export interface ValidateCommand {
   file: string;
   json: boolean;
 }
+export interface LayoutCommand {
+  command: 'layout';
+  file: string;
+  seed: number;
+  write: boolean;
+  out?: string;
+}
 export interface RenderCommand {
   command: 'render';
   file: string;
@@ -44,7 +57,7 @@ export interface RenderCommand {
   ffmpeg?: string;
 }
 export type Command =
-  ValidateCommand | RenderCommand | { command: 'help' } | { command: 'version' };
+  ValidateCommand | LayoutCommand | RenderCommand | { command: 'help' } | { command: 'version' };
 
 function integer(name: string, value: string | undefined, min: number): number | undefined {
   if (value === undefined) return undefined;
@@ -65,7 +78,7 @@ export function parseCommand(argv: readonly string[]): Command {
   if (command === undefined || command === '--help' || command === '-h' || command === 'help')
     return { command: 'help' };
   if (command === '--version' || command === '-v') return { command: 'version' };
-  if (command !== 'validate' && command !== 'render')
+  if (command !== 'validate' && command !== 'layout' && command !== 'render')
     throw new UsageError(`未知命令 ${JSON.stringify(command)}`);
   let parsed;
   try {
@@ -76,7 +89,13 @@ export function parseCommand(argv: readonly string[]): Command {
       options:
         command === 'validate'
           ? { json: { type: 'boolean', default: false } }
-          : {
+          : command === 'layout'
+            ? {
+                seed: { type: 'string', default: '0' },
+                write: { type: 'boolean', default: false },
+                out: { type: 'string' },
+              }
+            : {
               out: { type: 'string' },
               frames: { type: 'string' },
               'frame-spec': { type: 'string', default: 'landscape-1080p' },
@@ -95,6 +114,16 @@ export function parseCommand(argv: readonly string[]): Command {
   if (positionals.length !== 1) throw new UsageError(`${command} 需要且只需要一个文件参数`);
   const file = positionals[0];
   if (command === 'validate') return { command, file, json: values.json === true };
+  if (command === 'layout') {
+    const seedValue = values.seed;
+    if (typeof seedValue !== 'string' || !/^\d+$/.test(seedValue) || Number(seedValue) > 0xffffffff)
+      throw new UsageError('--seed 需要 0–4294967295 之间的整数');
+    const out = typeof values.out === 'string' ? values.out : undefined;
+    if (values.write && out !== undefined)
+      throw new UsageError('layout 的 --write 和 --out 不能同时使用');
+    if (out === '') throw new UsageError('--out 不能为空');
+    return { command, file, seed: Number(seedValue), write: values.write === true, ...(out !== undefined ? { out } : {}) };
+  }
   const str = (key: string): string | undefined => {
     const value = (values as Record<string, unknown>)[key];
     return typeof value === 'string' ? value : undefined;

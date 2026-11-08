@@ -52,7 +52,11 @@
   - [x] Measured against `main`: 16/16 browser mid-shot frames and 28/32 golden frames byte-identical; the 4 changed are biology mid-draw frames
   - [x] 44 golden frames including 12 mid-reveal samples; both MP4s re-exported and validated by `check:export`
 
-Next is **ADR 003 step 5**: seeded deterministic `relgraph layout` with write-back and a limited position-tweak tool, followed by the first source-verified 60–90 s film. Audio synchronization and independent MP4 subtitle streams remain B2 work.
+ADR 003 step 5 is split into two reviewable batches:
+- [x] **Step 5a:** seeded deterministic `relgraph layout` for missing coordinates, with opt-in validated source write-back and regression tests (PR pending).
+- [ ] **Step 5b:** director workspace position tweaks and explicit JSON export; default playback remains unchanged.
+
+After step 5b comes the first source-verified 60–90 s film. Audio synchronization and independent MP4 subtitle streams remain B2 work. Audio synchronization and independent MP4 subtitle streams remain B2 work.
 
 ## B2 — Source-verified film
 
