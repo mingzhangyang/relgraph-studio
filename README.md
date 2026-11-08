@@ -61,6 +61,21 @@ npm run relgraph -- layout story.json --seed 42 --write # atomically replace sou
 
 The same document and seed produce the same coordinates regardless of JSON node ordering. Literature positions go to `characters[].position`; biology positions go to `entities[].position` and `processes[].position`. The CLI validates the serialized document before writing, refuses to overwrite an existing `--out` destination, and leaves the source untouched by default. The existing `layoutGraph` fallback still handles imported documents without saved coordinates in the player.
 
+## Director workspace architecture
+
+For ADR 003 step 5, position authoring is deliberately split across three boundaries:
+
+- `layout-editor-model.ts`: **DOM-free** editing policy, visible-node eligibility, relative drag math, coordinate validation, changes/reset. Test the model directly without browser mocks.
+- `position-tool.ts` and `@relgraph/render`: pure coordinate transforms and shared camera projection.
+- `layout-editor-view.ts`: **DOM-only** rendering for the edit panel, node dropdown, status text and coordinate inputs.
+- `studio.ts`: browser event adapters (pointer capture, form input reading, redraw, file download), delegating to model + view. No duplicate drag or visibility math.
+
+The shared `tests/helpers/studio-harness.mjs` covers cross-component DOM integration; older standalone workspace DOM stubs have been migrated to it. Render/video golden tests exercise the composition layer separately. The broader playback/diagnostics DOM separation remains a later, standalone refactor rather than part of step 5.
+
+## Tweak positions in the director workspace
+
+The **调整节点位置** button pauses playback and locks the current shot camera. Drag visible nodes to refine coordinates; hidden nodes cannot be selected. Keyboard-only users can choose a currently visible node in **当前可见节点**, type numeric **X 坐标** / **Y 坐标**, then activate **应用坐标**. The selector does not reveal future or hidden nodes. Press **Esc** to leave edit mode. Seeking or changing themes also returns to normal camera behavior. **重置调整** restores the original layout. Edits live only in the current browser session until **导出含坐标 JSON** explicitly saves a new source file. The exported source contains every resolved position (including fallback coordinates for previously missing nodes) and is validated by the same source validator used for imports. Import the exported file or render it with the CLI to reuse the edited positions. Exiting edit mode, switching themes, and ordinary playback do not persist anything.
+
 ## Export a film without a browser
 
 The `relgraph` command line (`packages/cli`) renders a document with the same composition code as the workspace, drawn by [skia-canvas](https://skia-canvas.org) instead of a browser canvas, and encodes the frames with FFmpeg.
