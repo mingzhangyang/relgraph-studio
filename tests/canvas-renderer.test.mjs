@@ -73,8 +73,20 @@ test('display lists and detail lookup respect hidden targets and rewinding domai
   const entering = renderer.displayListAt(24);
   assert.ok(!texts(entering).includes('FUTURE PERSON'));
   assert.deepEqual(entering.a11y.nodes, ['Known', 'FUTURE PERSON']);
+  // The detail card waits for its node like the label does; its text is
+  // accessible from the start of the reveal.
+  assert.ok(!texts(entering).includes('FUTURE BIOGRAPHY'));
+  assert.deepEqual(entering.a11y.detail, { label: 'FUTURE PERSON', summary: 'FUTURE BIOGRAPHY' });
+  // 10 frames into the 0.6 s reveal: progress 0.694, past halfway, card fading in.
+  const fading = renderer.displayListAt(34);
+  const card = fading.items.find(
+    (item) => item.type === 'group' && JSON.stringify(item).includes('FUTURE BIOGRAPHY'),
+  );
+  assert.ok(card, 'card drawn as a fading group');
+  assert.ok(Math.abs(card.alpha - (10 / 14.4 - 0.5) * 2) < 1e-9, `card alpha ${card.alpha}`);
   const revealed = renderer.displayListAt(40);
   assert.deepEqual(calls, [
+    ['future', 2],
     ['future', 2],
     ['future', 2],
   ]);

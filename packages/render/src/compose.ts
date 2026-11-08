@@ -629,7 +629,7 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
         textWidth = card.w - u(50),
         titleFont = serif(20, 600),
         bodyFont = sans(15);
-      items.push(
+      const cardItems: DisplayItem[] = [
         {
           type: 'path',
           d: [['RR', card.x, card.y, card.w, card.h, u(12)]],
@@ -653,7 +653,14 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
           font: bodyFont,
           fill: P.cardText,
         })),
-      );
+      ];
+      // The card follows its node's label: drawn only past halfway through the
+      // node's reveal and faded in over the second half. Its text is
+      // accessible from the start of the reveal, like the node itself.
+      const cardProgress = nodeProgress(node.id);
+      if (cardProgress >= 1) items.push(...cardItems);
+      else if (cardProgress > 0.5)
+        items.push({ type: 'group', alpha: (cardProgress - 0.5) * 2, items: cardItems });
       detail = { label: node.label, summary };
     }
   }
