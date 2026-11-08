@@ -104,15 +104,18 @@ const examples = await Promise.all(
   }),
 );
 
-/** Shot midpoints, mid-transition frames from the second shot, and the last frame. */
+/** Shot midpoints, mid-reveal and mid-transition frames from the second shot, and the last frame. */
 function keyFrames(graph, fps) {
   const at = (sec) => Math.ceil(sec * fps - 1e-9);
   const frames = [];
   let start = 0;
   graph.scenes.forEach((scene, index) => {
     const transition = Math.min((scene.transitionMs ?? 1200) / 1000, scene.durationSec);
-    if (index > 0)
+    if (index > 0) {
+      // Halfway through the 0.6 s node reveal of objects entering at this shot.
+      frames.push({ shot: index + 1, kind: 'reveal', frame: at(start + 0.3) });
       frames.push({ shot: index + 1, kind: 'transition', frame: at(start + transition / 2) });
+    }
     frames.push({ shot: index + 1, kind: 'mid', frame: at(start + scene.durationSec / 2) });
     start += scene.durationSec;
   });
