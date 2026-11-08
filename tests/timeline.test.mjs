@@ -4,7 +4,7 @@ import literature from '../examples/honglou-provisional.relgraph.json' with { ty
 import biology from '../examples/biology-signaling-synthetic.json' with { type: 'json' };
 import { loadDocument } from '../packages/core/src/director/load.ts';
 import { layoutGraph } from '../packages/core/src/director/layout.ts';
-import { frameStateAt } from '../packages/core/src/graph/core.ts';
+import { frameStateAt, frameStateAtSecond } from '../packages/core/src/graph/core.ts';
 import {
   compileTimeline,
   captionOpacity,
@@ -338,6 +338,82 @@ test('short captions appear on their only sampled frame', () => {
     ],
   };
   assert.ok(compileTimeline(twoFrameGraph, 24).captions[1].fadeInSec > 0);
+});
+
+test('timeline compiles many shots from the known projection with inherited domain times', () => {
+  const graph = {
+    domain: 'literature',
+    meta: { title: 'Long presentation' },
+    timeline: { unit: 'chapter' },
+    nodes: [
+      { id: 'safe', label: 'Safe', kind: 'person' },
+      { id: 'future', label: 'Future', kind: 'person', visibility: { from: 2 } },
+    ],
+    edges: [{ id: 'meeting', source: 'safe', target: 'future', kind: 'friendship' }],
+    groups: [],
+    scenes: Array.from({ length: 800 }, (_, index) => ({
+      id: `shot-${index}`,
+      title: `Shot ${index}`,
+      narration: `Narration ${index}`,
+      durationSec: 0.125,
+      ...(index === 0 || index === 450 ? { domainAt: 1 } : {}),
+      ...(index === 200 ? { domainAt: 2 } : {}),
+      camera: { focusNodeId: 'future' },
+      highlight: { nodeIds: ['future'] },
+    })),
+  };
+  const original = structuredClone(graph);
+  const timeline = compileTimeline(graph, 24);
+  assert.deepEqual(graph, original, 'compiling must not change the source');
+  assert.equal(timeline.shots.length, 800);
+  assert.equal(timeline.durationSec, 100);
+  for (const index of [0, 1, 199, 200, 201, 449, 450, 799]) {
+    const shot = timeline.shots[index];
+    const reference = frameStateAtSecond(graph, (shot.startSec + shot.endSec) / 2);
+    assert.deepEqual(shot.scene, reference.playback.scene, `scene ${index}`);
+    assert.deepEqual(shot.view, reference.view, `projection ${index}`);
+    assert.deepEqual(shot.overlay, reference.overlay, `overlay ${index}`);
+    assert.deepEqual(timeline.camera[index].value, reference.camera);
+    assert.deepEqual(timeline.highlight[index].value, reference.highlight);
+    assert.equal(shot.domainAt, reference.playback.domainAt);
+  }
+  assert.equal(timeline.shots[199].scene.redacted, true);
+  assert.equal(timeline.shots[200].scene.redacted, false);
+  assert.equal(timeline.shots[450].scene.redacted, true);
+});
+
+test('fractional shot boundaries never hide the only sampled caption frame', () => {
+  const cases = [
+    { durations: [0.1, 1 / 15, 1 / 24], frame: 4 },
+    { durations: [0.1, 7 / 30, 1 / 24, 1], frame: 8 },
+  ];
+  for (const { durations, frame } of cases) {
+    const graph = {
+      domain: 'literature',
+      meta: { title: 'Fractional boundaries' },
+      nodes: [],
+      edges: [],
+      groups: [],
+      scenes: durations.map((durationSec, index) => ({
+        id: `shot-${index}`,
+        title: `Caption ${index}`,
+        narration: `Narration ${index}`,
+        durationSec,
+      })),
+    };
+    const timeline = compileTimeline(graph, 24);
+    const second = frame / 24;
+    assert.equal(timelinePlaybackAt(timeline, second).index, 2);
+    assert.ok(timeline.captions[2].inSec > second, 'rounding places the start after the sample');
+    assert.equal(timeline.captions[2].fadeInSec, 0);
+    assert.equal(captionOpacity(timeline, 1, second), 0, 'previous shot has ended');
+    assert.equal(captionOpacity(timeline, 2, second), 1, 'the current caption must be fully visible');
+    assert.equal(
+      directorFrameAt(graph, new Map(), frame, 24, { timeline }).captionOpacity,
+      1,
+      'renderer-facing director state must show the caption',
+    );
+  }
 });
 
 test('hidden targets with inherited Object property names have zero reveal progress', () => {

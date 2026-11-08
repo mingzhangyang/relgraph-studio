@@ -1,4 +1,4 @@
-import { frameStateAtSecond } from '../graph/core.js';
+import { projectFrameScene } from '../graph/core.js';
 import type {
   FrameScene,
   ProjectedVisualGraph,
@@ -86,6 +86,7 @@ export function compileTimeline(graph: VisualGraph, fps = 24): FilmTimeline {
   const shots: CompiledShot[] = [];
   let startSec = 0;
   let correction = 0;
+  let inheritedDomainAt: number | null = null;
   let previousNodes = new Set<string>();
   let previousEdges = new Set<string>();
 
@@ -94,13 +95,16 @@ export function compileTimeline(graph: VisualGraph, fps = 24): FilmTimeline {
     const adjusted = source.durationSec - correction;
     const endSec = startSec + adjusted;
     correction = endSec - startSec - adjusted;
-    const state = frameStateAtSecond(graph, startSec + (endSec - startSec) / 2);
-    const scene = state.playback.scene;
+    if (source.domainAt !== undefined) inheritedDomainAt = source.domainAt;
+    // This shot and its inherited domain time are already known; do not call
+    // sceneAtSecond for each shot (it would rebuild the full prefix sums).
+    const state = projectFrameScene(graph, source, index, inheritedDomainAt);
+    const scene = state.scene;
     if (!scene) throw new Error('Unable to compile a presentation shot');
     const shot: CompiledShot = {
       startSec,
       endSec,
-      domainAt: state.playback.domainAt,
+      domainAt: inheritedDomainAt,
       scene,
       view: state.view,
       overlay: state.overlay,
@@ -268,8 +272,13 @@ export function revealProgress(
 /** A11y includes text from fade-in start; opacity affects only pixels. */
 export function captionOpacity(timeline: FilmTimeline, sceneIndex: number, second: number): number {
   const cue = timeline.captions[sceneIndex];
-  if (!cue || second < cue.inSec || second >= cue.outSec) return 0;
-  const fadeIn = cue.fadeInSec > 0 ? (second - cue.inSec) / cue.fadeInSec : 1;
+  if (!cue) return 0;
+  // Match timelinePlaybackAt's half-open scene boundaries: decimal summation
+  // can put an authored start slightly after the frame assigned to that shot.
+  const tolerance =
+    8 * Number.EPSILON * Math.max(1, Math.abs(second), Math.abs(cue.inSec), Math.abs(cue.outSec));
+  if (second < cue.inSec - tolerance || second >= cue.outSec - tolerance) return 0;
+  const fadeIn = cue.fadeInSec > 0 ? Math.max(0, second - cue.inSec) / cue.fadeInSec : 1;
   const fadeOut = cue.fadeOutSec > 0 ? (cue.outSec - second) / cue.fadeOutSec : 1;
   return clamp(Math.min(1, fadeIn, fadeOut));
 }
