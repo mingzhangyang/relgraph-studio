@@ -1,5 +1,6 @@
 /** Stable source-level entry points shared by the studio and renderer. */
 export * from './director/layout.js';
+export * from './director/seeded-layout.js';
 export * from './director/load.js';
 export * from './director/state.js';
 export * from './director/timeline.js';

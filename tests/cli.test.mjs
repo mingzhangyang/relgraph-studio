@@ -67,7 +67,6 @@ test('invalid arguments are usage errors', () => {
     ['render', 's.json', '--out', 'a.mp4', '--unknown'],
     ['validate'],
     ['validate', 'a.json', 'b.json'],
-    ['layout', 'a.json'],
   ])
     assert.throws(() => parseCommand(argv), UsageError, argv.join(' '));
   assert.deepEqual(parseCommand([]), { command: 'help' });
@@ -201,4 +200,17 @@ test('renderFilm rejects non-integer ranges and job counts before writing', asyn
     { jobs: Number.NaN },
   ])
     await assert.rejects(renderFilm({ ...base, ...bad }), RenderError, JSON.stringify(bad));
+});
+
+// Layout argument contract must remain opt-in for destructive writes.
+test('layout command requires an explicit write mode', () => {
+  assert.deepEqual(parseCommand(['layout', 'story.json']), {
+    command: 'layout', file: 'story.json', seed: 0, write: false,
+  });
+  assert.deepEqual(parseCommand(['layout', 'story.json', '--seed', '42', '--write']), {
+    command: 'layout', file: 'story.json', seed: 42, write: true,
+  });
+  for (const flags of [['--seed', '-1'], ['--seed', '4294967296'], ['--seed', 'xyz'], ['--write', '--out', 'x.json']]) {
+    assert.throws(() => parseCommand(['layout', 'story.json', ...flags]), UsageError);
+  }
 });

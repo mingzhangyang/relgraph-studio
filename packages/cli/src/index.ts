@@ -3,9 +3,11 @@ import { SKIA_CANVAS_VERSION } from '@relgraph/render/skia';
 import { parseCommand, USAGE, UsageError, type Command } from './args.js';
 import { formatDiagnostics, loadFile } from './document.js';
 import { renderFilm, RenderError } from './render.js';
+import { layoutFile, LayoutError } from './layout.js';
 
 export { parseCommand, USAGE, UsageError, type Command } from './args.js';
 export { documentStrings, formatDiagnostics, loadFile } from './document.js';
+export { layoutFile, writeBackPositions, LayoutError, type LayoutRequest, type LayoutSummary } from './layout.js';
 export { encodeArgs, findFfmpeg, FfmpegError } from './ffmpeg.js';
 export { frameFile, isFramePattern } from './frames.js';
 export {
@@ -65,6 +67,18 @@ export async function main(argv: readonly string[], io: Io = defaultIo): Promise
         : formatDiagnostics(result),
     );
     return result.valid ? 0 : 1;
+  }
+  if (command.command === 'layout') {
+    try {
+      const result = await layoutFile(command);
+      io.stdout('布局：' + result.total + ' 个节点，补全 ' + result.missing + ' 个坐标\n');
+      io.stdout(result.written ? '→ ' + result.written + '\n' : '未修改文件；使用 --write 或 --out 保存布局。\n');
+      return 0;
+    } catch (error) {
+      if (!(error instanceof LayoutError)) throw error;
+      io.stderr('relgraph layout：' + error.message + '\n');
+      return 1;
+    }
   }
   try {
     let lastShown = 0;
