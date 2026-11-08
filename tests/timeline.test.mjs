@@ -294,3 +294,78 @@ test('one-pass reveal state equals the per-object reference on every frame', () 
     }
   }
 });
+
+test('short captions appear on their only sampled frame', () => {
+  const graph = {
+    domain: 'literature',
+    meta: { title: 'Short film' },
+    nodes: [],
+    edges: [],
+    groups: [],
+    scenes: [
+      { id: 'opening', title: 'Opening', durationSec: 1 },
+      { id: 'flash', title: 'Flash', narration: 'One frame', durationSec: 1 / 24 },
+      { id: 'ending', title: 'Ending', durationSec: 1 },
+    ],
+  };
+  const timeline = compileTimeline(graph, 24);
+  assert.equal(timeline.captions[1].fadeInSec, 0);
+  assert.equal(timeline.captions[1].fadeOutSec, 0);
+  assert.equal(captionOpacity(timeline, 1, 1), 1);
+  assert.equal(directorFrameAt(graph, new Map(), 24, 24, { timeline }).captionOpacity, 1);
+  assert.equal(captionOpacity(timeline, 1, 23 / 24), 0);
+  assert.equal(captionOpacity(timeline, 1, 25 / 24), 0);
+  assert.ok(timeline.captions[0].fadeInSec > 0);
+
+  // This shot is longer than 1 / fps but starts between sample times,
+  // leaving exactly one sampled frame at 25 / 24.
+  const offsetGraph = {
+    ...graph,
+    scenes: [
+      { id: 'opening', title: 'Opening', durationSec: 1 + 0.25 / 24 },
+      { id: 'ending', title: 'Ending', durationSec: 1.1 / 24 },
+    ],
+  };
+  const offsetTimeline = compileTimeline(offsetGraph, 24);
+  assert.equal(offsetTimeline.captions[1].fadeInSec, 0);
+  assert.equal(captionOpacity(offsetTimeline, 1, 25 / 24), 1);
+
+  const twoFrameGraph = {
+    ...graph,
+    scenes: [
+      { id: 'opening', title: 'Opening', durationSec: 1 },
+      { id: 'ending', title: 'Ending', durationSec: 2 / 24 },
+    ],
+  };
+  assert.ok(compileTimeline(twoFrameGraph, 24).captions[1].fadeInSec > 0);
+});
+
+test('hidden targets with inherited Object property names have zero reveal progress', () => {
+  const graph = {
+    domain: 'literature',
+    meta: { title: 'Unusual identifiers' },
+    timeline: { unit: 'chapter' },
+    nodes: [
+      { id: 'visible', label: 'Visible', kind: 'person' },
+      { id: 'constructor', label: 'Hidden', kind: 'person', visibility: { from: 2 } },
+    ],
+    edges: [{ id: 'toString', source: 'visible', target: 'constructor', kind: 'friendship' }],
+    groups: [],
+    scenes: [
+      { id: 'before', title: 'Before', durationSec: 1, domainAt: 1 },
+      { id: 'after', title: 'After', durationSec: 1, domainAt: 2 },
+    ],
+  };
+  const timeline = compileTimeline(graph);
+  for (const [kind, id] of [
+    ['node', 'constructor'],
+    ['node', '__proto__'],
+    ['edge', 'toString'],
+    ['edge', 'hasOwnProperty'],
+  ]) {
+    assert.equal(revealProgress(timeline, kind, id, 0), 0);
+    assert.equal(typeof revealProgress(timeline, kind, id, 0), 'number');
+  }
+  assert.equal(revealProgress(timeline, 'node', 'constructor', 1.9), 1);
+  assert.equal(revealProgress(timeline, 'edge', 'toString', 1.9), 1);
+});

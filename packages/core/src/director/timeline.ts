@@ -114,13 +114,24 @@ export function compileTimeline(graph: VisualGraph, fps = 24): FilmTimeline {
     });
     highlight.push({ atSec: startSec, value: state.highlight, ease: 'smooth' });
     domainTime.push({ atSec: startSec, value: shot.domainAt, ease: 'hold' });
+    // Count actual frame-grid samples in the half-open shot, rather than
+    // rounding its duration: a fractional start can leave just one sample.
+    // With no second sample to complete a fade, display the caption in full.
+    const firstSampleFrame = Math.ceil(
+      (startSec - 8 * Number.EPSILON * Math.max(1, Math.abs(startSec))) * fps,
+    );
+    const afterLastSampleFrame = Math.ceil(
+      (endSec - 8 * Number.EPSILON * Math.max(1, Math.abs(endSec))) * fps,
+    );
+    const singleFrame = afterLastSampleFrame - firstSampleFrame <= 1;
+    const captionFadeSec = singleFrame ? 0 : Math.min(CAPTION_FADE_SEC, scene.durationSec / 2);
     captions.push({
       inSec: startSec,
       outSec: endSec,
       title: scene.title,
       text: scene.narration,
-      fadeInSec: Math.min(CAPTION_FADE_SEC, scene.durationSec / 2),
-      fadeOutSec: Math.min(CAPTION_FADE_SEC, scene.durationSec / 2),
+      fadeInSec: captionFadeSec,
+      fadeOutSec: captionFadeSec,
     });
 
     const nextNodes = new Set(state.view.nodes.map((node) => node.id));
@@ -250,7 +261,8 @@ export function revealProgress(
   const view = timeline.shots[timelinePlaybackAt(timeline, second).index]?.view;
   if (!view) return 0;
   const state = revealStateAt(timeline, view, second);
-  return (kind === 'node' ? state.nodes : state.edges)[targetId] ?? 0;
+  const progress = kind === 'node' ? state.nodes : state.edges;
+  return Object.hasOwn(progress, targetId) ? progress[targetId] : 0;
 }
 
 /** A11y includes text from fade-in start; opacity affects only pixels. */
