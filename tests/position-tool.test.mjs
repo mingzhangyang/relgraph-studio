@@ -158,6 +158,71 @@ test('an off-centre stationary tap does not change a node, and dragging preserve
   assert.equal(app.node('layoutReset').disabled, false);
 });
 
+test('pointercancel rolls back only the interrupted drag and preserves earlier edits', async () => {
+  const app = makeStudio();
+  await app.ready;
+  assert.equal(app.window.renderAt(48), true);
+  const frame = app.window.studioFrame();
+  const node = frame.view.nodes.find((n) => frame.reveal.nodes[n.id] > 0.5);
+  assert.ok(node);
+  const original = literature.characters.find((n) => n.id === node.id)?.position;
+  assert.ok(original);
+  const stage = app.node('stage');
+  const pointer = (pointerId, x, y) => ({
+    pointerId, isPrimary: true, pointerType: 'mouse', button: 0, clientX: x, clientY: y,
+  });
+
+  await app.node('layoutToggle').click();
+  const firstStart = screenPosition(original, frame.cameraResolved, DEFAULT_FRAME_SPEC);
+  await stage.dispatch('pointerdown', pointer(41, firstStart.x, firstStart.y));
+  assert.equal(stage.hasPointerCapture(41), true);
+  await stage.dispatch('pointermove', pointer(41, firstStart.x + 32, firstStart.y - 20));
+  await stage.dispatch('pointerup', pointer(41, firstStart.x + 32, firstStart.y - 20));
+  assert.equal(stage.hasPointerCapture(41), false);
+  assert.equal(app.node('layoutReset').disabled, false, 'committed drag is dirty');
+
+  await app.node('layoutExport').click();
+  const firstExport = JSON.parse(await app.blobs.at(-1).text());
+  const committed = firstExport.characters.find((n) => n.id === node.id).position;
+  assert.notDeepEqual(committed, original, 'first drag must change the position');
+
+  const secondStart = screenPosition(committed, frame.cameraResolved, DEFAULT_FRAME_SPEC);
+  await stage.dispatch('pointerdown', pointer(42, secondStart.x, secondStart.y));
+  assert.equal(stage.hasPointerCapture(42), true);
+  await stage.dispatch('pointermove', pointer(42, secondStart.x + 40, secondStart.y + 19));
+  assert.notEqual(Number(app.node('layoutX').value), committed.x, 'second drag takes effect');
+
+  await stage.dispatch('pointercancel', { pointerId: 999 });
+  assert.equal(stage.hasPointerCapture(42), true, 'unrelated pointer cannot cancel this drag');
+  await stage.dispatch('pointercancel', { pointerId: 42 });
+  assert.equal(stage.hasPointerCapture(42), false, 'cancellation releases pointer capture');
+  assert.deepEqual(
+    { x: Number(app.node('layoutX').value), y: Number(app.node('layoutY').value) },
+    committed,
+    'cancellation restores the position before this drag',
+  );
+  assert.equal(app.node('layoutReset').disabled, false, 'the earlier adjustment stays dirty');
+  assert.match(app.node('layoutNote').textContent, /未保存/);
+
+  await app.node('layoutExport').click();
+  const restored = JSON.parse(await app.blobs.at(-1).text());
+  assert.deepEqual(
+    restored.characters.find((n) => n.id === node.id).position,
+    committed,
+    'export retains the earlier edit, not the cancelled motion or original position',
+  );
+
+  await app.node('layoutReset').click();
+  assert.equal(app.node('layoutReset').disabled, true);
+  const cleanStart = screenPosition(original, frame.cameraResolved, DEFAULT_FRAME_SPEC);
+  await stage.dispatch('pointerdown', pointer(43, cleanStart.x, cleanStart.y));
+  await stage.dispatch('pointermove', pointer(43, cleanStart.x + 25, cleanStart.y + 12));
+  assert.equal(app.node('layoutReset').disabled, false);
+  await stage.dispatch('pointercancel', { pointerId: 43 });
+  assert.equal(stage.hasPointerCapture(43), false);
+  assert.equal(app.node('layoutReset').disabled, true, 'cancelled first drag stays clean');
+});
+
 test('Escape works while controls have focus; arrows and renderAt release frozen camera', async () => {
   const app = makeStudio();
   await app.ready;
@@ -166,8 +231,10 @@ test('Escape works while controls have focus; arrows and renderAt release frozen
   const key = (code, target = null) => app.window.dispatch('keydown', {
     code, target, preventDefault() {}, 
   });
-  key('Escape', app.node('layoutToggle'));
-  assert.equal(app.node('layoutToggle').attributes['aria-pressed'], 'false');
+  const focusedToggle = app.node('layoutToggle');
+  focusedToggle.focusSelector = 'button';
+  key('Escape', focusedToggle);
+  assert.equal(focusedToggle.attributes['aria-pressed'], 'false');
   await app.node('layoutToggle').click();
   key('ArrowRight');
   assert.equal(app.node('layoutToggle').attributes['aria-pressed'], 'false');
