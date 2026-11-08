@@ -28,10 +28,20 @@ import {
   advancePlayback,
   createPlaybackState,
   formatPlaybackTime,
+  playbackDisplay,
   seekPlayback,
   setPlaybackRunning,
   shotMarkers,
 } from '../../apps/studio/src/playback-model.ts';
+import {
+  disablePlaybackView,
+  enablePlaybackView,
+  renderPlaybackControls,
+  renderPlaybackFrame,
+  renderPlaybackStatus,
+  resetPlaybackView,
+} from '../../apps/studio/src/playback-view.ts';
+import { createShotsView } from '../../apps/studio/src/shots-view.ts';
 
 // VM tests exercise the actual TypeScript workspace against a minimal simulated DOM.
 // The imported dependencies are supplied explicitly by each harness.
@@ -68,7 +78,15 @@ export const studioImports = {
   advancePlayback,
   createPlaybackState,
   formatPlaybackTime,
+  playbackDisplay,
   seekPlayback,
   setPlaybackRunning,
   shotMarkers,
+  disablePlaybackView,
+  enablePlaybackView,
+  renderPlaybackControls,
+  renderPlaybackFrame,
+  renderPlaybackStatus,
+  resetPlaybackView,
+  createShotsView,
 };
