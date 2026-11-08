@@ -208,3 +208,16 @@ test('display list is frame-only: random seek and prior rendering do not change 
   const later = renderer.displayListAt(128);
   assert.ok(later.a11y.nodes.includes(processLabel));
 });
+
+test('the last caption holds to the final frame while earlier ones fade out', () => {
+  for (const graph of [literaryGraph, biologyGraph]) {
+    const timeline = compileTimeline(graph, 24);
+    const lastIndex = timeline.captions.length - 1;
+    const lastFrame = Math.round(timeline.durationSec * 24) - 1;
+    assert.equal(timeline.captions[lastIndex].fadeOutSec, 0);
+    assert.equal(captionOpacity(timeline, lastIndex, lastFrame / 24), 1);
+    // The final frame of an earlier shot is still fading out.
+    const earlierEnd = Math.round(timeline.captions[0].outSec * 24) - 1;
+    assert.ok(captionOpacity(timeline, 0, earlierEnd / 24) < 1);
+  }
+});

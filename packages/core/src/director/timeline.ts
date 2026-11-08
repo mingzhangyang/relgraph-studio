@@ -158,6 +158,10 @@ export function compileTimeline(graph: VisualGraph, fps = 24): FilmTimeline {
     previousEdges = nextEdges;
     startSec = endSec;
   }
+  // The film ends on its last caption at full opacity instead of fading it
+  // away on the final frames.
+  const last = captions.at(-1);
+  if (last) last.fadeOutSec = 0;
   return {
     fps,
     durationSec: startSec,
@@ -238,7 +242,7 @@ export function revealProgress(
 export function captionOpacity(timeline: FilmTimeline, sceneIndex: number, second: number): number {
   const cue = timeline.captions[sceneIndex];
   if (!cue || second < cue.inSec || second >= cue.outSec) return 0;
-  return clamp(
-    Math.min(1, (second - cue.inSec) / cue.fadeInSec, (cue.outSec - second) / cue.fadeOutSec),
-  );
+  const fadeIn = cue.fadeInSec > 0 ? (second - cue.inSec) / cue.fadeInSec : 1;
+  const fadeOut = cue.fadeOutSec > 0 ? (cue.outSec - second) / cue.fadeOutSec : 1;
+  return clamp(Math.min(1, fadeIn, fadeOut));
 }
