@@ -323,7 +323,9 @@ const literatureFrames = Math.ceil(
       window.renderAt(1);
       return (
         document.activeElement === buttons[0] &&
-        buttons.every((button, index) => button === document.querySelectorAll('#shots .shot')[index])
+        buttons.every(
+          (button, index) => button === document.querySelectorAll('#shots .shot')[index],
+        )
       );
     });
     assert.equal(stableShots, true, 'shot buttons and focus survive frame renders');
