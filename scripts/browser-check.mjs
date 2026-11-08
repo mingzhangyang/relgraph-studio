@@ -352,7 +352,7 @@ const literatureFrames = Math.ceil(
     );
   });
 
-  await check('transcript reflects safe frame text without repeated live-region mutations', async () => {
+  await check('transcript stays safe without duplicate live mutations', async () => {
     const unchanged = await page.evaluate(() => {
       window.renderAt(0);
       const transcript = document.getElementById('transcript');
@@ -360,7 +360,11 @@ const literatureFrames = Math.ceil(
       const firstChild = transcript.firstElementChild;
       const transcriptObserver = new MutationObserver(() => {});
       const liveObserver = new MutationObserver(() => {});
-      transcriptObserver.observe(transcript, { childList: true, characterData: true, subtree: true });
+      transcriptObserver.observe(transcript, {
+        childList: true,
+        characterData: true,
+        subtree: true,
+      });
       liveObserver.observe(status, { childList: true, characterData: true, subtree: true });
       window.renderAt(0);
       window.renderAt(1);
