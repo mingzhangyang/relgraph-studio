@@ -92,6 +92,30 @@ export function shotMarkers(
   });
 }
 
+/** Pure display fields derived from the existing playback clock and scene. */
+export interface PlaybackDisplay {
+  readonly frameValue: string;
+  readonly fillPercent: number;
+  readonly ariaValueText: string;
+  readonly frameLabel: string;
+  readonly timeLabel: string;
+}
+
+export function playbackDisplay(
+  state: Pick<PlaybackState, 'frame' | 'fps' | 'totalFrames'>,
+  sceneIndex: number,
+  totalSec: number,
+): PlaybackDisplay {
+  const positionSec = state.frame / state.fps;
+  return {
+    frameValue: String(state.frame),
+    fillPercent: state.totalFrames > 1 ? (state.frame / (state.totalFrames - 1)) * 100 : 0,
+    ariaValueText: formatPlaybackTime(positionSec) + '，分镜 ' + (sceneIndex + 1),
+    frameLabel: 'FRAME ' + state.frame,
+    timeLabel: formatPlaybackTime(positionSec) + ' / ' + formatPlaybackTime(totalSec),
+  };
+}
+
 export function formatPlaybackTime(seconds: number): string {
   const t = Math.max(0, seconds);
   const minutes = Math.floor(t / 60);

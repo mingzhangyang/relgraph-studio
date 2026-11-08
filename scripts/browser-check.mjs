@@ -314,10 +314,42 @@ const literatureFrames = Math.ceil(
         if (other !== index) assert.equal(label, `分镜 ${other + 1}`, 'non-active titles hidden');
       });
     }
-    // Shortcuts are ignored while a control has focus.
+    // The real browser must retain a focused shot element across frame updates,
+    // and metadata for future shots must not leak through hidden DOM/ARIA attributes.
+    const stableShots = await page.evaluate(() => {
+      const buttons = [...document.querySelectorAll('#shots .shot')];
+      buttons[0].focus();
+      window.renderAt(0);
+      window.renderAt(1);
+      return (
+        document.activeElement === buttons[0] &&
+        buttons.every(
+          (button, index) => button === document.querySelectorAll('#shots .shot')[index],
+        )
+      );
+    });
+    assert.equal(stableShots, true, 'shot buttons and focus survive frame renders');
+    await page.evaluate(() => window.renderAt(0));
+    const inactiveMarkup = await page.locator('#shots .shot:not(.active)').evaluateAll(
+      (buttons) => buttons.map((button) => button.outerHTML).join(' '),
+    );
+    for (const future of documents.literature.presentation.slice(1)) {
+      assert.equal(
+        inactiveMarkup.includes(future.title),
+        false,
+        'future shot names excluded from DOM and ARIA',
+      );
+    }
+    // Shortcuts are ignored while a control has focus, regardless of the
+    // current frame left by the preceding focus/spoiler checks.
+    const frameBeforeShortcut = await frameNumber(page);
     await shotButtons.nth(0).focus();
     await page.keyboard.press('ArrowRight');
-    assert.equal(await frameNumber(page), literatureShots.at(-1).start);
+    assert.equal(
+      await frameNumber(page),
+      frameBeforeShortcut,
+      'focused shot button suppresses global ArrowRight seek',
+    );
   });
 
   await check('play, pause, Space and play-from-end behave like a player', async () => {

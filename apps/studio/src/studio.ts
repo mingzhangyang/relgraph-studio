@@ -9,7 +9,7 @@ import {
 import { layoutGraph } from '@relgraph/core';
 import { frameCount } from '@relgraph/core';
 import type { Bio } from '@relgraph/core';
-import type { DirectorFrameState, ScenePlayback, FrameScene, VisualGraph } from '@relgraph/core';
+import type { DirectorFrameState, VisualGraph } from '@relgraph/core';
 import {
   createCanvasRenderer,
   FILM_FONT_FACES,
@@ -39,11 +39,21 @@ import {
 import {
   advancePlayback,
   createPlaybackState,
-  formatPlaybackTime,
+  playbackDisplay,
   seekPlayback,
   setPlaybackRunning,
   shotMarkers,
 } from './playback-model.js';
+import {
+  disablePlaybackView,
+  enablePlaybackView,
+  renderPlaybackControls,
+  renderPlaybackFrame,
+  renderPlaybackStatus,
+  resetPlaybackView,
+  type WorkspaceStatus,
+} from './playback-view.js';
+import { createShotsView } from './shots-view.js';
 
 declare global {
   interface Window {
@@ -53,7 +63,6 @@ declare global {
 }
 
 type Theme = 'dark' | 'light';
-type Status = 'playing' | 'ready' | 'loading' | 'error';
 type DetailAt = (id: string, at: number | null) => Bio | undefined;
 type ExampleId = 'exampleLiterature' | 'exampleBiology';
 
@@ -86,6 +95,15 @@ const canvas = requiredElement('stage', HTMLCanvasElement),
   dropzone = requiredElement('dropzone', HTMLLabelElement),
   shots = $('shots'),
   strip = $('sceneStrip');
+const playbackControls = {
+  play,
+  restart,
+  scrubber,
+  status: $('status'),
+  frameNumber: $('frameNumber'),
+  time: $('time'),
+};
+const shotsView = createShotsView(document, { shots, strip });
 const layoutControls = {
   canvas,
   toggle: layoutToggle,
@@ -100,7 +118,7 @@ const layoutControls = {
 let graph: VisualGraph | null = null;
 let renderer: CanvasRenderer | null = null;
 let playback = createPlaybackState(1, FPS);
-let announcedScene = -1,
+let transcriptScene = -1,
   requestSerial = 0,
   loading = false;
 let animationId: number | null = null;
@@ -134,17 +152,10 @@ function savedTheme(): Theme | null {
 // still sticks for this page when storage is unavailable or setItem fails.
 let pinnedTheme = savedTheme();
 let theme: Theme = pinnedTheme || (lightQuery?.matches ? 'light' : 'dark');
-const setStatus = (text: string, state: Status): void => {
-  $('status').textContent = text;
-  $('status').setAttribute('data-state', state);
-};
-const stamp = formatPlaybackTime;
+const setStatus = (text: string, state: WorkspaceStatus): void =>
+  renderPlaybackStatus(playbackControls, text, state);
 function syncPlaybackControls(): void {
-  play.textContent = playback.playing ? '❚❚' : '▶';
-  play.setAttribute('aria-label', playback.playing ? '暂停' : '播放');
-  play.className = 'icon-button play' + (playback.playing ? ' is-playing' : '');
-  if (playback.playing) setStatus('播放中', 'playing');
-  else if (renderer && !loading) setStatus('就绪', 'ready');
+  renderPlaybackControls(playbackControls, playback, Boolean(renderer), loading);
 }
 function setPlaying(next: boolean): void {
   if (animationId !== null) cancelAnimationFrame(animationId);
@@ -204,62 +215,11 @@ function renderDiagnostics(result: LoadResult): void {
     $('warnings').className = 'ok';
   }
 }
-function buildShots(graph: VisualGraph): void {
-  shots.replaceChildren();
-  strip.replaceChildren();
-  const markers = shotMarkers(graph.scenes, playback.totalFrames, FPS);
-  graph.scenes.forEach((scene, index) => {
-    const marker = markers[index];
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'shot';
-    button.setAttribute('aria-label', `跳转至分镜 ${index + 1}`);
-    const top = document.createElement('small'),
-      number = document.createElement('span');
-    number.className = 'shot-index';
-    number.textContent = String(index + 1).padStart(2, '0');
-    top.append(number, ` ${stamp(marker.startSec)} · ${scene.durationSec}s`);
-    const progress = document.createElement('span');
-    progress.className = 'shot-progress';
-    progress.setAttribute('aria-hidden', 'true');
-    const title = document.createElement('strong');
-    title.textContent = `分镜 ${index + 1}`;
-    button.append(progress, top, title);
-    const target = marker.targetFrame;
-    button.addEventListener('click', () => {
-      if (layoutEditing) stopLayoutEdit();
-      if (loading) return;
-      setPlaying(false);
-      setFrame(target);
-    });
-    shots.append(button);
-    const segment = document.createElement('span');
-    segment.className = 'segment';
-    segment.setAttribute('style', `flex-grow:${scene.durationSec}`);
-    strip.append(segment);
-  });
-}
-function renderShots(activeIndex: number, activeTitle: string): void {
-  // Update existing buttons so focus survives both seeking and playback.
-  for (const [index, button] of [...shots.children].entries()) {
-    const active = index === activeIndex;
-    button.className = 'shot' + (active ? ' active' : '');
-    if (active) button.setAttribute('aria-current', 'step');
-    else button.removeAttribute('aria-current');
-    // Scene order need not match chapter/stage order: reveal only this title.
-    if (button.lastElementChild)
-      button.lastElementChild.textContent = active ? activeTitle : `分镜 ${index + 1}`;
-  }
-  for (const [index, segment] of [...strip.children].entries())
-    segment.className =
-      'segment' + (index === activeIndex ? ' active' : index < activeIndex ? ' done' : '');
-}
-function updateShotProgress(p: ScenePlayback<FrameScene>): void {
-  for (const [index, button] of [...shots.children].entries())
-    button.children[0]?.setAttribute(
-      'style',
-      `transform:scaleX(${index === p.index ? p.progress : 0})`,
-    );
+function seekToShot(targetFrame: number): void {
+  if (layoutEditing) stopLayoutEdit();
+  if (loading) return;
+  setPlaying(false);
+  setFrame(targetFrame);
 }
 /** The scene transcript and live region are sourced only from drawn-frame a11y. */
 function updateTranscript(a11y: FrameText): void {
@@ -300,14 +260,7 @@ function setFrame(next: number, updatePosition = true): DirectorFrameState | und
     p = state.playback;
   if (!p.scene) throw new Error('A loaded film must have a current scene');
   currentFrameState = state;
-  scrubber.value = String(frame);
-  scrubber.setAttribute(
-    'style',
-    `--fill:${playback.totalFrames > 1 ? (frame / (playback.totalFrames - 1)) * 100 : 0}%`,
-  );
-  scrubber.setAttribute('aria-valuetext', `${stamp(frame / FPS)}，分镜 ${p.index + 1}`);
-  $('frameNumber').textContent = `FRAME ${frame}`;
-  $('time').textContent = `${stamp(frame / FPS)} / ${stamp(p.totalSec)}`;
+  renderPlaybackFrame(playbackControls, playbackDisplay(playback, p.index, p.totalSec));
   $('currentShot').textContent =
     list.a11y.scene.title + (list.a11y.scene.narration ? '\n' + list.a11y.scene.narration : '');
   $('domainTime').textContent =
@@ -316,12 +269,12 @@ function setFrame(next: number, updatePosition = true): DirectorFrameState | und
       : `领域时间：${state.view.timeline?.unit || '时点'} ${p.domainAt}`;
   $('nodeCount').textContent = String(list.a11y.nodes.length);
   $('edgeCount').textContent = String(list.a11y.relations.length);
-  if (p.index !== announcedScene) {
-    announcedScene = p.index;
-    renderShots(p.index, list.a11y.scene.title);
+  shotsView.render(p.index, list.a11y.scene.title, p.progress);
+  // Transcript updates are addressed by the second, post-merge Views PR.
+  if (p.index !== transcriptScene) {
+    transcriptScene = p.index;
     updateTranscript(list.a11y);
   }
-  updateShotProgress(p);
   return state;
 }
 function paintEmptyStage(message: string): void {
@@ -359,15 +312,9 @@ function clearStudio(): void {
   currentFrameState = null;
   currentDetailAt = () => undefined;
   playback = createPlaybackState(1, FPS);
-  announcedScene = -1;
-  play.disabled = true;
-  restart.disabled = true;
-  scrubber.disabled = true;
-  scrubber.max = '0';
-  scrubber.value = '0';
-  scrubber.setAttribute('style', '--fill:0%');
-  shots.replaceChildren();
-  strip.replaceChildren();
+  transcriptScene = -1;
+  resetPlaybackView(playbackControls);
+  shotsView.clear();
   paintEmptyStage('请选择示例或导入有效的 JSON 数据');
   $('currentShot').textContent = '—';
   $('domainTime').textContent = '领域时间：—';
@@ -377,8 +324,6 @@ function clearStudio(): void {
   $('sourceNote').textContent = '—';
   $('transcript').replaceChildren();
   $('sceneDescription').textContent = '没有已加载的有效数据。';
-  $('time').textContent = '00:00.00 / 00:00.00';
-  $('frameNumber').textContent = 'FRAME 0';
 }
 function applyResult(result: LoadResult, name: string, sourceText?: string): void {
   loading = false;
@@ -404,11 +349,8 @@ function applyResult(result: LoadResult, name: string, sourceText?: string): voi
     theme,
   });
   playback = createPlaybackState(frameCount(graph, FPS), FPS);
-  scrubber.max = String(playback.totalFrames - 1);
-  scrubber.disabled = false;
-  play.disabled = false;
-  restart.disabled = false;
-  buildShots(graph);
+  enablePlaybackView(playbackControls, playback.totalFrames);
+  shotsView.build(shotMarkers(graph.scenes, playback.totalFrames, FPS), seekToShot);
   $('sceneCount').textContent = String(graph.scenes.length);
   $('sourceNote').textContent =
     graph.meta.sourceNote || graph.meta.description || '此数据未提供来源说明。';
@@ -420,9 +362,7 @@ function beginLoad(): number {
   if (layoutEditing) stopLayoutEdit();
   loading = true;
   setPlaying(false);
-  play.disabled = true;
-  restart.disabled = true;
-  scrubber.disabled = true;
+  disablePlaybackView(playbackControls);
   layoutToggle.disabled = true;
   layoutReset.disabled = true;
   layoutExport.disabled = true;
