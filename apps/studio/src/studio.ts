@@ -659,6 +659,8 @@ function rebuildRenderer(): void {
 }
 function stopLayoutEdit(): void {
   if (!layoutEditing) return;
+  if (dragging && canvas.hasPointerCapture(dragging.pointerId))
+    canvas.releasePointerCapture(dragging.pointerId);
   dragging = null;
   layoutEditing = false;
   editCamera = null;

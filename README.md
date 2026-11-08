@@ -63,7 +63,7 @@ The same document and seed produce the same coordinates regardless of JSON node 
 
 ## Tweak positions in the director workspace
 
-The **调整节点位置** button pauses playback and locks the current shot camera. Drag visible nodes to refine coordinates; hidden nodes cannot be selected. **重置调整** restores the original layout. Edits live only in the current browser session until **导出含坐标 JSON** explicitly saves a new source file. The exported source contains every resolved position (including fallback coordinates for previously missing nodes) and is validated by the same source validator used for imports. Import the exported file or render it with the CLI to reuse the edited positions. Exiting edit mode, switching themes, and ordinary playback do not persist anything.
+The **调整节点位置** button pauses playback and locks the current shot camera. Drag visible nodes to refine coordinates; hidden nodes cannot be selected. Keyboard-only users can choose a currently visible node in **当前可见节点**, type numeric **X 坐标** / **Y 坐标**, then activate **应用坐标**. The selector does not reveal future or hidden nodes. Press **Esc** to leave edit mode. Seeking or changing themes also returns to normal camera behavior. **重置调整** restores the original layout. Edits live only in the current browser session until **导出含坐标 JSON** explicitly saves a new source file. The exported source contains every resolved position (including fallback coordinates for previously missing nodes) and is validated by the same source validator used for imports. Import the exported file or render it with the CLI to reuse the edited positions. Exiting edit mode, switching themes, and ordinary playback do not persist anything.
 
 ## Export a film without a browser
 
