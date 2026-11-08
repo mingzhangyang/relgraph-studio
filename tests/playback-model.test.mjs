@@ -38,6 +38,27 @@ test('first tick establishes baseline and repaint preserves fractional progress'
   assert.ok(Math.abs(clock.position - 2.4) < 1e-10);
 });
 
+test('regressing and duplicate ticks never double-count elapsed time', () => {
+  let clock = setPlaybackRunning(createPlaybackState(100), true, true);
+  clock = advancePlayback(clock, 1000);
+  clock = advancePlayback(clock, 1050);
+  assert.equal(clock.frame, 1);
+  const beforeRegression = clock;
+  clock = advancePlayback(clock, 1010);
+  assert.equal(clock, beforeRegression, 'regressing tick must not move the clock baseline');
+  assert.equal(advancePlayback(clock, 1050), clock, 'duplicate timestamp has no effect');
+  clock = advancePlayback(clock, 1100);
+  assert.equal(clock.frame, 2, '100 ms of actual elapsed time is 2.4 frames at 24 FPS');
+  assert.ok(Math.abs(clock.position - 2.4) < 1e-10);
+  assert.equal(clock.lastTickMs, 1100);
+  const advanced = clock;
+  clock = advancePlayback(clock, 1070);
+  assert.equal(clock, advanced, 'a second regression must not shift the baseline');
+  clock = advancePlayback(clock, 1150);
+  assert.equal(clock.frame, 3);
+  assert.ok(Math.abs(clock.position - 3.6) < 1e-10);
+});
+
 test('pausing, scrubbing and resuming produce deterministic frame state', () => {
   let clock = setPlaybackRunning(seekPlayback(createPlaybackState(100), 20), true, true);
   clock = advancePlayback(clock, 1000);
