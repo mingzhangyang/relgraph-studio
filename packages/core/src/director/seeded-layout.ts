@@ -16,7 +16,9 @@ const hash = (value: string, seed: number): number => {
   }
   return state / 0x100000000;
 };
-const rounded = (value: number): number => Math.round(value * 100) / 100;
+// Keep extreme but finite source coordinates finite (value * 100 may overflow).
+const rounded = (value: number): number =>
+  Math.abs(value) > Number.MAX_VALUE / 100 ? value : Math.round(value * 100) / 100;
 const compareIds = (a: { id: string }, b: { id: string }): number =>
   a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
 
@@ -136,7 +138,14 @@ export function layoutMissingNodes(
       )
         break;
       const offset = angle + attempt * 2.399963229728653;
-      const radius = 72 * Math.sqrt(attempt + 1);
+      // At huge coordinates a 72-unit offset is smaller than one ULP.
+      // Scale by the local float spacing, otherwise every candidate collides.
+      const spacing = Math.max(
+        72,
+        Math.abs(point.x) * Number.EPSILON * 4,
+        Math.abs(point.y) * Number.EPSILON * 4,
+      );
+      const radius = spacing * Math.sqrt(attempt + 1);
       chosen = {
         x: rounded(point.x + Math.cos(offset) * radius),
         y: rounded(point.y + Math.sin(offset) * radius),
