@@ -1,5 +1,10 @@
 # Encoder failure must not abort native render workers
 
+**Merged:** PR #20 is on main as `a051d019d68ce2482de9e0ce4605fbb4f1862743`,
+with the exact tree of the verified correction. The separate B2 data branch
+has resumed from that main; its [current report](../datasets/honglou-chengjia-opening/VERIFICATION.md)
+supersedes the historical paused-branch status below.
+
 During B2-1 verification after PR #19 merged, the previously unexplained
 fake-encoder child failure was reproduced independently of Vitest. This is a
 runtime defect: forcibly terminating an active Skia worker can abort the entire

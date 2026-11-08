@@ -1,0 +1,767 @@
+{
+  "schemaVersion": "0.1",
+  "meta": {
+    "title": "红楼梦开篇：一条亲缘之路",
+    "work": "红楼梦（程甲本）",
+    "author": "曹雪芹（前八十回通常归属）；程伟元、高鹗整理刊行程甲本",
+    "description": "B2-1 第2–3回亲缘子集；6人9边，8条原文直证、1条支系推导。附带3秒数据校验时间轴，非正式影片。",
+    "language": "zh-CN",
+    "sourceNote": "1791程甲本第一册，固定转录修订并核对关键扫描段。来源见同目录 sources.json / VERIFICATION.md。仅至第三回；不含后续命运。"
+  },
+  "timeline": {
+    "unit": "回",
+    "total": 3,
+    "label": "程甲本正文回目"
+  },
+  "characters": [
+    {
+      "id": "lin-ruhai",
+      "name": "林如海",
+      "aliases": ["林海"],
+      "importance": 3,
+      "bio": {
+        "summary": "名海，字如海；林家主人，黛玉的父亲。",
+        "quotes": [
+          {
+            "text": "這林如海姓林名海，表字如海",
+            "at": 2,
+            "context": "lin-name · 叙述者介绍盐政林如海；如海是字，海是名。 https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F58&oldid=2441196"
+          },
+          {
+            "text": "只嫡妻賈氏生得一女，乳名黛玉",
+            "at": 2,
+            "context": "lin-daughter · 林如海家世段；父女、母女与嫡妻身份同段明确。 https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F58&oldid=2441196"
+          }
+        ]
+      },
+      "firstAppearance": 2,
+      "position": {
+        "x": -210,
+        "y": 90
+      },
+      "extra": {
+        "provenance": {
+          "status": "verified-direct",
+          "confidence": "high-within-selected-edition",
+          "evidenceIds": ["lin-name", "lin-daughter"],
+          "safeRevealAt": 2,
+          "reviewedThrough": 3,
+          "firstMention": {
+            "at": 2,
+            "kind": "named",
+            "note": "按正文首次明确指称计，不计回目、神话对应或同名物件；不是首次登台。",
+            "evidenceIds": ["lin-name"]
+          },
+          "aliasEvidence": [
+            {
+              "value": "林海",
+              "at": 2,
+              "evidenceIds": ["lin-name"]
+            }
+          ],
+          "firstOnstage": {
+            "status": "not-systematically-audited",
+            "note": "本批核实的是首次明确提及回目；不把第一回神话人物等同于后文人物初登场。"
+          },
+          "summaryEvidenceIds": ["lin-name", "lin-daughter"]
+        }
+      }
+    },
+    {
+      "id": "jia-min",
+      "name": "贾敏",
+      "aliases": [],
+      "importance": 3,
+      "bio": {
+        "summary": "林公夫人，黛玉的母亲，贾政的胞妹。",
+        "quotes": [
+          {
+            "text": "目今你貴東家林公之夫人，卽榮府中赦政二公之胞妹，在家時名字喚賈敏",
+            "at": 2,
+            "context": "min-identity · 冷子兴明确把林公夫人、贾氏、贾敏及贾政胞妹连接起来。 https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F65&oldid=2441203"
+          },
+          {
+            "text": "只嫡妻賈氏生得一女，乳名黛玉",
+            "at": 2,
+            "context": "lin-daughter · 林如海家世段；父女、母女与嫡妻身份同段明确。 https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F58&oldid=2441196"
+          }
+        ]
+      },
+      "firstAppearance": 2,
+      "position": {
+        "x": -210,
+        "y": -90
+      },
+      "extra": {
+        "provenance": {
+          "status": "verified-direct",
+          "confidence": "high-within-selected-edition",
+          "evidenceIds": ["min-identity", "lin-daughter"],
+          "safeRevealAt": 2,
+          "reviewedThrough": 3,
+          "firstMention": {
+            "at": 2,
+            "kind": "identified-as-jia-wife-before-naming",
+            "note": "按正文首次明确指称计，不计回目、神话对应或同名物件；不是首次登台。",
+            "evidenceIds": ["lin-daughter", "min-identity"]
+          },
+          "aliasEvidence": [],
+          "firstOnstage": {
+            "status": "not-systematically-audited",
+            "note": "本批核实的是首次明确提及回目；不把第一回神话人物等同于后文人物初登场。"
+          },
+          "summaryEvidenceIds": ["lin-daughter", "min-identity"]
+        }
+      }
+    },
+    {
+      "id": "lin-daiyu",
+      "name": "林黛玉",
+      "aliases": ["黛玉"],
+      "importance": 5,
+      "bio": {
+        "summary": "林家之女，乳名黛玉；第二回述其母贾氏去世。",
+        "quotes": [
+          {
+            "text": "只嫡妻賈氏生得一女，乳名黛玉",
+            "at": 2,
+            "context": "lin-daughter · 林如海家世段；父女、母女与嫡妻身份同段明确。 https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F58&oldid=2441196"
+          },
+          {
+            "text": "目今你貴東家林公之夫人，卽榮府中赦政二公之胞妹，在家時名字喚賈敏",
+            "at": 2,
+            "context": "min-identity · 冷子兴明确把林公夫人、贾氏、贾敏及贾政胞妹连接起来。 https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F65&oldid=2441203"
+          },
+          {
+            "text": "不料女學生之母賈氏夫人一病而亡",
+            "at": 2,
+            "context": "min-death · 第二回叙述贾氏去世；只作已揭示背景，不扩展后事。 https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F58&oldid=2441196"
+          },
+          {
+            "text": "這林黛玉嘗𦗟得母親說",
+            "at": 3,
+            "context": "daiyu-full-name · 第三回叙述者使用完整姓名；第二回已以林家之女、乳名黛玉明确提及人物。 https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F69&oldid=2441207"
+          }
+        ]
+      },
+      "firstAppearance": 2,
+      "position": {
+        "x": -20,
+        "y": 150
+      },
+      "extra": {
+        "provenance": {
+          "status": "verified-direct",
+          "confidence": "high-within-selected-edition",
+          "evidenceIds": ["lin-daughter", "min-identity", "min-death", "daiyu-full-name"],
+          "safeRevealAt": 2,
+          "reviewedThrough": 3,
+          "firstMention": {
+            "at": 2,
+            "kind": "named-by-given-name",
+            "note": "按正文首次明确指称计，不计回目、神话对应或同名物件；不是首次登台。",
+            "evidenceIds": ["lin-daughter"]
+          },
+          "aliasEvidence": [
+            {
+              "value": "黛玉",
+              "at": 2,
+              "evidenceIds": ["lin-daughter"]
+            }
+          ],
+          "firstOnstage": {
+            "status": "not-systematically-audited",
+            "note": "本批核实的是首次明确提及回目；不把第一回神话人物等同于后文人物初登场。"
+          },
+          "summaryEvidenceIds": ["lin-daughter", "min-identity", "min-death"],
+          "nameNormalization": "第二回乳名黛玉及林家女儿已确定身份；规范显示为林黛玉，完整连写见第三回，不把第三回当人物初提。"
+        }
+      }
+    },
+    {
+      "id": "jia-mu",
+      "name": "贾母",
+      "aliases": ["史老夫人"],
+      "importance": 3,
+      "bio": {
+        "summary": "荣府史氏太夫人，贾政之母。",
+        "quotes": [
+          {
+            "text": "娶的是金陵世家史侯的小姐爲妻，生了兩個兒子，長名賈赦，次名賈政",
+            "at": 2,
+            "context": "shi-sons · 冷子兴讲荣府：主语为贾代善之妻，后文称太夫人。 https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F61&oldid=2441199"
+          },
+          {
+            "text": "如今代善早已去世，太夫人尙在",
+            "at": 2,
+            "context": "shi-living · 承接史侯小姐及两个儿子的同一段人物指称。 https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F61&oldid=2441199"
+          },
+          {
+            "text": "因史老夫人極愛孫女",
+            "at": 2,
+            "context": "shi-alias · 第二回对同一荣府太夫人的史姓称谓。 https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F65&oldid=2441203"
+          },
+          {
+            "text": "黛玉方拜見了外祖母。當下賈母一一指與黛玉",
+            "at": 3,
+            "context": "grandmother · 叙述者将黛玉的外祖母明确称作贾母。 https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F70&oldid=2441208"
+          }
+        ]
+      },
+      "firstAppearance": 2,
+      "position": {
+        "x": 0,
+        "y": -230
+      },
+      "extra": {
+        "provenance": {
+          "status": "verified-direct",
+          "confidence": "high-within-selected-edition",
+          "evidenceIds": ["shi-sons", "shi-living", "shi-alias", "grandmother"],
+          "safeRevealAt": 2,
+          "reviewedThrough": 3,
+          "firstMention": {
+            "at": 2,
+            "kind": "identified-as-shi-dowager",
+            "note": "按正文首次明确指称计，不计回目、神话对应或同名物件；不是首次登台。",
+            "evidenceIds": ["shi-sons", "shi-living"]
+          },
+          "aliasEvidence": [
+            {
+              "value": "史老夫人",
+              "at": 2,
+              "evidenceIds": ["shi-alias"]
+            }
+          ],
+          "firstOnstage": {
+            "status": "not-systematically-audited",
+            "note": "本批核实的是首次明确提及回目；不把第一回神话人物等同于后文人物初登场。"
+          },
+          "summaryEvidenceIds": ["shi-sons", "shi-living", "shi-alias"],
+          "nameNormalization": "第二回史侯小姐/太夫人/史老夫人为明确指称；显示名用第三回叙述者称谓贾母，不虚构其闺名。"
+        }
+      }
+    },
+    {
+      "id": "jia-zheng",
+      "name": "贾政",
+      "aliases": ["存周"],
+      "importance": 3,
+      "bio": {
+        "summary": "荣府贾政，贾敏的兄长，宝玉之父。",
+        "quotes": [
+          {
+            "text": "娶的是金陵世家史侯的小姐爲妻，生了兩個兒子，長名賈赦，次名賈政",
+            "at": 2,
+            "context": "shi-sons · 冷子兴讲荣府：主语为贾代善之妻，后文称太夫人。 https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F61&oldid=2441199"
+          },
+          {
+            "text": "目今你貴東家林公之夫人，卽榮府中赦政二公之胞妹，在家時名字喚賈敏",
+            "at": 2,
+            "context": "min-identity · 冷子兴明确把林公夫人、贾氏、贾敏及贾政胞妹连接起来。 https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F65&oldid=2441203"
+          },
+          {
+            "text": "方纔說政公已有了一個啣玉之子",
+            "at": 2,
+            "context": "baoyu-father · 雨村回指冷子兴前述衔玉公子；与 baoyu-name 共同定位人物。 https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F65&oldid=2441203"
+          },
+          {
+            "text": "二内兄名政，字存周",
+            "at": 3,
+            "context": "zheng-alias · 林如海向雨村介绍贾政；存周只在第三回以后可用于文案。 https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F68&oldid=2441206"
+          }
+        ]
+      },
+      "firstAppearance": 2,
+      "position": {
+        "x": 210,
+        "y": -90
+      },
+      "extra": {
+        "provenance": {
+          "status": "verified-direct",
+          "confidence": "high-within-selected-edition",
+          "evidenceIds": ["shi-sons", "min-identity", "baoyu-father", "zheng-alias"],
+          "safeRevealAt": 2,
+          "reviewedThrough": 3,
+          "firstMention": {
+            "at": 2,
+            "kind": "named",
+            "note": "按正文首次明确指称计，不计回目、神话对应或同名物件；不是首次登台。",
+            "evidenceIds": ["shi-sons"]
+          },
+          "aliasEvidence": [
+            {
+              "value": "存周",
+              "at": 3,
+              "evidenceIds": ["zheng-alias"]
+            }
+          ],
+          "firstOnstage": {
+            "status": "not-systematically-audited",
+            "note": "本批核实的是首次明确提及回目；不把第一回神话人物等同于后文人物初登场。"
+          },
+          "summaryEvidenceIds": ["shi-sons", "min-identity", "baoyu-name", "baoyu-father"]
+        }
+      }
+    },
+    {
+      "id": "jia-baoyu",
+      "name": "贾宝玉",
+      "aliases": ["宝玉"],
+      "importance": 3,
+      "bio": {
+        "summary": "第二回冷子兴所述贾政的衔玉之子。",
+        "quotes": [
+          {
+            "text": "所以方纔你一說這寳玉",
+            "at": 2,
+            "context": "baoyu-name · 雨村对冷子兴所述衔玉公子的回指；指人物，不是第一回的通灵宝玉物件。 https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F63&oldid=2441201"
+          },
+          {
+            "text": "方纔說政公已有了一個啣玉之子",
+            "at": 2,
+            "context": "baoyu-father · 雨村回指冷子兴前述衔玉公子；与 baoyu-name 共同定位人物。 https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F65&oldid=2441203"
+          },
+          {
+            "text": "這位哥哥比我大一歲，小名就呌寶玉",
+            "at": 3,
+            "context": "baoyu-alias · 承接上一页黛玉关于表兄的话；本批不采用年龄数值。 https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F76&oldid=2441214"
+          }
+        ]
+      },
+      "firstAppearance": 2,
+      "position": {
+        "x": 210,
+        "y": 150
+      },
+      "extra": {
+        "provenance": {
+          "status": "verified-direct",
+          "confidence": "high-within-selected-edition",
+          "evidenceIds": ["baoyu-name", "baoyu-father", "baoyu-alias"],
+          "safeRevealAt": 2,
+          "reviewedThrough": 3,
+          "firstMention": {
+            "at": 2,
+            "kind": "identified-as-jia-zhengs-jade-born-son-before-naming",
+            "note": "按正文首次明确指称计，不计回目、神话对应或同名物件；不是首次登台。",
+            "evidenceIds": ["baoyu-name", "baoyu-father"]
+          },
+          "aliasEvidence": [
+            {
+              "value": "宝玉",
+              "at": 2,
+              "evidenceIds": ["baoyu-name"]
+            }
+          ],
+          "firstOnstage": {
+            "status": "not-systematically-audited",
+            "note": "本批核实的是首次明确提及回目；不把第一回神话人物等同于后文人物初登场。"
+          },
+          "summaryEvidenceIds": ["baoyu-name", "baoyu-father"],
+          "nameNormalization": "第二回以政公衔玉之子及宝玉明确指称；显示名补其明确父系贾姓，不将通灵宝玉物件当作同一人物的首次提及。"
+        }
+      }
+    }
+  ],
+  "relations": [
+    {
+      "id": "lin-marriage",
+      "source": "lin-ruhai",
+      "target": "jia-min",
+      "type": "marriage",
+      "label": "夫妻（生前）",
+      "directed": false,
+      "strength": 2,
+      "polarity": "neutral",
+      "description": "原文直证林公夫人为贾敏；本边表示已叙明的历史婚姻，不暗示贾敏在场或仍健在。",
+      "chapters": {
+        "from": 2
+      },
+      "evidence": [
+        {
+          "text": "只嫡妻賈氏生得一女，乳名黛玉",
+          "at": 2,
+          "context": "lin-daughter · 林如海家世段；父女、母女与嫡妻身份同段明确。 https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F58&oldid=2441196"
+        },
+        {
+          "text": "目今你貴東家林公之夫人，卽榮府中赦政二公之胞妹，在家時名字喚賈敏",
+          "at": 2,
+          "context": "min-identity · 冷子兴明确把林公夫人、贾氏、贾敏及贾政胞妹连接起来。 https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F65&oldid=2441203"
+        },
+        {
+          "text": "不料女學生之母賈氏夫人一病而亡",
+          "at": 2,
+          "context": "min-death · 第二回叙述贾氏去世；只作已揭示背景，不扩展后事。 https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F58&oldid=2441196"
+        }
+      ],
+      "extra": {
+        "provenance": {
+          "status": "verified-direct",
+          "confidence": "high-within-selected-edition",
+          "evidenceIds": ["lin-daughter", "min-identity", "min-death"],
+          "safeRevealAt": 2,
+          "reviewedThrough": 3,
+          "disputedInSelectedPassages": false,
+          "existenceDate": "未给出精确成立日期；chapters 表示读者知情阈值，不是亲缘成立日期。",
+          "evidenceConfirmedAt": 2
+        }
+      }
+    },
+    {
+      "id": "ruhai-daiyu",
+      "source": "lin-ruhai",
+      "target": "lin-daiyu",
+      "type": "family",
+      "label": "父女",
+      "directed": false,
+      "strength": 2,
+      "polarity": "neutral",
+      "description": "林家家世段直接称黛玉为林如海与嫡妻贾氏之女。",
+      "chapters": {
+        "from": 2
+      },
+      "evidence": [
+        {
+          "text": "只嫡妻賈氏生得一女，乳名黛玉",
+          "at": 2,
+          "context": "lin-daughter · 林如海家世段；父女、母女与嫡妻身份同段明确。 https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F58&oldid=2441196"
+        }
+      ],
+      "extra": {
+        "provenance": {
+          "status": "verified-direct",
+          "confidence": "high-within-selected-edition",
+          "evidenceIds": ["lin-daughter"],
+          "safeRevealAt": 2,
+          "reviewedThrough": 3,
+          "disputedInSelectedPassages": false,
+          "existenceDate": "未给出精确成立日期；chapters 表示读者知情阈值，不是亲缘成立日期。",
+          "evidenceConfirmedAt": 2
+        }
+      }
+    },
+    {
+      "id": "min-daiyu",
+      "source": "jia-min",
+      "target": "lin-daiyu",
+      "type": "family",
+      "label": "母女",
+      "directed": false,
+      "strength": 2,
+      "polarity": "neutral",
+      "description": "贾氏与贾敏的身份对应由同回原文明确给出。",
+      "chapters": {
+        "from": 2
+      },
+      "evidence": [
+        {
+          "text": "只嫡妻賈氏生得一女，乳名黛玉",
+          "at": 2,
+          "context": "lin-daughter · 林如海家世段；父女、母女与嫡妻身份同段明确。 https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F58&oldid=2441196"
+        },
+        {
+          "text": "目今你貴東家林公之夫人，卽榮府中赦政二公之胞妹，在家時名字喚賈敏",
+          "at": 2,
+          "context": "min-identity · 冷子兴明确把林公夫人、贾氏、贾敏及贾政胞妹连接起来。 https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F65&oldid=2441203"
+        }
+      ],
+      "extra": {
+        "provenance": {
+          "status": "verified-direct",
+          "confidence": "high-within-selected-edition",
+          "evidenceIds": ["lin-daughter", "min-identity"],
+          "safeRevealAt": 2,
+          "reviewedThrough": 3,
+          "disputedInSelectedPassages": false,
+          "existenceDate": "未给出精确成立日期；chapters 表示读者知情阈值，不是亲缘成立日期。",
+          "evidenceConfirmedAt": 2
+        }
+      }
+    },
+    {
+      "id": "mu-zheng",
+      "source": "jia-mu",
+      "target": "jia-zheng",
+      "type": "family",
+      "label": "母子",
+      "directed": false,
+      "strength": 2,
+      "polarity": "neutral",
+      "description": "史侯小姐所生两子之一为贾政；贾母是该荣府史氏太夫人的通行称谓。",
+      "chapters": {
+        "from": 2
+      },
+      "evidence": [
+        {
+          "text": "娶的是金陵世家史侯的小姐爲妻，生了兩個兒子，長名賈赦，次名賈政",
+          "at": 2,
+          "context": "shi-sons · 冷子兴讲荣府：主语为贾代善之妻，后文称太夫人。 https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F61&oldid=2441199"
+        },
+        {
+          "text": "如今代善早已去世，太夫人尙在",
+          "at": 2,
+          "context": "shi-living · 承接史侯小姐及两个儿子的同一段人物指称。 https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F61&oldid=2441199"
+        },
+        {
+          "text": "因史老夫人極愛孫女",
+          "at": 2,
+          "context": "shi-alias · 第二回对同一荣府太夫人的史姓称谓。 https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F65&oldid=2441203"
+        }
+      ],
+      "extra": {
+        "provenance": {
+          "status": "verified-direct",
+          "confidence": "high-within-selected-edition",
+          "evidenceIds": ["shi-sons", "shi-living", "shi-alias"],
+          "safeRevealAt": 2,
+          "reviewedThrough": 3,
+          "disputedInSelectedPassages": false,
+          "existenceDate": "未给出精确成立日期；chapters 表示读者知情阈值，不是亲缘成立日期。",
+          "evidenceConfirmedAt": 2
+        }
+      }
+    },
+    {
+      "id": "zheng-min",
+      "source": "jia-zheng",
+      "target": "jia-min",
+      "type": "family",
+      "label": "兄妹",
+      "directed": false,
+      "strength": 2,
+      "polarity": "neutral",
+      "description": "原文明说贾敏为赦政二公胞妹；不扩展家谱。",
+      "chapters": {
+        "from": 2
+      },
+      "evidence": [
+        {
+          "text": "目今你貴東家林公之夫人，卽榮府中赦政二公之胞妹，在家時名字喚賈敏",
+          "at": 2,
+          "context": "min-identity · 冷子兴明确把林公夫人、贾氏、贾敏及贾政胞妹连接起来。 https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F65&oldid=2441203"
+        }
+      ],
+      "extra": {
+        "provenance": {
+          "status": "verified-direct",
+          "confidence": "high-within-selected-edition",
+          "evidenceIds": ["min-identity"],
+          "safeRevealAt": 2,
+          "reviewedThrough": 3,
+          "disputedInSelectedPassages": false,
+          "existenceDate": "未给出精确成立日期；chapters 表示读者知情阈值，不是亲缘成立日期。",
+          "evidenceConfirmedAt": 2
+        }
+      }
+    },
+    {
+      "id": "zheng-baoyu",
+      "source": "jia-zheng",
+      "target": "jia-baoyu",
+      "type": "family",
+      "label": "父子",
+      "directed": false,
+      "strength": 2,
+      "polarity": "neutral",
+      "description": "同回回指将宝玉与政公的衔玉之子对应。",
+      "chapters": {
+        "from": 2
+      },
+      "evidence": [
+        {
+          "text": "所以方纔你一說這寳玉",
+          "at": 2,
+          "context": "baoyu-name · 雨村对冷子兴所述衔玉公子的回指；指人物，不是第一回的通灵宝玉物件。 https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F63&oldid=2441201"
+        },
+        {
+          "text": "方纔說政公已有了一個啣玉之子",
+          "at": 2,
+          "context": "baoyu-father · 雨村回指冷子兴前述衔玉公子；与 baoyu-name 共同定位人物。 https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F65&oldid=2441203"
+        }
+      ],
+      "extra": {
+        "provenance": {
+          "status": "verified-direct",
+          "confidence": "high-within-selected-edition",
+          "evidenceIds": ["baoyu-name", "baoyu-father"],
+          "safeRevealAt": 2,
+          "reviewedThrough": 3,
+          "disputedInSelectedPassages": false,
+          "existenceDate": "未给出精确成立日期；chapters 表示读者知情阈值，不是亲缘成立日期。",
+          "evidenceConfirmedAt": 2
+        }
+      }
+    },
+    {
+      "id": "mu-min",
+      "source": "jia-mu",
+      "target": "jia-min",
+      "type": "family",
+      "label": "母女",
+      "directed": false,
+      "strength": 2,
+      "polarity": "neutral",
+      "description": "第三回贾母对黛玉直接称其母为自己的女儿。",
+      "chapters": {
+        "from": 3
+      },
+      "evidence": [
+        {
+          "text": "我這些女兒，所疼者獨有你母",
+          "at": 3,
+          "context": "mu-min · 贾母向黛玉说话；其母身份由第二回 min-identity / lin-daughter 锁定。 https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F70&oldid=2441208"
+        },
+        {
+          "text": "目今你貴東家林公之夫人，卽榮府中赦政二公之胞妹，在家時名字喚賈敏",
+          "at": 2,
+          "context": "min-identity · 冷子兴明确把林公夫人、贾氏、贾敏及贾政胞妹连接起来。 https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F65&oldid=2441203"
+        },
+        {
+          "text": "只嫡妻賈氏生得一女，乳名黛玉",
+          "at": 2,
+          "context": "lin-daughter · 林如海家世段；父女、母女与嫡妻身份同段明确。 https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F58&oldid=2441196"
+        }
+      ],
+      "extra": {
+        "provenance": {
+          "status": "verified-direct",
+          "confidence": "high-within-selected-edition",
+          "evidenceIds": ["mu-min", "min-identity", "lin-daughter"],
+          "safeRevealAt": 3,
+          "reviewedThrough": 3,
+          "disputedInSelectedPassages": false,
+          "existenceDate": "未给出精确成立日期；chapters 表示读者知情阈值，不是亲缘成立日期。",
+          "evidenceConfirmedAt": 3
+        }
+      }
+    },
+    {
+      "id": "mu-daiyu",
+      "source": "jia-mu",
+      "target": "lin-daiyu",
+      "type": "family",
+      "label": "外祖母与外孙女",
+      "directed": false,
+      "strength": 2,
+      "polarity": "neutral",
+      "description": "第三回叙述者在拜见段直接确认；采用该明确称谓处作为保守揭示阈值。",
+      "chapters": {
+        "from": 3
+      },
+      "evidence": [
+        {
+          "text": "黛玉方拜見了外祖母。當下賈母一一指與黛玉",
+          "at": 3,
+          "context": "grandmother · 叙述者将黛玉的外祖母明确称作贾母。 https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F70&oldid=2441208"
+        }
+      ],
+      "extra": {
+        "provenance": {
+          "status": "verified-direct",
+          "confidence": "high-within-selected-edition",
+          "evidenceIds": ["grandmother"],
+          "safeRevealAt": 3,
+          "reviewedThrough": 3,
+          "disputedInSelectedPassages": false,
+          "existenceDate": "未给出精确成立日期；chapters 表示读者知情阈值，不是亲缘成立日期。",
+          "evidenceConfirmedAt": 3
+        }
+      }
+    },
+    {
+      "id": "baoyu-daiyu",
+      "source": "jia-baoyu",
+      "target": "lin-daiyu",
+      "type": "family",
+      "label": "姑表兄妹（亲缘推导）",
+      "directed": false,
+      "strength": 2,
+      "polarity": "neutral",
+      "description": "原文直接称表兄；姑表支系由贾政—贾敏兄妹及双方父母子女关系推导，不能把推导标为逐字直证。",
+      "chapters": {
+        "from": 3
+      },
+      "evidence": [
+        {
+          "text": "目今你貴東家林公之夫人，卽榮府中赦政二公之胞妹，在家時名字喚賈敏",
+          "at": 2,
+          "context": "min-identity · 冷子兴明确把林公夫人、贾氏、贾敏及贾政胞妹连接起来。 https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F65&oldid=2441203"
+        },
+        {
+          "text": "只嫡妻賈氏生得一女，乳名黛玉",
+          "at": 2,
+          "context": "lin-daughter · 林如海家世段；父女、母女与嫡妻身份同段明确。 https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F58&oldid=2441196"
+        },
+        {
+          "text": "所以方纔你一說這寳玉",
+          "at": 2,
+          "context": "baoyu-name · 雨村对冷子兴所述衔玉公子的回指；指人物，不是第一回的通灵宝玉物件。 https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F63&oldid=2441201"
+        },
+        {
+          "text": "方纔說政公已有了一個啣玉之子",
+          "at": 2,
+          "context": "baoyu-father · 雨村回指冷子兴前述衔玉公子；与 baoyu-name 共同定位人物。 https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F65&oldid=2441203"
+        },
+        {
+          "text": "舅母所說的，可是啣玉而生的這位表兄",
+          "at": 3,
+          "context": "cousin · 黛玉向王夫人核问宝玉；原文直接称表兄，姑表支系由亲缘链推导。 https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F75&oldid=2441213"
+        }
+      ],
+      "extra": {
+        "provenance": {
+          "status": "inferred",
+          "confidence": "high-confidence-kinship-inference",
+          "evidenceIds": ["min-identity", "lin-daughter", "baoyu-name", "baoyu-father", "cousin"],
+          "safeRevealAt": 3,
+          "reviewedThrough": 3,
+          "disputedInSelectedPassages": false,
+          "existenceDate": "未给出精确成立日期；chapters 表示读者知情阈值，不是亲缘成立日期。",
+          "derivedFrom": ["zheng-min", "min-daiyu", "zheng-baoyu"],
+          "evidenceConfirmedAt": 3
+        }
+      }
+    }
+  ],
+  "presentation": [
+    {
+      "id": "qa-before",
+      "title": "校验：尚未揭示",
+      "chapterAt": 1,
+      "durationSec": 1
+    },
+    {
+      "id": "qa-chapter-two",
+      "title": "校验：第二回已知亲缘",
+      "chapterAt": 2,
+      "durationSec": 1,
+      "camera": {
+        "fitIds": ["lin-ruhai", "jia-min", "lin-daiyu", "jia-mu", "jia-zheng", "jia-baoyu"]
+      }
+    },
+    {
+      "id": "qa-chapter-three",
+      "title": "校验：第三回明确称谓",
+      "chapterAt": 3,
+      "durationSec": 1,
+      "camera": {
+        "fitIds": ["lin-ruhai", "jia-min", "lin-daiyu", "jia-mu", "jia-zheng", "jia-baoyu"]
+      }
+    }
+  ],
+  "extra": {
+    "datasetId": "honglou-chengjia-opening-v1",
+    "sourceLedger": "sources.json",
+    "reviewedThrough": 3,
+    "presentationPurpose": "data-validation-only; replace in B2-2",
+    "policies": {
+      "firstAppearance": "正文首次明确提及回目；不是首次登台；有意不把神话对应当作人物身份事实。",
+      "chapterResolution": "chapter-end knowledge checkpoints; no claims of within-chapter sentence-order protection",
+      "strength": "所有边固定为2，只是图形权重，不是考据得出的亲疏评分。",
+      "polarity": "neutral 只表示本批不判断情感。",
+      "bioSafety": "小传摘要只使用第二回已知信息；第三回证据和别名保留原始来源时间。"
+    }
+  }
+}
