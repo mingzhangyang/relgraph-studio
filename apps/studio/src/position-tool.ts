@@ -1,4 +1,9 @@
-import { cameraCenterFor, projectCameraPoint, type FrameSpec } from '@relgraph/render';
+import {
+  cameraCenterFor,
+  projectCameraPoint,
+  worldWithScreenOffset,
+  type FrameSpec,
+} from '@relgraph/render';
 import type { DirectorFrameState, VisualNode } from '@relgraph/core';
 
 export type Point = { x: number; y: number };
@@ -31,10 +36,11 @@ export function graphPosition(point: Point, camera: Camera, spec: FrameSpec): Po
   const factor = camera.scale * spec.typeScale;
   if (!(factor > 0) || !Number.isFinite(factor))
     throw new RangeError('Invalid camera scale for position editing');
-  return {
-    x: camera.x + (point.x - center.x) / factor,
-    y: camera.y + (point.y - center.y) / factor,
-  };
+  const x = worldWithScreenOffset(camera.x, point.x - center.x, factor);
+  const y = worldWithScreenOffset(camera.y, point.y - center.y, factor);
+  if (x === null || y === null)
+    throw new RangeError('Screen point has no finite world coordinate');
+  return { x, y };
 }
 
 /** A single reveal threshold used by hit-testing and editing policy. */
@@ -55,6 +61,18 @@ export function hitVisibleNode(
   point: Point,
   radius: number,
 ): string | null {
+  // The composer clips all graph drawing to this stage. Without the same
+  // constraint, a node outside it can be dragged through the caption band.
+  const stage = spec.stage;
+  if (
+    !Number.isFinite(point.x) ||
+    !Number.isFinite(point.y) ||
+    point.x < stage.x ||
+    point.y < stage.y ||
+    point.x > stage.x + stage.w ||
+    point.y > stage.y + stage.h
+  )
+    return null;
   let closest: string | null = null;
   let best = radius * radius;
   for (const node of nodes) {

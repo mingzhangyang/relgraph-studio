@@ -1,5 +1,5 @@
 import { roundPositionCoordinate, type DirectorFrameState, type VisualNode } from '@relgraph/core';
-import type { FrameSpec } from '@relgraph/render';
+import { worldWithScreenOffset, type FrameSpec } from '@relgraph/render';
 import { hitVisibleNode, isNodeEditableNow, type Point } from './position-tool.js';
 
 /**
@@ -108,11 +108,12 @@ export function positionForDrag(
 ): Point | null {
   const scale = camera.scale * spec.typeScale;
   if (!(scale > 0) || !Number.isFinite(scale)) return null;
-  const dx = (currentPoint.x - drag.start.x) / scale;
-  const dy = (currentPoint.y - drag.start.y) / scale;
+  const dx = currentPoint.x - drag.start.x;
+  const dy = currentPoint.y - drag.start.y;
   if (!Number.isFinite(dx) || !Number.isFinite(dy)) return null;
   if (dx === 0 && dy === 0) return { ...drag.previous };
-  const x = drag.previous.x + dx, y = drag.previous.y + dy;
-  if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+  const x = worldWithScreenOffset(drag.previous.x, dx, scale);
+  const y = worldWithScreenOffset(drag.previous.y, dy, scale);
+  if (x === null || y === null) return null;
   return { x: roundPositionCoordinate(x), y: roundPositionCoordinate(y) };
 }

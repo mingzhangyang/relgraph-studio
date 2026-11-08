@@ -284,3 +284,30 @@ test('editing cleanup releases pointer capture on reset and mode exit', async ()
   await app.node('layoutReset').dispatch('click');
   assert.equal(stage.hasPointerCapture(91), false);
 });
+
+
+test('inverse camera projection survives a mathematically finite extreme-world round trip', () => {
+  const spec = DEFAULT_FRAME_SPEC;
+  const camera = { x: 1e308, y: 0, scale: 2.75e-306 };
+  const world = { x: -1e308, y: 0 };
+  const pixel = screenPosition(world, camera, spec);
+  assert.deepEqual(pixel, { x: 90, y: 330 });
+  assert.deepEqual(graphPosition(pixel, camera, spec), world);
+});
+
+test('hit testing ignores caption and title bands outside the renderer stage', () => {
+  const spec = DEFAULT_FRAME_SPEC;
+  const camera = { x: 0, y: 0, scale: 1 };
+  const nodes = [{ id: 'outside', label: 'Outside', kind: 'person' }];
+  const reveal = { nodes: { outside: 1 }, edges: {} };
+  const outside = new Map([['outside', { x: 0, y: 270 }]]);
+  const pixel = screenPosition(outside.get('outside'), camera, spec);
+  assert.equal(pixel.y, 600, 'node is in caption band below the clipped stage');
+  assert.equal(hitVisibleNode(nodes, outside, reveal, camera, spec, pixel, 24), null);
+  assert.equal(hitVisibleNode(nodes, outside, reveal, camera, spec, { x: 640, y: 40 }, 600), null);
+  const inside = new Map([['outside', { x: 0, y: 0 }]]);
+  assert.equal(
+    hitVisibleNode(nodes, inside, reveal, camera, spec, screenPosition(inside.get('outside'), camera, spec), 24),
+    'outside',
+  );
+});

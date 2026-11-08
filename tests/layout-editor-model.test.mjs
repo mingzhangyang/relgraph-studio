@@ -67,3 +67,22 @@ test('pure validation and reset do not depend on DOM or browser stubs', () => {
   assert.equal(layoutHasChanges(positions, initial), false);
   assert.notEqual(positions.get('early'), initial.get('early'), 'restored data must be cloned');
 });
+
+
+test('valid drag crosses opposite huge world coordinates without intermediate overflow', () => {
+  const camera = { x: 1e308, y: 0, scale: 2.75e-306 };
+  const drag = {
+    pointerId: 1,
+    id: 'a',
+    previous: { x: 1e308, y: 0 },
+    start: { x: 640, y: 330 },
+  };
+  const moved = positionForDrag(
+    drag,
+    { x: 90, y: 330 },
+    camera,
+    DEFAULT_FRAME_SPEC,
+  );
+  assert.deepEqual(moved, { x: -1e308, y: 0 });
+  assert.deepEqual(positionForDrag(drag, drag.start, camera, DEFAULT_FRAME_SPEC), drag.previous);
+});

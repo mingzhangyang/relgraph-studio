@@ -183,3 +183,35 @@ export function projectCameraPoint(
     y: center.y + scaledWorldDifference(point.y, camera.y, scale),
   };
 }
+
+
+/**
+ * Convert a screen-pixel displacement into a world coordinate without
+ * overflowing a valid finite result. Large opposite world coordinates can
+ * exceed Number.MAX_VALUE when the intermediate pixel delta is divided by
+ * a very small zoom, even if the final world position is representable.
+ *
+ * Prefer the ordinary expression to preserve its precision for normal views.
+ * Only when it overflows, combine the scaled origin and pixel offset first.
+ */
+export function worldWithScreenOffset(
+  worldOrigin: number,
+  pixelOffset: number,
+  scale: number,
+): number | null {
+  if (
+    !Number.isFinite(worldOrigin) ||
+    !Number.isFinite(pixelOffset) ||
+    !Number.isFinite(scale) ||
+    !(scale > 0)
+  )
+    return null;
+  if (pixelOffset === 0) return worldOrigin;
+  const direct = worldOrigin + pixelOffset / scale;
+  if (Number.isFinite(direct)) return direct;
+  const scaledOrigin = worldOrigin * scale;
+  const scaledTarget = scaledOrigin + pixelOffset;
+  if (!Number.isFinite(scaledTarget)) return null;
+  const result = scaledTarget / scale;
+  return Number.isFinite(result) ? result : null;
+}
