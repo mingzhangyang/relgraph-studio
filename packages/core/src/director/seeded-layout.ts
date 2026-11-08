@@ -30,6 +30,22 @@ const compareIds = (a: { id: string }, b: { id: string }): number =>
   a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
 
 /**
+ * Mean of finite authored coordinates without overflowing an intermediate sum.
+ * Scaling by the largest magnitude also avoids Infinity when anchors lie near
+ * Number.MAX_VALUE. Clamp roundoff to the representable [-1, 1] range before
+ * multiplying back, so a mean of three MAX_VALUE anchors remains finite.
+ */
+function finiteMean(points: readonly LayoutPoint[], axis: 'x' | 'y'): number {
+  if (!points.length) return 0;
+  let magnitude = 0;
+  for (const point of points) magnitude = Math.max(magnitude, Math.abs(point[axis]));
+  if (magnitude === 0) return 0;
+  let normalized = 0;
+  for (const point of points) normalized += point[axis] / magnitude / points.length;
+  return magnitude * Math.max(-1, Math.min(1, normalized));
+}
+
+/**
  * Prepare positions for authoring, not playback. Supplied positions never move;
  * only missing coordinates participate in seeded, bounded force relaxation.
  * Node and edge order are normalized so JSON array order cannot affect the result.
@@ -52,12 +68,10 @@ export function layoutMissingNodes(
   if (!missing.length) return positions;
 
   const original = [...positions.values()];
-  const center = original.length
-    ? {
-        x: original.reduce((sum, p) => sum + p.x / original.length, 0),
-        y: original.reduce((sum, p) => sum + p.y / original.length, 0),
-      }
-    : { x: 0, y: 0 };
+  const center = {
+    x: finiteMean(original, 'x'),
+    y: finiteMean(original, 'y'),
+  };
   const ids = new Set(nodes.map((node) => node.id));
   const edges = graph.edges
     .filter((edge) => ids.has(edge.source) && ids.has(edge.target) && edge.source !== edge.target)
@@ -73,10 +87,7 @@ export function layoutMissingNodes(
       .map((edge) => positions.get(edge.source === node.id ? edge.target : edge.source))
       .filter((point): point is LayoutPoint => point !== undefined);
     const anchor = adjacent.length
-      ? {
-          x: adjacent.reduce((sum, p) => sum + p.x / adjacent.length, 0),
-          y: adjacent.reduce((sum, p) => sum + p.y / adjacent.length, 0),
-        }
+      ? { x: finiteMean(adjacent, 'x'), y: finiteMean(adjacent, 'y') }
       : center;
     const angle = hash(node.id + ':angle', seed) * Math.PI * 2;
     const radius = adjacent.length ? 32 : 145 * Math.sqrt(index + 1);

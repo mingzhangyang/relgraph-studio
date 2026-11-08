@@ -230,3 +230,51 @@ test('collision fallback stays finite beside Number.MAX_VALUE anchors', () => {
     ) >= 64,
   );
 });
+
+
+test('both global and connected anchor means stay finite at Number.MAX_VALUE', () => {
+  const huge = Number.MAX_VALUE;
+  for (const connected of [false, true]) {
+    const nodes = Array.from({ length: 3 }, (_, index) => ({
+      id: 'anchor-' + index,
+      label: 'Anchor ' + index,
+      kind: 'person',
+      position: { x: huge, y: huge },
+    }));
+    nodes.push({ id: 'missing', label: 'Missing', kind: 'person' });
+    const edges = connected
+      ? nodes.slice(0, 3).map((node, index) => ({
+          id: 'edge-' + index, source: node.id, target: 'missing', kind: 'friendship',
+        }))
+      : [];
+    const graph = { nodes, edges };
+    const placed = layoutMissingNodes(graph, { seed: 42, iterations: 16 });
+    const point = placed.get('missing');
+    assert.ok(Number.isFinite(point.x) && Number.isFinite(point.y), 'missing position must be finite');
+    for (const anchor of nodes.slice(0, 3))
+      assert.deepEqual(placed.get(anchor.id), anchor.position, 'authored anchor must remain fixed');
+    assert.deepEqual(
+      [...placed], [...layoutMissingNodes(graph, { seed: 42, iterations: 16 })],
+      'same seed and inputs must be reproducible',
+    );
+  }
+});
+
+test('mixed extreme anchors keep their mean finite without biasing the layout', () => {
+  const graph = {
+    nodes: [
+      { id: 'positive', label: 'P', kind: 'person', position: { x: Number.MAX_VALUE, y: Number.MAX_VALUE } },
+      { id: 'negative', label: 'N', kind: 'person', position: { x: -Number.MAX_VALUE, y: -Number.MAX_VALUE } },
+      { id: 'missing', label: 'M', kind: 'person' },
+    ],
+    edges: [
+      { id: 'e1', source: 'positive', target: 'missing', kind: 'friendship' },
+      { id: 'e2', source: 'negative', target: 'missing', kind: 'friendship' },
+    ],
+  };
+  const result = layoutMissingNodes(graph, { seed: 17, iterations: 12 });
+  assert.ok(Number.isFinite(result.get('missing').x));
+  assert.ok(Number.isFinite(result.get('missing').y));
+  assert.deepEqual(result.get('positive'), graph.nodes[0].position);
+  assert.deepEqual(result.get('negative'), graph.nodes[1].position);
+});
