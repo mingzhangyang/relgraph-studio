@@ -73,6 +73,7 @@ test('position mode pauses playback, drags only visible nodes, exports JSON and 
   await app.ready;
   assert.equal(app.node('layoutToggle').disabled, false);
   assert.equal(app.node('layoutReset').disabled, true);
+  assert.equal(app.window.renderAt(36), true);
   const state = app.window.studioFrame();
   const node = state.view.nodes.find((n) => state.reveal.nodes[n.id] > 0.5);
   assert.ok(node, 'at least one displayed node is editable');
@@ -119,4 +120,117 @@ test('switching to a different document disables position tools while loading an
   assert.equal(app.node('layoutToggle').disabled, true);
   assert.equal(app.node('layoutExport').disabled, true);
   assert.equal(app.node('layoutToggle').attributes['aria-pressed'], 'false');
+});
+
+
+test('an off-centre stationary tap does not change a node, and dragging preserves grab offset', async () => {
+  const app = makeStudio();
+  await app.ready;
+  assert.equal(app.window.renderAt(48), true);
+  const state = app.window.studioFrame();
+  const node = state.view.nodes.find((n) => state.reveal.nodes[n.id] > 0.5);
+  assert.ok(node);
+  const before = literature.characters.find((n) => n.id === node.id).position;
+  const screen = screenPosition(before, state.cameraResolved, DEFAULT_FRAME_SPEC);
+  await app.node('layoutToggle').click();
+  const canvas = app.node('stage');
+  const at = { clientX: screen.x + 5, clientY: screen.y - 4 };
+  const pointer = { pointerId: 12, isPrimary: true, pointerType: 'mouse', button: 0 };
+  await canvas.dispatch('pointerdown', { ...pointer, ...at });
+  await canvas.dispatch('pointerup', { ...pointer, ...at });
+  assert.equal(app.node('layoutReset').disabled, true, 'a click is not a drag');
+  await app.node('layoutExport').click();
+  const unchanged = JSON.parse(await app.blobs[0].text());
+  assert.deepEqual(unchanged.characters.find((n) => n.id === node.id).position, before);
+
+  await canvas.dispatch('pointerdown', { ...pointer, ...at });
+  const moved = { clientX: at.clientX + 35, clientY: at.clientY - 21 };
+  await canvas.dispatch('pointermove', { ...pointer, ...moved });
+  await canvas.dispatch('pointerup', { ...pointer, ...moved });
+  await app.node('layoutExport').click();
+  const updated = JSON.parse(await app.blobs[1].text());
+  const after = updated.characters.find((n) => n.id === node.id).position;
+  assert.ok(Math.abs(after.x - (before.x + 35 / state.cameraResolved.scale)) <= 0.011);
+  assert.ok(Math.abs(after.y - (before.y - 21 / state.cameraResolved.scale)) <= 0.011);
+  assert.equal(app.node('layoutReset').disabled, false);
+});
+
+test('Escape works while controls have focus; arrows and renderAt release frozen camera', async () => {
+  const app = makeStudio();
+  await app.ready;
+  assert.equal(app.window.renderAt(48), true);
+  await app.node('layoutToggle').click();
+  const key = (code, target = null) => app.window.dispatch('keydown', {
+    code, target, preventDefault() {}, 
+  });
+  key('Escape', app.node('layoutToggle'));
+  assert.equal(app.node('layoutToggle').attributes['aria-pressed'], 'false');
+  await app.node('layoutToggle').click();
+  key('ArrowRight');
+  assert.equal(app.node('layoutToggle').attributes['aria-pressed'], 'false');
+  assert.equal(Number(app.node('scrubber').value), 72);
+  await app.node('layoutToggle').click();
+  key('ArrowLeft');
+  assert.equal(app.node('layoutToggle').attributes['aria-pressed'], 'false');
+  assert.equal(Number(app.node('scrubber').value), 48);
+  await app.node('layoutToggle').click();
+  assert.equal(app.window.renderAt(250), true);
+  assert.equal(app.node('layoutToggle').attributes['aria-pressed'], 'false');
+  assert.equal(Number(app.node('scrubber').value), 250);
+});
+
+test('manual and OS theme changes leave edit mode without retaining a fixed camera', async () => {
+  const app = makeStudio();
+  await app.ready;
+  assert.equal(app.window.renderAt(48), true);
+  await app.node('layoutToggle').click();
+  await app.node('themeToggle').click();
+  assert.equal(app.node('layoutToggle').attributes['aria-pressed'], 'false');
+  await app.node('layoutToggle').click();
+  // A manual choice pins the theme; use a second app to test OS-driven changes.
+  await app.node('layoutToggle').click();
+  const followOS = makeStudio();
+  await followOS.ready;
+  await followOS.node('layoutToggle').click();
+  followOS.setOSTheme(true);
+  assert.equal(followOS.node('layoutToggle').attributes['aria-pressed'], 'false');
+  assert.equal(followOS.themes.at(-1), 'light');
+});
+
+test('keyboard selector excludes hidden nodes and X/Y inputs change only visible nodes', async () => {
+  const app = makeStudio();
+  await app.ready;
+  assert.equal(app.window.renderAt(48), true);
+  const state = app.window.studioFrame();
+  const visibleIds = state.view.nodes
+    .filter((n) => Object.hasOwn(state.reveal.nodes, n.id) && state.reveal.nodes[n.id] > 0.5)
+    .map((n) => n.id);
+  await app.node('layoutToggle').click();
+  const select = app.node('layoutNode');
+  assert.equal(app.node('layoutEditor').hidden, false);
+  assert.deepEqual(select.children.map((o) => o.value), visibleIds);
+  assert.ok(select.children.length > 0);
+  const nodeId = select.children.at(-1).value;
+  select.value = nodeId;
+  await select.dispatch('change');
+  const before = literature.characters.find((n) => n.id === nodeId).position;
+  assert.equal(Number(app.node('layoutX').value), before.x);
+  assert.equal(Number(app.node('layoutY').value), before.y);
+  app.node('layoutX').value = 'Infinity';
+  await app.node('layoutApply').click();
+  assert.match(app.node('layoutNote').textContent, /有限数字/);
+  assert.equal(app.node('layoutReset').disabled, true);
+
+  app.node('layoutX').value = String(before.x + 42.25);
+  app.node('layoutY').value = String(before.y - 13.5);
+  await app.node('layoutApply').click();
+  assert.equal(app.node('layoutReset').disabled, false);
+  await app.node('layoutExport').click();
+  const doc = JSON.parse(await app.blobs[0].text());
+  assert.equal(loadDocument(doc).valid, true);
+  const changed = doc.characters.find((n) => n.id === nodeId).position;
+  assert.deepEqual(changed, { x: before.x + 42.25, y: before.y - 13.5 });
+  await app.node('layoutToggle').click();
+  assert.equal(app.node('layoutEditor').hidden, true);
+  assert.equal(select.children.length, 0, 'hidden/future labels are not kept in DOM');
 });
