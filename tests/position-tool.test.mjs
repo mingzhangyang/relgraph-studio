@@ -47,8 +47,13 @@ test('hit-testing excludes hidden nodes even when their IDs match Object prototy
   const point = screenPosition({ x: 0, y: 0 }, camera, DEFAULT_FRAME_SPEC);
   assert.equal(
     hitVisibleNode(
-      nodes, positions, { nodes: { visible: 1 }, edges: {} },
-      camera, DEFAULT_FRAME_SPEC, point, 24,
+      nodes,
+      positions,
+      { nodes: { visible: 1 }, edges: {} },
+      camera,
+      DEFAULT_FRAME_SPEC,
+      point,
+      24,
     ),
     'visible',
   );
@@ -68,7 +73,11 @@ test('source writeback can export entire layout without changing the imported da
     const written = applyGraphPositions(source, loaded.graph, positions);
     const checked = loadDocument(written.document);
     assert.equal(checked.valid, true);
-    assert.deepEqual(first.position, originalAdaptedPosition, 'writeback must not mutate adapted graph');
+    assert.deepEqual(
+      first.position,
+      originalAdaptedPosition,
+      'writeback must not mutate adapted graph',
+    );
     const adapted = checked.graph.nodes.find((node) => node.id === first.id);
     assert.deepEqual(adapted.position, { x: 654.32, y: -321.12 });
     assert.deepEqual(source, sourceBeforeWriteback, 'writeback must not mutate source');
@@ -96,11 +105,23 @@ test('position mode pauses playback, drags only visible nodes, exports JSON and 
   assert.equal(app.node('layoutToggle').attributes['aria-pressed'], 'true');
   const stage = app.node('stage');
   await stage.dispatch('pointerdown', {
-    pointerId: 4, isPrimary: true, button: 0, pointerType: 'mouse',
-    clientX: screen.x, clientY: screen.y,
+    pointerId: 4,
+    isPrimary: true,
+    button: 0,
+    pointerType: 'mouse',
+    clientX: screen.x,
+    clientY: screen.y,
   });
-  await stage.dispatch('pointermove', { pointerId: 4, clientX: screen.x + 50, clientY: screen.y + 26 });
-  await stage.dispatch('pointerup', { pointerId: 4, clientX: screen.x + 50, clientY: screen.y + 26 });
+  await stage.dispatch('pointermove', {
+    pointerId: 4,
+    clientX: screen.x + 50,
+    clientY: screen.y + 26,
+  });
+  await stage.dispatch('pointerup', {
+    pointerId: 4,
+    clientX: screen.x + 50,
+    clientY: screen.y + 26,
+  });
   assert.equal(app.node('layoutReset').disabled, false);
   assert.match(app.node('layoutNote').textContent, /未保存/);
 
@@ -130,7 +151,6 @@ test('switching to a different document disables position tools while loading an
   assert.equal(app.node('layoutExport').disabled, true);
   assert.equal(app.node('layoutToggle').attributes['aria-pressed'], 'false');
 });
-
 
 test('an off-centre stationary tap does not change a node, and dragging preserves grab offset', async () => {
   const app = makeStudio();
@@ -301,7 +321,10 @@ test('keyboard selector excludes hidden nodes and X/Y inputs change only visible
   await app.node('layoutToggle').click();
   const select = app.node('layoutNode');
   assert.equal(app.node('layoutEditor').hidden, false);
-  assert.deepEqual(select.children.map((o) => o.value), visibleIds);
+  assert.deepEqual(
+    select.children.map((o) => o.value),
+    visibleIds,
+  );
   assert.ok(select.children.length > 0);
   const nodeId = select.children.at(-1).value;
   select.value = nodeId;
@@ -328,7 +351,6 @@ test('keyboard selector excludes hidden nodes and X/Y inputs change only visible
   assert.equal(select.children.length, 0, 'hidden/future labels are not kept in DOM');
 });
 
-
 test('hit-testing uses the renderer camera projection for enormous finite distances', () => {
   const camera = { x: 1e308, y: 0, scale: 2.75e-306 };
   const extreme = { x: -1e308, y: 0 };
@@ -339,7 +361,10 @@ test('hit-testing uses the renderer camera projection for enormous finite distan
       [{ id: 'a' }],
       new Map([['a', extreme]]),
       { nodes: { a: 1 }, edges: {} },
-      camera, DEFAULT_FRAME_SPEC, point, 24,
+      camera,
+      DEFAULT_FRAME_SPEC,
+      point,
+      24,
     ),
     'a',
   );
@@ -356,7 +381,6 @@ test('scrubber captures target before edit-mode camera cleanup redraws the old f
   assert.equal(app.node('layoutToggle').attributes['aria-pressed'], 'false');
 });
 
-
 test('editing cleanup releases pointer capture on reset and mode exit', async () => {
   const app = makeStudio();
   await app.ready;
@@ -366,7 +390,14 @@ test('editing cleanup releases pointer capture on reset and mode exit', async ()
   const point = screenPosition(node.position, frame.cameraResolved, DEFAULT_FRAME_SPEC);
   await app.node('layoutToggle').click();
   const stage = app.node('stage');
-  const pointer = { pointerId: 91, isPrimary: true, pointerType: 'mouse', button: 0, clientX: point.x, clientY: point.y };
+  const pointer = {
+    pointerId: 91,
+    isPrimary: true,
+    pointerType: 'mouse',
+    button: 0,
+    clientX: point.x,
+    clientY: point.y,
+  };
   await stage.dispatch('pointerdown', pointer);
   assert.equal(stage.hasPointerCapture(91), true);
   await app.node('layoutToggle').click();
@@ -377,7 +408,6 @@ test('editing cleanup releases pointer capture on reset and mode exit', async ()
   await app.node('layoutReset').dispatch('click');
   assert.equal(stage.hasPointerCapture(91), false);
 });
-
 
 test('inverse camera projection survives a mathematically finite extreme-world round trip', () => {
   const spec = DEFAULT_FRAME_SPEC;
@@ -400,7 +430,15 @@ test('hit testing ignores caption and title bands outside the renderer stage', (
   assert.equal(hitVisibleNode(nodes, outside, reveal, camera, spec, { x: 640, y: 40 }, 600), null);
   const inside = new Map([['outside', { x: 0, y: 0 }]]);
   assert.equal(
-    hitVisibleNode(nodes, inside, reveal, camera, spec, screenPosition(inside.get('outside'), camera, spec), 24),
+    hitVisibleNode(
+      nodes,
+      inside,
+      reveal,
+      camera,
+      spec,
+      screenPosition(inside.get('outside'), camera, spec),
+      24,
+    ),
     'outside',
   );
 });
@@ -412,10 +450,10 @@ test('hit testing excludes fully clipped glyphs near the stage edge', () => {
   const reveal = { nodes: { clipped: 1 }, edges: {} };
   const insideStage = { x: 640, y: spec.stage.y + spec.stage.h - 1 };
   const outsidePosition = new Map([['clipped', { x: 0, y: 232 }]]);
-  assert.deepEqual(
-    screenPosition(outsidePosition.get('clipped'), camera, spec),
-    { x: 640, y: 562 },
-  );
+  assert.deepEqual(screenPosition(outsidePosition.get('clipped'), camera, spec), {
+    x: 640,
+    y: 562,
+  });
   assert.equal(
     hitVisibleNode(nodes, outsidePosition, reveal, camera, spec, insideStage, 24),
     null,

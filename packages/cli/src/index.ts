@@ -7,7 +7,13 @@ import { layoutFile, LayoutError } from './layout.js';
 
 export { parseCommand, USAGE, UsageError, type Command } from './args.js';
 export { documentStrings, formatDiagnostics, loadFile } from './document.js';
-export { layoutFile, writeBackPositions, LayoutError, type LayoutRequest, type LayoutSummary } from './layout.js';
+export {
+  layoutFile,
+  writeBackPositions,
+  LayoutError,
+  type LayoutRequest,
+  type LayoutSummary,
+} from './layout.js';
 export { encodeArgs, findFfmpeg, FfmpegError } from './ffmpeg.js';
 export { frameFile, isFramePattern } from './frames.js';
 export {
@@ -72,7 +78,11 @@ export async function main(argv: readonly string[], io: Io = defaultIo): Promise
     try {
       const result = await layoutFile(command);
       io.stdout('布局：' + result.total + ' 个节点，补全 ' + result.missing + ' 个坐标\n');
-      io.stdout(result.written ? '→ ' + result.written + '\n' : '未修改文件；使用 --write 或 --out 保存布局。\n');
+      io.stdout(
+        result.written
+          ? '→ ' + result.written + '\n'
+          : '未修改文件；使用 --write 或 --out 保存布局。\n',
+      );
       return 0;
     } catch (error) {
       if (!(error instanceof LayoutError)) throw error;

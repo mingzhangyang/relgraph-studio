@@ -12,8 +12,7 @@ export function nodeRadius(
 ): number {
   const importance = node.importance ?? 0;
   const base =
-    nodeStyleFor(style, node.kind).baseRadius ??
-    (importance >= 5 ? 16 : importance >= 3 ? 13 : 11);
+    nodeStyleFor(style, node.kind).baseRadius ?? (importance >= 5 ? 16 : importance >= 3 ? 13 : 11);
   return Math.min(19, Math.max(8, base * Math.sqrt(cameraScale))) * spec.typeScale;
 }
 
@@ -109,8 +108,6 @@ export function nodeGlyphIntersectsStage(
   const qx = dx - (g.halfWidth - g.cornerRadius);
   const qy = dy - (g.halfHeight - g.cornerRadius);
   const distance =
-    Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) +
-    Math.min(Math.max(qx, qy), 0) -
-    g.cornerRadius;
+    Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - g.cornerRadius;
   return distance < g.halfStroke;
 }

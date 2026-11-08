@@ -407,7 +407,11 @@ test('fractional shot boundaries never hide the only sampled caption frame', () 
     assert.ok(timeline.captions[2].inSec > second, 'rounding places the start after the sample');
     assert.equal(timeline.captions[2].fadeInSec, 0);
     assert.equal(captionOpacity(timeline, 1, second), 0, 'previous shot has ended');
-    assert.equal(captionOpacity(timeline, 2, second), 1, 'the current caption must be fully visible');
+    assert.equal(
+      captionOpacity(timeline, 2, second),
+      1,
+      'the current caption must be fully visible',
+    );
     assert.equal(
       directorFrameAt(graph, new Map(), frame, 24, { timeline }).captionOpacity,
       1,

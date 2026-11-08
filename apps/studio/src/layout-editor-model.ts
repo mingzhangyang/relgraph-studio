@@ -27,8 +27,7 @@ export interface PositionDrag {
 /** Reuse the same visibility threshold for keyboard controls and canvas drag. */
 export function editableNodes(frame: EditableFrame, positions: PositionMap): VisualNode[] {
   return frame.view.nodes.filter(
-    (node) =>
-      isNodeEditableNow(node.id, frame.reveal) && positions.has(node.id),
+    (node) => isNodeEditableNow(node.id, frame.reveal) && positions.has(node.id),
   );
 }
 
@@ -42,10 +41,7 @@ export function layoutHasChanges(current: PositionMap, original: PositionMap): b
 }
 
 /** Restore the previous authored/fallback layout without replacing its Map. */
-export function restoreLayoutPositions(
-  current: Map<string, Point>,
-  original: PositionMap,
-): void {
+export function restoreLayoutPositions(current: Map<string, Point>, original: PositionMap): void {
   current.clear();
   for (const [id, point] of original) current.set(id, { ...point });
 }
@@ -71,7 +67,8 @@ export function updateEditableNodePosition(
 /** Empty strings, NaN, Infinity and non-numeric text never become coordinates. */
 export function parseCoordinateInputs(xText: string, yText: string): Point | null {
   if (!xText.trim() || !yText.trim()) return null;
-  const x = Number(xText), y = Number(yText);
+  const x = Number(xText),
+    y = Number(yText);
   return Number.isFinite(x) && Number.isFinite(y) ? { x, y } : null;
 }
 

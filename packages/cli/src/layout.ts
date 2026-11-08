@@ -1,7 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import { chmod, stat, realpath, rename, unlink, writeFile } from 'node:fs/promises';
 import { basename, dirname, join, resolve } from 'node:path';
-import { applyGraphPositions, layoutMissingNodes, parseDocument, type VisualGraph } from '@relgraph/core';
+import {
+  applyGraphPositions,
+  layoutMissingNodes,
+  parseDocument,
+  type VisualGraph,
+} from '@relgraph/core';
 import { formatDiagnostics, loadFile } from './document.js';
 
 export interface LayoutRequest {
@@ -26,7 +31,9 @@ export function writeBackPositions(
   const result = applyGraphPositions(input, graph, positions, { onlyMissing: true });
   const missing = graph.nodes.filter((node) => node.position === undefined).length;
   if (result.changed !== missing)
-    throw new LayoutError('Position count mismatch: expected ' + missing + ', got ' + result.changed);
+    throw new LayoutError(
+      'Position count mismatch: expected ' + missing + ', got ' + result.changed,
+    );
   return { document: result.document, added: result.changed };
 }
 
@@ -67,7 +74,8 @@ export async function layoutFile(request: LayoutRequest): Promise<LayoutSummary>
     const serialized = JSON.stringify(output.document, null, indentOf(text)) + '\n';
     // Never write a document whose round-trip validation fails.
     const checked = parseDocument(serialized);
-    if (!checked.valid) throw new LayoutError('Layout validation failed:\n' + formatDiagnostics(checked));
+    if (!checked.valid)
+      throw new LayoutError('Layout validation failed:\n' + formatDiagnostics(checked));
 
     if (request.write && missing) {
       await atomicReplace(request.file, serialized);

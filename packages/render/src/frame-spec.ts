@@ -163,7 +163,6 @@ export const cameraCenterFor = (spec: FrameSpec): { x: number; y: number } => ({
   y: spec.safe.graph.y + spec.safe.graph.h / 2,
 });
 
-
 /** Overflow-safe coordinate difference, also used by interaction hit testing. */
 export function scaledWorldDifference(value: number, center: number, scale: number): number {
   const difference = value - center;
@@ -183,7 +182,6 @@ export function projectCameraPoint(
     y: center.y + scaledWorldDifference(point.y, camera.y, scale),
   };
 }
-
 
 /**
  * Convert a screen-pixel displacement into a world coordinate without
