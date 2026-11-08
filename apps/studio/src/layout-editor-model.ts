@@ -1,4 +1,9 @@
-import { roundPositionCoordinate, type DirectorFrameState, type VisualNode } from '@relgraph/core';
+import {
+  domainStyle,
+  roundPositionCoordinate,
+  type DirectorFrameState,
+  type VisualNode,
+} from '@relgraph/core';
 import { worldWithScreenOffset, type FrameSpec } from '@relgraph/render';
 import { hitVisibleNode, isNodeEditableNow, type Point } from './position-tool.js';
 
@@ -87,6 +92,7 @@ export function startPositionDrag(
     spec,
     point,
     radius,
+    domainStyle(frame.view.domain),
   );
   const previous = id ? positions.get(id) : undefined;
   if (!id || !previous || !editableNodes(frame, positions).some((node) => node.id === id))
