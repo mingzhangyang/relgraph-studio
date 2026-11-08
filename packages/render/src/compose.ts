@@ -24,13 +24,7 @@ import type {
   PathCommand,
   TextMeasurer,
 } from './display-list.js';
-import {
-  cameraCenterFor,
-  scaledWorldDifference,
-  DEFAULT_FRAME_SPEC,
-  type FrameSpec,
-  type Rect,
-} from './frame-spec.js';
+import { projectCameraPoint, DEFAULT_FRAME_SPEC, type FrameSpec, type Rect } from './frame-spec.js';
 import { RENDER_MESSAGES } from './locale.js';
 import { edgePaint, VIDEO_THEMES, type VideoTheme } from './theme.js';
 
@@ -244,15 +238,10 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
   const nodeProgress = (id: string): number => state.reveal?.nodes[id] ?? 1;
   const edgeProgress = (id: string): number => state.reveal?.edges[id] ?? 1;
   const captionAlpha = state.captionOpacity ?? 1;
-  const center = cameraCenterFor(spec);
-  const screenScale = cam.scale * ts;
   const point = (node: VisualNode): Point => {
     const p = positions.get(node.id);
     if (!p) throw new Error(`Missing layout position for node ${node.id}`);
-    return {
-      x: center.x + scaledWorldDifference(p.x, cam.x, screenScale),
-      y: center.y + scaledWorldDifference(p.y, cam.y, screenScale),
-    };
+    return projectCameraPoint(p, cam, spec);
   };
   const points = new Map(view.nodes.map((n) => [n.id, point(n)]));
   const pointFor = (id: string): Point => {
