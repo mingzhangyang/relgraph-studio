@@ -100,7 +100,10 @@ export function createShotsView(
       if (activeIndex !== lastIndex && lastIndex >= 0)
         buttons[lastIndex]?.children[0]?.setAttribute('style', 'transform:scaleX(0)');
       if (activeIndex !== lastIndex || progress !== lastProgress)
-        buttons[activeIndex]?.children[0]?.setAttribute('style', 'transform:scaleX(' + progress + ')');
+        buttons[activeIndex]?.children[0]?.setAttribute(
+          'style',
+          'transform:scaleX(' + progress + ')',
+        );
       lastIndex = activeIndex;
       lastTitle = activeTitle;
       lastProgress = progress;
