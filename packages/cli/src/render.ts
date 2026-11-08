@@ -53,12 +53,14 @@ export class RenderError extends Error {}
 
 class RenderThread {
   private readonly worker: Worker;
+  private readonly exited: Promise<void>;
   private readonly pending: { resolve(reply: WorkerReply): void; reject(error: Error): void }[] =
     [];
   private failure: Error | null = null;
 
   constructor(data: WorkerData) {
     this.worker = new Worker(new URL('./worker.js', import.meta.url), { workerData: data });
+    this.exited = new Promise((resolveExit) => this.worker.once('exit', () => resolveExit()));
     this.worker.on('message', (reply: WorkerReply) => {
       if ('error' in reply) {
         const error = new RenderError(
@@ -85,7 +87,11 @@ class RenderThread {
     });
   }
   async close(): Promise<void> {
-    await this.worker.terminate();
+    // Preserve the worker's FIFO: finish queued native Skia calls before
+    // closing its port. terminate() can interrupt Neon inside a V8 call and
+    // abort the entire process instead of reporting the original encoder error.
+    this.worker.postMessage({ stop: true } satisfies WorkerRequest);
+    await this.exited;
   }
 }
 
