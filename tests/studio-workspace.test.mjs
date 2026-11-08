@@ -282,3 +282,122 @@ test('playback view preserves accessible state through pause, end and replay', a
   await app.node('play').click();
   assert.equal(app.node('status').attributes['data-state'], 'ready');
 });
+
+test('same-shot a11y reveals update transcript and live status without repeated announcements', async () => {
+  const app = makeStudio({
+    // Simulate later within-shot a11y reveals using the actual shared VM/renderer path,
+    // without a second DOM, timeline implementation, or unprojected graph text.
+    transformFrameText(a11y, frame) {
+      return {
+        ...a11y,
+        nodes: [
+          ...a11y.nodes,
+          ...(frame >= 2
+            ? [frame >= 5 ? 'VISIBLE SECOND RENAMED' : 'VISIBLE SECOND']
+            : []),
+        ],
+        relations: [...a11y.relations, ...(frame >= 4 ? ['REVEALED RELATION'] : [])],
+      };
+    },
+  });
+  await app.ready;
+  const transcript = app.node('transcript');
+  const live = app.node('sceneDescription');
+  const first = transcript.children[0];
+  const announcements = live.textWrites;
+  assert.equal(transcript.textContent.includes('VISIBLE SECOND'), false);
+  assert.equal(transcript.textContent.includes('REVEALED RELATION'), false);
+
+  assert.equal(app.window.renderAt(1), true);
+  assert.equal(transcript.children[0], first, 'unchanged semantics reuse transcript DOM');
+  assert.equal(live.textWrites, announcements, 'animation frames do not repeat live announcements');
+
+  assert.equal(app.window.renderAt(2), true);
+  assert.match(transcript.textContent, /VISIBLE SECOND/);
+  assert.equal(app.window.studioFrame().playback.index, 0, 'reveal stays in one shot');
+  assert.equal(live.textWrites, announcements + 1, 'node count changes the live message');
+  const nodeIntro = transcript.children[0];
+
+  assert.equal(app.window.renderAt(3), true);
+  assert.equal(transcript.children[0], nodeIntro);
+  assert.equal(live.textWrites, announcements + 1);
+
+  assert.equal(app.window.renderAt(4), true);
+  assert.match(transcript.textContent, /REVEALED RELATION/);
+  assert.equal(live.textWrites, announcements + 2);
+
+  assert.equal(app.window.renderAt(5), true);
+  assert.match(transcript.textContent, /VISIBLE SECOND RENAMED/);
+  assert.equal(
+    live.textWrites,
+    announcements + 2,
+    'same-count label change updates transcript, not duplicate live status',
+  );
+  const renamedIntro = transcript.children[0];
+  assert.equal(app.window.renderAt(5), true);
+  assert.equal(transcript.children[0], renamedIntro);
+  assert.equal(live.textWrites, announcements + 2);
+
+  assert.equal(app.window.renderAt(0), true);
+  assert.doesNotMatch(transcript.textContent, /VISIBLE SECOND|REVEALED RELATION/);
+  assert.doesNotMatch(live.textContent, /VISIBLE SECOND|REVEALED RELATION/);
+  assert.equal(live.textWrites, announcements + 3, 'rewind withdraws exposed content');
+});
+
+test('document switching resets semantic cache and errors never retain previous transcript', async () => {
+  const app = makeStudio();
+  await app.ready;
+  assert.match(app.node('currentShot').textContent, /大观园/);
+  const input = app.node('fileInput');
+  input.files = [readFile('other.json', JSON.stringify(biology))];
+  await input.dispatch('change');
+  await flush();
+  assert.equal(app.node('sourceName').textContent, 'other.json');
+  assert.equal(app.node('status').attributes['data-state'], 'ready');
+  assert.doesNotMatch(app.node('transcript').textContent, /大观园/);
+  assert.equal(app.node('diagCount').hidden, true);
+  assert.equal(
+    app.node('nodeCount').textContent,
+    String(app.window.studioFrame().view.nodes.length),
+  );
+  input.files = [readFile('invalid.json', '{')];
+  await input.dispatch('change');
+  await flush();
+  assert.equal(app.node('status').attributes['data-state'], 'error');
+  assert.equal(app.node('transcript').textContent, '');
+  assert.equal(app.node('sceneDescription').textContent, '没有已加载的有效数据。');
+  assert.match(app.node('errors').textContent, /JSON|语法错误/);
+});
+
+test('pending requests clear outdated diagnostics and stale load failures cannot reappear', async () => {
+  const app = makeStudio();
+  await app.ready;
+  const input = app.node('fileInput');
+  input.files = [readFile('broken.json', '{')];
+  await input.dispatch('change');
+  await flush();
+  assert.match(app.node('errors').textContent, /JSON|语法错误/);
+
+  const old = deferred();
+  const current = deferred();
+  input.files = [{ name: 'old.json', text: () => old.promise }];
+  await input.dispatch('change');
+  assert.equal(app.node('errors').textContent, '');
+  assert.equal(app.node('warnings').textContent, '');
+  assert.equal(app.node('diagCount').hidden, true);
+
+  input.files = [{ name: 'current.json', text: () => current.promise }];
+  await input.dispatch('change');
+  old.reject(new Error('late stale failure'));
+  await flush();
+  assert.equal(app.node('status').attributes['data-state'], 'loading');
+  assert.equal(app.node('errors').textContent, '');
+
+  current.resolve(JSON.stringify(literature));
+  await flush();
+  assert.equal(app.node('sourceName').textContent, 'current.json');
+  assert.equal(app.node('status').attributes['data-state'], 'ready');
+  assert.equal(app.node('diagCount').hidden, true);
+  assert.equal(app.node('errors').textContent, '');
+  assert.equal(app.node('warnings').textContent, '未发现校验问题。');
+});
