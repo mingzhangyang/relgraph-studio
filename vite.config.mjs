@@ -11,6 +11,12 @@ export default defineConfig({
   resolve: {
     alias: [
       {
+        find: /^@relgraph\/render\/skia$/,
+        replacement: fileURLToPath(
+          new URL('./packages/render/src/backends/skia.ts', import.meta.url),
+        ),
+      },
+      {
         find: /^@relgraph\/core$/,
         replacement: fileURLToPath(new URL('./packages/core/src/index.ts', import.meta.url)),
       },

@@ -44,8 +44,7 @@ export function graphPosition(point: Point, camera: Camera, spec: FrameSpec): Po
     throw new RangeError('Invalid camera scale for position editing');
   const x = worldWithScreenOffset(camera.x, point.x - center.x, factor);
   const y = worldWithScreenOffset(camera.y, point.y - center.y, factor);
-  if (x === null || y === null)
-    throw new RangeError('Screen point has no finite world coordinate');
+  if (x === null || y === null) throw new RangeError('Screen point has no finite world coordinate');
   return { x, y };
 }
 

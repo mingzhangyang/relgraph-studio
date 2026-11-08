@@ -96,16 +96,16 @@ export function parseCommand(argv: readonly string[]): Command {
                 out: { type: 'string' },
               }
             : {
-              out: { type: 'string' },
-              frames: { type: 'string' },
-              'frame-spec': { type: 'string', default: 'landscape-1080p' },
-              theme: { type: 'string', default: 'light' },
-              locale: { type: 'string', default: 'zh-CN' },
-              from: { type: 'string' },
-              to: { type: 'string' },
-              jobs: { type: 'string' },
-              ffmpeg: { type: 'string' },
-            },
+                out: { type: 'string' },
+                frames: { type: 'string' },
+                'frame-spec': { type: 'string', default: 'landscape-1080p' },
+                theme: { type: 'string', default: 'light' },
+                locale: { type: 'string', default: 'zh-CN' },
+                from: { type: 'string' },
+                to: { type: 'string' },
+                jobs: { type: 'string' },
+                ffmpeg: { type: 'string' },
+              },
     });
   } catch (error) {
     throw new UsageError(error instanceof Error ? error.message : String(error));
@@ -122,7 +122,13 @@ export function parseCommand(argv: readonly string[]): Command {
     if (values.write && out !== undefined)
       throw new UsageError('layout 的 --write 和 --out 不能同时使用');
     if (out === '') throw new UsageError('--out 不能为空');
-    return { command, file, seed: Number(seedValue), write: values.write === true, ...(out !== undefined ? { out } : {}) };
+    return {
+      command,
+      file,
+      seed: Number(seedValue),
+      write: values.write === true,
+      ...(out !== undefined ? { out } : {}),
+    };
   }
   const str = (key: string): string | undefined => {
     const value = (values as Record<string, unknown>)[key];

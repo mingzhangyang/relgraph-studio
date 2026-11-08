@@ -2,7 +2,7 @@
 
 Status: **Accepted** · proposed 2026-11-06, accepted 2026-11-07 with migration step 2; steps 1–3 merged; step 4 complete 2026-11-08 · Supersedes nothing; refines [ADR 001](ARCHITECTURE.md) and [ADR 002](ADR-002-domain-adapters.md)
 
-The context and paths below describe the project when this ADR was proposed. For the current source layout and migration status, see the [README](../README.md) and [roadmap](ROADMAP.md). Migration steps 1–3 are complete: core and render have separate builds, frames are composed into display lists from a `FrameSpec`, edge and node vocabularies live in domain style sheets, and `relgraph render` exports MP4s headlessly through skia-canvas with vendored fonts and golden frames. Step 4 adds the compiled track timeline, default reveals and the caption track. The layout CLI (step 5) remains future work.
+The context and paths below describe the project when this ADR was proposed. For the current source layout and migration status, see the [README](../README.md) and [roadmap](ROADMAP.md). Migration steps 1–3 are complete: core and render have separate builds, frames are composed into display lists from a `FrameSpec`, edge and node vocabularies live in domain style sheets, and `relgraph render` exports MP4s headlessly through skia-canvas with vendored fonts and golden frames. Step 4 adds the compiled track timeline, default reveals and the caption track. Step 5's layout CLI and position tools are merged, as are the workspace model/view extractions. See [final acceptance](B1.5-FINAL-ACCEPTANCE.md) for measured verification and the corrective-PR merge gate before B2.
 
 ## Context
 

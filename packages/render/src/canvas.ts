@@ -73,7 +73,13 @@ export function createCanvasRenderer(
     cameraOverride,
   }: CanvasRendererOptions = {},
 ): CanvasRenderer {
-  if (cameraOverride && (!Number.isFinite(cameraOverride.x) || !Number.isFinite(cameraOverride.y) || !(cameraOverride.scale > 0) || !Number.isFinite(cameraOverride.scale)))
+  if (
+    cameraOverride &&
+    (!Number.isFinite(cameraOverride.x) ||
+      !Number.isFinite(cameraOverride.y) ||
+      !(cameraOverride.scale > 0) ||
+      !Number.isFinite(cameraOverride.scale))
+  )
     throw new RangeError('Invalid camera override');
   const palette = themeFor(theme);
   const spec = frameSpecFor(frameSpec);

@@ -29,7 +29,10 @@ const model = () => {
 
 test('pure policy excludes unrevealed nodes from both keyboard and drag paths', () => {
   const { frame, positions } = model();
-  assert.deepEqual(editableNodes(frame, positions).map(n => n.id), ['early']);
+  assert.deepEqual(
+    editableNodes(frame, positions).map((n) => n.id),
+    ['early'],
+  );
   assert.equal(updateEditableNodePosition(positions, frame, 'future', { x: 77, y: 77 }), false);
   assert.equal(updateEditableNodePosition(positions, frame, 'partial', { x: 77, y: 77 }), false);
   assert.equal(positions.get('future').x, 180);
@@ -44,21 +47,43 @@ test('drag mathematics preserves grab offset and rejects invalid or overflowing 
   const start = { x: center.x + 8, y: center.y - 5 };
   const drag = startPositionDrag(frame, positions, DEFAULT_FRAME_SPEC, start, 24, 1);
   assert.equal(drag.id, 'early');
-  assert.deepEqual(positionForDrag(drag, start, frame.cameraResolved, DEFAULT_FRAME_SPEC), { x: 0, y: 0 });
+  assert.deepEqual(positionForDrag(drag, start, frame.cameraResolved, DEFAULT_FRAME_SPEC), {
+    x: 0,
+    y: 0,
+  });
   assert.deepEqual(
-    positionForDrag(drag, { x: start.x + 40, y: start.y - 24 }, frame.cameraResolved, DEFAULT_FRAME_SPEC),
+    positionForDrag(
+      drag,
+      { x: start.x + 40, y: start.y - 24 },
+      frame.cameraResolved,
+      DEFAULT_FRAME_SPEC,
+    ),
     { x: 40, y: -24 },
   );
-  assert.equal(positionForDrag(drag, { x: Infinity, y: start.y }, frame.cameraResolved, DEFAULT_FRAME_SPEC), null);
-  assert.equal(positionForDrag(drag, start, { ...frame.cameraResolved, scale: 0 }, DEFAULT_FRAME_SPEC), null);
+  assert.equal(
+    positionForDrag(drag, { x: Infinity, y: start.y }, frame.cameraResolved, DEFAULT_FRAME_SPEC),
+    null,
+  );
+  assert.equal(
+    positionForDrag(drag, start, { ...frame.cameraResolved, scale: 0 }, DEFAULT_FRAME_SPEC),
+    null,
+  );
   const extreme = { ...drag, previous: { x: 1e307, y: 0 } };
-  assert.deepEqual(positionForDrag(extreme, start, frame.cameraResolved, DEFAULT_FRAME_SPEC), { x: 1e307, y: 0 });
+  assert.deepEqual(positionForDrag(extreme, start, frame.cameraResolved, DEFAULT_FRAME_SPEC), {
+    x: 1e307,
+    y: 0,
+  });
 });
 
 test('pure validation and reset do not depend on DOM or browser stubs', () => {
   const { frame, positions } = model();
   const initial = new Map([...positions].map(([id, p]) => [id, { ...p }]));
-  for (const values of [['', '1'], ['Infinity', '2'], ['2', 'NaN'], ['1', '']])
+  for (const values of [
+    ['', '1'],
+    ['Infinity', '2'],
+    ['2', 'NaN'],
+    ['1', ''],
+  ])
     assert.equal(parseCoordinateInputs(...values), null);
   assert.deepEqual(parseCoordinateInputs('1.25', '-4'), { x: 1.25, y: -4 });
   assert.equal(updateEditableNodePosition(positions, frame, 'early', { x: 1.25, y: -4 }), true);
@@ -68,7 +93,6 @@ test('pure validation and reset do not depend on DOM or browser stubs', () => {
   assert.notEqual(positions.get('early'), initial.get('early'), 'restored data must be cloned');
 });
 
-
 test('valid drag crosses opposite huge world coordinates without intermediate overflow', () => {
   const camera = { x: 1e308, y: 0, scale: 2.75e-306 };
   const drag = {
@@ -77,12 +101,7 @@ test('valid drag crosses opposite huge world coordinates without intermediate ov
     previous: { x: 1e308, y: 0 },
     start: { x: 640, y: 330 },
   };
-  const moved = positionForDrag(
-    drag,
-    { x: 90, y: 330 },
-    camera,
-    DEFAULT_FRAME_SPEC,
-  );
+  const moved = positionForDrag(drag, { x: 90, y: 330 }, camera, DEFAULT_FRAME_SPEC);
   assert.deepEqual(moved, { x: -1e308, y: 0 });
   assert.deepEqual(positionForDrag(drag, drag.start, camera, DEFAULT_FRAME_SPEC), drag.previous);
 });
@@ -95,21 +114,11 @@ test('axis-aligned drags preserve the exact untouched coordinate precision', () 
     previous: { x: 10.123456789, y: 5.67891 },
     start: { x: 640, y: 330 },
   };
-  const horizontal = positionForDrag(
-    drag,
-    { x: 660, y: 330 },
-    camera,
-    DEFAULT_FRAME_SPEC,
-  );
+  const horizontal = positionForDrag(drag, { x: 660, y: 330 }, camera, DEFAULT_FRAME_SPEC);
   assert.equal(horizontal.y, drag.previous.y, 'horizontal drag must not round Y');
   assert.notEqual(horizontal.x, drag.previous.x);
 
-  const vertical = positionForDrag(
-    drag,
-    { x: 640, y: 350 },
-    camera,
-    DEFAULT_FRAME_SPEC,
-  );
+  const vertical = positionForDrag(drag, { x: 640, y: 350 }, camera, DEFAULT_FRAME_SPEC);
   assert.equal(vertical.x, drag.previous.x, 'vertical drag must not round X');
   assert.notEqual(vertical.y, drag.previous.y);
 });

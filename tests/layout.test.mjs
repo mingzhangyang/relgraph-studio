@@ -37,8 +37,10 @@ test('seeded missing-node layout is reproducible across graph array order and le
   }
   assert.notDeepEqual(
     [first.get(graph.nodes[0].id), first.get(graph.nodes[3].id)],
-    [layoutMissingNodes(graph, { seed: 77 }).get(graph.nodes[0].id),
-      layoutMissingNodes(graph, { seed: 77 }).get(graph.nodes[3].id)],
+    [
+      layoutMissingNodes(graph, { seed: 77 }).get(graph.nodes[0].id),
+      layoutMissingNodes(graph, { seed: 77 }).get(graph.nodes[3].id),
+    ],
   );
   assert.throws(() => layoutMissingNodes(graph, { seed: -1 }), RangeError);
 });
@@ -52,11 +54,13 @@ test('biology process and missing entities receive separate positions without mo
   assert.ok(points.has(source.entities[1].id));
   assert.deepEqual(points.get('kinase-k'), source.entities[0].position);
   const missing = graph.nodes.filter((node) => !node.position);
-  for (const node of missing) for (const other of graph.nodes)
-    if (other.id !== node.id) {
-      const a = points.get(node.id), b = points.get(other.id);
-      assert.ok(Math.hypot(a.x - b.x, a.y - b.y) >= 63.99);
-    }
+  for (const node of missing)
+    for (const other of graph.nodes)
+      if (other.id !== node.id) {
+        const a = points.get(node.id),
+          b = points.get(other.id);
+        assert.ok(Math.hypot(a.x - b.x, a.y - b.y) >= 63.99);
+      }
 });
 
 test('layout preview does not write; --write is deterministic and preserves source fields', async () => {
@@ -90,7 +94,8 @@ test('layout preview does not write; --write is deterministic and preserves sour
 test('layout out file is exclusive and biology mapping includes reaction nodes', async () => {
   const folder = await mkdtemp(join(tmpdir(), 'relgraph-layout-'));
   try {
-    const file = join(folder, 'biology.json'), out = join(folder, 'arranged.json');
+    const file = join(folder, 'biology.json'),
+      out = join(folder, 'arranged.json');
     await writeFile(file, JSON.stringify(biology, null, 2) + '\n');
     const before = await readFile(file, 'utf8');
     const summary = await layoutFile({ file, out, seed: 0, write: false });
@@ -107,7 +112,6 @@ test('layout out file is exclusive and biology mapping includes reaction nodes',
     await rm(folder, { recursive: true, force: true });
   }
 });
-
 
 test('atomic --write preserves source mode despite the process umask', async () => {
   const folder = await mkdtemp(join(tmpdir(), 'relgraph-mode-'));
@@ -164,7 +168,6 @@ test('finite extreme authored coordinates cannot overflow the seeded layout', ()
   assert.deepEqual([...positions], [...layoutMissingNodes(graph, { seed: 42 })]);
 });
 
-
 test('opposite maximum finite anchors cannot poison spring forces with NaN', () => {
   const graph = {
     nodes: [
@@ -200,7 +203,8 @@ test('layout handles thousands of fixed nodes with one missing, without fixed/fi
 });
 
 test('shared coordinate rounding leaves extreme finite values finite', async () => {
-  const { roundPositionCoordinate } = await import('../packages/core/src/director/seeded-layout.ts');
+  const { roundPositionCoordinate } =
+    await import('../packages/core/src/director/seeded-layout.ts');
   for (const value of [0, 123.456, -9.876, 1e307, -1.5e308]) {
     assert.ok(Number.isFinite(roundPositionCoordinate(value)));
   }
@@ -208,7 +212,6 @@ test('shared coordinate rounding leaves extreme finite values finite', async () 
   assert.equal(roundPositionCoordinate(1e307), 1e307);
   assert.throws(() => roundPositionCoordinate(Number.POSITIVE_INFINITY), RangeError);
 });
-
 
 test('collision fallback stays finite beside Number.MAX_VALUE anchors', () => {
   const huge = Number.MAX_VALUE;
@@ -223,14 +226,8 @@ test('collision fallback stays finite beside Number.MAX_VALUE anchors', () => {
   assert.deepEqual(placed.get('anchor'), graph.nodes[0].position);
   assert.ok(Number.isFinite(placed.get('extra').x));
   assert.ok(Number.isFinite(placed.get('extra').y));
-  assert.ok(
-    Math.hypot(
-      placed.get('extra').x - huge,
-      placed.get('extra').y - huge,
-    ) >= 64,
-  );
+  assert.ok(Math.hypot(placed.get('extra').x - huge, placed.get('extra').y - huge) >= 64);
 });
-
 
 test('both global and connected anchor means stay finite at Number.MAX_VALUE', () => {
   const huge = Number.MAX_VALUE;
@@ -244,17 +241,24 @@ test('both global and connected anchor means stay finite at Number.MAX_VALUE', (
     nodes.push({ id: 'missing', label: 'Missing', kind: 'person' });
     const edges = connected
       ? nodes.slice(0, 3).map((node, index) => ({
-          id: 'edge-' + index, source: node.id, target: 'missing', kind: 'friendship',
+          id: 'edge-' + index,
+          source: node.id,
+          target: 'missing',
+          kind: 'friendship',
         }))
       : [];
     const graph = { nodes, edges };
     const placed = layoutMissingNodes(graph, { seed: 42, iterations: 16 });
     const point = placed.get('missing');
-    assert.ok(Number.isFinite(point.x) && Number.isFinite(point.y), 'missing position must be finite');
+    assert.ok(
+      Number.isFinite(point.x) && Number.isFinite(point.y),
+      'missing position must be finite',
+    );
     for (const anchor of nodes.slice(0, 3))
       assert.deepEqual(placed.get(anchor.id), anchor.position, 'authored anchor must remain fixed');
     assert.deepEqual(
-      [...placed], [...layoutMissingNodes(graph, { seed: 42, iterations: 16 })],
+      [...placed],
+      [...layoutMissingNodes(graph, { seed: 42, iterations: 16 })],
       'same seed and inputs must be reproducible',
     );
   }
@@ -263,8 +267,18 @@ test('both global and connected anchor means stay finite at Number.MAX_VALUE', (
 test('mixed extreme anchors keep their mean finite without biasing the layout', () => {
   const graph = {
     nodes: [
-      { id: 'positive', label: 'P', kind: 'person', position: { x: Number.MAX_VALUE, y: Number.MAX_VALUE } },
-      { id: 'negative', label: 'N', kind: 'person', position: { x: -Number.MAX_VALUE, y: -Number.MAX_VALUE } },
+      {
+        id: 'positive',
+        label: 'P',
+        kind: 'person',
+        position: { x: Number.MAX_VALUE, y: Number.MAX_VALUE },
+      },
+      {
+        id: 'negative',
+        label: 'N',
+        kind: 'person',
+        position: { x: -Number.MAX_VALUE, y: -Number.MAX_VALUE },
+      },
       { id: 'missing', label: 'M', kind: 'person' },
     ],
     edges: [

@@ -61,10 +61,7 @@ export function createTranscriptView(
     },
     render(a11y) {
       const scene = a11y.scene;
-      setText(
-        elements.currentShot,
-        scene.title + (scene.narration ? '\n' + scene.narration : ''),
-      );
+      setText(elements.currentShot, scene.title + (scene.narration ? '\n' + scene.narration : ''));
       setText(elements.nodeCount, String(a11y.nodes.length));
       setText(elements.edgeCount, String(a11y.relations.length));
 

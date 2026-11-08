@@ -57,10 +57,7 @@ test('snapshot clones arrays, scene and detail against in-place renderer mutatio
 });
 
 test('live text preserves existing wording, using only projected a11y', () => {
-  assert.equal(
-    liveFrameDescription(frame()),
-    'Scene。Narration 当前 1 个节点，1 条关系。',
-  );
+  assert.equal(liveFrameDescription(frame()), 'Scene。Narration 当前 1 个节点，1 条关系。');
   assert.equal(
     liveFrameDescription({ ...frame(), detail: { label: 'A', summary: 'Visible summary' } }),
     'Scene。Narration 当前 1 个节点，1 条关系。A：Visible summary',

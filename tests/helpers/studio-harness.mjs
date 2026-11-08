@@ -59,8 +59,15 @@ export function makeStudio({
       this._text = '';
       this.textWrites = 0;
       this.classList = {
-        add: (name) => (this.className = [...new Set([...this.className.split(' ').filter(Boolean), name])].join(' ')),
-        remove: (name) => (this.className = this.className.split(' ').filter((part) => part !== name).join(' ')),
+        add: (name) =>
+          (this.className = [...new Set([...this.className.split(' ').filter(Boolean), name])].join(
+            ' ',
+          )),
+        remove: (name) =>
+          (this.className = this.className
+            .split(' ')
+            .filter((part) => part !== name)
+            .join(' ')),
       };
     }
     append(...nodes) {
@@ -110,12 +117,21 @@ export function makeStudio({
       return this.dispatch('click');
     }
     remove() {
-      if (document.body) document.body.children = document.body.children.filter((child) => child !== this);
+      if (document.body)
+        document.body.children = document.body.children.filter((child) => child !== this);
     }
-    getBoundingClientRect() { return { left: 0, top: 0, width: 1280, height: 720 }; }
-    setPointerCapture(id) { this.pointerCaptured = id; }
-    hasPointerCapture(id) { return this.pointerCaptured === id; }
-    releasePointerCapture() { this.pointerCaptured = null; }
+    getBoundingClientRect() {
+      return { left: 0, top: 0, width: 1280, height: 720 };
+    }
+    setPointerCapture(id) {
+      this.pointerCaptured = id;
+    }
+    hasPointerCapture(id) {
+      return this.pointerCaptured === id;
+    }
+    releasePointerCapture() {
+      this.pointerCaptured = null;
+    }
     getContext() {
       return { fillRect() {}, fillText() {} };
     }
@@ -152,7 +168,10 @@ export function makeStudio({
       if (id === missingId) return null;
       if (!elements.has(id)) {
         const element = new (id === wrongId ? Element : (constructors[id] ?? Element))();
-        if (id === 'stage') { element.width = 1280; element.height = 720; }
+        if (id === 'stage') {
+          element.width = 1280;
+          element.height = 720;
+        }
         elements.set(id, element);
       }
       return elements.get(id);
@@ -200,10 +219,15 @@ export function makeStudio({
     hitVisibleNode,
     Blob,
     URL: {
-      createObjectURL(blob) { blobs.push(blob); return 'blob:relgraph-' + blobs.length; },
+      createObjectURL(blob) {
+        blobs.push(blob);
+        return 'blob:relgraph-' + blobs.length;
+      },
       revokeObjectURL() {},
     },
-    setTimeout(callback) { callback(); },
+    setTimeout(callback) {
+      callback();
+    },
     frameCount,
     createCanvasRenderer: (_canvas, graph, layout, options) => {
       themes.push(options.theme);
@@ -224,7 +248,11 @@ export function makeStudio({
         if (transformFrameText) list.a11y = transformFrameText(list.a11y, frame, graph);
         return { state, list };
       };
-      return { renderFrame: (frame) => renderFrameWithList(frame).state, renderFrameWithList, frameSpec: DEFAULT_FRAME_SPEC };
+      return {
+        renderFrame: (frame) => renderFrameWithList(frame).state,
+        renderFrameWithList,
+        frameSpec: DEFAULT_FRAME_SPEC,
+      };
     },
     fetch: fetcher ?? defaultFetcher,
     matchMedia: () => media,

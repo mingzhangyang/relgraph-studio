@@ -87,9 +87,10 @@ test('playback stops at final frame, including a one-frame film', () => {
   let clock = setPlaybackRunning(createPlaybackState(49), true, true);
   clock = advancePlayback(clock, 20);
   clock = advancePlayback(clock, 2020);
-  assert.deepEqual([clock.frame, clock.position, clock.playing, clock.lastTickMs], [
-    48, 48, false, null,
-  ]);
+  assert.deepEqual(
+    [clock.frame, clock.position, clock.playing, clock.lastTickMs],
+    [48, 48, false, null],
+  );
   assert.equal(advancePlayback(clock, 9999), clock);
   clock = advancePlayback(setPlaybackRunning(createPlaybackState(1), true, true), 0);
   assert.equal(clock.playing, false);
@@ -110,12 +111,15 @@ test('shot-start markers retain fractional shot boundary semantics', () => {
     68,
     24,
   );
-  assert.deepEqual(markers.map((m) => m.targetFrame), [0, 12, 20]);
-  assert.deepEqual(markers.map((m) => m.startSec), [0, 0.5, 0.5 + 1 / 3]);
-  assert.equal(
-    shotMarkers([{ durationSec: 99 }, { durationSec: 1 }], 10, 24)[1].targetFrame,
-    9,
+  assert.deepEqual(
+    markers.map((m) => m.targetFrame),
+    [0, 12, 20],
   );
+  assert.deepEqual(
+    markers.map((m) => m.startSec),
+    [0, 0.5, 0.5 + 1 / 3],
+  );
+  assert.equal(shotMarkers([{ durationSec: 99 }, { durationSec: 1 }], 10, 24)[1].targetFrame, 9);
 });
 
 test('time label formatting retains existing workspace presentation', () => {

@@ -330,9 +330,9 @@ const literatureFrames = Math.ceil(
     });
     assert.equal(stableShots, true, 'shot buttons and focus survive frame renders');
     await page.evaluate(() => window.renderAt(0));
-    const inactiveMarkup = await page.locator('#shots .shot:not(.active)').evaluateAll(
-      (buttons) => buttons.map((button) => button.outerHTML).join(' '),
-    );
+    const inactiveMarkup = await page
+      .locator('#shots .shot:not(.active)')
+      .evaluateAll((buttons) => buttons.map((button) => button.outerHTML).join(' '));
     for (const future of documents.literature.presentation.slice(1)) {
       assert.equal(
         inactiveMarkup.includes(future.title),
@@ -584,6 +584,123 @@ const literatureFrames = Math.ceil(
     );
     assert.equal(await status(page), 'ready');
   });
+
+  await check(
+    'timed imports reveal and retract nodes and relations without hidden DOM text',
+    async () => {
+      // Synthetic fixture: chapter steps use the production projection/timeline,
+      // rather than injecting a11y or implementing a second spoiler filter.
+      const timed = {
+        schemaVersion: '0.1',
+        meta: { title: 'Timed browser regression' },
+        timeline: { unit: 'chapter', total: 3 },
+        characters: ['OPEN NODE', 'FUTURE NODE B', 'FUTURE NODE C'].map((name, index) => ({
+          id: `node-${index}`,
+          name,
+          firstAppearance: index + 1,
+          importance: 2,
+          position: { x: index * 150, y: 0 },
+          bio: { summary: name },
+        })),
+        relations: [1, 2].map((index) => ({
+          id: `edge-${index}`,
+          source: `node-${index - 1}`,
+          target: `node-${index}`,
+          type: 'other',
+          label: `FUTURE EDGE ${index}`,
+          strength: 2,
+          chapters: { from: index + 1 },
+        })),
+        presentation: [1, 2, 3].map((chapterAt) => ({
+          id: `shot-${chapterAt}`,
+          title: `Chapter ${chapterAt}`,
+          chapterAt,
+          durationSec: 2,
+        })),
+      };
+      await dropFile(page, 'timed.json', JSON.stringify(timed));
+      await page.waitForFunction(
+        () => document.getElementById('sourceName').textContent === 'timed.json',
+      );
+      assert.equal(await status(page), 'ready');
+      assert.doesNotMatch(await page.locator('body').innerHTML(), /FUTURE NODE|FUTURE EDGE/);
+      for (const [frame, nodes, edges] of [
+        [48, 2, 1],
+        [96, 3, 2],
+        [0, 1, 0],
+      ]) {
+        await page.evaluate((f) => window.renderAt(f), frame);
+        assert.equal(await page.locator('#transcript ul').nth(0).locator('li').count(), nodes);
+        assert.equal(await page.locator('#transcript ul').nth(1).locator('li').count(), edges);
+        if (frame === 48) {
+          assert.match(await page.locator('#transcript').textContent(), /FUTURE NODE B/);
+          assert.doesNotMatch(
+            await page.locator('body').innerHTML(),
+            /FUTURE NODE C|FUTURE EDGE 2/,
+          );
+        }
+        if (frame === 0)
+          assert.doesNotMatch(await page.locator('body').innerHTML(), /FUTURE NODE|FUTURE EDGE/);
+      }
+      const mutations = await page.evaluate(() => {
+        const observer = new MutationObserver(() => {});
+        observer.observe(document.getElementById('transcript'), {
+          childList: true,
+          subtree: true,
+          characterData: true,
+        });
+        window.renderAt(1);
+        const count = observer.takeRecords().length;
+        observer.disconnect();
+        return count;
+      });
+      assert.equal(mutations, 0, 'unchanged semantics within a shot retain transcript DOM');
+    },
+  );
+
+  await check(
+    'late example success and invalid data cannot replace a newer local import',
+    async () => {
+      const pattern = '**/examples/biology-signaling-synthetic.json';
+      for (const body of [JSON.stringify(documents.biology), '{']) {
+        let acceptRoute;
+        const pending = new Promise((resolve) => {
+          acceptRoute = resolve;
+        });
+        await page.route(pattern, (route) => acceptRoute(route));
+        try {
+          await page.click('#exampleBiology');
+          const route = await pending;
+          assert.equal(await status(page), 'loading');
+          assert.equal(await page.isDisabled('#play'), true);
+          assert.equal(await page.locator('#errors .diagnostic-item').count(), 0);
+          await dropFile(page, 'current.json', JSON.stringify(documents.literature));
+          await page.waitForFunction(
+            () => document.getElementById('sourceName').textContent === 'current.json',
+          );
+          await waitReady(page);
+          assert.equal(await status(page), 'ready');
+          assert.equal(await page.evaluate(() => window.renderAt(48)), true);
+          const warnings = await text(page, '#warnings');
+          const response = page.waitForResponse((r) => r.url() === route.request().url());
+          await route.fulfill({ status: 200, contentType: 'application/json', body });
+          await (await response).finished();
+          // Allow the fetch's text/parse microtasks to finish on the page.
+          await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 0)));
+          assert.equal(await text(page, '#sourceName'), 'current.json');
+          assert.equal(await status(page), 'ready');
+          assert.equal(await frameNumber(page), 48);
+          assert.equal(await text(page, '#warnings'), warnings);
+          assert.equal(await page.locator('#errors .diagnostic-item').count(), 0);
+          assert.equal(await page.getAttribute('#exampleLiterature', 'aria-pressed'), 'false');
+          assert.equal(await page.getAttribute('#exampleBiology', 'aria-pressed'), 'false');
+          assert.match(await page.locator('#transcript').textContent(), /贾宝玉/);
+        } finally {
+          await page.unroute(pattern);
+        }
+      }
+    },
+  );
 
   await check('no console errors, page errors or external requests', async () => {
     assert.deepEqual(problems, []);

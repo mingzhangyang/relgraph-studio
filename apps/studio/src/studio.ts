@@ -452,7 +452,6 @@ function applyTheme(next: Theme, persist: boolean): void {
   } else paintEmptyStage(emptyMessage);
 }
 
-
 /**
  * Never expose names of future/hidden nodes in the keyboard selector.
  * Re-check the current spoiler-safe frame when applying a typed coordinate.
@@ -482,14 +481,22 @@ layoutNode.addEventListener('change', () => {
   updateLayoutFields();
 });
 layoutApply.addEventListener('click', () => {
-  if (!layoutEditing || !currentLayout || !selectedLayoutNode ||
-      !availableNodes().some((node) => node.id === selectedLayoutNode)) return;
+  if (
+    !layoutEditing ||
+    !currentLayout ||
+    !selectedLayoutNode ||
+    !availableNodes().some((node) => node.id === selectedLayoutNode)
+  )
+    return;
   const point = parseCoordinateInputs(layoutX.value, layoutY.value);
   if (!point) {
     renderEditorMessage(layoutControls, '坐标必须是有限数字，请检查 X 和 Y');
     return;
   }
-  if (!currentFrameState || !updateEditableNodePosition(currentLayout, currentFrameState, selectedLayoutNode, point))
+  if (
+    !currentFrameState ||
+    !updateEditableNodePosition(currentLayout, currentFrameState, selectedLayoutNode, point)
+  )
     return;
   setFrame(playback.frame, false);
   updateLayoutControls();
@@ -557,7 +564,12 @@ canvas.addEventListener('pointerdown', (event) => {
   const rect = canvas.getBoundingClientRect();
   const radius = 24 * (canvas.width / Math.max(1, rect.width));
   const nextDrag = startPositionDrag(
-    currentFrameState, currentLayout, renderer.frameSpec, point, radius, event.pointerId,
+    currentFrameState,
+    currentLayout,
+    renderer.frameSpec,
+    point,
+    radius,
+    event.pointerId,
   );
   if (!nextDrag) return;
   dragging = nextDrag;
@@ -568,11 +580,22 @@ canvas.addEventListener('pointerdown', (event) => {
   event.preventDefault();
 });
 function moveLayoutNode(event: PointerEvent): void {
-  if (!dragging || !renderer || !currentLayout || !currentFrameState ||
-      dragging.pointerId !== event.pointerId) return;
+  if (
+    !dragging ||
+    !renderer ||
+    !currentLayout ||
+    !currentFrameState ||
+    dragging.pointerId !== event.pointerId
+  )
+    return;
   const point = pointerLocation(event);
   if (!point) return;
-  const moved = positionForDrag(dragging, point, currentFrameState.cameraResolved, renderer.frameSpec);
+  const moved = positionForDrag(
+    dragging,
+    point,
+    currentFrameState.cameraResolved,
+    renderer.frameSpec,
+  );
   if (!moved || !updateEditableNodePosition(currentLayout, currentFrameState, dragging.id, moved))
     return;
   setFrame(playback.frame, false);
@@ -610,7 +633,10 @@ layoutExport.addEventListener('click', () => {
     link.click();
     link.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
-    renderEditorMessage(layoutControls, '已准备导出：' + link.download + '。修改仅保存在导出的 JSON 文件中。');
+    renderEditorMessage(
+      layoutControls,
+      '已准备导出：' + link.download + '。修改仅保存在导出的 JSON 文件中。',
+    );
   } catch (error) {
     renderEditorMessage(
       layoutControls,

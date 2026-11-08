@@ -99,7 +99,9 @@ export function encodeArgs({ width, height, fps, out }: EncodeSettings): string[
     'pipe:0',
     '-an',
     '-vf',
-    'scale=out_color_matrix=bt709:out_range=tv,format=yuv420p',
+    // FFmpeg 7 can forward unspecified frame primaries/transfer over the
+    // output codec tags. Tag the converted frames as well as the stream.
+    'scale=out_color_matrix=bt709:out_range=tv,format=yuv420p,setparams=color_primaries=bt709:color_trc=bt709:colorspace=bt709:range=limited',
     '-c:v',
     'libx264',
     '-preset',

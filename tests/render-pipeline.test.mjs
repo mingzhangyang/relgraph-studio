@@ -476,8 +476,6 @@ test('frame specs keep the graph safe area on stage and bands tall enough for th
   assert.ok(track.d[0][2] + track.d[0][4] <= 720);
 });
 
-
-
 test('opt-in camera override freezes authoring gestures without changing default film frames', () => {
   const example = examples[0];
   const canvas = measuringCanvas();
@@ -498,7 +496,11 @@ test('opt-in camera override freezes authoring gestures without changing default
   const oldPosition = { ...example.layout.get(nodeId) };
   try {
     example.layout.set(nodeId, { x: oldPosition.x + 75, y: oldPosition.y + 40 });
-    assert.notDeepEqual(edited.displayListAt(frame), frozen, 'node movement is drawn under the fixed camera');
+    assert.notDeepEqual(
+      edited.displayListAt(frame),
+      frozen,
+      'node movement is drawn under the fixed camera',
+    );
   } finally {
     example.layout.set(nodeId, oldPosition);
   }
@@ -507,9 +509,10 @@ test('opt-in camera override freezes authoring gestures without changing default
   });
   assert.deepEqual(unchanged.displayListAt(frame), before);
   assert.throws(
-    () => createCanvasRenderer(canvas, example.graph, example.layout, {
-      cameraOverride: { x: 0, y: 0, scale: Number.NaN },
-    }),
+    () =>
+      createCanvasRenderer(canvas, example.graph, example.layout, {
+        cameraOverride: { x: 0, y: 0, scale: Number.NaN },
+      }),
     RangeError,
   );
 });

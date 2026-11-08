@@ -1,5 +1,9 @@
 import type { VisualGraph } from '../../types/visual-graph.js';
 
+// Node 20+ and modern browsers provide this host API. Keep its declaration
+// local so the ES-only core build needs neither DOM nor Node ambient types.
+declare function structuredClone<T>(value: T): T;
+
 type Point = { x: number; y: number };
 type RecordValue = Record<string, unknown>;
 const record = (value: unknown): value is RecordValue =>
@@ -34,11 +38,7 @@ export function applyGraphPositions(
       const point = positions.get(id);
       if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y))
         throw new TypeError('No finite position for ' + entry.id);
-      if (
-        record(entry.position) &&
-        entry.position.x === point.x &&
-        entry.position.y === point.y
-      )
+      if (record(entry.position) && entry.position.x === point.x && entry.position.y === point.y)
         continue;
       entry.position = { x: point.x, y: point.y };
       changed++;
