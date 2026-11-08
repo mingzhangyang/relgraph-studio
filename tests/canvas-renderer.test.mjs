@@ -70,8 +70,26 @@ test('display lists and detail lookup respect hidden targets and rewinding domai
   assert.deepEqual(early.a11y.relations, []);
   assert.equal(early.a11y.detail, null);
 
-  const revealed = renderer.displayListAt(24);
-  assert.deepEqual(calls, [['future', 2]]);
+  const entering = renderer.displayListAt(24);
+  assert.ok(!texts(entering).includes('FUTURE PERSON'));
+  assert.deepEqual(entering.a11y.nodes, ['Known', 'FUTURE PERSON']);
+  // The detail card waits for its node like the label does; its text is
+  // accessible from the start of the reveal.
+  assert.ok(!texts(entering).includes('FUTURE BIOGRAPHY'));
+  assert.deepEqual(entering.a11y.detail, { label: 'FUTURE PERSON', summary: 'FUTURE BIOGRAPHY' });
+  // 10 frames into the 0.6 s reveal: progress 0.694, past halfway, card fading in.
+  const fading = renderer.displayListAt(34);
+  const card = fading.items.find(
+    (item) => item.type === 'group' && JSON.stringify(item).includes('FUTURE BIOGRAPHY'),
+  );
+  assert.ok(card, 'card drawn as a fading group');
+  assert.ok(Math.abs(card.alpha - (10 / 14.4 - 0.5) * 2) < 1e-9, `card alpha ${card.alpha}`);
+  const revealed = renderer.displayListAt(40);
+  assert.deepEqual(calls, [
+    ['future', 2],
+    ['future', 2],
+    ['future', 2],
+  ]);
   assert.ok(texts(revealed).includes('FUTURE PERSON'));
   assert.ok(texts(revealed).includes('FUTURE BIOGRAPHY'));
   assert.deepEqual(revealed.a11y.detail, { label: 'FUTURE PERSON', summary: 'FUTURE BIOGRAPHY' });
@@ -82,7 +100,7 @@ test('display lists and detail lookup respect hidden targets and rewinding domai
   assert.doesNotMatch(readable(rewind), /FUTURE PERSON|FUTURE BIOGRAPHY/);
   // Random access reproduces the same values.
   assert.deepEqual(renderer.displayListAt(0), early);
-  assert.deepEqual(renderer.displayListAt(24), revealed);
+  assert.deepEqual(renderer.displayListAt(40), revealed);
 });
 
 test('renderFrame returns the director state for the drawn frame', () => {
@@ -91,6 +109,17 @@ test('renderFrame returns the director state for the drawn frame', () => {
   const state = renderer.renderFrame(24);
   assert.equal(state.playback.index, 1);
   assert.equal(state.overlay.nodeId, 'future');
+  // Published frame data must not mutate private compiled scene snapshots.
+  state.view.nodes[0].label = 'TAMPERED';
+  state.playback.scene.title = 'TAMPERED SHOT';
+  state.camera.focusNodeId = 'known';
+  const next = renderer.renderFrame(24);
+  assert.equal(next.playback.scene.title, 'Reveal');
+  assert.deepEqual(
+    next.view.nodes.map((node) => node.label),
+    ['Known', 'FUTURE PERSON'],
+  );
+  assert.notEqual(next.camera.focusNodeId, 'known');
 });
 
 test('missing layout positions fail only when the node is visible', () => {

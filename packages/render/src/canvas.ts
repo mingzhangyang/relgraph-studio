@@ -1,4 +1,4 @@
-import { directorFrameAt, domainStyle, localeFor } from '@relgraph/core';
+import { compileTimeline, directorFrameAt, domainStyle, localeFor } from '@relgraph/core';
 import type { DirectorFrameState, DomainStyle, VisualGraph } from '@relgraph/core';
 import { canvasTextMeasurer, drawDisplayList, type Canvas2D } from './backends/canvas2d.js';
 import { composeFrame, type DetailLookup } from './compose.js';
@@ -31,6 +31,8 @@ export interface CanvasRendererOptions {
 export interface CanvasRenderer {
   /** Draw a frame and return its state. */
   renderFrame(frame: number): DirectorFrameState;
+  /** Draw and return both state and a11y-bearing display list in one composition. */
+  renderFrameWithList(frame: number): { state: DirectorFrameState; list: DisplayList };
   /** Compose a frame without drawing it. */
   displayListAt(frame: number): DisplayList;
   theme: 'dark' | 'light';
@@ -74,11 +76,13 @@ export function createCanvasRenderer(
   const fit = cameraFitFor(spec);
   const resolvedStyle = style ?? domainStyle(graph.domain);
   const resolvedLocale = localeFor(locale);
+  // Safe compilation depends on the input document, never on playback order.
+  const timeline = compileTimeline(graph, rate);
   const ctx = canvas.getContext('2d', { alpha: false, desynchronized: false });
   canvas.width = spec.width;
   canvas.height = spec.height;
   function compose(frame: number): { state: DirectorFrameState; list: DisplayList } {
-    const state = directorFrameAt(graph, positions, frame, rate, { fit });
+    const state = directorFrameAt(graph, positions, frame, rate, { fit, timeline });
     if (!ctx) throw new TypeError('Canvas 2D context is unavailable');
     const list = composeFrame(state, {
       graph,
@@ -99,7 +103,13 @@ export function createCanvasRenderer(
       const { state, list } = compose(frame);
       // compose() has already rejected a missing context.
       if (ctx) drawDisplayList(ctx, list);
+      // directorFrameAt returns a copy, so the cached timeline cannot leak.
       return state;
+    },
+    renderFrameWithList(frame) {
+      const result = compose(frame);
+      if (ctx) drawDisplayList(ctx, result.list);
+      return result;
     },
     displayListAt: (frame) => compose(frame).list,
     theme: palette.name,

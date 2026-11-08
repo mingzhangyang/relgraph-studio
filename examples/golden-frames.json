@@ -20,6 +20,14 @@
       "example": "literature",
       "theme": "light",
       "shot": 2,
+      "kind": "reveal",
+      "frame": 176,
+      "sha256": "0c0af0df69cfff9222a27f242df391a2fae08931ec4047795421c76757e4414a"
+    },
+    {
+      "example": "literature",
+      "theme": "light",
+      "shot": 2,
       "kind": "transition",
       "frame": 183,
       "sha256": "bd2f101e157466f372b47384ee3fcd3f133ae184a179659387ff451d93eea2c4"
@@ -31,6 +39,14 @@
       "kind": "mid",
       "frame": 264,
       "sha256": "c79c4ccdfe0e159e27ba11b79b1df914ad1f227038bc354a6ea7c704415bdf49"
+    },
+    {
+      "example": "literature",
+      "theme": "light",
+      "shot": 3,
+      "kind": "reveal",
+      "frame": 368,
+      "sha256": "97a7fd0910b329ac51b583d54f4570099b38639b0fdd353d8bae079002e99066"
     },
     {
       "example": "literature",
@@ -52,6 +68,14 @@
       "example": "literature",
       "theme": "light",
       "shot": 4,
+      "kind": "reveal",
+      "frame": 584,
+      "sha256": "3d623087dfc09359ac993009a03df97e2de90f71bf41bade7dcca24693afb121"
+    },
+    {
+      "example": "literature",
+      "theme": "light",
+      "shot": 4,
       "kind": "transition",
       "frame": 591,
       "sha256": "fc44d9473860a8d5c45c4465d08868e482d38087c4c1c3caef116cffe443fea3"
@@ -63,6 +87,14 @@
       "kind": "mid",
       "frame": 672,
       "sha256": "f80fae7b150baf9ff0368a8b9ff27a503c4555100c63dd6c2e4fe9eb06c4086f"
+    },
+    {
+      "example": "literature",
+      "theme": "light",
+      "shot": 5,
+      "kind": "reveal",
+      "frame": 776,
+      "sha256": "4fe8b1a975ad191e98560037513973609459e8f8e7c000096b9d48a18980591c"
     },
     {
       "example": "literature",
@@ -100,6 +132,14 @@
       "example": "literature",
       "theme": "dark",
       "shot": 2,
+      "kind": "reveal",
+      "frame": 176,
+      "sha256": "eb52fc17c926ed829ed8502ce32e98598b17fa5df527624d89533fb7401d44af"
+    },
+    {
+      "example": "literature",
+      "theme": "dark",
+      "shot": 2,
       "kind": "transition",
       "frame": 183,
       "sha256": "08b2f48741e1f9c88153972813aed7ee76ef6d3a52fc32fcac78dbd37dc12808"
@@ -111,6 +151,14 @@
       "kind": "mid",
       "frame": 264,
       "sha256": "d273b2b5a5ccced2056b0c19a88ca672ccd7da2bade7dc6d21571d14bbb1c9e4"
+    },
+    {
+      "example": "literature",
+      "theme": "dark",
+      "shot": 3,
+      "kind": "reveal",
+      "frame": 368,
+      "sha256": "1f7c7940691d6bc6ddaca04044eeadcd6338aaf420cb40ccd5fc64edb87f4843"
     },
     {
       "example": "literature",
@@ -132,6 +180,14 @@
       "example": "literature",
       "theme": "dark",
       "shot": 4,
+      "kind": "reveal",
+      "frame": 584,
+      "sha256": "201697bde17fe9709bad5729a4b4903d94100403f72c5c4c9beaa067940b78bd"
+    },
+    {
+      "example": "literature",
+      "theme": "dark",
+      "shot": 4,
       "kind": "transition",
       "frame": 591,
       "sha256": "1237d18cb5fd913d33963075043fad8dc143b9af70a771bb7a0f74bcf3aa3c27"
@@ -143,6 +199,14 @@
       "kind": "mid",
       "frame": 672,
       "sha256": "5999610ebbf03905a83eab507ae5a3759f216f0eabc3c02fd7d0e9bad133a344"
+    },
+    {
+      "example": "literature",
+      "theme": "dark",
+      "shot": 5,
+      "kind": "reveal",
+      "frame": 776,
+      "sha256": "3bea79cfe6295a4f639aba58e63d02f9f1907798a2d850cd8b02e1c8274bcb4a"
     },
     {
       "example": "literature",
@@ -180,9 +244,17 @@
       "example": "biology",
       "theme": "light",
       "shot": 2,
+      "kind": "reveal",
+      "frame": 104,
+      "sha256": "89292ebd4c85321bd6a62ac974fd6eae97a7526cdcad3d0cfc2e146797fc502a"
+    },
+    {
+      "example": "biology",
+      "theme": "light",
+      "shot": 2,
       "kind": "transition",
       "frame": 111,
-      "sha256": "389d9671781362af38908ed7b52c736850c9f24be59a6bd70b4afc68b8212831"
+      "sha256": "70747cc1b1992ac5de727cfe8e626a268e0a689f761100b9998168a71e02ccbf"
     },
     {
       "example": "biology",
@@ -196,9 +268,17 @@
       "example": "biology",
       "theme": "light",
       "shot": 3,
+      "kind": "reveal",
+      "frame": 224,
+      "sha256": "e5d5e9377408f6d298df5a0deca1e84ab6e19f01f24090aa41e82a574152484f"
+    },
+    {
+      "example": "biology",
+      "theme": "light",
+      "shot": 3,
       "kind": "transition",
       "frame": 231,
-      "sha256": "dd4d6631df39f4e022e53637a59238250b345b4eb80d5eff5ebc36f98f22e62b"
+      "sha256": "eb26e8b9bc142b2f3ea3470347a5753acbf143a60283befd26b87ae844da0103"
     },
     {
       "example": "biology",
@@ -228,9 +308,17 @@
       "example": "biology",
       "theme": "dark",
       "shot": 2,
+      "kind": "reveal",
+      "frame": 104,
+      "sha256": "8806ce8aa4791c385093ca01f76ae41689be1ab3eb610808270682ce2dfeb52c"
+    },
+    {
+      "example": "biology",
+      "theme": "dark",
+      "shot": 2,
       "kind": "transition",
       "frame": 111,
-      "sha256": "7d4d46570ddc5e15dd909fff357b1fb47204ef3d992ba9f509e33011e4cabd2c"
+      "sha256": "90a4336c93b7fc349611b430c7da57ae07dc9944489cf6ff2d39d18d5f24ebd9"
     },
     {
       "example": "biology",
@@ -244,9 +332,17 @@
       "example": "biology",
       "theme": "dark",
       "shot": 3,
+      "kind": "reveal",
+      "frame": 224,
+      "sha256": "ef38a6101723adc1545c9b5f3acb79a8b8de639b25be8e1c0cad03dafff62de5"
+    },
+    {
+      "example": "biology",
+      "theme": "dark",
+      "shot": 3,
       "kind": "transition",
       "frame": 231,
-      "sha256": "1fa27fb1a342ea1ca2419a9f70c5bb0e68f3c7b0f283f55d329b59dac363acc8"
+      "sha256": "60ce6e7c6593a6d9830f116e8bb14ecc16a1260a749d5470990f89ec81838780"
     },
     {
       "example": "biology",

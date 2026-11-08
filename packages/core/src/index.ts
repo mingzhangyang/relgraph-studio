@@ -2,6 +2,7 @@
 export * from './director/layout.js';
 export * from './director/load.js';
 export * from './director/state.js';
+export * from './director/timeline.js';
 export * from './domains/biology.js';
 export * from './domains/biology.style.js';
 export * from './domains/literature.js';

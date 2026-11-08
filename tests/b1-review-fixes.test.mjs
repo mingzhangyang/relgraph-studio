@@ -6,6 +6,9 @@ import biology from '../examples/biology-signaling-synthetic.json' with {type:'j
 import {loadDocument,parseDocument} from '../packages/core/src/director/load.ts';
 import {layoutGraph} from '../packages/core/src/director/layout.ts';
 import {directorFrameAt,frameCount} from '../packages/core/src/director/state.ts';
+import {domainStyle} from '../packages/core/src/style.ts';
+import {composeFrame} from '../packages/render/src/compose.ts';
+import {measure} from './helpers/display-list.mjs';
 
 function graphWith(nodes,scenes){return {domain:'test',meta:{title:'Test'},timeline:{unit:'stage'},nodes,edges:[],groups:[],scenes};}
 
@@ -86,7 +89,14 @@ async function studioHarness(){
  ]};
  const jobs=new Map();let nextId=0;
  const window={addEventListener(){}};
- const createCanvasRenderer=(_canvas,graph,layout,{fps})=>({renderFrame:frame=>directorFrameAt(graph,layout,frame,fps)});
+ const createCanvasRenderer=(_canvas,graph,layout,{fps,detailAt})=>{
+  const renderFrameWithList=frame=>{
+   const state=directorFrameAt(graph,layout,frame,fps);
+   const list=composeFrame(state,{graph,positions:layout,frame,fps,measure,style:domainStyle(graph.domain),detailAt});
+   return {state,list};
+  };
+  return {renderFrame:frame=>renderFrameWithList(frame).state,renderFrameWithList};
+ };
  const env={...studioImports,document,window,Element:FakeElement,HTMLElement:FakeElement,HTMLCanvasElement:FakeElement,HTMLButtonElement:FakeElement,HTMLInputElement:FakeElement,HTMLLabelElement:FakeElement,fetch:async()=>({ok:true,text:async()=>JSON.stringify(source)}),
   parseDocument,layoutGraph,frameCount,createCanvasRenderer,structuredClone,
   requestAnimationFrame:callback=>{const id=++nextId;jobs.set(id,callback);return id;},cancelAnimationFrame:id=>jobs.delete(id)};

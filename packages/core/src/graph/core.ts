@@ -1,5 +1,6 @@
 /** Renderer-neutral, deterministic graph contract. Domain facts remain in source documents. */
 import type {
+  FrameScene,
   FrameState,
   ProjectedVisualGraph,
   ResolvedHighlight,
@@ -392,12 +393,24 @@ export function sceneAtSecond(graph: VisualGraph, second: number): ScenePlayback
 export function frameStateAt(graph: VisualGraph, frame: number, fps = 24): FrameState {
   if (!Number.isInteger(frame) || frame < 0 || !finite(fps) || fps <= 0)
     throw new RangeError('Invalid frame or fps');
-  const playback = sceneAtSecond(graph, frame / fps),
-    view = projectVisualGraph(graph, playback.domainAt),
-    s = playback.scene;
+  return frameStateAtSecond(graph, frame / fps);
+}
+
+/** Project and redact a known shot without scanning scene boundaries again.
+ * This shared path keeps timeline compilation and random-access evaluation
+ * equally spoiler-safe, even when a shot inherits its domain time.
+ */
+export function projectFrameScene(
+  graph: VisualGraph,
+  source: VisualScene | null,
+  index: number,
+  domainAt: number | null,
+): Omit<FrameState, 'playback'> & { scene: FrameScene | null } {
+  const view = projectVisualGraph(graph, domainAt);
+  const s = source;
   if (!s)
     return {
-      playback: { ...playback, scene: null },
+      scene: null,
       view,
       overlay: null,
       highlight: { nodeIds: [], edgeIds: [], groupId: null },
@@ -433,7 +446,7 @@ export function frameStateAt(graph: VisualGraph, frame: number, fps = 24): Frame
   // refer to characters or reactions which are not visible at this domain time.
   const scene = {
     id: hiddenTarget ? undefined : s.id,
-    title: hiddenTarget ? `分镜 ${playback.index + 1}（目标尚不可见）` : s.title,
+    title: hiddenTarget ? `分镜 ${index + 1}（目标尚不可见）` : s.title,
     narration: hiddenTarget ? undefined : s.narration,
     durationSec: s.durationSec,
     transitionMs: s.transitionMs,
@@ -443,5 +456,17 @@ export function frameStateAt(graph: VisualGraph, frame: number, fps = 24): Frame
     redacted: hiddenTarget,
     ...(overlay ? { openDetailNodeId: overlay.nodeId } : {}),
   };
-  return { playback: { ...playback, scene }, view, camera, highlight, overlay };
+  return { scene, view, camera, highlight, overlay };
+}
+
+/** Evaluate a spoiler-safe scene at any video second, including sub-frame shot boundaries. */
+export function frameStateAtSecond(graph: VisualGraph, second: number): FrameState {
+  const playback = sceneAtSecond(graph, second);
+  const { scene, ...projected } = projectFrameScene(
+    graph,
+    playback.scene,
+    playback.index,
+    playback.domainAt,
+  );
+  return { ...projected, playback: { ...playback, scene } };
 }

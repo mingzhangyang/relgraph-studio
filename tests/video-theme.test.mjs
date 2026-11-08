@@ -60,7 +60,13 @@ test('a theme picked in the workspace stays pinned when storage is unavailable',
   matchMedia:()=>lightQuery,localStorage:blockedStorage,
   fetch:async()=>({ok:true,text:async()=>JSON.stringify(literature)}),
   parseDocument:text=>loadDocument(JSON.parse(text)),layoutGraph,frameCount:()=>48,
-  createCanvasRenderer:(_canvas,graph,layout,{theme})=>{themes.push(theme);return {renderFrame:()=>({playback:{index:0,progress:0,totalSec:2,domainAt:null,scene:{title:'S'}},view:{nodes:[],edges:[]},overlay:null})};},
+  createCanvasRenderer:(_canvas,graph,layout,{theme})=>{
+    themes.push(theme);
+    return {renderFrameWithList:()=>({
+      state:{playback:{index:0,progress:0,totalSec:2,domainAt:null,scene:{title:'S'}},view:{nodes:[],edges:[]},overlay:null},
+      list:{a11y:{scene:{title:'S',narration:''},nodes:[],relations:[],detail:null}}
+    })};
+  },
   requestAnimationFrame:()=>0,cancelAnimationFrame(){}};
  const {runInNewContext}=await import('node:vm');
  const script=studioSource();

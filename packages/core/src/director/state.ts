@@ -1,6 +1,9 @@
 import { frameStateAt } from '../graph/core.js';
+import { captionOpacity, compileTimeline, revealStateAt, timelinePlaybackAt } from './timeline.js';
+import type { FilmTimeline } from './timeline.js';
 import type {
   DirectorFrameState,
+  FrameState,
   ProjectedVisualGraph,
   ResolvedHighlight,
   VisualCamera,
@@ -14,12 +17,18 @@ type Position = { x: number; y: number };
  * of the 1280×720 design (renderers multiply by their frame's type scale).
  * Core stays independent of the renderer's FrameSpec and receives only this.
  */
+// Available in every supported runtime (Node 20+, browsers); core builds
+// against ES2022 alone, whose library has no declaration for it.
+declare function structuredClone<T>(value: T): T;
+
 export interface CameraFit {
   halfWidth: number;
   halfHeight: number;
 }
 export interface DirectorFrameOptions {
   fit?: CameraFit;
+  /** A compiled timeline reused for random-access frames; never mutated. */
+  timeline?: FilmTimeline;
 }
 export const DEFAULT_CAMERA_FIT: Readonly<CameraFit> = Object.freeze({
   halfWidth: 550,
@@ -79,51 +88,78 @@ function cameraFor(
   return { x, y, scale: clamp(scale, Number.MIN_VALUE, 1.6) };
 }
 
-/** All transition values come from the requested frame, never previous draws. */
+/** Every value comes from the requested frame and its compiled, projected tracks. */
 export function directorFrameAt(
   graph: VisualGraph,
   positions: ReadonlyMap<string, Position>,
   frame: number,
   fps = 24,
-  { fit = DEFAULT_CAMERA_FIT }: DirectorFrameOptions = {},
+  { fit = DEFAULT_CAMERA_FIT, timeline: suppliedTimeline }: DirectorFrameOptions = {},
 ): DirectorFrameState {
-  const state = frameStateAt(graph, frame, fps);
-  const { playback, view } = state;
-  const target = cameraFor(view, state.camera, positions, state.highlight, fit);
+  if (!Number.isInteger(frame) || frame < 0 || !Number.isFinite(fps) || fps <= 0)
+    throw new RangeError('Invalid frame or fps');
+  const timeline = suppliedTimeline ?? compileTimeline(graph, fps);
+  if (timeline.fps !== fps) throw new RangeError('Timeline FPS mismatch');
+  const playback = timelinePlaybackAt(timeline, frame / fps);
+  const shot = timeline.shots[playback.index];
+  // Empty graphs have no authored presentation, but retain the legacy
+  // renderer-neutral projection behavior.
+  const fallback = shot ? null : frameStateAt(graph, frame, fps);
+  const view = shot?.view ?? fallback?.view;
+  if (!view) throw new Error('Unable to resolve frame projection');
+  const cameraSpec = timeline.camera[playback.index]?.value ?? fallback?.camera ?? {};
+  const highlight = timeline.highlight[playback.index]?.value ??
+    fallback?.highlight ?? {
+      nodeIds: [],
+      edgeIds: [],
+      groupId: null,
+    };
+  const state: FrameState = {
+    playback,
+    view,
+    camera: cameraSpec,
+    highlight,
+    overlay: shot?.overlay ?? fallback?.overlay ?? null,
+  };
+  const target = cameraFor(view, cameraSpec, positions, highlight, fit);
   let camera = target,
     transition = 1;
   let previousHighlight: ResolvedHighlight = { nodeIds: [], edgeIds: [], groupId: null };
   if (playback.index > 0 && playback.scene) {
-    // Restrict even the previous target to the current view: backward domain
-    // jumps cannot aim a camera at a now-hidden future object.
-    // sceneAtSecond compares boundaries with this same floating-point
-    // tolerance. Pick the last frame strictly before that effective boundary.
+    // The previous target is restricted to CURRENT visible IDs, so a domain
+    // time reversal never targets or highlights a now-hidden future object.
     const tolerance = 8 * Number.EPSILON * Math.max(1, Math.abs(playback.startSec));
     const previousFrame = Math.max(
       0,
       Math.min(frame - 1, Math.ceil((playback.startSec - tolerance) * fps) - 1),
     );
-    const previous = frameStateAt(graph, previousFrame, fps);
+    const previousPlayback = timelinePlaybackAt(timeline, previousFrame / fps);
+    const previousShot = timeline.shots[previousPlayback.index];
+    if (!previousShot) throw new Error('Missing previous compiled shot');
     const nodeIds = new Set(view.nodes.map((node) => node.id)),
       edgeIds = new Set(view.edges.map((edge) => edge.id)),
       groupIds = new Set(view.groups.map((group) => group.id));
-    const previousGroupId = previous.highlight.groupId;
+    const priorHighlight = timeline.highlight[previousPlayback.index].value;
+    const previousGroupId = priorHighlight.groupId;
     previousHighlight = {
-      nodeIds: previous.highlight.nodeIds.filter((id) => nodeIds.has(id)),
-      edgeIds: previous.highlight.edgeIds.filter((id) => edgeIds.has(id)),
+      nodeIds: priorHighlight.nodeIds.filter((id) => nodeIds.has(id)),
+      edgeIds: priorHighlight.edgeIds.filter((id) => edgeIds.has(id)),
       groupId: previousGroupId !== null && groupIds.has(previousGroupId) ? previousGroupId : null,
     };
     const previousView = {
-      ...previous.view,
-      nodes: previous.view.nodes.filter((node) => nodeIds.has(node.id)),
-      edges: previous.view.edges.filter((edge) => edgeIds.has(edge.id)),
-      groups: previous.view.groups.filter((group) => groupIds.has(group.id)),
+      ...previousShot.view,
+      nodes: previousShot.view.nodes.filter((node) => nodeIds.has(node.id)),
+      edges: previousShot.view.edges.filter((edge) => edgeIds.has(edge.id)),
+      groups: previousShot.view.groups.filter((group) => groupIds.has(group.id)),
     };
-    const from = cameraFor(previousView, previous.camera, positions, previousHighlight, fit);
-    const duration = Math.min(
-      (playback.scene?.transitionMs ?? 1200) / 1000,
-      playback.scene.durationSec,
+    const from = cameraFor(
+      previousView,
+      timeline.camera[previousPlayback.index].value,
+      positions,
+      previousHighlight,
+      fit,
     );
+    const duration = timeline.camera[playback.index].transitionSec;
     transition = duration <= 0 ? 1 : ease(playback.elapsedSec / duration);
     camera = {
       x: mix(from.x, target.x, transition),
@@ -131,7 +167,18 @@ export function directorFrameAt(
       scale: mix(from.scale, target.scale, transition),
     };
   }
-  return { ...state, cameraResolved: camera, transition, previousHighlight };
+  const second = frame / fps;
+  // The scene, projection, camera and highlight come from the (possibly
+  // caller-supplied, reused) timeline. Return a copy so editing a returned
+  // state can never change a later frame.
+  return structuredClone({
+    ...state,
+    cameraResolved: camera,
+    transition,
+    previousHighlight,
+    reveal: revealStateAt(timeline, view, second),
+    captionOpacity: captionOpacity(timeline, playback.index, second),
+  });
 }
 
 export function frameCount(graph: VisualGraph, fps = 24): number {

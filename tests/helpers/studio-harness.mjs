@@ -2,6 +2,9 @@ import { runInNewContext } from 'node:vm';
 import { parseDocument } from '../../packages/core/src/director/load.ts';
 import { layoutGraph } from '../../packages/core/src/director/layout.ts';
 import { directorFrameAt, frameCount } from '../../packages/core/src/director/state.ts';
+import { domainStyle } from '../../packages/core/src/style.ts';
+import { composeFrame } from '../../packages/render/src/compose.ts';
+import { measure } from './display-list.mjs';
 import literature from '../../examples/honglou-provisional.relgraph.json' with { type: 'json' };
 import biology from '../../examples/biology-signaling-synthetic.json' with { type: 'json' };
 import { studioImports, studioSource } from './studio-source.mjs';
@@ -157,7 +160,22 @@ export function makeStudio({
     frameCount,
     createCanvasRenderer: (_canvas, graph, layout, options) => {
       themes.push(options.theme);
-      return { renderFrame: (frame) => directorFrameAt(graph, layout, frame, options.fps) };
+      const renderFrameWithList = (frame) => {
+        const state = directorFrameAt(graph, layout, frame, options.fps);
+        return {
+          state,
+          list: composeFrame(state, {
+            graph,
+            positions: layout,
+            frame,
+            fps: options.fps,
+            measure,
+            style: domainStyle(graph.domain),
+            detailAt: options.detailAt,
+          }),
+        };
+      };
+      return { renderFrame: (frame) => renderFrameWithList(frame).state, renderFrameWithList };
     },
     fetch: fetcher ?? defaultFetcher,
     matchMedia: () => media,

@@ -14,6 +14,7 @@ import {
   FILM_FONT_FACES,
   filmFontQuery,
   type CanvasRenderer,
+  type FrameText,
 } from '@relgraph/render';
 
 declare global {
@@ -214,24 +215,18 @@ function updateShotProgress(p: ScenePlayback<FrameScene>): void {
       `transform:scaleX(${index === p.index ? p.progress : 0})`,
     );
 }
-function updateTranscript(state: DirectorFrameState): void {
-  const { view, playback } = state,
-    transcript = $('transcript');
-  if (!playback.scene) throw new Error('A loaded film must have a current scene');
+/** The scene transcript and live region are sourced only from drawn-frame a11y. */
+function updateTranscript(a11y: FrameText): void {
+  const transcript = $('transcript');
   transcript.replaceChildren();
   const intro = document.createElement('p');
-  intro.textContent = `${playback.scene.title}。${playback.scene.narration || ''}`;
+  intro.textContent = `${a11y.scene.title}。${a11y.scene.narration}`;
   transcript.append(intro);
-  const names = new Map(view.nodes.map((node) => [node.id, node.label]));
-  const overlay = state.overlay;
-  const detailNode = overlay ? view.nodes.find((node) => node.id === overlay.nodeId) : undefined;
-  const detail = detailNode ? currentDetailAt(detailNode.id, playback.domainAt) : undefined;
-  const detailText = detailNode && detail?.summary ? `${detailNode.label}：${detail.summary}` : '';
-  if (detailText) {
+  if (a11y.detail) {
     const heading = document.createElement('strong');
     heading.textContent = '当前人物简介';
     const summary = document.createElement('p');
-    summary.textContent = detailText;
+    summary.textContent = `${a11y.detail.label}：${a11y.detail.summary}`;
     transcript.append(heading, summary);
   }
   const add = (title: string, values: string[]): void => {
@@ -245,25 +240,17 @@ function updateTranscript(state: DirectorFrameState): void {
     }
     transcript.append(heading, list);
   };
-  add(
-    '当前可见节点',
-    view.nodes.map((node) => node.label),
-  );
-  add(
-    '当前可见关系',
-    view.edges.map(
-      (edge) =>
-        `${names.get(edge.source)} ${edge.directed ? '→' : '—'} ${names.get(edge.target)}：${edge.label || edge.kind} (${edge.kind})`,
-    ),
-  );
+  add('当前可见节点', a11y.nodes);
+  add('当前可见关系', a11y.relations);
+  const detailText = a11y.detail ? `${a11y.detail.label}：${a11y.detail.summary}` : '';
   $('sceneDescription').textContent =
-    `${playback.scene.title}。${playback.scene.narration || ''} 当前 ${view.nodes.length} 个节点，${view.edges.length} 条关系。${detailText}`;
+    `${a11y.scene.title}。${a11y.scene.narration} 当前 ${a11y.nodes.length} 个节点，${a11y.relations.length} 条关系。${detailText}`;
 }
 function setFrame(next: number, updatePosition = true): DirectorFrameState | undefined {
   if (!renderer) return;
   frame = Math.max(0, Math.min(totalFrames - 1, Math.floor(next)));
   if (updatePosition) position = frame;
-  const state = renderer.renderFrame(frame),
+  const { state, list } = renderer.renderFrameWithList(frame),
     p = state.playback;
   if (!p.scene) throw new Error('A loaded film must have a current scene');
   currentFrameState = state;
@@ -276,17 +263,17 @@ function setFrame(next: number, updatePosition = true): DirectorFrameState | und
   $('frameNumber').textContent = `FRAME ${frame}`;
   $('time').textContent = `${stamp(frame / FPS)} / ${stamp(p.totalSec)}`;
   $('currentShot').textContent =
-    p.scene.title + (p.scene.narration ? '\n' + p.scene.narration : '');
+    list.a11y.scene.title + (list.a11y.scene.narration ? '\n' + list.a11y.scene.narration : '');
   $('domainTime').textContent =
     p.domainAt === null
       ? '领域时间：未指定'
       : `领域时间：${state.view.timeline?.unit || '时点'} ${p.domainAt}`;
-  $('nodeCount').textContent = String(state.view.nodes.length);
-  $('edgeCount').textContent = String(state.view.edges.length);
+  $('nodeCount').textContent = String(list.a11y.nodes.length);
+  $('edgeCount').textContent = String(list.a11y.relations.length);
   if (p.index !== announcedScene) {
     announcedScene = p.index;
-    renderShots(p.index, p.scene.title);
-    updateTranscript(state);
+    renderShots(p.index, list.a11y.scene.title);
+    updateTranscript(list.a11y);
   }
   updateShotProgress(p);
   return state;
