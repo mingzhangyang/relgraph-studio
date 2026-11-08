@@ -22,6 +22,8 @@ export default tseslint.config(
       'tests/film-fonts.test.mjs',
       'tests/cli.test.mjs',
       'tests/layout.test.mjs',
+      'tests/layout-editor-model.test.mjs',
+      'tests/position-tool.test.mjs',
       'tests/helpers/**/*.mjs',
     ],
     extends: [js.configs.recommended],
