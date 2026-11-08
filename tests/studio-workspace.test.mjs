@@ -283,7 +283,7 @@ test('playback view preserves accessible state through pause, end and replay', a
   assert.equal(app.node('status').attributes['data-state'], 'ready');
 });
 
-test('same-shot a11y reveals update transcript and live status without repeated announcements', async () => {
+test('same-shot a11y reveals update transcript without repeat announcements', async () => {
   const app = makeStudio({
     // Simulate later within-shot a11y reveals using the actual shared VM/renderer path,
     // without a second DOM, timeline implementation, or unprojected graph text.
@@ -344,7 +344,7 @@ test('same-shot a11y reveals update transcript and live status without repeated 
   assert.equal(live.textWrites, announcements + 3, 'rewind withdraws exposed content');
 });
 
-test('document switching resets semantic cache and errors never retain previous transcript', async () => {
+test('document switches reset cached text, and errors clear the transcript', async () => {
   const app = makeStudio();
   await app.ready;
   assert.match(app.node('currentShot').textContent, /大观园/);
@@ -369,7 +369,7 @@ test('document switching resets semantic cache and errors never retain previous 
   assert.match(app.node('errors').textContent, /JSON|语法错误/);
 });
 
-test('pending requests clear outdated diagnostics and stale load failures cannot reappear', async () => {
+test('pending and stale loads cannot expose outdated diagnostics', async () => {
   const app = makeStudio();
   await app.ready;
   const input = app.node('fileInput');
