@@ -2,9 +2,11 @@ import {
   cameraCenterFor,
   projectCameraPoint,
   worldWithScreenOffset,
+  nodeGlyphBounds,
+  rectsIntersect,
   type FrameSpec,
 } from '@relgraph/render';
-import type { DirectorFrameState, VisualNode } from '@relgraph/core';
+import { NEUTRAL_STYLE, type DirectorFrameState, type DomainStyle, type VisualNode } from '@relgraph/core';
 
 export type Point = { x: number; y: number };
 export type Camera = DirectorFrameState['cameraResolved'];
@@ -60,6 +62,7 @@ export function hitVisibleNode(
   spec: FrameSpec,
   point: Point,
   radius: number,
+  style: DomainStyle = NEUTRAL_STYLE,
 ): string | null {
   // The composer clips all graph drawing to this stage. Without the same
   // constraint, a node outside it can be dragged through the caption band.
@@ -80,6 +83,8 @@ export function hitVisibleNode(
     const position = positions.get(node.id);
     if (!position) continue;
     const screen = screenPosition(position, camera, spec);
+    const bounds = nodeGlyphBounds(node, screen, camera.scale, spec, style, reveal.nodes[node.id]);
+    if (!rectsIntersect(bounds, stage)) continue;
     const distance = (screen.x - point.x) ** 2 + (screen.y - point.y) ** 2;
     if (distance <= best) {
       best = distance;
