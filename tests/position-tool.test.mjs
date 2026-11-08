@@ -484,7 +484,14 @@ test('corner clipping uses actual circle, diamond and rounded-pill footprints', 
     );
     assert.equal(
       hitVisibleNode(
-        [node], new Map([[node.id, outsideWorld]]), reveal, camera, spec, at, 24, style,
+        [node],
+        new Map([[node.id, outsideWorld]]),
+        reveal,
+        camera,
+        spec,
+        at,
+        24,
+        style,
       ),
       null,
       `${node.id}: a nearby stage click must not select a fully clipped node`,
@@ -496,7 +503,14 @@ test('corner clipping uses actual circle, diamond and rounded-pill footprints', 
     );
     assert.equal(
       hitVisibleNode(
-        [node], new Map([[node.id, insideWorld]]), reveal, camera, spec, at, 24, style,
+        [node],
+        new Map([[node.id, insideWorld]]),
+        reveal,
+        camera,
+        spec,
+        at,
+        24,
+        style,
       ),
       node.id,
       `${node.id}: a partially visible node remains selectable`,
