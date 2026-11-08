@@ -475,3 +475,36 @@ test('frame specs keep the graph safe area on stage and bands tall enough for th
   const track = paths(list).find((p) => p.fill === VIDEO_THEMES.light.track);
   assert.ok(track.d[0][2] + track.d[0][4] <= 720);
 });
+
+
+test('opt-in camera override freezes authoring gestures without changing default film frames', () => {
+  const example = examples[0];
+  const canvas = measuringCanvas();
+  const base = createCanvasRenderer(canvas, example.graph, example.layout, { theme: 'light' });
+  const before = base.displayListAt(0);
+  const original = base.renderFrame(0).cameraResolved;
+  const override = { ...original };
+  const edited = createCanvasRenderer(canvas, example.graph, example.layout, {
+    theme: 'light', cameraOverride: override,
+  });
+  const first = edited.renderFrame(0);
+  assert.deepEqual(first.cameraResolved, override);
+  const nodeId = first.view.nodes[0].id;
+  const oldPosition = { ...example.layout.get(nodeId) };
+  try {
+    example.layout.set(nodeId, { x: oldPosition.x + 75, y: oldPosition.y + 40 });
+    assert.deepEqual(edited.renderFrame(0).cameraResolved, override);
+  } finally {
+    example.layout.set(nodeId, oldPosition);
+  }
+  const unchanged = createCanvasRenderer(canvas, example.graph, example.layout, {
+    theme: 'light',
+  });
+  assert.deepEqual(unchanged.displayListAt(0), before);
+  assert.throws(
+    () => createCanvasRenderer(canvas, example.graph, example.layout, {
+      cameraOverride: { x: 0, y: 0, scale: Number.NaN },
+    }),
+    RangeError,
+  );
+});

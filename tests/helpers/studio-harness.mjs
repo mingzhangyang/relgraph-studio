@@ -1,6 +1,9 @@
 import { runInNewContext } from 'node:vm';
 import { parseDocument } from '../../packages/core/src/director/load.ts';
 import { layoutGraph } from '../../packages/core/src/director/layout.ts';
+import { applyGraphPositions } from '../../packages/core/src/director/position-writeback.ts';
+import { DEFAULT_FRAME_SPEC } from '../../packages/render/src/frame-spec.ts';
+import { canvasPoint, graphPosition, hitVisibleNode } from '../../apps/studio/src/position-tool.ts';
 import { directorFrameAt, frameCount } from '../../packages/core/src/director/state.ts';
 import { domainStyle } from '../../packages/core/src/style.ts';
 import { composeFrame } from '../../packages/render/src/compose.ts';
@@ -34,6 +37,8 @@ export function makeStudio({
   const windowListeners = new Map();
   const mediaListeners = [];
   const themes = [];
+  const blobs = [];
+  const downloads = [];
   let nextJob = 0;
   let document;
 
@@ -48,6 +53,10 @@ export function makeStudio({
       this.disabled = false;
       this.hidden = false;
       this._text = '';
+      this.classList = {
+        add: (name) => (this.className = [...new Set([...this.className.split(' ').filter(Boolean), name])].join(' ')),
+        remove: (name) => (this.className = this.className.split(' ').filter((part) => part !== name).join(' ')),
+      };
     }
     append(...nodes) {
       this.children.push(...nodes);
@@ -89,10 +98,18 @@ export function makeStudio({
       );
     }
     click() {
+      if (this.tagName === 'A') downloads.push({ href: this.href, filename: this.download });
       if (this.disabled) return Promise.resolve([]);
       this.focus();
       return this.dispatch('click');
     }
+    remove() {
+      if (document.body) document.body.children = document.body.children.filter((child) => child !== this);
+    }
+    getBoundingClientRect() { return { left: 0, top: 0, width: 1280, height: 720 }; }
+    setPointerCapture(id) { this.pointerCaptured = id; }
+    hasPointerCapture(id) { return this.pointerCaptured === id; }
+    releasePointerCapture() { this.pointerCaptured = null; }
     getContext() {
       return { fillRect() {}, fillText() {} };
     }
@@ -110,16 +127,23 @@ export function makeStudio({
     exampleLiterature: HTMLButtonElement,
     exampleBiology: HTMLButtonElement,
     themeToggle: HTMLButtonElement,
+    layoutToggle: HTMLButtonElement,
+    layoutReset: HTMLButtonElement,
+    layoutExport: HTMLButtonElement,
     dropzone: HTMLLabelElement,
   };
   document = {
     activeElement: null,
     documentElement: new Element('html'),
+    body: new Element('body'),
     fonts: { ready: fonts, load: loadFont },
     getElementById(id) {
       if (id === missingId) return null;
-      if (!elements.has(id))
-        elements.set(id, new (id === wrongId ? Element : (constructors[id] ?? Element))());
+      if (!elements.has(id)) {
+        const element = new (id === wrongId ? Element : (constructors[id] ?? Element))();
+        if (id === 'stage') { element.width = 1280; element.height = 720; }
+        elements.set(id, element);
+      }
       return elements.get(id);
     },
     createElement(tag) {
@@ -157,11 +181,24 @@ export function makeStudio({
     structuredClone,
     parseDocument,
     layoutGraph,
+    applyGraphPositions,
+    canvasPoint,
+    graphPosition,
+    hitVisibleNode,
+    Blob,
+    URL: {
+      createObjectURL(blob) { blobs.push(blob); return 'blob:relgraph-' + blobs.length; },
+      revokeObjectURL() {},
+    },
+    setTimeout(callback) { callback(); },
     frameCount,
     createCanvasRenderer: (_canvas, graph, layout, options) => {
       themes.push(options.theme);
       const renderFrameWithList = (frame) => {
-        const state = directorFrameAt(graph, layout, frame, options.fps);
+        const evaluated = directorFrameAt(graph, layout, frame, options.fps);
+        const state = options.cameraOverride
+          ? { ...evaluated, cameraResolved: { ...options.cameraOverride } }
+          : evaluated;
         return {
           state,
           list: composeFrame(state, {
@@ -175,7 +212,7 @@ export function makeStudio({
           }),
         };
       };
-      return { renderFrame: (frame) => renderFrameWithList(frame).state, renderFrameWithList };
+      return { renderFrame: (frame) => renderFrameWithList(frame).state, renderFrameWithList, frameSpec: DEFAULT_FRAME_SPEC };
     },
     fetch: fetcher ?? defaultFetcher,
     matchMedia: () => media,
@@ -194,6 +231,8 @@ export function makeStudio({
     window,
     jobs,
     themes,
+    blobs,
+    downloads,
     elements,
     node: (id) => document.getElementById(id),
     setOSTheme(matches) {

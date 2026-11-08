@@ -54,7 +54,7 @@
 
 ADR 003 step 5 is split into two reviewable batches:
 - [x] **Step 5a:** seeded deterministic `relgraph layout` for missing coordinates, with opt-in validated source write-back and regression tests (PR pending).
-- [ ] **Step 5b:** director workspace position tweaks and explicit JSON export; default playback remains unchanged.
+- [x] **Step 5b:** opt-in director canvas drag adjustment for currently visible nodes, frozen preview camera, reset, and validated JSON export. Default playback and original source are unchanged (PR pending).
 
 After step 5b comes the first source-verified 60–90 s film. Audio synchronization and independent MP4 subtitle streams remain B2 work. Audio synchronization and independent MP4 subtitle streams remain B2 work.
 

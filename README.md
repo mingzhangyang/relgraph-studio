@@ -61,6 +61,10 @@ npm run relgraph -- layout story.json --seed 42 --write # atomically replace sou
 
 The same document and seed produce the same coordinates regardless of JSON node ordering. Literature positions go to `characters[].position`; biology positions go to `entities[].position` and `processes[].position`. The CLI validates the serialized document before writing, refuses to overwrite an existing `--out` destination, and leaves the source untouched by default. The existing `layoutGraph` fallback still handles imported documents without saved coordinates in the player.
 
+## Tweak positions in the director workspace
+
+The **调整节点位置** button pauses playback and locks the current shot camera. Drag visible nodes to refine coordinates; hidden nodes cannot be selected. **重置调整** restores the original layout. Edits live only in the current browser session until **导出含坐标 JSON** explicitly saves a new source file. The exported source contains every resolved position (including fallback coordinates for previously missing nodes) and is validated by the same source validator used for imports. Import the exported file or render it with the CLI to reuse the edited positions. Exiting edit mode, switching themes, and ordinary playback do not persist anything.
+
 ## Export a film without a browser
 
 The `relgraph` command line (`packages/cli`) renders a document with the same composition code as the workspace, drawn by [skia-canvas](https://skia-canvas.org) instead of a browser canvas, and encodes the frames with FFmpeg.
