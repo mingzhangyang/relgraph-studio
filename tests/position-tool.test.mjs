@@ -169,13 +169,19 @@ test('pointercancel rolls back only the interrupted drag and preserves earlier e
   assert.ok(original);
   const stage = app.node('stage');
   const pointer = (pointerId, x, y) => ({
-    pointerId, isPrimary: true, pointerType: 'mouse', button: 0, clientX: x, clientY: y,
+    pointerId,
+    isPrimary: true,
+    pointerType: 'mouse',
+    button: 0,
+    clientX: x,
+    clientY: y,
   });
 
   await app.node('layoutToggle').click();
   const firstStart = screenPosition(original, frame.cameraResolved, DEFAULT_FRAME_SPEC);
   await stage.dispatch('pointerdown', pointer(41, firstStart.x, firstStart.y));
   assert.equal(stage.hasPointerCapture(41), true);
+  assert.equal(app.node('layoutNode').value, node.id, 'first drag selects the intended node');
   await stage.dispatch('pointermove', pointer(41, firstStart.x + 32, firstStart.y - 20));
   await stage.dispatch('pointerup', pointer(41, firstStart.x + 32, firstStart.y - 20));
   assert.equal(stage.hasPointerCapture(41), false);
@@ -189,6 +195,7 @@ test('pointercancel rolls back only the interrupted drag and preserves earlier e
   const secondStart = screenPosition(committed, frame.cameraResolved, DEFAULT_FRAME_SPEC);
   await stage.dispatch('pointerdown', pointer(42, secondStart.x, secondStart.y));
   assert.equal(stage.hasPointerCapture(42), true);
+  assert.equal(app.node('layoutNode').value, node.id, 'second drag uses the same node');
   await stage.dispatch('pointermove', pointer(42, secondStart.x + 40, secondStart.y + 19));
   assert.notEqual(Number(app.node('layoutX').value), committed.x, 'second drag takes effect');
 
@@ -196,6 +203,12 @@ test('pointercancel rolls back only the interrupted drag and preserves earlier e
   assert.equal(stage.hasPointerCapture(42), true, 'unrelated pointer cannot cancel this drag');
   await stage.dispatch('pointercancel', { pointerId: 42 });
   assert.equal(stage.hasPointerCapture(42), false, 'cancellation releases pointer capture');
+  await stage.dispatch('pointermove', pointer(42, secondStart.x + 100, secondStart.y));
+  assert.equal(
+    Number(app.node('layoutX').value),
+    committed.x,
+    'a cancelled drag cannot continue changing the position',
+  );
   assert.deepEqual(
     { x: Number(app.node('layoutX').value), y: Number(app.node('layoutY').value) },
     committed,
@@ -216,6 +229,7 @@ test('pointercancel rolls back only the interrupted drag and preserves earlier e
   assert.equal(app.node('layoutReset').disabled, true);
   const cleanStart = screenPosition(original, frame.cameraResolved, DEFAULT_FRAME_SPEC);
   await stage.dispatch('pointerdown', pointer(43, cleanStart.x, cleanStart.y));
+  assert.equal(app.node('layoutNode').value, node.id);
   await stage.dispatch('pointermove', pointer(43, cleanStart.x + 25, cleanStart.y + 12));
   assert.equal(app.node('layoutReset').disabled, false);
   await stage.dispatch('pointercancel', { pointerId: 43 });
@@ -228,9 +242,12 @@ test('Escape works while controls have focus; arrows and renderAt release frozen
   await app.ready;
   assert.equal(app.window.renderAt(48), true);
   await app.node('layoutToggle').click();
-  const key = (code, target = null) => app.window.dispatch('keydown', {
-    code, target, preventDefault() {}, 
-  });
+  const key = (code, target = null) =>
+    app.window.dispatch('keydown', {
+      code,
+      target,
+      preventDefault() {},
+    });
   const focusedToggle = app.node('layoutToggle');
   focusedToggle.focusSelector = 'button';
   key('Escape', focusedToggle);
