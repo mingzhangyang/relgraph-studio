@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { stat, realpath, rename, unlink, writeFile } from 'node:fs/promises';
+import { chmod, stat, realpath, rename, unlink, writeFile } from 'node:fs/promises';
 import { basename, dirname, join, resolve } from 'node:path';
 import { applyGraphPositions, layoutMissingNodes, parseDocument, type VisualGraph } from '@relgraph/core';
 import { formatDiagnostics, loadFile } from './document.js';
@@ -38,10 +38,12 @@ function indentOf(text: string): string | number {
 /** Place temporary data beside the target so rename is an atomic replacement. */
 async function atomicReplace(file: string, text: string): Promise<void> {
   const target = await realpath(file);
-  const mode = (await stat(target)).mode & 0o777;
+  const mode = (await stat(target)).mode & 0o7777;
   const temporary = join(dirname(target), '.' + basename(target) + '.' + randomUUID() + '.tmp');
   try {
     await writeFile(temporary, text, { flag: 'wx', mode });
+    // mode during creation is masked by umask; restore the source mode before rename.
+    await chmod(temporary, mode);
     await rename(temporary, target);
   } finally {
     await unlink(temporary).catch(() => undefined);
@@ -49,6 +51,9 @@ async function atomicReplace(file: string, text: string): Promise<void> {
 }
 
 export async function layoutFile(request: LayoutRequest): Promise<LayoutSummary> {
+  // Enforce write-mode exclusivity even for callers bypassing parseCommand.
+  if (request.write && request.out !== undefined)
+    throw new LayoutError('layout --write and --out cannot be combined');
   try {
     const { text, result } = await loadFile(request.file);
     if (!result.valid) throw new LayoutError(formatDiagnostics(result).trim());

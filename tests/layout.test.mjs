@@ -1,6 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { chmod, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import literature from '../examples/honglou-provisional.relgraph.json' with { type: 'json' };
@@ -106,4 +106,60 @@ test('layout out file is exclusive and biology mapping includes reaction nodes',
   } finally {
     await rm(folder, { recursive: true, force: true });
   }
+});
+
+
+test('atomic --write preserves source mode despite the process umask', async () => {
+  const folder = await mkdtemp(join(tmpdir(), 'relgraph-mode-'));
+  try {
+    const file = join(folder, 'story.json');
+    const source = structuredClone(literature);
+    delete source.characters[0].position;
+    await writeFile(file, JSON.stringify(source));
+    await chmod(file, 0o664);
+    const before = (await stat(file)).mode & 0o777;
+    assert.equal(before, 0o664);
+    const result = await layoutFile({ file, seed: 0, write: true });
+    assert.equal(result.missing, 1);
+    assert.equal((await stat(file)).mode & 0o777, before);
+    assert.equal(graphOf(JSON.parse(await readFile(file, 'utf8'))).nodes.length, 17);
+  } finally {
+    await rm(folder, { recursive: true, force: true });
+  }
+});
+
+test('programmatic layoutFile rejects conflicting writes before even reading input', async () => {
+  const folder = await mkdtemp(join(tmpdir(), 'relgraph-conflict-'));
+  try {
+    const file = join(folder, 'story.json');
+    const out = join(folder, 'other.json');
+    const source = structuredClone(literature);
+    delete source.characters[0].position;
+    const original = JSON.stringify(source, null, 2) + '\n';
+    await writeFile(file, original);
+    await assert.rejects(
+      layoutFile({ file, seed: 0, write: true, out }),
+      (error) => error instanceof LayoutError && /--write and --out/.test(error.message),
+    );
+    assert.equal(await readFile(file, 'utf8'), original);
+    await assert.rejects(readFile(out, 'utf8'), { code: 'ENOENT' });
+  } finally {
+    await rm(folder, { recursive: true, force: true });
+  }
+});
+
+test('finite extreme authored coordinates cannot overflow the seeded layout', () => {
+  const graph = {
+    nodes: [
+      { id: 'anchor', kind: 'person', label: 'anchor', position: { x: 1e307, y: 0 } },
+      { id: 'missing', kind: 'person', label: 'missing' },
+    ],
+    edges: [{ id: 'e', source: 'anchor', target: 'missing', kind: 'friendship' }],
+  };
+  const positions = layoutMissingNodes(graph, { seed: 42 });
+  assert.deepEqual(positions.get('anchor'), graph.nodes[0].position);
+  const candidate = positions.get('missing');
+  assert.ok(Number.isFinite(candidate.x) && Number.isFinite(candidate.y));
+  assert.ok(Math.hypot(candidate.x - 1e307, candidate.y) >= 64);
+  assert.deepEqual([...positions], [...layoutMissingNodes(graph, { seed: 42 })]);
 });
