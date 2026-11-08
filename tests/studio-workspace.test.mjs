@@ -230,7 +230,7 @@ test('missing or incorrectly typed workspace elements fail with their ID', async
   await assert.rejects(wrongType.ready, /Missing or invalid workspace element: #fileInput/);
 });
 
-test('shot view keeps focus and button identity and excludes future titles while seeking', async () => {
+test('shot view keeps focus and future titles safe during seek', async () => {
   const app = makeStudio();
   await app.ready;
   const buttons = [...app.node('shots').children];
