@@ -6,6 +6,12 @@ import { applyGraphPositions } from '../packages/core/src/director/position-writ
 import { loadDocument } from '../packages/core/src/director/load.ts';
 import { layoutGraph } from '../packages/core/src/director/layout.ts';
 import { DEFAULT_FRAME_SPEC } from '../packages/render/src/frame-spec.ts';
+import { domainStyle } from '../packages/core/src/style.ts';
+import {
+  nodeGlyphBounds,
+  nodeGlyphIntersectsStage,
+  rectsIntersect,
+} from '../packages/render/src/node-geometry.ts';
 import {
   canvasPoint,
   graphPosition,
@@ -435,5 +441,93 @@ test('hit testing excludes fully clipped glyphs near the stage edge', () => {
     ),
     null,
     'a node below the reveal threshold cannot be selected',
+  );
+});
+
+test('corner clipping uses actual circle, diamond and rounded-pill footprints', () => {
+  const spec = DEFAULT_FRAME_SPEC;
+  const camera = { x: 0, y: 0, scale: 1 };
+  const at = { x: spec.stage.x + 1, y: spec.stage.y + 1 };
+  const cases = [
+    {
+      node: { id: 'circle', label: 'Circle', kind: 'person', importance: 1 },
+      style: domainStyle('literature'),
+      outside: { x: 14, y: 96 },
+      visible: { x: 19, y: 101 },
+    },
+    {
+      node: { id: 'diamond', label: 'Diamond', kind: 'reaction', importance: 1 },
+      style: domainStyle('biology'),
+      outside: { x: 14, y: 96 },
+      visible: { x: 20, y: 102 },
+    },
+    {
+      node: { id: 'pill', label: 'Pill', kind: 'protein', importance: 1 },
+      style: domainStyle('biology'),
+      outside: { x: 14, y: 99 },
+      visible: { x: 20, y: 103 },
+    },
+  ];
+  for (const { node, style, outside, visible } of cases) {
+    const reveal = { nodes: { [node.id]: 1 }, edges: {} };
+    const outsideWorld = graphPosition(outside, camera, spec);
+    const insideWorld = graphPosition(visible, camera, spec);
+    assert.equal(
+      rectsIntersect(nodeGlyphBounds(node, outside, camera.scale, spec, style), spec.stage),
+      true,
+      `${node.id}: the old rectangle-only test would accept this glyph`,
+    );
+    assert.equal(
+      nodeGlyphIntersectsStage(node, outside, camera.scale, spec, style),
+      false,
+      `${node.id}: the rendered outline is fully clipped at the corner`,
+    );
+    assert.equal(
+      hitVisibleNode(
+        [node], new Map([[node.id, outsideWorld]]), reveal, camera, spec, at, 24, style,
+      ),
+      null,
+      `${node.id}: a nearby stage click must not select a fully clipped node`,
+    );
+    assert.equal(
+      nodeGlyphIntersectsStage(node, visible, camera.scale, spec, style),
+      true,
+      `${node.id}: a small glyph fragment intersects the stage`,
+    );
+    assert.equal(
+      hitVisibleNode(
+        [node], new Map([[node.id, insideWorld]]), reveal, camera, spec, at, 24, style,
+      ),
+      node.id,
+      `${node.id}: a partially visible node remains selectable`,
+    );
+  }
+});
+
+test('corner clipping honors reveal scaling and frame-spec scaling', () => {
+  const spec = DEFAULT_FRAME_SPEC;
+  const style = domainStyle('literature');
+  const node = { id: 'scaled', label: 'Scaled', kind: 'person', importance: 1 };
+  const corner = { x: spec.stage.x - 10, y: spec.stage.y - 10 };
+  assert.equal(nodeGlyphIntersectsStage(node, corner, 1, spec, style, 1), true);
+  assert.equal(
+    nodeGlyphIntersectsStage(node, corner, 1, spec, style, 0.6),
+    false,
+    'the outline shrinks during reveal without changing node centre',
+  );
+  const scaledSpec = {
+    ...spec,
+    stage: {
+      x: spec.stage.x * 1.5,
+      y: spec.stage.y * 1.5,
+      w: spec.stage.w * 1.5,
+      h: spec.stage.h * 1.5,
+    },
+    typeScale: 1.5,
+  };
+  assert.equal(
+    nodeGlyphIntersectsStage(node, { x: 21, y: 144 }, 1, scaledSpec, style),
+    false,
+    'a uniformly scaled off-corner glyph remains fully clipped',
   );
 });
