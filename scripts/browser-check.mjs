@@ -352,6 +352,54 @@ const literatureFrames = Math.ceil(
     );
   });
 
+  await check('transcript reflects safe frame text without repeated live-region mutations', async () => {
+    const unchanged = await page.evaluate(() => {
+      window.renderAt(0);
+      const transcript = document.getElementById('transcript');
+      const status = document.getElementById('sceneDescription');
+      const firstChild = transcript.firstElementChild;
+      const transcriptObserver = new MutationObserver(() => {});
+      const liveObserver = new MutationObserver(() => {});
+      transcriptObserver.observe(transcript, { childList: true, characterData: true, subtree: true });
+      liveObserver.observe(status, { childList: true, characterData: true, subtree: true });
+      window.renderAt(0);
+      window.renderAt(1);
+      const result = {
+        sameChild: transcript.firstElementChild === firstChild,
+        transcriptMutations: transcriptObserver.takeRecords().length,
+        liveMutations: liveObserver.takeRecords().length,
+      };
+      transcriptObserver.disconnect();
+      liveObserver.disconnect();
+      return result;
+    });
+    assert.deepEqual(unchanged, {
+      sameChild: true,
+      transcriptMutations: 0,
+      liveMutations: 0,
+    });
+
+    await page.evaluate((frame) => window.renderAt(frame), literatureShots[1].start);
+    const visibleNodes = await page.evaluate(() =>
+      window.studioFrame().view.nodes.map((node) => node.label),
+    );
+    assert.deepEqual(
+      await page.locator('#transcript ul').first().locator('li').allTextContents(),
+      visibleNodes,
+      'transcript is sourced from the same spoiler-safe frame as the canvas',
+    );
+    assert.equal(await text(page, '#nodeCount'), String(visibleNodes.length));
+    await page.evaluate(() => window.renderAt(0));
+    const returnedNodes = await page.evaluate(() =>
+      window.studioFrame().view.nodes.map((node) => node.label),
+    );
+    assert.deepEqual(
+      await page.locator('#transcript ul').first().locator('li').allTextContents(),
+      returnedNodes,
+      'backward seeking restores prior visible semantic content',
+    );
+  });
+
   await check('play, pause, Space and play-from-end behave like a player', async () => {
     await page.click('#restart');
     assert.equal(await frameNumber(page), 0);
