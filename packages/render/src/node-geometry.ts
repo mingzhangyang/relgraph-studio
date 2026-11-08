@@ -34,8 +34,8 @@ export function nodeGlyphBounds(
   const shape = nodeStyleFor(style, node.kind).shape;
   const u = spec.typeScale;
   const halfStroke = 0.9 * u;
-  const halfWidth = (r + (shape === 'pill' ? 4 : 3) * u + halfStroke);
-  const halfHeight = ((shape === 'pill' ? r * 0.75 : r + 3 * u) + halfStroke);
+  const halfWidth = r + (shape === 'pill' ? 4 : 3) * u + halfStroke;
+  const halfHeight = (shape === 'pill' ? r * 0.75 : r + 3 * u) + halfStroke;
   const revealScale = revealProgress < 1 ? 0.82 + 0.18 * revealProgress : 1;
   const width = halfWidth * revealScale;
   const height = halfHeight * revealScale;
