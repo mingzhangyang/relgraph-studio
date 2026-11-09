@@ -341,6 +341,21 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
   };
   const update = (field: string, value: unknown) =>
     actions.change(editAppearance(config, kind, item(), scope.value as Scope, field, value));
+  const hasAuthoredOverride = (field: string): boolean => {
+    const layers = config[kind === 'node' ? 'nodes' : 'edges'];
+    const selected = item();
+    const style =
+      scope.value === 'global'
+        ? layers?.defaults
+        : scope.value === 'category'
+          ? selected
+            ? layers?.categories?.[selected.kind]
+            : undefined
+          : selected
+            ? layers?.objects?.[selected.id]
+            : undefined;
+    return Boolean(style && Object.hasOwn(style, field));
+  };
   const buildFields = () => {
     if (fieldSignature === kind) return;
     fieldSignature = kind;
@@ -355,6 +370,7 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
         hint = el('small', appearanceFieldHint(appearanceKind(), key)),
         feedback = el('small'),
         reset = el('button', '↺');
+      row.id = 'visual-' + key + '-field';
       row.className = 'property-field' + (type === 'color' ? ' is-color' : '');
       fieldControls.className = 'property-control-row';
       hint.className = 'property-hint';
@@ -431,7 +447,10 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
 
         // Explicitly clearing an override inherits its resolved value.
         drafts.delete(draft);
-        const accepted = update(key, parsed.value);
+        const accepted =
+          parsed.value === undefined && !hasAuthoredOverride(key)
+            ? true
+            : update(key, parsed.value);
         if (accepted) {
           input.value = expectedAppearance(key);
           showFieldError('');
@@ -446,11 +465,12 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
         actions.draftChanged?.();
       };
       reset.type = 'button';
+      reset.id = 'visual-' + key + '-reset';
       reset.setAttribute('aria-label', '恢复继承：' + title);
       reset.title = '恢复继承';
       reset.addEventListener('click', () => {
         drafts.delete(draftKey(key));
-        const accepted = update(key, undefined);
+        const accepted = !hasAuthoredOverride(key) || update(key, undefined);
         if (accepted) {
           input.value = expectedAppearance(key);
           showFieldError('');
