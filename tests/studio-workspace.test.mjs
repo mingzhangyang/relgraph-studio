@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import literature from '../examples/honglou-provisional.relgraph.json' with { type: 'json' };
 import biology from '../examples/biology-signaling-synthetic.json' with { type: 'json' };
 import { deferred, flush, makeStudio } from './helpers/studio-harness.mjs';
+import { currentStudioMode, planStudioModeTransition } from '../apps/studio/src/studio-mode-model.ts';
 import { documentCommandFromShortcut } from '../apps/studio/src/document-command-model.ts';
 
 const readFile = (name, value) => ({ name, text: () => Promise.resolve(value) });
@@ -1473,4 +1474,52 @@ test('document toolbar disables commands while a replacement source is loading',
   assert.equal(download.disabled, false);
   assert.equal(coords.disabled, false);
   assert.equal(app.node('sourceName').textContent, '生物信号 · 虚构合成示例');
+});
+
+test('pure workspace mode policy derives from authoritative owners without a second clock', () => {
+  const mode = (playing, editing, previewing) =>
+    currentStudioMode({ playing, editing, previewing });
+  assert.equal(mode(false, false, false), 'idle');
+  assert.equal(mode(true, false, false), 'playing');
+  assert.equal(mode(false, true, false), 'positionEdit');
+  assert.equal(mode(false, false, true), 'layoutPreview');
+  assert.equal(mode(true, true, true), 'layoutPreview', 'preview ownership wins a stale clock');
+});
+
+test('pure transition plans preserve playback on theme, drafts on pause and preview acceptance', () => {
+  const expected = [
+    ['playing', 'theme', 'playing', false, false, false],
+    ['playing', 'navigate', 'idle', true, false, false],
+    ['playing', 'pause', 'idle', true, false, false],
+    ['playing', 'beginPreview', 'layoutPreview', true, false, false],
+    ['playing', 'enterPositionEdit', 'positionEdit', true, false, false],
+    ['positionEdit', 'play', 'playing', false, false, true],
+    ['positionEdit', 'navigate', 'idle', true, false, true],
+    ['positionEdit', 'theme', 'idle', false, false, true],
+    ['positionEdit', 'commitEdit', 'positionEdit', true, false, false],
+    ['positionEdit', 'pause', 'positionEdit', true, false, false],
+    ['layoutPreview', 'cancelPreview', 'idle', false, true, false],
+    ['layoutPreview', 'acceptPreview', 'idle', false, false, false],
+    ['layoutPreview', 'beginPreview', 'layoutPreview', true, true, false],
+    ['layoutPreview', 'enterPositionEdit', 'positionEdit', true, true, false],
+    ['layoutPreview', 'play', 'playing', false, true, false],
+    ['layoutPreview', 'commitEdit', 'idle', true, true, false],
+    ['layoutPreview', 'theme', 'idle', false, true, false],
+    ['idle', 'cancelPreview', 'idle', false, false, false],
+    ['idle', 'navigate', 'idle', true, false, false],
+  ];
+  for (const [from, intent, next, pause, discard, exit] of expected) {
+    const plan = planStudioModeTransition(from, intent);
+    assert.equal(plan.from, from, from + '/' + intent);
+    assert.equal(plan.next, next, from + '/' + intent);
+    assert.equal(plan.pausePlayback, pause, from + '/' + intent + ' pause');
+    assert.equal(plan.discardPreview, discard, from + '/' + intent + ' discard');
+    assert.equal(plan.exitPositionEdit, exit, from + '/' + intent + ' exit');
+    assert.equal(
+      plan.acceptPreview,
+      from === 'layoutPreview' && intent === 'acceptPreview',
+      from + '/' + intent + ' accept',
+    );
+    assert.ok(!(plan.acceptPreview && plan.discardPreview), 'never restore an applied preview');
+  }
 });
