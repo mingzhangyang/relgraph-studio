@@ -559,7 +559,12 @@ test('unapplied manual coordinates block export and warn on source replacement',
   x.value = String(Number(originalX) + 13);
   await x.dispatch('input');
   assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
-  const exit = { prevented: false, preventDefault() { this.prevented = true; } };
+  const exit = {
+    prevented: false,
+    preventDefault() {
+      this.prevented = true;
+    },
+  };
   app.window.dispatch('beforeunload', exit);
   assert.equal(exit.prevented, true);
 
