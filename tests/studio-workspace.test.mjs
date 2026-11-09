@@ -530,13 +530,22 @@ test('unsent copy drafts are protected and cannot be mistaken for a saved projec
   assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
 });
 
-test('a temporary layout preview is dirty only until cancelled', async () => {
+test('layout previews and uncommitted strategy drafts are guarded separately', async () => {
   const app = makeStudio();
   await app.ready;
-  viewControl(app, 'strategyType').value = 'circle';
-  viewControl(app, 'strategyMode').value = 'rearrange';
+  const type = viewControl(app, 'strategyType');
+  const mode = viewControl(app, 'strategyMode');
+  type.value = 'circle';
+  mode.value = 'rearrange';
+  await type.dispatch('change');
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true', 'draft before preview');
   await viewControl(app, 'strategyPreview').click();
   assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
   await viewControl(app, 'strategyCancel').click();
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true', 'cancel keeps input drafts');
+  type.value = 'manual';
+  await type.dispatch('change');
+  mode.value = 'preserve';
+  await mode.dispatch('change');
   assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
 });
