@@ -1131,3 +1131,167 @@ test('position editing uses the same workspace-only outline for its selected nod
   assert.equal(note.attributes['data-outlined'], '0');
   assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
 });
+
+test('numeric style fields show shared ranges and retain invalid drafts across redraw and selection', async () => {
+  const app = makeStudio();
+  await app.ready;
+  assert.equal(app.window.renderAt(84), true);
+  const objects = viewControl(app, 'visualObject');
+  const ids = objects.children.filter((option) => option.value).map((option) => option.value);
+  assert.ok(ids.length >= 2);
+  objects.value = ids[0];
+  await objects.dispatch('change');
+
+  const size = viewControl(app, 'visual-size');
+  const note = viewControl(app, 'visual-size-hint');
+  const field = viewControl(app, 'visual-size-field');
+  const feedback = viewControl(app, 'visual-size-error');
+  assert.equal(size.min, '8');
+  assert.equal(size.max, '48');
+  assert.equal(size.step, 'any');
+  assert.match(note.textContent, /8–48/);
+  assert.match(size.attributes['aria-describedby'], /visual-size-error/);
+  assert.equal(field.attributes['data-invalid'], 'false');
+
+  size.value = '999';
+  await size.dispatch('input');
+  assert.equal(size.attributes['aria-invalid'], 'true');
+  assert.equal(field.attributes['data-invalid'], 'true');
+  assert.match(feedback.textContent, /8–48/);
+  await size.dispatch('change');
+  assert.match(viewControl(app, 'visualError').textContent, /配置无效/);
+  assert.equal(viewControl(app, 'visualUndo').disabled, true, 'invalid value adds no history');
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
+  assert.equal(app.window.renderAt(85), true);
+  assert.equal(size.value, '999');
+  assert.match(feedback.textContent, /8–48/);
+
+  objects.value = ids[1];
+  await objects.dispatch('change');
+  assert.equal(viewControl(app, 'visual-size-error').textContent, '');
+  objects.value = ids[0];
+  await objects.dispatch('change');
+  assert.equal(size.value, '999');
+  assert.equal(size.attributes['aria-invalid'], 'true');
+  assert.match(feedback.textContent, /8–48/);
+
+  size.value = '20';
+  await size.dispatch('input');
+  assert.equal(size.attributes['aria-invalid'], 'false');
+  await size.dispatch('change');
+  assert.equal(feedback.textContent, '');
+  assert.equal(viewControl(app, 'visualUndo').disabled, false);
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
+  await viewControl(app, 'visualSave').click();
+  const exported = JSON.parse(await app.blobs.at(-1).text());
+  assert.equal(exported.config.nodes.objects[ids[0]].size, 20);
+});
+
+test('color input and picker share validation, preserve bad hex, and commit one valid value', async () => {
+  const app = makeStudio();
+  await app.ready;
+  assert.equal(app.window.renderAt(84), true);
+  const objects = viewControl(app, 'visualObject');
+  objects.value = objects.children[1].value;
+  await objects.dispatch('change');
+  const fill = viewControl(app, 'visual-fill');
+  const picker = viewControl(app, 'visual-fill-picker');
+  const feedback = viewControl(app, 'visual-fill-error');
+  assert.equal(fill.type, 'text');
+  assert.equal(picker.type, 'color');
+  assert.match(fill.attributes['pattern'], /0-9a-fA-F/);
+  assert.match(picker.attributes['aria-label'], /填充色/);
+  assert.equal(picker.disabled, false);
+  assert.equal(fill.maxLength, undefined, 'hex drafts must not be truncated before validation');
+
+  fill.value = '#33669900';
+  await fill.dispatch('input');
+  assert.equal(fill.attributes['aria-invalid'], 'true');
+  await fill.dispatch('change');
+  assert.equal(fill.value, '#33669900');
+  assert.equal(viewControl(app, 'visualUndo').disabled, true);
+  assert.equal(app.window.renderAt(85), true);
+  assert.equal(fill.value, '#33669900');
+
+  fill.value = 'red';
+  await fill.dispatch('input');
+  assert.equal(fill.attributes['aria-invalid'], 'true');
+  assert.match(feedback.textContent, /#336699/);
+  await fill.dispatch('change');
+  assert.equal(viewControl(app, 'visualUndo').disabled, true);
+  assert.equal(fill.value, 'red');
+  assert.equal(app.window.renderAt(85), true);
+  assert.equal(fill.value, 'red');
+
+  picker.value = '#22aa88';
+  await picker.dispatch('input');
+  assert.equal(fill.value, '#22aa88');
+  assert.equal(fill.attributes['aria-invalid'], 'false');
+  await picker.dispatch('change');
+  assert.equal(feedback.textContent, '');
+  assert.equal(viewControl(app, 'visualUndo').disabled, false);
+  await viewControl(app, 'visualSave').click();
+  const exported = JSON.parse(await app.blobs.at(-1).text());
+  assert.equal(exported.config.nodes.objects[objects.value].fill, '#22aa88');
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
+
+  await viewControl(app, 'visualUndo').click();
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
+  await viewControl(app, 'visualRedo').click();
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
+});
+
+test('resetting an already-inherited invalid input clears its draft without adding history', async () => {
+  const app = makeStudio();
+  await app.ready;
+  assert.equal(app.window.renderAt(84), true);
+  const objects = viewControl(app, 'visualObject');
+  objects.value = objects.children[1].value;
+  await objects.dispatch('change');
+  const size = viewControl(app, 'visual-size');
+  const inherited = size.value;
+
+  size.value = '999';
+  await size.dispatch('input');
+  await size.dispatch('change');
+  assert.match(viewControl(app, 'visualError').textContent, /配置无效/);
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
+  await viewControl(app, 'visual-size-reset').click();
+  assert.equal(viewControl(app, 'visualError').textContent, '');
+  assert.equal(size.value, inherited);
+  assert.equal(size.attributes['aria-invalid'], 'false');
+  assert.equal(viewControl(app, 'visual-size-error').textContent, '');
+  assert.equal(viewControl(app, 'visualUndo').disabled, true);
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
+
+  size.value = '';
+  await size.dispatch('input');
+  await size.dispatch('change');
+  assert.equal(size.value, inherited, 'empty means inherit without authoring a no-op override');
+  assert.equal(viewControl(app, 'visualUndo').disabled, true);
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
+
+  const kind = viewControl(app, 'visualKind');
+  kind.value = 'edge';
+  await kind.dispatch('change');
+  const width = viewControl(app, 'visual-width');
+  const curve = viewControl(app, 'visual-curve');
+  assert.equal(width.min, '0.5');
+  assert.equal(width.max, '8');
+  assert.equal(curve.min, '-160');
+  assert.equal(curve.max, '160');
+  const weight = viewControl(app, 'visual-fontWeight');
+  const labelVisibility = viewControl(app, 'visual-showLabel');
+  assert.equal(weight.tagName, 'SELECT');
+  assert.deepEqual(
+    weight.children.map((option) => option.value),
+    ['', '400', '600'],
+    'edge weight options must match the shared core enum',
+  );
+  assert.deepEqual(
+    labelVisibility.children.map((option) => option.value),
+    ['', 'true', 'false'],
+    'boolean choices come from the shared core rule',
+  );
+});
+

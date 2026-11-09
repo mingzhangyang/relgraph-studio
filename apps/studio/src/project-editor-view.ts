@@ -3,12 +3,15 @@ import {
   appearanceOrigin,
   displayNodeText,
   displayEdgeText,
+  APPEARANCE_FIELD_RULES,
+  type AppearanceKind,
   type ProjectConfig,
   type DirectorFrameState,
   type VisualNode,
   type VisualEdge,
 } from '@relgraph/core';
 import { hitDisplayList, type DisplayList } from '@relgraph/render';
+import { appearanceFieldHint, parseAppearanceDraft } from './field-validation-model.js';
 import {
   editAppearance,
   inspectorAppearance,
@@ -32,26 +35,27 @@ interface Actions {
   draftChanged?(): void;
   selectionChanged?(): void;
 }
-const nodeFields: [string, string, string | readonly string[]][] = [
-  ['shape', '形状', ['circle', 'pill', 'diamond']],
+type ControlKind = 'number' | 'color' | 'choice';
+const nodeFields: [string, string, ControlKind][] = [
+  ['shape', '形状', 'choice'],
   ['size', '半径 · px', 'number'],
   ['fill', '填充色', 'color'],
   ['border', '边框色', 'color'],
   ['borderWidth', '边框宽度', 'number'],
   ['fontSize', '字号', 'number'],
-  ['fontWeight', '字重', ['400', '600']],
+  ['fontWeight', '字重', 'choice'],
   ['textColor', '文字色', 'color'],
-  ['textPosition', '文字位置', ['auto', 'top', 'bottom', 'left', 'right']],
+  ['textPosition', '文字位置', 'choice'],
 ];
-const edgeFields: [string, string, string | readonly string[]][] = [
+const edgeFields: [string, string, ControlKind][] = [
   ['color', '线条颜色', 'color'],
   ['width', '线宽', 'number'],
-  ['dash', '虚实', ['solid', 'dashed', 'dotted']],
-  ['head', '端点', ['arrow', 'bar', 'hollow-circle', 'none']],
+  ['dash', '虚实', 'choice'],
+  ['head', '端点', 'choice'],
   ['curve', '曲率 · 0 为直线', 'number'],
-  ['showLabel', '显示标签', ['true', 'false']],
+  ['showLabel', '显示标签', 'choice'],
   ['fontSize', '标签字号', 'number'],
-  ['fontWeight', '标签字重', ['400', '600']],
+  ['fontWeight', '标签字重', 'choice'],
   ['textColor', '标签文字色', 'color'],
 ];
 /**
@@ -266,8 +270,15 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
   host.append(error);
   const controls = new Map<
     string,
-    { input: HTMLInputElement | HTMLSelectElement; origin: HTMLElement; row: HTMLElement }
+    {
+      input: HTMLInputElement | HTMLSelectElement;
+      picker: HTMLInputElement | null;
+      origin: HTMLElement;
+      feedback: HTMLElement;
+      row: HTMLElement;
+    }
   >();
+  const appearanceKind = (): AppearanceKind => (kind === 'node' ? 'nodes' : 'edges');
   const item = (): VisualNode | VisualEdge | undefined =>
     selection
       ? (kind === 'node' ? frame?.view.nodes : frame?.view.edges)?.find(
@@ -329,88 +340,173 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
   };
   const update = (field: string, value: unknown) =>
     actions.change(editAppearance(config, kind, item(), scope.value as Scope, field, value));
+  const hasAuthoredOverride = (field: string): boolean => {
+    const layers = config[kind === 'node' ? 'nodes' : 'edges'];
+    const selected = item();
+    const style =
+      scope.value === 'global'
+        ? layers?.defaults
+        : scope.value === 'category'
+          ? selected
+            ? layers?.categories?.[selected.kind]
+            : undefined
+          : selected
+            ? layers?.objects?.[selected.id]
+            : undefined;
+    return Boolean(style && Object.hasOwn(style, field));
+  };
   const buildFields = () => {
     if (fieldSignature === kind) return;
     fieldSignature = kind;
     controls.clear();
     fields.replaceChildren();
     for (const [key, title, type] of kind === 'node' ? nodeFields : edgeFields) {
-      const row = el('label', title),
-        input = typeof type === 'string' ? el('input') : el('select'),
+      const row = el('div'),
+        heading = el('label', title),
+        fieldControls = el('div'),
+        input = type === 'choice' ? el('select') : el('input'),
         origin = el('small'),
+        hint = el('small', appearanceFieldHint(appearanceKind(), key)),
+        feedback = el('small'),
         reset = el('button', '↺');
+      row.id = 'visual-' + key + '-field';
+      row.className = 'property-field' + (type === 'color' ? ' is-color' : '');
+      fieldControls.className = 'property-control-row';
+      hint.className = 'property-hint';
+      feedback.className = 'property-error';
+      feedback.id = 'visual-' + key + '-error';
+      feedback.setAttribute('aria-live', 'polite');
+      hint.id = 'visual-' + key + '-hint';
+      origin.id = 'visual-' + key + '-origin';
       input.id = 'visual-' + key;
-      if (typeof type === 'string') {
+      heading.setAttribute('for', input.id);
+      input.setAttribute('aria-describedby', hint.id + ' ' + feedback.id + ' ' + origin.id);
+      const rule = APPEARANCE_FIELD_RULES[appearanceKind()][key];
+      if (type !== 'choice') {
         (input as HTMLInputElement).type = type === 'color' ? 'text' : type;
         (input as HTMLInputElement).placeholder =
           type === 'color' ? '#RRGGBB · 留空继承' : '留空继承';
-        (input as HTMLInputElement).step = 'any';
+        if (rule?.type === 'number') {
+          (input as HTMLInputElement).min = String(rule.min);
+          (input as HTMLInputElement).max = String(rule.max);
+          (input as HTMLInputElement).step = 'any';
+          (input as HTMLInputElement).inputMode = 'decimal';
+        } else if (rule?.type === 'color') {
+          (input as HTMLInputElement).setAttribute('pattern', '#[0-9a-fA-F]{6}');
+        }
       } else {
         const empty = el('option', '继承');
         empty.value = '';
         input.append(empty);
-        for (const value of type) {
-          const o = el('option', value);
-          o.value = value;
-          input.append(o);
+        const values =
+          rule?.type === 'enum'
+            ? rule.values
+            : rule?.type === 'boolean'
+              ? [true, false]
+              : [];
+        for (const value of values) {
+          const option = el('option', String(value));
+          option.value = String(value);
+          input.append(option);
         }
       }
-      reset.type = 'button';
-      reset.setAttribute('aria-label', '恢复继承：' + title);
-      reset.addEventListener('click', () => {
-        drafts.delete(draftKey(key));
-        input.setAttribute('aria-invalid', 'false');
-        update(key, undefined);
-        actions.draftChanged?.();
-      });
-      input.addEventListener('input', () => {
+
+      const picker = rule?.type === 'color' ? el('input') : null;
+      if (picker) {
+        picker.type = 'color';
+        picker.id = input.id + '-picker';
+        picker.className = 'property-color-picker';
+        picker.setAttribute('aria-label', '选择' + title);
+        picker.title = '选择' + title;
+      }
+      const showFieldError = (message: string): void => {
+        feedback.textContent = message;
+        input.setAttribute('aria-invalid', String(Boolean(message)));
+        row.setAttribute('data-invalid', String(Boolean(message)));
+      };
+      const validateCurrent = (badInput: boolean): ReturnType<typeof parseAppearanceDraft> =>
+        parseAppearanceDraft(appearanceKind(), key, input.value, badInput);
+      const onDraftInput = (): void => {
         const badInput = input.type === 'number' && input.validity?.badInput === true;
         rememberDraft(key, input.value, expectedAppearance(key), input.type, badInput);
-        input.setAttribute('aria-invalid', String(badInput));
-      });
-      input.addEventListener('change', () => {
+        showFieldError(validateCurrent(badInput).message);
+        if (picker && /^#[0-9a-f]{6}$/i.test(input.value)) picker.value = input.value;
+      };
+      const commit = (): void => {
         const raw = input.value;
         const draft = draftKey(key);
-        // Blurring an incomplete number may sanitize its DOM value to '' and
-        // clear badInput without another input event. Retain the earlier flag
-        // until the user actually enters a valid replacement or explicitly resets.
+        // A number field may lose its native badInput flag on blur. A fresh
+        // valid input event, not a blur-sanitized empty string, must clear it.
         const badInput =
           input.type === 'number' &&
           (input.validity?.badInput === true || drafts.get(draft)?.badInput === true);
-        if (badInput) {
-          drafts.set(draft, { value: raw, badInput: true });
-          input.setAttribute('aria-invalid', 'true');
-          error.textContent = '数字输入尚未完成，请修正或恢复继承后再保存。';
+        const parsed = validateCurrent(badInput);
+        if (!parsed.ok) {
+          drafts.set(draft, { value: raw, badInput });
+          showFieldError(parsed.message);
+          error.textContent = badInput ? parsed.message : '配置无效：' + parsed.message;
           actions.draftChanged?.();
           return;
         }
-        const val =
-          raw === ''
-            ? undefined
-            : ['size', 'borderWidth', 'fontSize', 'fontWeight', 'width', 'curve'].includes(key)
-              ? Number(raw)
-              : key === 'showLabel'
-                ? raw === 'true'
-                : raw;
-        // Clearing an override intentionally inherits a nonempty value.
-        // Use validation's outcome instead of comparing raw input against the
-        // inherited appearance, which would report a false pending draft.
+
+        // Explicitly clearing an override inherits its resolved value.
         drafts.delete(draft);
-        const accepted = update(key, val);
+        const accepted =
+          parsed.value === undefined && !hasAuthoredOverride(key)
+            ? true
+            : update(key, parsed.value);
         if (accepted) {
-          // The browser may still regard this input as focused during change.
-          // Display the committed/inherited value immediately in either case.
           input.value = expectedAppearance(key);
-          input.setAttribute('aria-invalid', 'false');
+          showFieldError('');
+          error.textContent = '';
+          if (picker && /^#[0-9a-f]{6}$/i.test(input.value)) picker.value = input.value;
         } else if (!matchesValue(raw, expectedAppearance(key), input.type)) {
+          // Core still validates the complete project, including cross-field
+          // and domain restrictions. Never lose a rejected edit or its context.
           drafts.set(draft, { value: raw, badInput: false });
           input.value = raw;
+          showFieldError('此值未能应用，请检查项目错误提示。');
+        }
+        actions.draftChanged?.();
+      };
+      reset.type = 'button';
+      reset.id = 'visual-' + key + '-reset';
+      reset.setAttribute('aria-label', '恢复继承：' + title);
+      reset.title = '恢复继承';
+      reset.addEventListener('click', () => {
+        const draft = draftKey(key);
+        const previousDraft = drafts.get(draft);
+        const accepted = !hasAuthoredOverride(key) || update(key, undefined);
+        if (accepted) {
+          drafts.delete(draft);
+          input.value = expectedAppearance(key);
+          showFieldError('');
+          error.textContent = '';
+          if (picker && /^#[0-9a-f]{6}$/i.test(input.value)) picker.value = input.value;
+        } else {
+          if (previousDraft) drafts.set(draft, previousDraft);
+          showFieldError('恢复继承失败，请检查项目错误提示。');
         }
         actions.draftChanged?.();
       });
-      row.append(input, origin, reset);
+      input.addEventListener('input', onDraftInput);
+      input.addEventListener('change', commit);
+      fieldControls.append(input);
+      if (picker) {
+        picker.addEventListener('input', () => {
+          input.value = picker.value;
+          onDraftInput();
+        });
+        picker.addEventListener('change', () => {
+          input.value = picker.value;
+          commit();
+        });
+        fieldControls.append(picker);
+      }
+      fieldControls.append(reset);
+      row.append(heading, fieldControls, origin, hint, feedback);
       fields.append(row);
-      controls.set(key, { input, origin, row });
+      controls.set(key, { input, picker, origin, feedback, row });
     }
   };
   const render = () => {
@@ -483,17 +579,26 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
     if (imageStatus.textContent !== nextImageStatus) imageStatus.textContent = nextImageStatus;
     for (const [key, c] of controls) {
       c.input.disabled = disabled || (key === 'head' && frame?.view.domain === 'biology');
+      if (c.picker) c.picker.disabled = c.input.disabled;
       c.origin.textContent = inspectorOrigin(config, kind, selected, scope.value as Scope, key);
+      const inherited = String((resolved as Record<string, unknown>)[key] ?? '');
       if (contextChanged || doc.activeElement !== c.input)
-        c.input.value = displayedValue(
-          key,
-          String((resolved as Record<string, unknown>)[key] ?? ''),
-          c.input.type,
-        );
-      c.input.setAttribute(
-        'aria-invalid',
-        String(drafts.get(draftKey(key))?.badInput === true || c.input.validity?.badInput === true),
-      );
+        c.input.value = displayedValue(key, inherited, c.input.type);
+      const badInput =
+        c.input.type === 'number' &&
+        (drafts.get(draftKey(key))?.badInput === true || c.input.validity?.badInput === true);
+      const parsed = parseAppearanceDraft(appearanceKind(), key, c.input.value, badInput);
+      c.input.setAttribute('aria-invalid', String(!parsed.ok));
+      c.row.setAttribute('data-invalid', String(!parsed.ok));
+      if (c.feedback.textContent !== parsed.message) c.feedback.textContent = parsed.message;
+      if (c.picker && doc.activeElement !== c.picker) {
+        const color = /^#[0-9a-f]{6}$/i.test(c.input.value)
+          ? c.input.value
+          : /^#[0-9a-f]{6}$/i.test(inherited)
+            ? inherited
+            : '#808080';
+        c.picker.value = color;
+      }
     }
     renderedContext = context;
     // Recompute dirty state only after selection and its controls agree.

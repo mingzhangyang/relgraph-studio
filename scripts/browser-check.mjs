@@ -1613,6 +1613,100 @@ for (const theme of ['dark', 'light']) {
   await context.close();
 }
 
+// Current project rules must guide actual Chromium fields before a rejected
+// value reaches the core validator. Native color-picker UI is not automated,
+// but its real input/change events are exercised through a supported DOM path.
+{
+  const { context, page, problems } = await openStudio();
+  await check('appearance fields validate in place and preserve rejected drafts', async () => {
+    await page.evaluate(() => window.renderAt(84));
+    await page.selectOption('#visualObject', { index: 1 });
+    await page.locator('#appearanceEditor details').evaluate((element) => {
+      element.open = true;
+    });
+    assert.equal(await page.getAttribute('#visual-size', 'min'), '8');
+    assert.equal(await page.getAttribute('#visual-size', 'max'), '48');
+    assert.match(await page.getAttribute('#visual-size', 'aria-describedby'), /visual-size-error/);
+    assert.match(await text(page, '#visual-size-hint'), /8–48/);
+
+    await page.fill('#visual-size', '999');
+    await page.locator('#visual-size').evaluate((element) => element.blur());
+    assert.equal(await page.getAttribute('#visual-size', 'aria-invalid'), 'true');
+    assert.equal(await page.getAttribute('#visual-size-field', 'data-invalid'), 'true');
+    assert.match(await text(page, '#visual-size-error'), /8–48/);
+    assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'true');
+    await page.evaluate(() => window.renderAt(85));
+    assert.equal(await page.inputValue('#visual-size'), '999', 'invalid draft survives replay');
+
+    await page.selectOption('#visualObject', { index: 2 });
+    assert.equal(await text(page, '#visual-size-error'), '');
+    await page.selectOption('#visualObject', { index: 1 });
+    assert.equal(await page.inputValue('#visual-size'), '999');
+    assert.match(await text(page, '#visual-size-error'), /8–48/);
+    await page.click('#visual-size-reset');
+    assert.equal(await page.getAttribute('#visual-size', 'aria-invalid'), 'false');
+    assert.equal(await text(page, '#visual-size-error'), '');
+    assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'false');
+
+    const fillInput = page.locator('#visual-fill');
+    assert.equal(await fillInput.getAttribute('maxlength'), null);
+    await fillInput.fill('');
+    await fillInput.pressSequentially('#33669900');
+    assert.equal(await fillInput.inputValue(), '#33669900', '8-digit hex input is not truncated');
+    await fillInput.evaluate((element) => element.blur());
+    assert.equal(await fillInput.getAttribute('aria-invalid'), 'true');
+    assert.equal(await fillInput.inputValue(), '#33669900');
+    await page.evaluate(() => window.renderAt(86));
+    assert.equal(await fillInput.inputValue(), '#33669900', 'bad hex draft survives redraw');
+
+    await page.fill('#visual-fill', 'not-a-color');
+    await page.locator('#visual-fill').evaluate((element) => element.blur());
+    assert.equal(await page.getAttribute('#visual-fill', 'aria-invalid'), 'true');
+    assert.match(await text(page, '#visual-fill-error'), /#336699/);
+    await page.locator('#visual-fill-picker').evaluate((picker) => {
+      picker.value = '#2299aa';
+      picker.dispatchEvent(new Event('input', { bubbles: true }));
+      picker.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    assert.equal(await page.inputValue('#visual-fill'), '#2299aa');
+    assert.equal(await text(page, '#visual-fill-error'), '');
+    const saved = page.waitForEvent('download');
+    await page.click('#visualSave');
+    const project = JSON.parse(await readFile(await (await saved).path(), 'utf8'));
+    const nodeId = await page.inputValue('#visualObject');
+    assert.equal(project.config.nodes.objects[nodeId].fill, '#2299aa');
+    assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'false');
+
+    await page.selectOption('#visualKind', 'edge');
+    assert.equal(await page.getAttribute('#visual-width', 'min'), '0.5');
+    assert.equal(await page.getAttribute('#visual-width', 'max'), '8');
+    assert.equal(await page.getAttribute('#visual-curve', 'min'), '-160');
+    assert.equal(await page.getAttribute('#visual-curve', 'max'), '160');
+    for (const width of [1280, 390]) {
+      await page.setViewportSize({ width, height: 840 });
+      const geometry = await page.evaluate(() => {
+        const editor = document.getElementById('appearanceEditor');
+        const field = document.getElementById('visual-color-field');
+        return {
+          overflow: document.documentElement.scrollWidth - window.innerWidth,
+          editor: editor.getBoundingClientRect().width,
+          field: field.getBoundingClientRect().width,
+          picker: document.getElementById('visual-color-picker').getBoundingClientRect().width,
+        };
+      });
+      assert.ok(geometry.overflow <= 2, `no horizontal overflow at ${width}px`);
+      assert.ok(geometry.editor > 200 && geometry.field > 140);
+      assert.ok(geometry.picker >= 36, 'native color swatch stays usable');
+      await page.screenshot({
+        path: join(outputDir, `field-validation-${width}.png`),
+        fullPage: true,
+      });
+    }
+    assert.deepEqual(problems, []);
+  });
+  await context.close();
+}
+
 // UI-only outlines must be visible in the composite screenshot, not Canvas
 // pixels or native video output. Exercise real Chromium geometry and scrolling.
 {
