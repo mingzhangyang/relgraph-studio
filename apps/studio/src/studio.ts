@@ -170,6 +170,7 @@ function applyProjectHistory({
   restoreLayoutPositions(currentLayout, originalLayout);
   for (const [id, p] of Object.entries(graph.project.layout?.positions ?? {}))
     currentLayout.set(id, { ...p });
+  reconcileCommittedCoordinateDrafts();
   projectSavepoint.positionsChanged();
   // Lock-only commits update persisted coordinates/locks, not the user's pending
   // strategy inputs. Undo/redo, apply and other config transitions still reset.
@@ -382,13 +383,19 @@ function coordinateDraftMatches(
   const parsed = parseCoordinateInputs(draft.x, draft.y);
   return parsed !== null && parsed.x === point.x && parsed.y === point.y;
 }
-function hasPendingCoordinateDraft(): boolean {
-  // Prune drafts that now match an applied/undone position so they cannot
-  // reappear if later history operations move the node elsewhere.
+// The mutable currentLayout also holds temporary preview and drag positions.
+// Only ProjectHistory plus the loaded baseline define *committed* positions.
+function committedCoordinate(id: string): { x: number; y: number } | undefined {
+  return projectHistory.value.layout?.positions?.[id] ?? originalLayout?.get(id);
+}
+// Called only after a real history transition, never from a drag frame/render.
+function reconcileCommittedCoordinateDrafts(): void {
   for (const [id, draft] of coordinateDrafts) {
-    const point = currentLayout?.get(id);
+    const point = committedCoordinate(id);
     if (point && coordinateDraftMatches(draft, point)) coordinateDrafts.delete(id);
   }
+}
+function hasPendingCoordinateDraft(): boolean {
   return coordinateDrafts.size > 0;
 }
 
@@ -747,12 +754,10 @@ function updateLayoutFields(): void {
   renderEditorFields(layoutControls, point);
   if (selectedLayoutNode && point) {
     const draft = coordinateDrafts.get(selectedLayoutNode);
-    if (draft) {
-      if (coordinateDraftMatches(draft, point)) coordinateDrafts.delete(selectedLayoutNode);
-      else {
-        layoutX.value = draft.x;
-        layoutY.value = draft.y;
-      }
+    const committed = committedCoordinate(selectedLayoutNode);
+    if (draft && (!committed || !coordinateDraftMatches(draft, committed))) {
+      layoutX.value = draft.x;
+      layoutY.value = draft.y;
     }
   }
   refreshUnsavedState();
@@ -774,7 +779,7 @@ function trackCoordinateDraft(): void {
     layoutY.disabled
   )
     return;
-  const point = currentLayout.get(selectedLayoutNode);
+  const point = committedCoordinate(selectedLayoutNode);
   if (!point) return;
   const draft = { x: layoutX.value, y: layoutY.value };
   if (coordinateDraftMatches(draft, point)) coordinateDrafts.delete(selectedLayoutNode);
@@ -813,6 +818,7 @@ layoutApply.addEventListener('click', () => {
   projectHistory.commit(configWithPositions(undefined, [selectedLayoutNode]));
   if (graph) graph.project = projectHistory.value;
   coordinateDrafts.delete(selectedLayoutNode);
+  reconcileCommittedCoordinateDrafts();
   setFrame(playback.frame, false);
   updateLayoutFields();
   updateLayoutControls();
@@ -952,6 +958,7 @@ canvas.addEventListener('pointerup', (event) => {
   if (currentLayout && dragHasChanges(dragging, currentLayout)) {
     projectHistory.commit(configWithPositions(undefined, [dragging.id]));
     if (graph) graph.project = projectHistory.value;
+    reconcileCommittedCoordinateDrafts();
   }
   releaseLayoutPointer();
   setFrame(playback.frame, false);

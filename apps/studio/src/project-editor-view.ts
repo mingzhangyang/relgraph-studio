@@ -96,7 +96,10 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
   let kind: 'node' | 'edge' = 'node';
   // Keep uncommitted and rejected edits outside the DOM. Selection changes,
   // playback redraws and focus loss must not silently discard user input.
-  const drafts = new Map<string, string>();
+  // A number input can expose value === '' while validity.badInput is true.
+  // Preserve validity with the draft; a bare string cannot distinguish that
+  // state from an intentional empty override.
+  const drafts = new Map<string, { value: string; badInput: boolean }>();
   let renderedContext = '';
   const el = <K extends keyof HTMLElementTagNameMap>(
     tag: K,
@@ -300,21 +303,27 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
         field
       ] ?? '',
     );
-  const rememberDraft = (field: string, value: string, expected: string, type?: string): void => {
+  const rememberDraft = (
+    field: string,
+    value: string,
+    expected: string,
+    type?: string,
+    badInput = false,
+  ): void => {
     const key = draftKey(field);
-    if (matchesValue(value, expected, type)) drafts.delete(key);
-    else drafts.set(key, value);
+    if (!badInput && matchesValue(value, expected, type)) drafts.delete(key);
+    else drafts.set(key, { value, badInput });
     actions.draftChanged?.();
   };
   const displayedValue = (field: string, expected: string, type?: string): string => {
     const key = draftKey(field);
     const pending = drafts.get(key);
     if (pending === undefined) return expected;
-    if (matchesValue(pending, expected, type)) {
+    if (!pending.badInput && matchesValue(pending.value, expected, type)) {
       drafts.delete(key);
       return expected;
     }
-    return pending;
+    return pending.value;
   };
   const update = (field: string, value: unknown) =>
     actions.change(editAppearance(config, kind, item(), scope.value as Scope, field, value));
@@ -348,15 +357,31 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
       reset.setAttribute('aria-label', '恢复继承：' + title);
       reset.addEventListener('click', () => {
         drafts.delete(draftKey(key));
+        input.setAttribute('aria-invalid', 'false');
         update(key, undefined);
         actions.draftChanged?.();
       });
-      input.addEventListener('input', () =>
-        rememberDraft(key, input.value, expectedAppearance(key), input.type),
-      );
+      input.addEventListener('input', () => {
+        const badInput = input.type === 'number' && input.validity?.badInput === true;
+        rememberDraft(key, input.value, expectedAppearance(key), input.type, badInput);
+        input.setAttribute('aria-invalid', String(badInput));
+      });
       input.addEventListener('change', () => {
         const raw = input.value;
         const draft = draftKey(key);
+        // Blurring an incomplete number may sanitize its DOM value to '' and
+        // clear badInput without another input event. Retain the earlier flag
+        // until the user actually enters a valid replacement or explicitly resets.
+        const badInput =
+          input.type === 'number' &&
+          (input.validity?.badInput === true || drafts.get(draft)?.badInput === true);
+        if (badInput) {
+          drafts.set(draft, { value: raw, badInput: true });
+          input.setAttribute('aria-invalid', 'true');
+          error.textContent = '数字输入尚未完成，请修正或恢复继承后再保存。';
+          actions.draftChanged?.();
+          return;
+        }
         const val =
           raw === ''
             ? undefined
@@ -374,8 +399,9 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
           // The browser may still regard this input as focused during change.
           // Display the committed/inherited value immediately in either case.
           input.value = expectedAppearance(key);
+          input.setAttribute('aria-invalid', 'false');
         } else if (!matchesValue(raw, expectedAppearance(key), input.type)) {
-          drafts.set(draft, raw);
+          drafts.set(draft, { value: raw, badInput: false });
           input.value = raw;
         }
         actions.draftChanged?.();
@@ -462,6 +488,10 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
           String((resolved as Record<string, unknown>)[key] ?? ''),
           c.input.type,
         );
+      c.input.setAttribute(
+        'aria-invalid',
+        String(drafts.get(draftKey(key))?.badInput === true || c.input.validity?.badInput === true),
+      );
     }
     renderedContext = context;
     // Recompute dirty state only after selection and its controls agree.
@@ -500,7 +530,7 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
     drafts.delete(draft);
     const accepted = actions.change(next);
     if (!accepted && value !== expectedText(field)) {
-      drafts.set(draft, value);
+      drafts.set(draft, { value, badInput: false });
       if (field === 'label') label.value = value;
       else description.value = value;
     }
@@ -545,6 +575,10 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
       const resolved = inspectorAppearance(config, kind, selected, scope.value as Scope);
       for (const [key, control] of controls) {
         if (control.input.disabled) continue;
+        // Check native validity as well as stored drafts. The latter protects
+        // incomplete tokens once focus is lost or a node/scope is switched.
+        if (control.input.type === 'number' && control.input.validity?.badInput === true)
+          return true;
         const expected = String((resolved as Record<string, unknown>)[key] ?? '');
         if (!matchesValue(control.input.value, expected, control.input.type)) return true;
       }
