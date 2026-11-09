@@ -63,6 +63,9 @@ import { createShotsView } from './shots-view.js';
 import { createDiagnosticsView } from './diagnostics-view.js';
 import { createTranscriptView } from './transcript-view.js';
 import { createWorkspaceShellView } from './workspace-shell-view.js';
+import { projectSelectionOverlay } from './selection-overlay-model.js';
+import { createSelectionOverlayView } from './selection-overlay-view.js';
+import type { DisplayList } from '@relgraph/render';
 
 declare global {
   interface Window {
@@ -104,6 +107,13 @@ const canvas = requiredElement('stage', HTMLCanvasElement),
   saveState = $('saveState'),
   shots = $('shots'),
   strip = $('sceneStrip');
+const selectionSvg = document.getElementById('stageSelection');
+if (!selectionSvg) throw new Error('Missing workspace element: #stageSelection');
+const selectionOverlayView = createSelectionOverlayView(
+  document,
+  selectionSvg as unknown as SVGSVGElement,
+  $('selectionFeedback'),
+);
 const playbackControls = {
   play,
   restart,
@@ -223,6 +233,9 @@ let imageUploadSerial = 0;
 const projectHistory = new ProjectHistory();
 const projectSavepoint = new ProjectSavepoint();
 const projectEditor = createProjectEditor(document, $('appearanceEditor'), {
+  selectionChanged() {
+    refreshSelectionFeedback();
+  },
   change(config) {
     if (!graph || loading) return false;
     ++imageUploadSerial;
@@ -355,6 +368,7 @@ const layoutControls = {
 };
 let graph: VisualGraph | null = null;
 let renderer: CanvasRenderer | null = null;
+let lastDisplayList: DisplayList | null = null;
 let playback = createPlaybackState(1, FPS);
 let requestSerial = 0,
   loading = false;
@@ -475,6 +489,19 @@ function seekToShot(targetFrame: number): void {
   setPlaying(false);
   setFrame(targetFrame);
 }
+function refreshSelectionFeedback(): void {
+  const focus =
+    layoutEditing &&
+    selectedLayoutNode &&
+    currentFrameState?.view.nodes.some((node) => node.id === selectedLayoutNode)
+      ? {
+          kind: 'node' as const,
+          selection: { kind: 'node' as const, id: selectedLayoutNode },
+          scope: 'object' as const,
+        }
+      : projectEditor.focus();
+  selectionOverlayView.render(projectSelectionOverlay(currentFrameState, lastDisplayList, focus));
+}
 function setFrame(next: number, updatePosition = true): DirectorFrameState | undefined {
   if (!renderer) return;
   playback = seekPlayback(playback, next, !updatePosition);
@@ -483,6 +510,7 @@ function setFrame(next: number, updatePosition = true): DirectorFrameState | und
     p = state.playback;
   if (!p.scene) throw new Error('A loaded film must have a current scene');
   currentFrameState = state;
+  lastDisplayList = list;
   strategyView.render(
     state,
     projectHistory.value.layout,
@@ -493,6 +521,7 @@ function setFrame(next: number, updatePosition = true): DirectorFrameState | und
   renderPlaybackFrame(playbackControls, playbackDisplay(playback, p.index, p.totalSec));
   transcriptView.render(list.a11y);
   projectEditor.render(state, projectHistory.value, projectHistory.canUndo, projectHistory.canRedo);
+  refreshSelectionFeedback();
   shellView.renderDomainTime(p.domainAt, state.view.timeline?.unit);
   shotsView.render(p.index, list.a11y.scene.title, p.progress);
   return state;
@@ -508,6 +537,7 @@ function clearStudio(): void {
   coordinateDrafts.clear();
   projectEditor.clear();
   renderer = null;
+  lastDisplayList = null;
   currentLayout = null;
   originalLayout = null;
   sourceDocument = null;
@@ -527,6 +557,7 @@ function clearStudio(): void {
   transcriptView.reset();
   shellView.paintEmptyStage('请选择示例或导入有效的 JSON 数据', theme);
   shellView.resetMetadata();
+  refreshSelectionFeedback();
   refreshUnsavedState();
 }
 function applyResult(result: LoadResult, name: string, sourceText?: string): void {
@@ -794,6 +825,7 @@ layoutNode.addEventListener('change', () => {
   if (!availableNodes().some((node) => node.id === layoutNode.value)) return;
   selectedLayoutNode = layoutNode.value;
   updateLayoutFields();
+  refreshSelectionFeedback();
 });
 layoutApply.addEventListener('click', () => {
   if (
@@ -859,6 +891,7 @@ function stopLayoutEdit(): void {
   rebuildRenderer();
   updateLayoutEditor();
   updateLayoutControls();
+  refreshSelectionFeedback();
 }
 layoutToggle.addEventListener('click', () => {
   cancelLayoutPreview();
@@ -873,6 +906,7 @@ layoutToggle.addEventListener('click', () => {
   rebuildRenderer();
   updateLayoutEditor();
   updateLayoutControls();
+  refreshSelectionFeedback();
 });
 layoutReset.addEventListener('click', () => {
   cancelLayoutPreview();
@@ -923,6 +957,7 @@ canvas.addEventListener('pointerdown', (event) => {
   selectedLayoutNode = nextDrag.id;
   renderEditorSelection(layoutControls, nextDrag.id);
   updateLayoutFields();
+  refreshSelectionFeedback();
   canvas.setPointerCapture(event.pointerId);
   event.preventDefault();
 });

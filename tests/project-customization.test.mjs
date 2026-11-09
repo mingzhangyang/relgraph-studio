@@ -39,6 +39,7 @@ import {
 import { makeStudio } from './helpers/studio-harness.mjs';
 import { ProjectSavepoint, workspaceSnapshot } from '../apps/studio/src/unsaved-changes-model.ts';
 import { visibleObjectEntries } from '../apps/studio/src/project-editor-view.ts';
+import { projectSelectionOverlay } from '../apps/studio/src/selection-overlay-model.ts';
 
 const compose = (graph, frame = 0, spec = FRAME_SPECS['landscape-720p'], theme = 'light') => {
   const positions = layoutGraph(graph);
@@ -246,6 +247,131 @@ test('savepoint reuses snapshots across redraws and invalidates live position ed
   assert.equal(savepoint.isDirty(config, points), false, 'undo returns to saved configuration');
   savepoint.clear();
   assert.equal(savepoint.isDirty({ preset: 'quiet' }, points), false);
+});
+
+test('workspace selection overlay uses safe projected IDs and composed hit geometry only', () => {
+  const frame = {
+    view: {
+      nodes: [
+        { id: 'shown-a', kind: 'person' },
+        { id: 'shown-b', kind: 'person' },
+        { id: 'shown-c', kind: 'other' },
+      ],
+      edges: [
+        { id: 'parallel-1', kind: 'friend' },
+        { id: 'parallel-2', kind: 'friend' },
+      ],
+    },
+  };
+  const list = {
+    width: 1280,
+    height: 720,
+    selectionClip: { x: 80, y: 90, w: 800, h: 460 },
+    selection: [
+      { kind: 'node', id: 'shown-a', box: { x: 100, y: 100, w: 60, h: 44 } },
+      { kind: 'node', id: 'shown-b', box: { x: 990, y: 100, w: 50, h: 44 } },
+      { kind: 'node', id: 'shown-c', box: { x: 220, y: 100, w: 70, h: 44 } },
+      { kind: 'node', id: 'hidden-future', box: { x: 0, y: 0, w: 30, h: 30 } },
+      { kind: 'edge', id: 'parallel-1', points: [{ x: 120, y: 130 }, { x: 250, y: 200 }] },
+      { kind: 'edge', id: 'parallel-2', points: [{ x: 130, y: 130 }, { x: 260, y: 210 }] },
+      { kind: 'edge', id: 'hidden-edge', points: [{ x: 1, y: 1 }, { x: 2, y: 2 }] },
+    ],
+  };
+  const node = { kind: 'node', selection: { kind: 'node', id: 'shown-a' }, scope: 'object' };
+  const single = projectSelectionOverlay(frame, list, node);
+  assert.equal(single.affectedCount, 1);
+  assert.deepEqual(single.targets.map(({ hit }) => hit.id), ['shown-a']);
+  assert.equal(single.targets[0].selected, true);
+  assert.deepEqual(single.clip, list.selectionClip);
+
+  const category = projectSelectionOverlay(frame, list, { ...node, scope: 'category' });
+  assert.equal(category.affectedCount, 2, 'off-stage members still belong to the category');
+  assert.deepEqual(category.targets.map(({ hit }) => hit.id), ['shown-a']);
+  const global = projectSelectionOverlay(frame, list, {
+    kind: 'node', selection: null, scope: 'global',
+  });
+  assert.equal(global.affectedCount, 3);
+  assert.deepEqual(global.targets.map(({ hit }) => hit.id), ['shown-a', 'shown-c']);
+  assert.ok(global.targets.every((target) => !target.selected));
+
+  const edge = projectSelectionOverlay(frame, list, {
+    kind: 'edge', selection: { kind: 'edge', id: 'parallel-2' }, scope: 'category',
+  });
+  assert.equal(edge.affectedCount, 2);
+  assert.deepEqual(edge.targets.map(({ hit }) => hit.id), ['parallel-1', 'parallel-2']);
+  assert.equal(edge.targets[1].selected, true);
+  assert.ok(!JSON.stringify([single, category, global, edge]).includes('hidden-future'));
+  assert.ok(!JSON.stringify([single, category, global, edge]).includes('hidden-edge'));
+});
+
+test('workspace overlays exclude invalid geometry and do not invent hidden selections', () => {
+  const frame = { view: { nodes: [{ id: 'visible', kind: 'item' }], edges: [] } };
+  const list = {
+    width: 1280,
+    height: 720,
+    selection: [
+      { kind: 'node', id: 'visible', box: { x: NaN, y: 0, w: 20, h: 20 } },
+      { kind: 'node', id: 'visible', points: [{ x: 0, y: 0 }, { x: Infinity, y: 1 }] },
+    ],
+  };
+  const missing = projectSelectionOverlay(frame, list, {
+    kind: 'node', selection: { kind: 'node', id: 'future' }, scope: 'object',
+  });
+  assert.equal(missing.affectedCount, 0);
+  assert.deepEqual(missing.targets, []);
+  const global = projectSelectionOverlay(frame, list, {
+    kind: 'node', selection: null, scope: 'global',
+  });
+  assert.equal(global.affectedCount, 1);
+  assert.deepEqual(global.targets, [], 'neither invalid hit geometry reaches SVG');
+});
+
+test('workspace overlay counts only segments intersecting the selection clip', () => {
+  const edgeIds = [
+    'outside-corner',
+    'enters-corner',
+    'crosses-stage',
+    'two-segment',
+    'touches-border',
+    'wholly-away',
+  ];
+  const frame = {
+    view: { nodes: [], edges: edgeIds.map((id) => ({ id, kind: 'friend' })) },
+  };
+  const list = {
+    width: 1280,
+    height: 720,
+    selectionClip: { x: 80, y: 90, w: 800, h: 460 },
+    selection: [
+      // The bounding box overlaps the clip corner but the line never enters.
+      { kind: 'edge', id: 'outside-corner', points: [{ x: 0, y: 120 }, { x: 120, y: 0 }] },
+      { kind: 'edge', id: 'enters-corner', points: [{ x: 0, y: 0 }, { x: 130, y: 130 }] },
+      // Both endpoints are outside: the segment still crosses the visible clip.
+      { kind: 'edge', id: 'crosses-stage', points: [{ x: 0, y: 150 }, { x: 1000, y: 150 }] },
+      { kind: 'edge', id: 'two-segment', points: [
+        { x: 0, y: 120 }, { x: 120, y: 0 }, { x: 200, y: 130 },
+      ] },
+      { kind: 'edge', id: 'touches-border', points: [{ x: 0, y: 90 }, { x: 100, y: 90 }] },
+      { kind: 'edge', id: 'wholly-away', points: [{ x: 0, y: 0 }, { x: 20, y: 20 }] },
+      // A hit outside the current spoiler-safe frame must also stay excluded.
+      { kind: 'edge', id: 'hidden-future', points: [{ x: 90, y: 90 }, { x: 100, y: 100 }] },
+    ],
+  };
+  const all = projectSelectionOverlay(frame, list, {
+    kind: 'edge', selection: null, scope: 'global',
+  });
+  assert.equal(all.affectedCount, 6);
+  assert.deepEqual(all.targets.map(({ hit }) => hit.id), [
+    'enters-corner', 'crosses-stage', 'two-segment', 'touches-border',
+  ]);
+  assert.match(all.message, /已描边 4 个/);
+
+  const missed = projectSelectionOverlay(frame, list, {
+    kind: 'edge', selection: { kind: 'edge', id: 'outside-corner' }, scope: 'object',
+  });
+  assert.equal(missed.affectedCount, 1, 'the item still belongs to the safe projection');
+  assert.deepEqual(missed.targets, [], 'no invisible segment can be counted as outlined');
+  assert.match(missed.message, /尚未绘制到当前画面/);
 });
 
 test('shared workspace harness mounts the real property view and retains controls across redraws', async () => {

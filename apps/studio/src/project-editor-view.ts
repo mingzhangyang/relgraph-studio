@@ -30,6 +30,7 @@ interface Actions {
   pause(): void;
   uploadImage(file: File, nodeId: string): Promise<void>;
   draftChanged?(): void;
+  selectionChanged?(): void;
 }
 const nodeFields: [string, string, string | readonly string[]][] = [
   ['shape', '形状', ['circle', 'pill', 'diamond']],
@@ -143,6 +144,7 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
     ['category', '当前类别'],
     ['global', '全局默认'],
   ]);
+  scope.value = 'object';
   const provenance = el('p');
   provenance.id = 'visualFacts';
   provenance.className = 'muted';
@@ -504,13 +506,18 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
     kind = kindSelect.value as typeof kind;
     setSelection(null);
     render();
+    actions.selectionChanged?.();
   });
   objects.addEventListener('change', () => {
     actions.pause();
     setSelection(objects.value ? { kind, id: objects.value } : null);
     render();
+    actions.selectionChanged?.();
   });
-  scope.addEventListener('change', render);
+  scope.addEventListener('change', () => {
+    render();
+    actions.selectionChanged?.();
+  });
   const changeText = (field: 'label' | 'description', value: string) => {
     if (!selection) return;
     const next = copyConfig(config),
@@ -555,6 +562,9 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
   });
   button('保存项目 JSON', 'visualSave', actions.save);
   return {
+    focus(): { kind: 'node' | 'edge'; selection: Selection; scope: Scope } {
+      return { kind, selection, scope: scope.value as Scope };
+    },
     /** Detect unsent text/number drafts, including invalid values not accepted by core. */
     hasPendingDraft() {
       if (!frame) return false;
@@ -634,6 +644,7 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
         kind = hit.kind;
         kindSelect.value = kind;
         render();
+        actions.selectionChanged?.();
       }
     },
   };

@@ -60,6 +60,13 @@ future object maps. The composer resolves sparse appearance/copy only for that
 safe view. Selection targets derive from the same projected paths and node
 geometry; they are data, not another rendering backend. The DOM property adapter
 keeps controls mounted and receives only the current projected frame.
+The director's workspace-only selection feedback uses existing composed
+`DisplayList.selection` hit geometry and the current `DirectorFrameState.view`;
+`selection-overlay-model.ts` intersects both safe sources, while
+`selection-overlay-view.ts` creates a transparent, pointer-inert SVG overlay
+above the preview canvas. Scope counts do not include future source objects.
+The overlay is never sent to the renderer or export pipeline, and the sidebar
+scrolls independently on desktop/medium layouts.
 
 `layout-strategies.ts` is a synchronous DOM-free authoring step over stable IDs.
 It supports generic layered SCC/distance packing, the existing seeded force

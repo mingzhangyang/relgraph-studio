@@ -1613,6 +1613,95 @@ for (const theme of ['dark', 'light']) {
   await context.close();
 }
 
+// UI-only outlines must be visible in the composite screenshot, not Canvas
+// pixels or native video output. Exercise real Chromium geometry and scrolling.
+{
+  const { context, page, problems } = await openStudio();
+  await check('selection outlines and scope counts stay outside the Canvas bitmap', async () => {
+    assert.equal(await page.evaluate(() => window.renderAt(84)), true);
+    const beforePixels = await canvasHash(page);
+    const beforeComposite = await page.locator('.stage-image').screenshot();
+    assert.equal(await page.locator('#stageSelection .selection-target').count(), 0);
+
+    await page.selectOption('#visualObject', { index: 1 });
+    assert.ok(await page.locator('#stageSelection .selection-target.selected').count());
+    assert.equal(await page.getAttribute('#selectionFeedback', 'data-affected'), '1');
+    assert.equal(await canvasHash(page), beforePixels, 'SVG feedback cannot change canvas pixels');
+    const afterComposite = await page.locator('.stage-image').screenshot();
+    assert.notDeepEqual(
+      afterComposite,
+      beforeComposite,
+      'composited stage visibly outlines selection',
+    );
+
+    await page.selectOption('#visualScope', 'global');
+    const safeNodeCount = await page.evaluate(() => window.studioFrame().view.nodes.length);
+    assert.equal(
+      await page.getAttribute('#selectionFeedback', 'data-affected'),
+      String(safeNodeCount),
+    );
+    assert.equal(await canvasHash(page), beforePixels, 'scope change leaves film unchanged');
+    await page.selectOption('#visualKind', 'edge');
+    await page.selectOption('#visualScope', 'global');
+    const safeEdgeCount = await page.evaluate(() => window.studioFrame().view.edges.length);
+    assert.equal(
+      await page.getAttribute('#selectionFeedback', 'data-affected'),
+      String(safeEdgeCount),
+    );
+    assert.equal(await canvasHash(page), beforePixels);
+
+    await page.selectOption('#visualKind', 'node');
+    await page.selectOption('#visualScope', 'object');
+    await page.selectOption('#visualObject', { index: 1 });
+    for (const width of [1440, 1280, 900, 390]) {
+      await page.setViewportSize({ width, height: 800 });
+      const geometry = await page.evaluate(() => {
+        const canvas = document.getElementById('stage');
+        const overlay = document.getElementById('stageSelection');
+        const sidebar = document.querySelector('.rightbar');
+        const stageRect = canvas.getBoundingClientRect();
+        const overlayRect = overlay.getBoundingClientRect();
+        const firstTop = stageRect.top;
+        sidebar.scrollTop = sidebar.scrollHeight;
+        return {
+          stageRect: { x: stageRect.x, y: stageRect.y, w: stageRect.width, h: stageRect.height },
+          overlayRect: {
+            x: overlayRect.x, y: overlayRect.y, w: overlayRect.width, h: overlayRect.height,
+          },
+          firstTop,
+          afterTop: canvas.getBoundingClientRect().top,
+          sidebarScroll: sidebar.scrollTop,
+          sidebarOverflow: getComputedStyle(sidebar).overflowY,
+          sidebarPosition: getComputedStyle(sidebar).position,
+          viewportOverflow: document.documentElement.scrollWidth - window.innerWidth,
+        };
+      });
+      assert.ok(geometry.stageRect.w > 200, `visible stage at ${width}px`);
+      for (const key of ['x', 'y', 'w', 'h']) {
+        assert.ok(
+          Math.abs(geometry.stageRect[key] - geometry.overlayRect[key]) < 2,
+          `overlay ${key} matches canvas at ${width}px`,
+        );
+      }
+      assert.ok(geometry.viewportOverflow <= 2, `no horizontal overflow at ${width}px`);
+      if (width >= 900) {
+        assert.equal(geometry.sidebarPosition, 'sticky');
+        assert.equal(geometry.sidebarOverflow, 'auto');
+        assert.ok(geometry.sidebarScroll > 0, 'inspector scrolls independently');
+        assert.ok(Math.abs(geometry.firstTop - geometry.afterTop) < 2, 'canvas stays in place');
+      } else {
+        assert.equal(geometry.sidebarPosition, 'static', 'narrow screens stack naturally');
+      }
+      await page.screenshot({
+        path: join(outputDir, `selection-workspace-${width}.png`),
+        fullPage: true,
+      });
+    }
+    assert.deepEqual(problems, []);
+  });
+  await context.close();
+}
+
 // Added or removed shots change the frame inventory; both need an explicit
 // baseline refresh instead of passing on the frames that remain.
 if (reference)

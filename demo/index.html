@@ -33,9 +33,13 @@
     </div>
 
     <div class="stage-shell">
-      <canvas id="stage" width="1280" height="720" role="img" aria-label="关系叙事视频预览" aria-describedby="sceneDescription">当前分镜和关系见画面文字说明。</canvas>
+      <div class="stage-image">
+        <canvas id="stage" width="1280" height="720" role="img" aria-label="关系叙事视频预览" aria-describedby="sceneDescription">当前分镜和关系见画面文字说明。</canvas>
+        <svg id="stageSelection" class="stage-selection" viewBox="0 0 1280 720" aria-hidden="true" focusable="false"></svg>
+      </div>
     </div>
     <p id="sceneDescription" class="sr-only" role="status" aria-live="polite"></p>
+    <p id="selectionFeedback" class="selection-feedback" role="status" aria-live="polite">请选择数据后，可在画面上查看选中对象和影响范围。</p>
     <div class="layout-tools" role="group" aria-label="节点位置微调">
       <button id="layoutToggle" type="button" aria-pressed="false" disabled>调整节点位置</button>
       <button id="layoutReset" type="button" disabled>重置调整</button>
