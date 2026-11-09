@@ -57,7 +57,7 @@ const edgeFields: [string, string, ControlKind][] = [
   ['curve', '曲率 · 0 为直线', 'number'],
   ['showLabel', '显示标签', 'choice'],
   ['fontSize', '标签字号', 'number'],
-  ['fontWeight', '标签字重', ['400', '600']],
+  ['fontWeight', '标签字重', 'choice'],
   ['textColor', '标签文字色', 'color'],
 ];
 /**
