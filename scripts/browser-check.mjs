@@ -779,6 +779,170 @@ const captured = [];
 // Every frame this run is expected to produce, captured or not.
 const expectedFiles = [];
 const baselineFiles = new Set(reference?.frames.map((frame) => frame.file) ?? []);
+// Layout preview is transient; only explicit application enters document history.
+{
+  const { context, page, problems } = await openStudio();
+  await check('layout preview, cancel, locks, apply, undo/redo and project reload', async () => {
+    await page.evaluate(() => window.renderAt(84));
+    await page.locator('#layoutStrategies').evaluate((e) => (e.open = true));
+    const original = await canvasPng(page),
+      firstId = await page.inputValue('#strategyNode');
+    await page.check('#strategyLock');
+    await page.selectOption('#strategyType', 'circle');
+    await page.selectOption('#strategyMode', 'rearrange');
+    await page.fill('#strategySeed', '42');
+    await page.click('#strategyPreview');
+    const preview = await canvasPng(page);
+    assert.notDeepEqual(preview, original);
+    await page.click('#strategyCancel');
+    assert.deepEqual(await canvasPng(page), original);
+    await page.click('#strategyPreview');
+    assert.deepEqual(await canvasPng(page), preview);
+    await page.click('#strategyApply');
+    assert.equal(await page.locator('#strategyApply').isDisabled(), true);
+    await page.click('#visualUndo');
+    assert.deepEqual(await canvasPng(page), original);
+    await page.click('#visualRedo');
+    assert.deepEqual(await canvasPng(page), preview);
+    const promise = page.waitForEvent('download');
+    await page.click('#visualSave');
+    const d = await promise;
+    const project = JSON.parse(await readFile(await d.path(), 'utf8'));
+    assert.equal(project.config.layout.type, 'circle');
+    assert.equal(project.config.layout.seed, 42);
+    assert.ok(project.config.layout.locked.includes(firstId));
+    assert.deepEqual(
+      project.config.layout.positions[firstId],
+      documents.literature.characters.find((n) => n.id === firstId).position,
+    );
+    await page.locator('#fileInput').setInputFiles({
+      name: 'layout.studio.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(JSON.stringify(project)),
+    });
+    await page.waitForFunction(
+      () => document.getElementById('sourceName').textContent === 'layout.studio.json',
+    );
+    await waitReady(page);
+    await page.evaluate(() => window.renderAt(84));
+    assert.deepEqual(await canvasPng(page), preview);
+    await page.selectOption('#strategyType', 'layered');
+    await page.click('#strategyPreview');
+    await loadExample(page, EXAMPLES[1]);
+    assert.equal(await page.locator('#strategyApply').isDisabled(), true);
+    assert.equal(await page.inputValue('#strategyType'), 'manual');
+    assert.deepEqual(problems, []);
+  });
+  await context.close();
+}
+
+// Real Canvas layout previews in both domains/themes; retain evidence for visual review.
+for (const theme of ['light', 'dark'])
+  for (const example of EXAMPLES) {
+    const { context, page, problems } = await openStudio({ colorScheme: theme });
+    await check(`layout visuals ${example.key}/${theme}: layered, force and circle`, async () => {
+      await loadExample(page, example);
+      await page.evaluate((f) => window.renderAt(f), example.key === 'biology' ? 156 : 84);
+      await page.locator('#layoutStrategies').evaluate((e) => (e.open = true));
+      await page.selectOption('#strategyMode', 'rearrange');
+      await page.fill('#strategySeed', '42');
+      for (const type of ['layered', 'force', 'circle']) {
+        await page.selectOption('#strategyType', type);
+        await page.click('#strategyPreview');
+        const first = await canvasPng(page);
+        await writeFile(join(outputDir, `layout-${example.key}-${theme}-${type}.png`), first);
+        await page.click('#strategyCancel');
+        await page.click('#strategyPreview');
+        assert.deepEqual(await canvasPng(page), first);
+        await page.click('#strategyCancel');
+      }
+      assert.deepEqual(problems, []);
+    });
+    await context.close();
+  }
+
+{
+  const { context, page, problems } = await openStudio();
+  await check(
+    'review: sparse locks, preview export, no-op redo and Escape cancellation',
+    async () => {
+      const source = structuredClone(documents.literature);
+      for (const node of source.characters) delete node.position;
+      await page.locator('#fileInput').setInputFiles({
+        name: 'missing-review.json',
+        mimeType: 'application/json',
+        buffer: Buffer.from(JSON.stringify(source)),
+      });
+      await page.waitForFunction(
+        () => document.getElementById('sourceName').textContent === 'missing-review.json',
+      );
+      await waitReady(page);
+      await page.locator('#layoutStrategies').evaluate((e) => (e.open = true));
+      const id = await page.inputValue('#strategyNode'),
+        baseline = await canvasPng(page);
+      await page.check('#strategyLock');
+      await page.selectOption('#strategyType', 'force');
+      await page.selectOption('#strategyMode', 'missing');
+      await page.click('#strategyPreview');
+      assert.notDeepEqual(
+        await canvasPng(page),
+        baseline,
+        'locking one fallback does not author every other point',
+      );
+      await page.click('#strategyCancel');
+      const exportPositions = async () => {
+        const promise = page.waitForEvent('download');
+        await page.click('#layoutExport');
+        const download = await promise;
+        return JSON.parse(await readFile(await download.path(), 'utf8'));
+      };
+      const expected = await exportPositions();
+      await page.selectOption('#strategyType', 'circle');
+      await page.selectOption('#strategyMode', 'rearrange');
+      await page.click('#strategyPreview');
+      assert.notDeepEqual(await canvasPng(page), baseline);
+      assert.deepEqual(await exportPositions(), expected);
+      assert.equal(await page.locator('#strategyApply').isDisabled(), true);
+      await page.uncheck('#strategyLock');
+      await page.click('#strategyPreview');
+      await page.click('#strategyApply');
+      await page.click('#visualUndo');
+      assert.equal(await page.locator('#visualRedo').isDisabled(), false);
+      await page.click('#layoutToggle');
+      await page.selectOption('#layoutNode', id);
+      const before = { x: await page.inputValue('#layoutX'), y: await page.inputValue('#layoutY') };
+      await page.locator('#stage').scrollIntoViewIfNeeded();
+      const point = await page.evaluate(({ x, y }) => {
+        const s = window.studioFrame(),
+          r = document.getElementById('stage').getBoundingClientRect();
+        return {
+          x:
+            r.left +
+            ((640 + (Number(x) - s.cameraResolved.x) * s.cameraResolved.scale) * r.width) / 1280,
+          y:
+            r.top +
+            ((330 + (Number(y) - s.cameraResolved.y) * s.cameraResolved.scale) * r.height) / 720,
+        };
+      }, before);
+      await page.mouse.click(point.x, point.y);
+      assert.equal(await page.locator('#visualRedo').isDisabled(), false);
+      await page.mouse.move(point.x, point.y);
+      await page.mouse.down();
+      await page.mouse.move(point.x + 30, point.y + 20);
+      assert.notEqual(await page.inputValue('#layoutX'), before.x);
+      await page.keyboard.press('Escape');
+      await page.mouse.up();
+      await page.click('#layoutToggle');
+      await page.selectOption('#layoutNode', id);
+      assert.equal(await page.inputValue('#layoutX'), before.x);
+      assert.equal(await page.inputValue('#layoutY'), before.y);
+      assert.equal(await page.locator('#visualRedo').isDisabled(), false);
+      assert.deepEqual(problems, []);
+    },
+  );
+  await context.close();
+}
+
 {
   const { context, page, problems } = await openStudio();
   await check(

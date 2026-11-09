@@ -65,7 +65,7 @@ export interface VisualGraph {
 }
 
 /** A projection contains only the currently visible graph objects. */
-export type ProjectedVisualGraph = Omit<VisualGraph, 'scenes'>;
+export type ProjectedVisualGraph = Omit<VisualGraph, 'scenes' | 'project'>;
 
 export interface ResolvedHighlight {
   nodeIds: NodeId[];

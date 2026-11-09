@@ -46,39 +46,6 @@ const edgeFields: [string, string, string | readonly string[]][] = [
   ['fontWeight', '标签字重', ['400', '600']],
   ['textColor', '标签文字色', 'color'],
 ];
-/**
- * Label only currently projected choices; never consult the unfiltered source
- * graph for a relationship's endpoints. IDs disambiguate parallel relations.
- */
-export function visibleObjectEntries(
-  frame: Pick<DirectorFrameState, 'view'> | null,
-  config: ProjectConfig,
-  kind: 'node' | 'edge',
-): { id: string; label: string }[] {
-  if (!frame) return [];
-  if (kind === 'node')
-    return frame.view.nodes.map((node) => ({
-      id: node.id,
-      label: displayNodeText(config, node.id)?.label ?? node.label,
-    }));
-  const names = new Map(
-    frame.view.nodes.map((node) => [
-      node.id,
-      displayNodeText(config, node.id)?.label ?? node.label,
-    ]),
-  );
-  return frame.view.edges.map((edge) => {
-    const from = names.get(edge.source);
-    const to = names.get(edge.target);
-    const endpoints =
-      from === undefined || to === undefined
-        ? '端点未显示'
-        : `${from} ${edge.directed ? '→' : '—'} ${to}`;
-    const label = displayEdgeText(config, edge.id)?.label ?? edge.label ?? edge.kind;
-    return { id: edge.id, label: `${label} · ${endpoints} · ID: ${edge.id}` };
-  });
-}
-
 /** Stable controls; only safe object options are reconciled when projection changes. */
 export function createProjectEditor(doc: Document, host: HTMLElement, actions: Actions) {
   let config: ProjectConfig = {},
@@ -235,7 +202,13 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
     buildFields();
     const candidates = kind === 'node' ? (frame?.view.nodes ?? []) : (frame?.view.edges ?? []);
     if (selection && !candidates.some((n) => n.id === selection!.id)) selection = null;
-    const entries = visibleObjectEntries(frame, config, kind);
+    const entries = candidates.map((n) => ({
+      id: n.id,
+      label:
+        kind === 'node'
+          ? (displayNodeText(config, n.id)?.label ?? n.label)
+          : (displayEdgeText(config, n.id)?.label ?? n.label ?? n.kind),
+    }));
     const nextSignature = JSON.stringify([kind, entries]);
     if (signature !== nextSignature) {
       signature = nextSignature;
@@ -271,7 +244,7 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
     provenance.textContent = selected
       ? `类别：${selected.kind}` +
         (kind === 'edge'
-          ? ` · ${'directed' in selected && selected.directed ? '有向' : '无向'} · ${entries.find((entry) => entry.id === selected.id)?.label ?? '端点未显示'} · 关系事实保持原样`
+          ? ` · ${'directed' in selected && selected.directed ? '有向' : '无向'} · 关系事实保持原样`
           : '')
       : '全局样式可作用于未来对象，列表只显示当前投影。';
     const resolved = inspectorAppearance(config, kind, selected, scope.value as Scope);

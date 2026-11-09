@@ -1,3 +1,10 @@
+import {
+  configWithLayoutPositions,
+  dragHasChanges,
+  cancelPositionDrag,
+} from './layout-history-model.js';
+import { computeLayout, DEFAULT_LAYOUT_SETTINGS, type LayoutSettings } from '@relgraph/core';
+import { createLayoutStrategyView } from './layout-strategy-view.js';
 import { createProject, projectSource, validateProjectConfig } from '@relgraph/core';
 import { ProjectHistory } from './project-editor-model.js';
 import { createProjectEditor } from './project-editor-view.js';
@@ -113,6 +120,74 @@ const transcriptView = createTranscriptView(document, {
   nodeCount: $('nodeCount'),
   edgeCount: $('edgeCount'),
 });
+let layoutPreview: {
+  settings: LayoutSettings;
+  before: Map<string, { x: number; y: number }>;
+  serial: number;
+} | null = null;
+function cancelLayoutPreview(): void {
+  if (!layoutPreview) return;
+  if (currentLayout) restoreLayoutPositions(currentLayout, layoutPreview.before);
+  layoutPreview = null;
+  rebuildRenderer();
+}
+function configWithPositions(
+  settings: LayoutSettings = projectHistory.value.layout ?? DEFAULT_LAYOUT_SETTINGS,
+  editedIds?: readonly string[],
+) {
+  return configWithLayoutPositions(
+    projectHistory.value,
+    currentLayout ?? new Map(),
+    settings,
+    editedIds,
+  );
+}
+function applyProjectHistory(): void {
+  if (!graph || !currentLayout || !originalLayout) return;
+  graph.project = projectHistory.value;
+  restoreLayoutPositions(currentLayout, originalLayout);
+  for (const [id, p] of Object.entries(graph.project.layout?.positions ?? {}))
+    currentLayout.set(id, { ...p });
+  strategyView.reset(graph.project.layout);
+  rebuildRenderer();
+  updateLayoutFields();
+  updateLayoutControls();
+}
+const strategyView = createLayoutStrategyView(document, $('layoutStrategyEditor'), {
+  preview(settings) {
+    if (!graph || !currentLayout || loading) return;
+    if (layoutEditing) stopLayoutEdit();
+    setPlaying(false);
+    cancelLayoutPreview();
+    try {
+      const before = new Map([...currentLayout].map(([id, p]) => [id, { ...p }]));
+      const next = computeLayout(graph, settings, currentLayout);
+      layoutPreview = { settings, before, serial: requestSerial };
+      restoreLayoutPositions(currentLayout, next);
+      rebuildRenderer();
+    } catch (error) {
+      strategyView.error(error instanceof Error ? error.message : String(error));
+    }
+  },
+  apply() {
+    if (!graph || !layoutPreview || loading || layoutPreview.serial !== requestSerial) return;
+    const next = configWithPositions(layoutPreview.settings);
+    layoutPreview = null;
+    projectHistory.commit(next);
+    applyProjectHistory();
+  },
+  cancel: cancelLayoutPreview,
+  lock(id, locked) {
+    if (!graph || !currentFrameState?.view.nodes.some((n) => n.id === id) || loading) return;
+    cancelLayoutPreview();
+    const settings = projectHistory.value.layout ?? DEFAULT_LAYOUT_SETTINGS;
+    const ids = new Set(settings.locked);
+    if (locked) ids.add(id);
+    else ids.delete(id);
+    projectHistory.commit(configWithPositions({ ...settings, locked: [...ids].sort() }, [id]));
+    applyProjectHistory();
+  },
+});
 const projectHistory = new ProjectHistory();
 const projectEditor = createProjectEditor(document, $('appearanceEditor'), {
   change(config) {
@@ -122,24 +197,24 @@ const projectEditor = createProjectEditor(document, $('appearanceEditor'), {
       projectEditor.error('配置无效：' + errors.join('；'));
       return;
     }
+    cancelLayoutPreview();
     projectEditor.error('');
     setPlaying(false);
     projectHistory.commit(config);
-    graph.project = projectHistory.value;
-    rebuildRenderer();
+    applyProjectHistory();
   },
   undo() {
     if (graph) {
+      cancelLayoutPreview();
       projectHistory.undo();
-      graph.project = projectHistory.value;
-      rebuildRenderer();
+      applyProjectHistory();
     }
   },
   redo() {
     if (graph) {
+      cancelLayoutPreview();
       projectHistory.redo();
-      graph.project = projectHistory.value;
-      rebuildRenderer();
+      applyProjectHistory();
     }
   },
   pause() {
@@ -147,6 +222,7 @@ const projectEditor = createProjectEditor(document, $('appearanceEditor'), {
   },
   save() {
     if (!graph || !currentLayout || sourceDocument === null || loading) return;
+    cancelLayoutPreview();
     const config = {
       ...projectHistory.value,
       layout: {
@@ -242,6 +318,7 @@ function tick(now: number): void {
   animationId = requestAnimationFrame(tick);
 }
 function seekToShot(targetFrame: number): void {
+  cancelLayoutPreview();
   if (layoutEditing) stopLayoutEdit();
   if (loading) return;
   setPlaying(false);
@@ -255,6 +332,13 @@ function setFrame(next: number, updatePosition = true): DirectorFrameState | und
     p = state.playback;
   if (!p.scene) throw new Error('A loaded film must have a current scene');
   currentFrameState = state;
+  strategyView.render(
+    state,
+    projectHistory.value.layout,
+    Boolean(layoutPreview),
+    loading,
+    projectHistory.value,
+  );
   renderPlaybackFrame(playbackControls, playbackDisplay(playback, p.index, p.totalSec));
   transcriptView.render(list.a11y);
   projectEditor.render(state, projectHistory.value, projectHistory.canUndo, projectHistory.canRedo);
@@ -283,6 +367,9 @@ function paintEmptyStage(message: string): void {
 }
 function clearStudio(): void {
   setPlaying(false);
+  layoutPreview = null;
+  strategyView.reset(undefined);
+  strategyView.render(null, undefined, false, loading);
   graph = null;
   projectHistory.reset();
   projectEditor.clear();
@@ -324,6 +411,7 @@ function applyResult(result: LoadResult, name: string, sourceText?: string): voi
   graph = result.graph;
   sourceDocument = sourceText ? projectSource(JSON.parse(sourceText)) : null;
   projectHistory.reset(graph.project ?? {});
+  strategyView.reset(graph.project?.layout);
   sourceFilename = /\.json$/i.test(name) ? name : 'relgraph.json';
   currentDetailAt = result.detailAt || (() => undefined);
   currentLayout = layoutGraph(graph);
@@ -345,9 +433,11 @@ function applyResult(result: LoadResult, name: string, sourceText?: string): voi
   setFrame(0);
 }
 function beginLoad(): number {
+  cancelLayoutPreview();
   const serial = ++requestSerial;
   if (layoutEditing) stopLayoutEdit();
   loading = true;
+  strategyView.render(currentFrameState, projectHistory.value.layout, false, true);
   setPlaying(false);
   disablePlaybackView(playbackControls);
   layoutToggle.disabled = true;
@@ -437,11 +527,13 @@ dropzone.addEventListener('drop', (event) => {
   void loadFile(event.dataTransfer?.files?.[0]);
 });
 play.addEventListener('click', () => {
+  cancelLayoutPreview();
   if (layoutEditing) stopLayoutEdit();
   if (!playback.playing && playback.frame >= playback.totalFrames - 1) setFrame(0);
   setPlaying(!playback.playing);
 });
 restart.addEventListener('click', () => {
+  cancelLayoutPreview();
   if (layoutEditing) stopLayoutEdit();
   setPlaying(false);
   setFrame(0);
@@ -449,6 +541,7 @@ restart.addEventListener('click', () => {
 scrubber.addEventListener('input', () => {
   // Editing teardown redraws the prior frame, so capture the requested frame first.
   const requestedFrame = Number(scrubber.value);
+  cancelLayoutPreview();
   if (layoutEditing) stopLayoutEdit();
   setPlaying(false);
   setFrame(requestedFrame);
@@ -479,16 +572,19 @@ window.addEventListener('keydown', (event) => {
     event.preventDefault();
     play.click();
   } else if (event.code === 'ArrowRight') {
+    cancelLayoutPreview();
     if (layoutEditing) stopLayoutEdit();
     setPlaying(false);
     setFrame(playback.frame + FPS);
   } else if (event.code === 'ArrowLeft') {
+    cancelLayoutPreview();
     if (layoutEditing) stopLayoutEdit();
     setPlaying(false);
     setFrame(playback.frame - FPS);
   }
 });
 function applyTheme(next: Theme, persist: boolean): void {
+  cancelLayoutPreview();
   // A theme is a normal renderer transition; never carry a frozen shot camera.
   if (layoutEditing) stopLayoutEdit();
   theme = next;
@@ -550,6 +646,7 @@ layoutApply.addEventListener('click', () => {
     !layoutEditing ||
     !currentLayout ||
     !selectedLayoutNode ||
+    projectHistory.value.layout?.locked.includes(selectedLayoutNode) ||
     !availableNodes().some((node) => node.id === selectedLayoutNode)
   )
     return;
@@ -563,6 +660,8 @@ layoutApply.addEventListener('click', () => {
     !updateEditableNodePosition(currentLayout, currentFrameState, selectedLayoutNode, point)
   )
     return;
+  projectHistory.commit(configWithPositions(undefined, [selectedLayoutNode]));
+  if (graph) graph.project = projectHistory.value;
   setFrame(playback.frame, false);
   updateLayoutControls();
 });
@@ -591,6 +690,7 @@ function releaseLayoutPointer(): void {
 }
 function stopLayoutEdit(): void {
   if (!layoutEditing) return;
+  if (dragging && currentLayout) cancelPositionDrag(currentLayout, dragging);
   releaseLayoutPointer();
   layoutEditing = false;
   editCamera = null;
@@ -599,6 +699,7 @@ function stopLayoutEdit(): void {
   updateLayoutControls();
 }
 layoutToggle.addEventListener('click', () => {
+  cancelLayoutPreview();
   if (!renderer || !currentFrameState || !currentLayout) return;
   if (layoutEditing) {
     stopLayoutEdit();
@@ -612,9 +713,13 @@ layoutToggle.addEventListener('click', () => {
   updateLayoutControls();
 });
 layoutReset.addEventListener('click', () => {
+  cancelLayoutPreview();
   if (!currentLayout || !originalLayout) return;
   releaseLayoutPointer();
-  restoreLayoutPositions(currentLayout, originalLayout);
+  for (const [id, p] of originalLayout)
+    if (!projectHistory.value.layout?.locked.includes(id)) currentLayout.set(id, { ...p });
+  projectHistory.commit(configWithPositions());
+  if (graph) graph.project = projectHistory.value;
   rebuildRenderer();
   updateLayoutFields();
   updateLayoutControls();
@@ -641,7 +746,7 @@ canvas.addEventListener('pointerdown', (event) => {
     event.pointerId,
     graph?.project,
   );
-  if (!nextDrag) return;
+  if (!nextDrag || projectHistory.value.layout?.locked.includes(nextDrag.id)) return;
   dragging = nextDrag;
   selectedLayoutNode = nextDrag.id;
   renderEditorSelection(layoutControls, nextDrag.id);
@@ -677,7 +782,12 @@ canvas.addEventListener('pointermove', moveLayoutNode);
 canvas.addEventListener('pointerup', (event) => {
   if (!dragging || dragging.pointerId !== event.pointerId) return;
   moveLayoutNode(event);
+  if (currentLayout && dragHasChanges(dragging, currentLayout)) {
+    projectHistory.commit(configWithPositions(undefined, [dragging.id]));
+    if (graph) graph.project = projectHistory.value;
+  }
   releaseLayoutPointer();
+  setFrame(playback.frame, false);
 });
 canvas.addEventListener('pointercancel', (event) => {
   if (!dragging || dragging.pointerId !== event.pointerId || !currentLayout) return;
@@ -700,6 +810,7 @@ function downloadJson(value: unknown, filename: string): void {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 layoutExport.addEventListener('click', () => {
+  cancelLayoutPreview();
   if (!graph || !currentLayout || sourceDocument === null) return;
   try {
     const output = applyGraphPositions(sourceDocument, graph, currentLayout);
@@ -734,6 +845,7 @@ lightQuery?.addEventListener?.('change', (event) => {
 // Headless frame export and independent frame inspection; no recording or animation state.
 window.renderAt = (f) => {
   if (!renderer || !Number.isInteger(f) || f < 0 || f >= playback.totalFrames) return false;
+  cancelLayoutPreview();
   if (layoutEditing) stopLayoutEdit();
   setPlaying(false);
   setFrame(f);
