@@ -100,6 +100,12 @@ export function makeStudio({
     closest(selector) {
       return this.focusSelector && selector.includes(this.focusSelector) ? this : null;
     }
+    contains(node) {
+      return this === node || this.children.some((child) => child?.contains?.(node));
+    }
+    blur() {
+      if (document.activeElement === this) document.activeElement = null;
+    }
     focus() {
       document.activeElement = this;
     }

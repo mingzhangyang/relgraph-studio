@@ -744,6 +744,7 @@ canvas.addEventListener('pointerdown', (event) => {
     point,
     radius,
     event.pointerId,
+    graph?.project,
   );
   if (!nextDrag || projectHistory.value.layout?.locked.includes(nextDrag.id)) return;
   dragging = nextDrag;
