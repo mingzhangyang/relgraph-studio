@@ -494,7 +494,11 @@ function refreshSelectionFeedback(): void {
     layoutEditing &&
     selectedLayoutNode &&
     currentFrameState?.view.nodes.some((node) => node.id === selectedLayoutNode)
-      ? { kind: 'node' as const, selection: { kind: 'node' as const, id: selectedLayoutNode }, scope: 'object' as const }
+      ? {
+          kind: 'node' as const,
+          selection: { kind: 'node' as const, id: selectedLayoutNode },
+          scope: 'object' as const,
+        }
       : projectEditor.focus();
   selectionOverlayView.render(projectSelectionOverlay(currentFrameState, lastDisplayList, focus));
 }
