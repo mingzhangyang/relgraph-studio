@@ -52,6 +52,8 @@ The browser workspace additionally exposes `window.renderAt(frame)` for a valida
 
 Use the right-side **画面与属性** panel for safe node/edge selection, sparse inherited styles, display-only copy, undo/redo and **保存项目 JSON**. Plain source files remain compatible; Studio projects also render through the CLI. See [configuration and reproduction](docs/NETWORK-AUTHORING.md).
 
+Uploaded node images are supported through the node property panel: PNG/JPEG/WebP, shape clipping, cover/contain, undo and self-contained project saving. See [limits, offline export and squash merge order](docs/NODE-IMAGES.md).
+
 ## Prepare deterministic coordinates before filming
 
 Use `relgraph layout` to fill **only missing** node coordinates with a seeded, fixed-iteration layout. Existing authored coordinates are never moved, including reaction/process positions. The layout runs before playback; it adds no physics to the renderer or timeline.

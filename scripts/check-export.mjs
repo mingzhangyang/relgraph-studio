@@ -449,9 +449,12 @@ for (const example of examples)
         const source = JSON.parse(await readFile(join(root, example.file), 'utf8'));
         const node = example.result.graph.nodes[0];
         const config = {
+          assets: { portrait: { format: 'rgba8', width: 2, height: 1, data: '/wAA/wAA//8=' } },
           nodes: {
             defaults: { fontSize: 18, borderWidth: 3 },
-            objects: { [node.id]: { size: 23, fill: '#334455' } },
+            objects: {
+              [node.id]: { size: 32, fill: '#334455', image: 'portrait', imageFit: 'cover' },
+            },
           },
           edges: { defaults: { width: 2.4, dash: 'dotted', curve: 28, showLabel: true } },
           text: { nodes: { [node.id]: { label: '显示文案' } } },

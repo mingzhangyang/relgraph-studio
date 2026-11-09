@@ -79,3 +79,10 @@ Manual numeric coordinate edits, complete drags, reset and lock changes enter th
 ```
 
 Reimport uses the saved coordinates directly. Merely loading or playing never reruns a selected algorithm. `computeLayout` is the exported pure core entry for programmatic authoring. Coordinates produced by strategies are quantized to .01 world units (including normalization of negative zero); authored/locked precision remains intact. All original domain formats, reaction nodes, directed roles and source evidence are retained.
+
+## Node images
+
+Use **节点图片 · 仅当前节点** for local PNG/JPEG/WebP upload, shape clipping,
+cover/contain, removal and inherited-image reset. Saved projects embed normalized
+pixels alongside sparse `image`/`imageFit` references; the original domain source
+stays unchanged. See [image limits, export and squash merge order](NODE-IMAGES.md).

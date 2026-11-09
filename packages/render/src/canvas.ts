@@ -1,3 +1,4 @@
+import { materializeImages, browserImageFactory, type ImageFactory } from './images.js';
 import { compileTimeline, directorFrameAt, domainStyle, localeFor } from '@relgraph/core';
 import type { DirectorFrameState, DomainStyle, VisualGraph } from '@relgraph/core';
 import { canvasTextMeasurer, drawDisplayList, type Canvas2D } from './backends/canvas2d.js';
@@ -17,6 +18,7 @@ export { VIDEO_THEMES, themeFor } from './theme.js';
 
 type Point = { x: number; y: number };
 export interface CanvasRendererOptions {
+  imageFactory?: ImageFactory;
   /** Defaults to the frame spec's rate (24 for the presets). */
   fps?: number;
   detailAt?: DetailLookup;
@@ -71,6 +73,7 @@ export function createCanvasRenderer(
     style,
     locale,
     cameraOverride,
+    imageFactory = browserImageFactory,
   }: CanvasRendererOptions = {},
 ): CanvasRenderer {
   if (
@@ -81,6 +84,7 @@ export function createCanvasRenderer(
       !Number.isFinite(cameraOverride.scale))
   )
     throw new RangeError('Invalid camera override');
+  const images = materializeImages(graph.project?.assets, imageFactory);
   const palette = themeFor(theme);
   const spec = frameSpecFor(frameSpec);
   const rate = fps ?? spec.fps;
@@ -116,13 +120,13 @@ export function createCanvasRenderer(
     renderFrame(frame) {
       const { state, list } = compose(frame);
       // compose() has already rejected a missing context.
-      if (ctx) drawDisplayList(ctx, list);
+      if (ctx) drawDisplayList(ctx, list, images);
       // directorFrameAt returns a copy, so the cached timeline cannot leak.
       return state;
     },
     renderFrameWithList(frame) {
       const result = compose(frame);
-      if (ctx) drawDisplayList(ctx, result.list);
+      if (ctx) drawDisplayList(ctx, result.list, images);
       return result;
     },
     displayListAt: (frame) => compose(frame).list,
