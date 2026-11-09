@@ -743,7 +743,7 @@ test('unapplied coordinates survive switching nodes until explicitly reset', asy
   assert.equal(viewControl(app, 'visualUndo').disabled, true, 'draft-only reset adds no history');
 });
 
-test('incomplete native numbers remain drafts even when the browser reports an empty value', async () => {
+test('native badInput stays dirty even when the input value is empty', async () => {
   const app = makeStudio();
   await app.ready;
   assert.equal(app.window.renderAt(84), true);
