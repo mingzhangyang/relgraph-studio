@@ -847,6 +847,8 @@ const baselineFiles = new Set(reference?.frames.map((frame) => frame.file) ?? []
     assert.deepEqual(await canvasPng(page), preview);
     await page.selectOption('#strategyType', 'layered');
     await page.click('#strategyPreview');
+    // The pending preview/draft now requires explicit acceptance of discarding work.
+    page.once('dialog', (dialog) => void dialog.accept());
     await loadExample(page, EXAMPLES[1]);
     assert.equal(await page.locator('#strategyApply').isDisabled(), true);
     assert.equal(await page.inputValue('#strategyType'), 'manual');
@@ -1166,6 +1168,8 @@ for (const theme of ['light', 'dark']) {
       buffer: Buffer.from(data, 'base64'),
     });
     await page.waitForFunction(() => typeof window.releaseNodeImage === 'function');
+    // An in-flight image is also protected; this test explicitly discards it.
+    page.once('dialog', (dialog) => void dialog.accept());
     await loadExample(page, EXAMPLES[1]);
     const expected = await canvasPng(page);
     await page.evaluate(() => window.releaseNodeImage());
