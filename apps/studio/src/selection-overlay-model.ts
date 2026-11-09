@@ -34,6 +34,23 @@ const drawable = (hit: HitTarget): boolean => {
   );
 };
 
+function intersectsClip(hit: HitTarget, clip: { x: number; y: number; w: number; h: number }): boolean {
+  if (![clip.x, clip.y, clip.w, clip.h].every(finite) || clip.w <= 0 || clip.h <= 0)
+    return false;
+  const xs = hit.box
+    ? [hit.box.x, hit.box.x + hit.box.w]
+    : (hit.points ?? []).map((p) => p.x);
+  const ys = hit.box
+    ? [hit.box.y, hit.box.y + hit.box.h]
+    : (hit.points ?? []).map((p) => p.y);
+  return (
+    Math.max(...xs) >= clip.x &&
+    Math.min(...xs) <= clip.x + clip.w &&
+    Math.max(...ys) >= clip.y &&
+    Math.min(...ys) <= clip.y + clip.h
+  );
+}
+
 /**
  * Selection feedback is strictly a WORKSPACE projection of already-safe frame
  * objects and already-composed hit geometry. Never consult the raw source graph.
@@ -59,7 +76,13 @@ export function projectSelectionOverlay(
     affected = visible.filter((item) => item.kind === selected.kind);
   const eligibleIds = new Set(affected.map((item) => item.id));
   const targets = (list?.selection ?? [])
-    .filter((hit) => hit.kind === focus.kind && eligibleIds.has(hit.id) && drawable(hit))
+    .filter(
+      (hit) =>
+        hit.kind === focus.kind &&
+        eligibleIds.has(hit.id) &&
+        drawable(hit) &&
+        intersectsClip(hit, clip),
+    )
     .map((hit) => ({ hit, selected: selected?.id === hit.id }));
 
   const message =
