@@ -9,6 +9,7 @@ import { computeLayout, DEFAULT_LAYOUT_SETTINGS, type LayoutSettings } from '@re
 import { createLayoutStrategyView } from './layout-strategy-view.js';
 import { createProject, projectSource, validateProjectConfig } from '@relgraph/core';
 import { ProjectHistory } from './project-editor-model.js';
+import { ProjectSavepoint } from './unsaved-changes-model.js';
 import { createProjectEditor } from './project-editor-view.js';
 import { parseDocument, applyGraphPositions, type LoadResult } from '@relgraph/core';
 import { layoutGraph } from '@relgraph/core';
@@ -100,6 +101,7 @@ const canvas = requiredElement('stage', HTMLCanvasElement),
   layoutY = requiredElement('layoutY', HTMLInputElement),
   layoutApply = requiredElement('layoutApply', HTMLButtonElement),
   dropzone = requiredElement('dropzone', HTMLLabelElement),
+  saveState = $('saveState'),
   shots = $('shots'),
   strip = $('sceneStrip');
 const playbackControls = {
@@ -144,6 +146,7 @@ function cancelLayoutPreview(): void {
   if (currentLayout) restoreLayoutPositions(currentLayout, layoutPreview.before);
   layoutPreview = null;
   rebuildRenderer();
+  refreshUnsavedState();
 }
 function configWithPositions(
   settings: LayoutSettings = projectHistory.value.layout ?? DEFAULT_LAYOUT_SETTINGS,
@@ -183,6 +186,7 @@ const strategyView = createLayoutStrategyView(document, $('layoutStrategyEditor'
       layoutPreview = { settings, before, serial: requestSerial };
       restoreLayoutPositions(currentLayout, next);
       rebuildRenderer();
+      refreshUnsavedState();
     } catch (error) {
       strategyView.error(error instanceof Error ? error.message : String(error));
     }
@@ -208,6 +212,7 @@ const strategyView = createLayoutStrategyView(document, $('layoutStrategyEditor'
 });
 let imageUploadSerial = 0;
 const projectHistory = new ProjectHistory();
+const projectSavepoint = new ProjectSavepoint();
 const projectEditor = createProjectEditor(document, $('appearanceEditor'), {
   change(config) {
     if (!graph || loading) return;
@@ -245,6 +250,9 @@ const projectEditor = createProjectEditor(document, $('appearanceEditor'), {
   pause() {
     setPlaying(false);
   },
+  draftChanged() {
+    refreshUnsavedState();
+  },
   async uploadImage(file, nodeId) {
     if (!graph || loading || !currentFrameState?.view.nodes.some((n) => n.id === nodeId)) return;
     const serial = ++imageUploadSerial,
@@ -280,6 +288,11 @@ const projectEditor = createProjectEditor(document, $('appearanceEditor'), {
   },
   save() {
     if (!graph || !currentLayout || sourceDocument === null || loading) return;
+    if (dragging || projectEditor.hasPendingDraft() || projectEditor.isImageBusy()) {
+      projectEditor.error('仍有未提交的输入、拖动或图片处理，请完成后再保存项目。');
+      refreshUnsavedState();
+      return;
+    }
     cancelLayoutPreview();
     const config = {
       ...projectHistory.value,
@@ -299,11 +312,19 @@ const projectEditor = createProjectEditor(document, $('appearanceEditor'), {
       projectEditor.error('保存失败：' + errors.join('；'));
       return;
     }
-    downloadJson(
-      createProject(sourceDocument, config),
-      sourceFilename.replace(/\.json$/i, '') + '.studio.json',
-    );
-  },
+    try {
+      downloadJson(
+        createProject(sourceDocument, config),
+        sourceFilename.replace(/\.json$/i, '') + '.studio.json',
+      );
+      // Browsers can initiate downloads, but cannot verify the file was kept.
+      projectSavepoint.markClean(projectHistory.value, currentLayout);
+      projectEditor.error('已发起完整项目 JSON 下载，请确认浏览器已将文件保存到本机。');
+      refreshUnsavedState();
+    } catch (error) {
+      projectEditor.error('保存失败：' + (error instanceof Error ? error.message : String(error)));
+    }
+  }
 });
 const layoutControls = {
   canvas,
@@ -332,6 +353,38 @@ let selectedLayoutNode: string | null = null;
 let layoutEditing = false;
 let editCamera: DirectorFrameState['cameraResolved'] | null = null;
 let dragging: PositionDrag | null = null;
+const DOCUMENT_TITLE = 'RelGraph Studio · 导演工作台';
+let lastDirtyStatus: boolean | null = null;
+
+function hasUnsavedChanges(): boolean {
+  // A load already accepted for discard should not trigger another warning.
+  return Boolean(
+    !loading &&
+    graph &&
+    currentLayout &&
+    (projectSavepoint.isDirty(projectHistory.value, currentLayout) ||
+      layoutPreview ||
+      dragging ||
+      projectEditor.isImageBusy() ||
+      projectEditor.hasPendingDraft()),
+  );
+}
+function refreshUnsavedState(): void {
+  const dirty = hasUnsavedChanges();
+  if (lastDirtyStatus === dirty) return;
+  lastDirtyStatus = dirty;
+  saveState.textContent = dirty ? '未保存修改' : '无未保存修改';
+  saveState.setAttribute('data-dirty', String(dirty));
+  document.title = dirty ? `● ${DOCUMENT_TITLE}` : DOCUMENT_TITLE;
+}
+function confirmSourceReplacement(): boolean {
+  return !hasUnsavedChanges() || window.confirm('当前项目有未保存的修改。继续加载其他数据将丢弃这些修改，是否继续？');
+}
+window.addEventListener('beforeunload', (event) => {
+  if (!hasUnsavedChanges()) return;
+  event.preventDefault();
+  event.returnValue = '';
+});
 // Workspace and video share one theme. Without a saved choice it follows the OS.
 const THEME_KEY = 'relgraph-theme',
   lightQuery = globalThis.matchMedia?.('(prefers-color-scheme: light)');
@@ -406,6 +459,7 @@ function clearStudio(): void {
   strategyView.render(null, undefined, false, loading);
   graph = null;
   projectHistory.reset();
+  projectSavepoint.clear();
   projectEditor.clear();
   renderer = null;
   currentLayout = null;
@@ -427,6 +481,7 @@ function clearStudio(): void {
   transcriptView.reset();
   shellView.paintEmptyStage('请选择示例或导入有效的 JSON 数据', theme);
   shellView.resetMetadata();
+  refreshUnsavedState();
 }
 function applyResult(result: LoadResult, name: string, sourceText?: string): void {
   loading = false;
@@ -446,6 +501,7 @@ function applyResult(result: LoadResult, name: string, sourceText?: string): voi
   currentDetailAt = result.detailAt || (() => undefined);
   currentLayout = layoutGraph(graph);
   originalLayout = new Map([...currentLayout].map(([id, point]) => [id, { ...point }]));
+  projectSavepoint.markClean(projectHistory.value, currentLayout);
   renderEditorAvailability(layoutControls, layoutExport, sourceDocument !== null);
   renderer = createCanvasRenderer(canvas, graph, currentLayout, {
     fps: FPS,
@@ -458,6 +514,7 @@ function applyResult(result: LoadResult, name: string, sourceText?: string): voi
   shellView.renderSourceSummary(graph.scenes.length, graph.meta.sourceNote, graph.meta.description);
   setStatus('就绪', 'ready');
   setFrame(0);
+  refreshUnsavedState();
 }
 function beginLoad(): number {
   cancelLayoutPreview();
@@ -466,6 +523,7 @@ function beginLoad(): number {
   const serial = ++requestSerial;
   if (layoutEditing) stopLayoutEdit();
   loading = true;
+  refreshUnsavedState();
   strategyView.render(currentFrameState, projectHistory.value.layout, false, true);
   setPlaying(false);
   disablePlaybackView(playbackControls);
@@ -511,6 +569,7 @@ async function loadExample(path: string, name: string): Promise<void> {
   }
 }
 exampleLiterature.addEventListener('click', () => {
+  if (!confirmSourceReplacement()) return;
   shellView.markSource('exampleLiterature');
   return loadExample(
     '../examples/honglou-provisional.relgraph.json',
@@ -518,11 +577,12 @@ exampleLiterature.addEventListener('click', () => {
   );
 });
 exampleBiology.addEventListener('click', () => {
+  if (!confirmSourceReplacement()) return;
   shellView.markSource('exampleBiology');
   return loadExample('../examples/biology-signaling-synthetic.json', '生物信号 · 虚构合成示例');
 });
 async function loadFile(file: File | undefined): Promise<void> {
-  if (!file) return;
+  if (!file || !confirmSourceReplacement()) return;
   const serial = beginLoad();
   shellView.markSource(null);
   try {
@@ -691,6 +751,7 @@ const layoutChanged = (): boolean =>
   Boolean(currentLayout && originalLayout && layoutHasChanges(currentLayout, originalLayout));
 function updateLayoutControls(): void {
   renderEditorStatus(layoutControls, layoutEditing, layoutChanged());
+  refreshUnsavedState();
 }
 function rebuildRenderer(): void {
   if (!graph || !currentLayout) return;
@@ -807,6 +868,7 @@ canvas.addEventListener('pointerup', (event) => {
   }
   releaseLayoutPointer();
   setFrame(playback.frame, false);
+  refreshUnsavedState();
 });
 canvas.addEventListener('pointercancel', (event) => {
   if (!dragging || dragging.pointerId !== event.pointerId || !currentLayout) return;
@@ -847,7 +909,7 @@ layoutExport.addEventListener('click', () => {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
     renderEditorMessage(
       layoutControls,
-      '已准备导出：' + link.download + '。修改仅保存在导出的 JSON 文件中。',
+      '已准备导出：' + link.download + '。此文件仅保存源数据坐标，不代表完整项目已保存。',
     );
   } catch (error) {
     renderEditorMessage(
