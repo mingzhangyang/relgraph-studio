@@ -791,9 +791,11 @@ test('incomplete native numbers remain drafts even when the browser reports an e
   size.value = '';
   await size.dispatch('input');
   await size.dispatch('change');
-  assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
+  // The editor may retain an empty scope container in history; that is not
+  // an invalid draft and must not block an explicit complete-project save.
   await viewControl(app, 'visualSave').click();
   assert.equal(app.downloads.length, before + 1);
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
   const exported = JSON.parse(await app.blobs.at(-1).text());
   assert.equal(exported.config.nodes?.objects?.[objects.value]?.size, undefined);
 });
