@@ -760,7 +760,7 @@ window.addEventListener('keydown', (event) => {
   if (command) {
     if (documentToolbarView.enabled(command)) {
       event.preventDefault();
-      documentToolbarView.run(command);
+      if (!event.repeat) documentToolbarView.run(command);
     }
     return;
   }
