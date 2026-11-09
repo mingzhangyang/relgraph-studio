@@ -124,30 +124,8 @@ export function validAppearanceField(
       );
   }
 }
-const nodeKeys = [
-  'image',
-  'imageFit',
-  'shape',
-  'size',
-  'fill',
-  'border',
-  'borderWidth',
-  'fontSize',
-  'fontWeight',
-  'textColor',
-  'textPosition',
-];
-const edgeKeys = [
-  'color',
-  'width',
-  'dash',
-  'head',
-  'curve',
-  'showLabel',
-  'fontSize',
-  'fontWeight',
-  'textColor',
-];
+const nodeKeys = Object.keys(APPEARANCE_FIELD_RULES.nodes);
+const edgeKeys = Object.keys(APPEARANCE_FIELD_RULES.edges);
 /** Strict, bounded validation; errors describe fields, never imported display values. */
 export function validateProjectConfig(value: unknown, graph?: VisualGraph): string[] {
   const errors: string[] = [];
