@@ -183,6 +183,10 @@ function applyProjectHistory({
   preserveLayoutDraft = false,
 }: { preserveLayoutDraft?: boolean } = {}): void {
   if (!graph || !currentLayout || !originalLayout) return;
+  // History replay, config changes and asynchronous image edits must invalidate
+  // an in-flight pointer transaction before they replace its underlying layout.
+  // Otherwise the late pointerup could commit stale coordinates over undo/redo.
+  cancelActiveLayoutDrag();
   graph.project = projectHistory.value;
   restoreLayoutPositions(currentLayout, originalLayout);
   for (const [id, p] of Object.entries(graph.project.layout?.positions ?? {}))
@@ -947,13 +951,18 @@ function releaseLayoutPointer(): void {
     canvas.releasePointerCapture(dragging.pointerId);
   dragging = null;
 }
-function stopLayoutEdit(): void {
-  if (!layoutEditing) return;
-  if (dragging && currentLayout) {
+/** One cancellation path for history transitions, pointercancel and edit teardown. */
+function cancelActiveLayoutDrag(): void {
+  if (!dragging) return;
+  if (currentLayout) {
     cancelPositionDrag(currentLayout, dragging);
     projectSavepoint.positionsChanged();
   }
   releaseLayoutPointer();
+}
+function stopLayoutEdit(): void {
+  if (!layoutEditing) return;
+  cancelActiveLayoutDrag();
   layoutEditing = false;
   editCamera = null;
   rebuildRenderer();
@@ -979,7 +988,7 @@ layoutToggle.addEventListener('click', () => {
 layoutReset.addEventListener('click', () => {
   cancelLayoutPreview();
   if (!currentLayout || !originalLayout) return;
-  releaseLayoutPointer();
+  cancelActiveLayoutDrag();
   const changedPositions = layoutChanged();
   // Reset is an explicit discard of all pending coordinate inputs, not a
   // new authored layout commit when only unsubmitted drafts existed.
@@ -1069,9 +1078,7 @@ canvas.addEventListener('pointerup', (event) => {
 });
 canvas.addEventListener('pointercancel', (event) => {
   if (!dragging || dragging.pointerId !== event.pointerId || !currentLayout) return;
-  currentLayout.set(dragging.id, dragging.previous);
-  projectSavepoint.positionsChanged();
-  releaseLayoutPointer();
+  cancelActiveLayoutDrag();
   setFrame(playback.frame, false);
   updateLayoutFields();
   updateLayoutControls();

@@ -115,11 +115,33 @@ export function createSimulatedStudioDom({
       return canvasContext ? canvasContext() : { fillRect() {}, fillText() {} };
     }
   }
-  class HTMLCanvasElement extends Element {}
-  class HTMLButtonElement extends Element {}
-  class HTMLInputElement extends Element {}
-  class HTMLLabelElement extends Element {}
-  class HTMLSelectElement extends Element {}
+  // getElementById constructs mapped controls without a tag argument. Keep
+  // their tagName consistent with real DOM elements, just like createElement.
+  class HTMLCanvasElement extends Element {
+    constructor(tag = 'canvas') {
+      super(tag);
+    }
+  }
+  class HTMLButtonElement extends Element {
+    constructor(tag = 'button') {
+      super(tag);
+    }
+  }
+  class HTMLInputElement extends Element {
+    constructor(tag = 'input') {
+      super(tag);
+    }
+  }
+  class HTMLLabelElement extends Element {
+    constructor(tag = 'label') {
+      super(tag);
+    }
+  }
+  class HTMLSelectElement extends Element {
+    constructor(tag = 'select') {
+      super(tag);
+    }
+  }
   const constructors = {
     stage: HTMLCanvasElement,
     play: HTMLButtonElement,

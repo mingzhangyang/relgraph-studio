@@ -123,7 +123,8 @@ test('position mode pauses playback, drags only visible nodes, exports JSON and 
     clientY: screen.y + 26,
   });
   assert.equal(app.node('layoutReset').disabled, false);
-  assert.match(app.node('layoutNote').textContent, /未保存/);
+  assert.match(app.node('layoutNote').textContent, /有坐标调整/);
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
 
   await app.node('layoutExport').click();
   assert.equal(app.downloads.length, 1);
@@ -194,9 +195,10 @@ test('node locks preserve strategy drafts; undo and document switch reset them',
   assert.equal(type.value, 'circle');
   assert.equal(seed.value, '42');
 
-  const undo = find(app.node('appearanceEditor'), 'visualUndo'),
-    redo = find(app.node('appearanceEditor'), 'visualRedo');
-  assert.ok(undo && redo, 'shared project history controls remain mounted');
+  const undo = app.node('visualUndo'),
+    redo = app.node('visualRedo');
+  assert.equal(undo.tagName, 'BUTTON', 'undo is in the document toolbar');
+  assert.equal(redo.tagName, 'BUTTON', 'redo is in the document toolbar');
   await undo.click();
   assert.equal(type.value, 'manual', 'undo resets controls to committed settings');
   assert.equal(mode.value, 'preserve');
@@ -312,7 +314,8 @@ test('pointercancel rolls back only the interrupted drag and preserves earlier e
     'cancellation restores the position before this drag',
   );
   assert.equal(app.node('layoutReset').disabled, false, 'the earlier adjustment stays dirty');
-  assert.match(app.node('layoutNote').textContent, /未保存/);
+  assert.match(app.node('layoutNote').textContent, /有坐标调整/);
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
 
   await app.node('layoutExport').click();
   const restored = JSON.parse(await app.blobs.at(-1).text());
@@ -332,6 +335,75 @@ test('pointercancel rolls back only the interrupted drag and preserves earlier e
   await stage.dispatch('pointercancel', { pointerId: 43 });
   assert.equal(stage.hasPointerCapture(43), false);
   assert.equal(app.node('layoutReset').disabled, true, 'cancelled first drag stays clean');
+});
+
+test('history replay cancels live drags before undo/redo and ignores late pointerup', async () => {
+  const app = makeStudio();
+  await app.ready;
+  assert.equal(app.window.renderAt(48), true);
+  const frame = app.window.studioFrame();
+  const node = frame.view.nodes.find((item) => frame.reveal.nodes[item.id] > 0.5);
+  assert.ok(node);
+  const original = literature.characters.find((item) => item.id === node.id)?.position;
+  assert.ok(original);
+  await app.node('layoutToggle').click();
+
+  const stage = app.node('stage');
+  const point = (id, x, y) => ({
+    pointerId: id,
+    isPrimary: true,
+    pointerType: 'mouse',
+    button: 0,
+    clientX: x,
+    clientY: y,
+  });
+  const coords = () => ({
+    x: Number(app.node('layoutX').value),
+    y: Number(app.node('layoutY').value),
+  });
+  const start = screenPosition(original, frame.cameraResolved, DEFAULT_FRAME_SPEC);
+  await stage.dispatch('pointerdown', point(51, start.x, start.y));
+  await stage.dispatch('pointermove', point(51, start.x + 32, start.y - 20));
+  await stage.dispatch('pointerup', point(51, start.x + 32, start.y - 20));
+  const committed = coords();
+  assert.notDeepEqual(committed, original, 'the first drag is committed in project history');
+  assert.equal(app.node('visualUndo').disabled, false);
+
+  const second = screenPosition(committed, frame.cameraResolved, DEFAULT_FRAME_SPEC);
+  await stage.dispatch('pointerdown', point(52, second.x, second.y));
+  await stage.dispatch('pointermove', point(52, second.x + 39, second.y + 18));
+  assert.equal(stage.hasPointerCapture(52), true);
+  assert.notDeepEqual(coords(), committed, 'second drag is still uncommitted');
+
+  let prevented = false;
+  app.window.dispatch('keydown', {
+    key: 'z',
+    ctrlKey: true,
+    target: stage,
+    preventDefault() {
+      prevented = true;
+    },
+  });
+  assert.equal(prevented, true, 'Ctrl+Z handles a document history command');
+  assert.equal(stage.hasPointerCapture(52), false, 'undo cancels the pointer transaction');
+  assert.deepEqual(coords(), original, 'undo restores the previous history state');
+  await stage.dispatch('pointerup', point(52, second.x + 39, second.y + 18));
+  assert.deepEqual(coords(), original, 'late pointerup cannot resurrect the second drag');
+  assert.equal(app.node('visualRedo').disabled, false, 'redo remains available');
+  assert.equal(app.node('visualUndo').disabled, true);
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
+
+  const third = screenPosition(original, frame.cameraResolved, DEFAULT_FRAME_SPEC);
+  await stage.dispatch('pointerdown', point(53, third.x, third.y));
+  await stage.dispatch('pointermove', point(53, third.x - 24, third.y + 16));
+  assert.equal(stage.hasPointerCapture(53), true);
+  await app.node('visualRedo').click();
+  assert.equal(stage.hasPointerCapture(53), false, 'toolbar redo also cancels drag');
+  await stage.dispatch('pointerup', point(53, third.x - 24, third.y + 16));
+  assert.deepEqual(coords(), committed, 'redo restores the committed position');
+  assert.equal(app.node('visualRedo').disabled, true);
+  assert.equal(app.node('visualUndo').disabled, false);
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
 });
 
 test('Escape works while controls have focus; arrows and renderAt release frozen camera', async () => {
