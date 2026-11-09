@@ -549,3 +549,40 @@ test('layout previews and uncommitted strategy drafts are guarded separately', a
   await mode.dispatch('change');
   assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
 });
+
+test('pending image normalization is dirty, while confirmed replacement rejects its stale completion', async () => {
+  const image = deferred();
+  const app = makeStudio({ normalizeImage: () => image.promise });
+  await app.ready;
+  assert.equal(app.window.renderAt(84), true);
+  const objects = viewControl(app, 'visualObject');
+  assert.ok(objects.children.length > 1);
+  objects.value = objects.children[1].value;
+  await objects.dispatch('change');
+
+  const picker = viewControl(app, 'visualImageFile');
+  picker.files = [{ name: 'pending.png', type: 'image/png' }];
+  await picker.dispatch('change');
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
+
+  let confirmed = false;
+  app.window.confirm = () => {
+    confirmed = true;
+    return false;
+  };
+  await app.node('exampleBiology').click();
+  assert.equal(confirmed, true);
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
+  assert.match(app.node('sourceName').textContent, /红楼梦/);
+
+  app.window.confirm = () => true;
+  await app.node('exampleBiology').click();
+  image.resolve({
+    id: 'late-image',
+    asset: { format: 'rgba8', width: 1, height: 1, data: '/wAA/w==' },
+  });
+  await flush();
+  assert.match(app.node('sourceName').textContent, /生物信号/);
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
+  assert.equal(viewControl(app, 'visualUndo').disabled, true);
+});
