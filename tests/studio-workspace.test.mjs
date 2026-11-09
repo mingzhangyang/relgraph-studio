@@ -1321,7 +1321,7 @@ test('pure document shortcut policy respects platform modifiers and editable foc
   assert.equal(shortcut('y', { ctrlKey: true, shiftKey: true }), null);
 });
 
-test('document toolbar owns undo, redo, full save, coordinate export and dirty status', async () => {
+test('document toolbar unifies history, saves, exports and dirty state', async () => {
   const app = makeStudio();
   await app.ready;
   const undo = app.node('visualUndo');
@@ -1377,9 +1377,7 @@ test('document toolbar owns undo, redo, full save, coordinate export and dirty s
   assert.equal(state.attributes['data-dirty'], 'false');
 });
 
-test(
-  'document shortcuts use the toolbar history; input undo stays native, save checks drafts',
-  async () => {
+test('document shortcuts preserve input undo and guard save', async () => {
   const app = makeStudio();
   await app.ready;
   const preset = viewControl(app, 'visualPreset');
@@ -1393,7 +1391,9 @@ test(
       key: value,
       ctrlKey: true,
       target,
-      preventDefault() { prevented = true; },
+      preventDefault() {
+        prevented = true;
+      },
       ...options,
     });
     return prevented;
@@ -1436,8 +1436,7 @@ test(
   assert.equal(app.downloads.length, previous + 1);
   assert.match(app.downloads.at(-1).filename, /\.studio\.json$/);
   assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
-  },
-);
+});
 
 test('document toolbar disables commands while a replacement source is loading', async () => {
   const pending = deferred();
@@ -1462,7 +1461,9 @@ test('document toolbar disables commands while a replacement source is loading',
     key: 's',
     ctrlKey: true,
     target: app.node('stage'),
-    preventDefault() { prevented = true; },
+    preventDefault() {
+      prevented = true;
+    },
   });
   assert.equal(prevented, false, 'disabled command does not suppress browser default');
   pending.resolve({ ok: true, text: async () => JSON.stringify(biology) });
