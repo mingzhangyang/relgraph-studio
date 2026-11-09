@@ -19,8 +19,11 @@ remote URLs and unreadable files are rejected with a message.
   **保存项目 JSON** embeds the pixels; reimport needs no original file or URL.
   The old coordinate-only source export intentionally does not save imagery.
 
-Files must be nonempty and at most **8 MiB**. Decoded images above **16,777,216
-pixels** are rejected. Normalization applies EXIF orientation and resizes without
+Files must be nonempty and at most **8 MiB**. Encoded PNG IHDR, JPEG SOF and
+WebP VP8/VP8L/VP8X/animation-frame dimensions are checked **before decoding**;
+anything above **16,777,216 pixels**, or missing readable dimensions, is rejected.
+The decoded dimensions are checked again. This header preflight is not a full
+codec validator; the browser still rejects corrupt image data. Normalization applies EXIF orientation and resizes without
 upscaling to a maximum longest edge of **256 pixels**, retaining aspect ratio.
 It drops filenames/EXIF and stores normalized RGBA, not the original photo.
 Projects support at most **32 assets** and **4 MiB of decoded RGBA pixels**.
@@ -54,6 +57,8 @@ extended. Invalid uploads leave the previous picture intact.
 
 The pure composer resolves images only for projected visible nodes and emits
 source crop, destination rectangle and the existing node outline as a clip.
+The outline fills beneath the image and strokes exactly once above it, keeping
+reveal and dimming opacity consistent with ordinary nodes.
 Display lists contain only currently visible asset references, never a global
 resource map. The backends create native bitmap canvases before frames run; no
 network request, decoder or mutable loading state runs inside playback. The
@@ -87,15 +92,23 @@ reuses those exact pixels rather than re-decoding the original on each platform.
 
 ## Squash merge order
 
-This feature starts from layout PR #23 at `1fbeaa083c0a0089d9c2b2eefcf63bf21f01bc86`.
-The intended sequence is **#22 → #23 → node-image PR**. Do not merge automatically.
-Squash changes commit ancestry: after #22 merges, rebase only #23's independent
-commits onto new main using its old A base `eb28307`; then change its PR base to
-main and rerun the relevant checks. After #23 merges, rebase only the image
-commits (after old B base `1fbeaa0`) onto new main, then retarget the image PR.
-Preserve the old bases even if merged branches are deleted. Inspect the remaining
-diff before updating the PR branch; use force-with-lease when updating a rewritten
-branch. Merely changing the PR base is insufficient after squash.
+The intended sequence is **#22 → #23 → #24**. Do not merge automatically.
+After review corrections, preserve A head
+`2f2eae201a13a4806800096b5bae832f9651e40d` and B head
+`5b54f5c28d986a038b8e2524e99b5b19d82ab108`, even if their branches are deleted.
+The original image-only commit was `54a918d`; subsequent merges retain all A/B
+corrections and image-specific conflict resolutions.
+
+Squash changes commit ancestry. After #22 merges, transplant B's independent
+tree delta (saved A head → saved B head) onto new main, then retarget #23 and
+rerun checks. After #23 merges, transplant the image delta (saved B head →
+saved #24 head) onto new main, then retarget #24. Preserve each old head before
+rewriting any branch. A reliable method is `git diff --binary <old-base>
+<old-head>` into a patch, applied with `git apply --index` on a fresh branch from
+new main. Review the independent diff and test it before replacing the PR head;
+use an explicit force-with-lease if history replacement is needed. Merely
+changing the PR base is insufficient, and a rebase that drops merge commits
+can lose conflict resolutions. [Review corrections and visual audit](NETWORK-REVIEW-FIXES.md).
 
 [Light preview](visuals/node-images/light.png) · [Dark preview](visuals/node-images/dark.png).
 The previews use a simple two-color raster fixture to make cropping visible; no
@@ -105,7 +118,10 @@ feature. Roll back this PR to remove uploads/image styles/resources; the earlier
 appearance/layout features remain. Existing image projects then require removing
 `assets`, `image` and `imageFit` before import by an older version.
 
-## Actual verification · 2026-11-09
+## Original image-delivery verification · 2026-11-09
+
+This records the original image snapshot. The review-correction validation below
+supersedes its counts and unchanged-Golden statement.
 
 On Linux x64 / Node 24.22.1 / Chromium 153.0.8010.12 / skia-canvas 4.0.0 /
 FFmpeg 7.1.5, with the existing lockfile and fonts:
@@ -131,3 +147,55 @@ format-specific browser checks. No dependency, source schema or source dataset
 changed. No Actions workflow was added, dispatched or rerun, and no merge was
 performed. Logs and original captures remain in local ignored
 `output/node-images-acceptance/` and `output/browser-check/`.
+
+## Review correction validation
+
+The eleven #22/#23 findings are mapped to fixes and regression layers in the
+[review report](NETWORK-REVIEW-FIXES.md). Those corrections were merged forward
+without rewriting the existing PR histories. #24 additionally fixes all three
+of its Copilot findings:
+
+- Read encoded PNG/JPEG/WebP dimensions before calling `createImageBitmap`,
+  including WebP canvas, bitstream and animation-frame dimensions. Retain the
+  decoded check and close rejected bitmaps. Bounded header parsing is DOM-free.
+- Restore image inheritance on the selected object's layer regardless of the
+  global/category style selector; retain inherited resources and prune unused
+  object resources. Other nodes' inherited imagery stays intact.
+- Fill the node outline beneath the image and stroke once above it, preserving
+  reveal/dimming opacity. Zero-width borders also stay disabled in native Canvas.
+
+On the same Linux/Node/Chromium/Skia/FFmpeg versions and unchanged lockfile:
+`npm ci` installed **157** packages; typecheck, lint, format:check, check:types,
+package JS/declaration builds and production build passed. Final full Vitest
+passed **225/225 in 28 files** with `--maxWorkers=1`. The image file contains
+**16/16** tests, including new header/budget, pre/post-decode guard and
+reveal/dimming single-stroke cases. Existing pure, simulated-DOM, native and
+package integration tests remain distinct from browser checks.
+
+Real Chromium passed **55/55**, including all six oversized encoding fixtures
+(PNG, baseline/progressive JPEG, lossy/lossless/extended WebP) with **zero decoder
+calls**, unchanged Canvas on rejection, and restoring inheritance for both an
+image override and `null` in both global/category scopes. Actual PNG/JPEG/WebP
+uploads, stale decoder/document guards, undo/redo, exact project round trips,
+projection and focus checks also passed. All **16/16 browser baseline PNGs**
+are byte-identical. The baseline was not refreshed.
+
+Final `npm run check:export` passed **13/13**, including **44/44 Skia Golden
+frames**, both full technical-example MP4s (960/312 frames at 1080p/24 FPS),
+exact direct-Skia/worker PNG checks, decoded-video frame comparisons and all
+eight custom image-project domain/theme/720p/1080p combinations. Preview↔Skia
+raster differences remain informational (mean **1.037%** pixels over 16/255),
+not exact cross-backend equality. Logs are retained locally in
+`output/review-fixes/logs/`; the final executable source snapshot is `ae5562c`.
+
+The first new stroke test incorrectly traversed a leaf-only helper and sampled
+the provisional example's fully visible initial nodes. It was corrected to
+inspect nested groups and the verified dataset's actual chapter reveal, keeping
+the assertions for both reveal and dimming. The targeted **16/16** run and the
+complete **225/225** run then passed. Source data/timing was not changed.
+
+The six intentional Skia Golden changes and two committed before/after pairs
+are explained in the review report; **38/44** hashes remain unchanged from the
+pre-review snapshot. No unverified result is implied for native screen readers,
+additional platforms/engines, rare glyphs or production typography. No formal
+film, Actions dispatch/rerun or merge into main was performed.
