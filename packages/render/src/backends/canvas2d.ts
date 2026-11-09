@@ -188,7 +188,7 @@ function drawItems(ctx: Canvas2D, items: readonly DisplayItem[], alpha: number):
         ctx.fillStyle = paint(ctx, item.fill);
         ctx.fill();
       }
-      if (item.stroke !== undefined) {
+      if (item.stroke !== undefined && (item.width ?? 1) > 0) {
         ctx.strokeStyle = paint(ctx, item.stroke);
         ctx.lineWidth = item.width ?? 1;
         ctx.lineJoin = 'miter';

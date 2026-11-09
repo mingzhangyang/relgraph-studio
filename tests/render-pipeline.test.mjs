@@ -516,3 +516,21 @@ test('opt-in camera override freezes authoring gestures without changing default
     RangeError,
   );
 });
+
+test('zero-width strokes stay disabled instead of inheriting native Canvas lineWidth', () => {
+  let strokes = 0;
+  const ctx = new Proxy({}, { get: (_, key) => (key === 'stroke' ? () => strokes++ : () => {}) });
+  const path = {
+    type: 'path',
+    d: [
+      ['M', 0, 0],
+      ['L', 10, 10],
+    ],
+    stroke: '#ffffff',
+    width: 0,
+  };
+  drawDisplayList(ctx, { width: 20, height: 20, items: [path] });
+  assert.equal(strokes, 0);
+  drawDisplayList(ctx, { width: 20, height: 20, items: [{ ...path, width: 2 }] });
+  assert.equal(strokes, 1);
+});
