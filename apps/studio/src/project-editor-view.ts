@@ -295,12 +295,7 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
         field
       ] ?? '',
     );
-  const rememberDraft = (
-    field: string,
-    value: string,
-    expected: string,
-    type?: string,
-  ): void => {
+  const rememberDraft = (field: string, value: string, expected: string, type?: string): void => {
     const key = draftKey(field);
     if (matchesValue(value, expected, type)) drafts.delete(key);
     else drafts.set(key, value);

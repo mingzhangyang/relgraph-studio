@@ -68,7 +68,7 @@ export class ProjectSavepoint {
       };
     if (
       this.positionsCache?.source !== positions ||
-      this.positionsCache.revision !== this.positionRevision
+      this.positionsCache?.revision !== this.positionRevision
     )
       this.positionsCache = {
         source: positions,
