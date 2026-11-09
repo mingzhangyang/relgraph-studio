@@ -548,7 +548,7 @@ test('pending numeric appearance drafts work in the shared source-VM harness', a
   assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
 });
 
-test('removing a scoped override accepts an inherited nonempty value without leaving a draft', async () => {
+test('clearing an override inherits a value without an unsaved draft', async () => {
   const app = makeStudio();
   await app.ready;
   assert.equal(app.window.renderAt(84), true);
@@ -556,6 +556,9 @@ test('removing a scoped override accepts an inherited nonempty value without lea
   objects.value = objects.children[1].value;
   await objects.dispatch('change');
 
+  const scope = viewControl(app, 'visualScope');
+  scope.value = 'object';
+  await scope.dispatch('change');
   const preset = viewControl(app, 'visualPreset');
   preset.value = 'presentation';
   await preset.dispatch('change');
@@ -572,7 +575,11 @@ test('removing a scoped override accepts an inherited nonempty value without lea
   await font.dispatch('change');
   assert.equal(font.value, '18', 'successful removal displays inherited value');
   assert.equal(viewControl(app, 'visualError').textContent, '');
-  assert.equal(app.node('saveState').attributes['data-dirty'], 'true', 'prior preset still differs');
+  assert.equal(
+    app.node('saveState').attributes['data-dirty'],
+    'true',
+    'prior preset still differs',
+  );
 
   const count = app.downloads.length;
   await viewControl(app, 'visualSave').click();
