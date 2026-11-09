@@ -1509,7 +1509,11 @@ for (const theme of ['dark', 'light']) {
 
     page.once('dialog', (dialog) => void dialog.dismiss());
     await page.click('#exampleBiology');
-    assert.equal(await text(page, '#sourceName'), initialSource, 'cancel keeps the original source');
+    assert.equal(
+      await text(page, '#sourceName'),
+      initialSource,
+      'cancel keeps the original source',
+    );
     assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'true');
 
     const download = page.waitForEvent('download');
