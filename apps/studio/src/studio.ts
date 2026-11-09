@@ -422,6 +422,7 @@ let layoutEditing = false;
 let editCamera: DirectorFrameState['cameraResolved'] | null = null;
 let dragging: PositionDrag | null = null;
 const DOCUMENT_TITLE = 'RelGraph Studio · 导演工作台';
+const DOCUMENT_TOOLBAR_NOTE = '完整项目包含外观、文案及坐标；坐标导出不保存样式。';
 let lastDirtyStatus: boolean | null = null;
 
 // Do not confuse numeric formatting with a meaningful coordinate change.
@@ -601,6 +602,7 @@ function clearStudio(): void {
   transcriptView.reset();
   shellView.paintEmptyStage('请选择示例或导入有效的 JSON 数据', theme);
   shellView.resetMetadata();
+  documentToolbarView.message(DOCUMENT_TOOLBAR_NOTE);
   refreshSelectionFeedback();
   refreshUnsavedState();
 }
