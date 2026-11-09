@@ -655,7 +655,8 @@ footer span { color: var(--gold); }
 @media (max-width: 640px) {
   .layout { padding: 16px 16px 28px; gap: 24px; }
   .rightbar { display: flex; }
-  .topbar { position: static; }
+  .topbar { position: static; flex-wrap: wrap; }
+  .top-meta { flex-wrap: wrap; justify-content: flex-end; gap: 8px; max-width: 100%; }
   .top-note, .brand small, .hint-note, .pill { display: none; }
   .brand b { font-size: 15px; }
   .transport { flex-wrap: wrap; gap: 10px; padding: 10px; }
