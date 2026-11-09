@@ -332,7 +332,7 @@ const projectEditor = createProjectEditor(document, $('appearanceEditor'), {
     } catch (error) {
       projectEditor.error('保存失败：' + (error instanceof Error ? error.message : String(error)));
     }
-  }
+  },
 });
 const layoutControls = {
   canvas,
