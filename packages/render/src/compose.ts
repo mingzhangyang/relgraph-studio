@@ -557,7 +557,7 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
             type: 'path',
             d: outline,
             fill: custom.fill ?? P.nodeFill,
-            ...(asset ? {} : { stroke: c, width: u(custom.borderWidth ?? 2) }),
+            ...(asset && custom.image ? {} : { stroke: c, width: u(custom.borderWidth ?? 2) }),
           },
           ...(asset && custom.image
             ? [

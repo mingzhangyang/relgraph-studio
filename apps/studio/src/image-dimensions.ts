@@ -1,14 +1,16 @@
 /** Encoded-header preflight runs before any browser bitmap allocation. DOM-free. */
 export const MAX_UPLOAD_PIXELS = 16 * 1024 * 1024;
-export function checkEncodedImageDimensions(bytes: Uint8Array): void {
+export function checkEncodedImageDimensions(bytes: Uint8Array): { width: number; height: number } {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  let result: { width: number; height: number } | undefined;
   const invalid = (): never => {
-    throw new Error('图片尺寸信息不完整或格式无效，请更换 PNG、JPEG 或 WebP 文件。');
+    throw new Error('图片格式或尺寸信息无效或不完整，请更换 PNG、JPEG 或 WebP 文件。');
   };
   const dimensions = (width: number, height: number): void => {
     if (!(width > 0 && height > 0)) invalid();
     if (width > MAX_UPLOAD_PIXELS / height)
       throw new Error('图片尺寸过大，请先缩小到 1600 万像素以内。');
+    result ??= { width, height };
   };
   const tag = (offset: number): string =>
     String.fromCharCode(...bytes.subarray(offset, offset + 4));
@@ -17,7 +19,7 @@ export function checkEncodedImageDimensions(bytes: Uint8Array): void {
   if ([137, 80, 78, 71, 13, 10, 26, 10].every((v, i) => bytes[i] === v)) {
     if (bytes.length < 33 || tag(12) !== 'IHDR' || view.getUint32(8) !== 13) invalid();
     dimensions(view.getUint32(16), view.getUint32(20));
-    return;
+    return result!;
   }
   if (bytes[0] === 255 && bytes[1] === 216) {
     let offset = 2,
@@ -40,7 +42,7 @@ export function checkEncodedImageDimensions(bytes: Uint8Array): void {
       offset += length;
     }
     if (!found) invalid();
-    return;
+    return result!;
   }
   if (bytes.length >= 12 && tag(0) === 'RIFF' && tag(8) === 'WEBP') {
     const end = view.getUint32(4, true) + 8;
@@ -84,7 +86,7 @@ export function checkEncodedImageDimensions(bytes: Uint8Array): void {
     };
     chunks(12, end, false);
     if (!found) invalid();
-    return;
+    return result!;
   }
   throw new Error('仅支持 PNG、JPEG、WebP 静态图片。');
 }

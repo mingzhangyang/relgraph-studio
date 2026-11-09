@@ -1,5 +1,7 @@
 import { encodeImageBytes, MAX_IMAGE_SIDE, type ImageAsset } from '@relgraph/core';
 import { checkEncodedImageDimensions, MAX_UPLOAD_PIXELS } from './image-dimensions.js';
+// Preserve the concurrent image-fix API through the shared DOM-free parser.
+export { checkEncodedImageDimensions as readEncodedImageDimensions } from './image-dimensions.js';
 /** Decode once locally, flatten orientation, strip metadata, bound exported pixels. */
 export async function normalizeNodeImage(file: File): Promise<{ id: string; asset: ImageAsset }> {
   if (!file.size || file.size > 8 * 1024 * 1024)

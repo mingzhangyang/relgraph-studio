@@ -125,6 +125,10 @@ export function pruneImageAssets(config: ProjectConfig): ProjectConfig {
     );
   return config;
 }
+/** Restore only this node's inherited image, regardless of the active style scope. */
+export function inheritNodeImage(config: ProjectConfig, node: VisualNode): ProjectConfig {
+  return pruneImageAssets(editAppearance(config, 'node', node, 'object', 'image', undefined));
+}
 export function setNodeImage(
   config: ProjectConfig,
   node: VisualNode,
