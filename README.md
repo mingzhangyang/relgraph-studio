@@ -116,6 +116,6 @@ Every frame is a pure function of the document, layout, frame index and options,
 
 ADR 003 step 4 was accepted after measuring its pixels against `main`: all 16 browser mid-shot frames and 28 of the 32 previous golden frames are byte-identical, and the 4 that changed are the biology frames where new edges are still being drawn (111 and 231, both themes). 12 mid-reveal golden frames were added.
 
-See [architecture](docs/ARCHITECTURE.md), [cross-domain decision](docs/ADR-002-domain-adapters.md), [render pipeline and foundations](docs/ADR-003-render-pipeline-and-foundations.md) and [roadmap](docs/ROADMAP.md). The project has no GitHub Actions workflow; validation is local.
+See [architecture](docs/ARCHITECTURE.md), [cross-domain decision](docs/ADR-002-domain-adapters.md), [render pipeline and foundations](docs/ADR-003-render-pipeline-and-foundations.md) and [roadmap](docs/ROADMAP.md). The project has no GitHub Actions workflow; validation is local. See [four-layer local testing](docs/TESTING.md) for the precise model, simulated DOM, actual Chromium and native export coverage.
 
 **License:** not selected yet. A public repository does not by itself grant an open-source or commercial-use license.
