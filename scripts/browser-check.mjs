@@ -1671,6 +1671,26 @@ for (const theme of ['dark', 'light']) {
     assert.equal(await page.getAttribute('#visual-width', 'max'), '8');
     assert.equal(await page.getAttribute('#visual-curve', 'min'), '-160');
     assert.equal(await page.getAttribute('#visual-curve', 'max'), '160');
+    for (const width of [1280, 390]) {
+      await page.setViewportSize({ width, height: 840 });
+      const geometry = await page.evaluate(() => {
+        const editor = document.getElementById('appearanceEditor');
+        const field = document.getElementById('visual-color-field');
+        return {
+          overflow: document.documentElement.scrollWidth - window.innerWidth,
+          editor: editor.getBoundingClientRect().width,
+          field: field.getBoundingClientRect().width,
+          picker: document.getElementById('visual-color-picker').getBoundingClientRect().width,
+        };
+      });
+      assert.ok(geometry.overflow <= 2, `no horizontal overflow at ${width}px`);
+      assert.ok(geometry.editor > 200 && geometry.field > 140);
+      assert.ok(geometry.picker >= 36, 'native color swatch stays usable');
+      await page.screenshot({
+        path: join(outputDir, `field-validation-${width}.png`),
+        fullPage: true,
+      });
+    }
     assert.deepEqual(problems, []);
   });
   await context.close();
