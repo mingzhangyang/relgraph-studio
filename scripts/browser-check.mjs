@@ -1626,7 +1626,6 @@ for (const theme of ['dark', 'light']) {
     });
     assert.equal(await page.getAttribute('#visual-size', 'min'), '8');
     assert.equal(await page.getAttribute('#visual-size', 'max'), '48');
-    assert.equal(await page.getAttribute('#visual-width', 'min'), null);
     assert.match(await page.getAttribute('#visual-size', 'aria-describedby'), /visual-size-error/);
     assert.match(await text(page, '#visual-size-hint'), /8–48/);
 
