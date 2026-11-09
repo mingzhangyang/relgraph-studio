@@ -1066,3 +1066,56 @@ test('pending image normalization is dirty, while confirmed replacement rejects 
   assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
   assert.equal(viewControl(app, 'visualUndo').disabled, true);
 });
+
+test('studio SVG feedback follows the safe inspector selection and scope without rerendering unchanged DOM', async () => {
+  const app = makeStudio();
+  await app.ready;
+  assert.equal(app.node('selectionFeedback').attributes['data-outlined'], '0');
+  assert.equal(app.node('stageSelection').attributes.viewBox, '0 0 1280 720');
+  assert.equal(app.window.renderAt(84), true);
+
+  const objects = viewControl(app, 'visualObject');
+  assert.ok(objects.children.length > 1, 'current safe projection offers selectable nodes');
+  objects.value = objects.children[1].value;
+  await objects.dispatch('change');
+
+  const stage = app.node('stageSelection');
+  const note = app.node('selectionFeedback');
+  assert.ok(Number(note.attributes['data-outlined']) >= 1, 'selected node is outlined');
+  const selectedShapes = stage.children[1].children;
+  assert.ok(selectedShapes.some((shape) => shape.attributes.class.includes('selected')));
+  assert.match(note.textContent, /已选中节点/);
+  assert.equal(stage.children[1].attributes['clip-path'], 'url(#studioSelectionClip)');
+  const stableGroup = stage.children[1];
+  assert.equal(app.window.renderAt(84), true);
+  assert.equal(stage.children[1], stableGroup, 'unchanged frames reuse the feedback DOM');
+
+  const scope = viewControl(app, 'visualScope');
+  scope.value = 'global';
+  await scope.dispatch('change');
+  assert.equal(note.attributes['data-affected'], String(app.window.studioFrame().view.nodes.length));
+  assert.ok(Number(note.attributes['data-outlined']) >= 1);
+  assert.match(note.textContent, /当前投影/);
+  assert.ok(stage.children[1].children.every((shape) =>
+    shape.attributes.class.includes('affected') || shape.attributes.class.includes('selected'),
+  ));
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'false', 'selection is not an edit');
+
+  await app.node('exampleBiology').click();
+  assert.equal(note.attributes['data-outlined'], '0', 'a new document clears old selection');
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
+});
+
+test('position editing uses the same workspace-only outline for its selected node', async () => {
+  const app = makeStudio();
+  await app.ready;
+  assert.equal(app.window.renderAt(84), true);
+  await app.node('layoutToggle').click();
+  const note = app.node('selectionFeedback');
+  assert.ok(Number(note.attributes['data-affected']) <= 1);
+  assert.ok(Number(note.attributes['data-outlined']) <= 1);
+  assert.match(note.textContent, /已选中节点/);
+  await app.node('layoutToggle').click();
+  assert.equal(note.attributes['data-outlined'], '0');
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
+});
