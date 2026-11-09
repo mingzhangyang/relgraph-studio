@@ -12,7 +12,7 @@ export function createSelectionOverlayView(
   note: HTMLElement,
 ) {
   let previous = '';
-  const element = (name: string): SVGElement => doc.createElementNS(NS, name);
+  const element = (name: string) => doc.createElementNS(NS, name);
 
   function render(projection: OverlayProjection): void {
     const signature = JSON.stringify(projection);
