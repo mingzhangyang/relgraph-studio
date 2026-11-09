@@ -92,25 +92,28 @@ Use matching theme and FrameSpec inputs for preview/export. The preview is 720p;
 CLI defaults to 1080p. Images are normalized at upload time, so later import/export
 reuses those exact pixels rather than re-decoding the original on each platform.
 
-## Squash merge order
+## Delivery and main-branch verification · updated 2026-11-09
 
-The intended sequence is **#22 → #23 → #24**. Do not merge automatically.
-After review corrections, preserve A head
-`2f2eae201a13a4806800096b5bae832f9651e40d` and B head
-`5b54f5c28d986a038b8e2524e99b5b19d82ab108`, even if their branches are deleted.
-The original image-only commit was `54a918d`; subsequent merges retain all A/B
-corrections and image-specific conflict resolutions.
+The original plan was to squash **#22 → #23 → #24**, but that is **historical,
+not an instruction to execute**. #22 reached `main`; #23 was merged only into
+`feat/network-appearance`, and #24 only into `feat/network-layouts`.
+Their GitHub **Merged** labels did not deliver their features to `main`.
+Do **not** retarget, rebase or remerge #23/#24.
 
-Squash changes commit ancestry. After #22 merges, transplant B's independent
-tree delta (saved A head → saved B head) onto new main, then retarget #23 and
-rerun checks. After #23 merges, transplant the image delta (saved B head →
-saved #24 head) onto new main, then retarget #24. Preserve each old head before
-rewriting any branch. A reliable method is `git diff --binary <old-base>
-<old-head>` into a patch, applied with `git apply --index` on a fresh branch from
-new main. Review the independent diff and test it before replacing the PR head;
-use an explicit force-with-lease if history replacement is needed. Merely
-changing the PR base is insufficient, and a rebase that drops merge commits
-can lose conflict resolutions. [Review corrections and visual audit](NETWORK-REVIEW-FIXES.md).
+The current delivery vehicle is [PR #25](https://github.com/mingzhangyang/relgraph-studio/pull/25):
+one PR whose `base.ref` is **`main`**, restoring the complete final reviewed
+#23 and #24 file trees in two separate commits, followed by the repository's
+no-stacked-PR policy and review fixes. Nothing here claims #25 is already merged.
+
+Before merging #25, verify its actual `main` base, latest reviewed commit,
+review findings, local typecheck/lint/format, Vitest, real Chromium flows,
+44 Skia Golden hashes and native export matrix; do not blindly refresh visual
+baselines and do not run GitHub Actions without approval. The execution counts
+below describe **historical #22–#24 snapshots**, not fresh #25 test results.
+After merging #25 into `main`, fetch `main` again and verify the restored layout
+strategies, history, image assets, Canvas/Skia export, regression fixes, tests
+and `AGENTS.md` are **actually present**, rather than trusting the Merged label.
+Only then create further feature branches from the new `main`.
 
 [Light preview](visuals/node-images/light.png) · [Dark preview](visuals/node-images/dark.png).
 The previews use a simple two-color raster fixture to make cropping visible; no

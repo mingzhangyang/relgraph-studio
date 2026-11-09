@@ -59,16 +59,22 @@ The snapshot-ownership refinement also passed its **16/16** targeted layout
 tests, and zero-stroke plus render tests passed **35/35**. Final combined #24
 validation is recorded in [the image report](https://github.com/mingzhangyang/relgraph-studio/blob/feat/node-images/docs/NODE-IMAGES.md#review-correction-validation).
 
-Squash merge order remains **#22 → #23 → #24**. Preserve the final A/B heads
-before merging. After an upstream squash, transplant only the next layer's tree
-delta onto the new main, then retarget and verify that PR. A base-only change
-retains obsolete ancestry. With the review-fix merge commits, blindly dropping
-merge commits during a rebase can also lose conflict resolutions. A reliable
-option is to save `git diff --binary <old-base> <old-head>` and apply that patch
-to a fresh branch from new main; inspect and test the resulting independent
-diff before updating the existing PR branch. Retain branch backups and use an
-explicit lease for any required history replacement. No squash/rebase/merge
-into main is performed by this correction work.
+### Historical merge handling versus current delivery
+
+The original #22 → #23 → #24 squash/transplant instructions are historical.
+#22 reached `main`, but #23 was merged into `feat/network-appearance` and
+#24 into `feat/network-layouts`. Neither was delivered to `main` by those
+merges. Do not retarget or rerun those merged PRs.
+
+[PR #25](https://github.com/mingzhangyang/relgraph-studio/pull/25) now restores
+their **final reviewed trees** together, directly against `main`. The first
+three Copilot findings on #25 prompted restoration of existing mainline
+geometry and safe relationship selector regressions; lock-only layout-draft
+preservation and stale delivery guidance have also been addressed on #25.
+Do not treat the original counts above as fresh #25 verification. Locally
+validate the actual #25 tree, merge only into `main`, then check the expected
+files and fixes on the new `main` before starting B2-2 or another feature.
+GitHub's Merged label alone is insufficient. No GitHub Actions dispatch.
 
 No dependency, font, domain schema, source fact or evidence changed. Native
 screen-reader sessions, additional platforms/engines, rare glyphs and dense

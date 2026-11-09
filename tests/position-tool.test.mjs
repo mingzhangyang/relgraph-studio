@@ -141,6 +141,77 @@ test('position mode pauses playback, drags only visible nodes, exports JSON and 
   assert.equal(app.node('layoutToggle').attributes['aria-pressed'], 'false');
 });
 
+test('locking a node preserves draft layout parameters until preview; undo and document load reset them', async () => {
+  const app = makeStudio();
+  await app.ready;
+  assert.equal(app.window.renderAt(84), true);
+  // Controls created by the real view live under the shared simulated-DOM host.
+  const find = (root, id) => {
+    if (root.id === id) return root;
+    for (const child of root.children) {
+      const result = find(child, id);
+      if (result) return result;
+    }
+    return null;
+  };
+  const control = (id) => {
+    const result = find(app.node('layoutStrategyEditor'), id);
+    assert.ok(result, `missing strategy control: ${id}`);
+    return result;
+  };
+  const type = control('strategyType'),
+    mode = control('strategyMode'),
+    seed = control('strategySeed'),
+    spacing = control('strategySpacing'),
+    iterations = control('strategyIterations'),
+    lock = control('strategyLock'),
+    node = control('strategyNode');
+  assert.ok(node.value, 'a currently projected node is selectable');
+  const draft = [
+    [type, 'circle'],
+    [mode, 'rearrange'],
+    [seed, '42'],
+    [spacing, '188'],
+    [iterations, '123'],
+  ];
+  for (const [input, value] of draft) {
+    input.value = value;
+    await input.dispatch('change');
+  }
+  lock.checked = true;
+  await lock.dispatch('change');
+  assert.equal(lock.checked, true);
+  for (const [input, value] of draft)
+    assert.equal(input.value, value, 'locking cannot reset a draft layout parameter');
+
+  await control('strategyPreview').click();
+  assert.equal(control('strategyApply').disabled, false, 'the draft settings produce a preview');
+  await control('strategyCancel').click();
+  for (const [input, value] of draft)
+    assert.equal(input.value, value, 'canceling the preview preserves the input draft');
+  await control('strategyPreview').click();
+  await control('strategyApply').click();
+  assert.equal(type.value, 'circle');
+  assert.equal(seed.value, '42');
+
+  const undo = find(app.node('appearanceEditor'), 'visualUndo'),
+    redo = find(app.node('appearanceEditor'), 'visualRedo');
+  assert.ok(undo && redo, 'shared project history controls remain mounted');
+  await undo.click();
+  assert.equal(type.value, 'manual', 'undo resets controls to committed settings');
+  assert.equal(mode.value, 'preserve');
+  assert.equal(seed.value, '0');
+  await redo.click();
+  assert.equal(type.value, 'circle', 'redo restores the applied layout');
+  assert.equal(mode.value, 'rearrange');
+  assert.equal(seed.value, '42');
+
+  await app.node('exampleBiology').click();
+  assert.equal(type.value, 'manual', 'document load resets the layout draft');
+  assert.equal(mode.value, 'preserve');
+  assert.equal(seed.value, '0');
+});
+
 test('switching to a different document disables position tools while loading and after error', async () => {
   const app = makeStudio();
   await app.ready;

@@ -71,10 +71,17 @@ The accepted B1.5 scope is deterministic data → adapter → graph → pure tim
 - [x] Batch A: coordinated visual presets, inherited node/edge styles, independent display copy, projection-safe stable property panel, local project import/export and history. See [configuration](NETWORK-AUTHORING.md).
 - [x] Batch B: deterministic force/circle/generic layered/manual strategies; preserve/missing/rearrange, locks, explicit preview/apply/cancel and unified layout/manual history. Saved coordinates drive playback, without runtime simulation.
 
-Implementation and local acceptance are complete in Draft [#22](https://github.com/mingzhangyang/relgraph-studio/pull/22) (A) and stacked [#23](https://github.com/mingzhangyang/relgraph-studio/pull/23) (B); merge remains pending. The original delivery passed **201/201 tests**, **47/47 Chromium**, **44/44 Golden frames** and **13/13 export checks**. All eleven Copilot findings have subsequent fixes and targeted regressions; see [review corrections, visual comparison and updated validation](NETWORK-REVIEW-FIXES.md), alongside [original acceptance and remaining limits](NETWORK-AUTHORING-ACCEPTANCE.md). Squash A before B, transplant each independent layer onto new main and verify its diff before merging. B2-2 starts from the reviewed resulting main.
+Implementation history: [#22](https://github.com/mingzhangyang/relgraph-studio/pull/22)
+has been merged **into `main`**. [#23](https://github.com/mingzhangyang/relgraph-studio/pull/23)
+and [#24](https://github.com/mingzhangyang/relgraph-studio/pull/24) were marked merged
+into feature branches, **not `main`**. Their layout and image features are being
+delivered together via [PR #25](https://github.com/mingzhangyang/relgraph-studio/pull/25),
+which targets `main` directly and preserves the final reviewed fixes. #25 is
+**pending merge** until its current tree passes local checks and review.
 
-- [x] Node images: local PNG/JPEG/WebP normalization, inherited image references, shared crop/clip rendering, project-embedded pixels, undo and stale-upload guards. Independent stacked Draft PR after #23; [use, limits and squash order](NODE-IMAGES.md).
-- [x] Copilot corrections: all eleven #22/#23 findings plus three #24 image findings fixed and covered. Final combined validation: **228/228 tests (28 files)**, **55/55 Chromium**, **44/44 Golden frames**, **13/13 export checks**; static/package/production checks pass. [Current report](NODE-IMAGES.md#review-correction-validation) and [review mapping / visual comparisons](NETWORK-REVIEW-FIXES.md). Squash order remains **#22 → #23 → #24**; each next layer needs its independent tree delta transplanted after upstream squash.
+- [x] Node images: local PNG/JPEG/WebP normalization, inherited image references, shared crop/clip rendering, project-embedded pixels, undo and stale-upload guards. Implemented on the reviewed feature tree; `main` delivery is through #25, not a stacked or retargeted PR.
+- [x] Historical acceptance evidence: #22/#23 original delivery reported **201/201 tests, 47/47 Chromium, 44/44 Golden frames, 13/13 export checks**; the final #24 combined snapshot reported **228/228 tests (28 files), 55/55 Chromium, 44/44 Goldens, 13/13 exports**. These are **previously executed snapshot results**, not a new run for #25. See [review fixes](NETWORK-REVIEW-FIXES.md), [acceptance](NETWORK-AUTHORING-ACCEPTANCE.md) and [image report](NODE-IMAGES.md#review-correction-validation).
+- [ ] Delivery gate: review and locally validate #25, merge **only #25 directly into `main`**, then fetch the new `main` and verify layout strategies, project history, image materialization, shared renderer/export, tests and `AGENTS.md` actually exist on `main`. Do not begin B2-2 production on an unmerged feature branch; do not trigger CI without explicit approval.
 
 ## B2 — Source-verified film
 

@@ -788,10 +788,22 @@ const baselineFiles = new Set(reference?.frames.map((frame) => frame.file) ?? []
     await page.locator('#layoutStrategies').evaluate((e) => (e.open = true));
     const original = await canvasPng(page),
       firstId = await page.inputValue('#strategyNode');
-    await page.check('#strategyLock');
     await page.selectOption('#strategyType', 'circle');
     await page.selectOption('#strategyMode', 'rearrange');
     await page.fill('#strategySeed', '42');
+    await page.fill('#strategySpacing', '188');
+    await page.fill('#strategyIterations', '123');
+    // The controls are a draft until Preview/Apply. Locking alone must not
+    // discard these values or persist them as a completed layout.
+    await page.check('#strategyLock');
+    for (const [id, value] of [
+      ['strategyType', 'circle'],
+      ['strategyMode', 'rearrange'],
+      ['strategySeed', '42'],
+      ['strategySpacing', '188'],
+      ['strategyIterations', '123'],
+    ])
+      assert.equal(await page.inputValue('#' + id), value, id + ' survives lock');
     await page.click('#strategyPreview');
     const preview = await canvasPng(page);
     assert.notDeepEqual(preview, original);
@@ -803,14 +815,20 @@ const baselineFiles = new Set(reference?.frames.map((frame) => frame.file) ?? []
     assert.equal(await page.locator('#strategyApply').isDisabled(), true);
     await page.click('#visualUndo');
     assert.deepEqual(await canvasPng(page), original);
+    assert.equal(await page.inputValue('#strategyType'), 'manual');
+    assert.equal(await page.inputValue('#strategySeed'), '0');
     await page.click('#visualRedo');
     assert.deepEqual(await canvasPng(page), preview);
+    assert.equal(await page.inputValue('#strategyType'), 'circle');
+    assert.equal(await page.inputValue('#strategySeed'), '42');
     const promise = page.waitForEvent('download');
     await page.click('#visualSave');
     const d = await promise;
     const project = JSON.parse(await readFile(await d.path(), 'utf8'));
     assert.equal(project.config.layout.type, 'circle');
     assert.equal(project.config.layout.seed, 42);
+    assert.equal(project.config.layout.spacing, 188);
+    assert.equal(project.config.layout.iterations, 123);
     assert.ok(project.config.layout.locked.includes(firstId));
     assert.deepEqual(
       project.config.layout.positions[firstId],

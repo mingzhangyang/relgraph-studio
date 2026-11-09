@@ -144,13 +144,15 @@ function configWithPositions(
     editedIds,
   );
 }
-function applyProjectHistory(): void {
+function applyProjectHistory({ preserveLayoutDraft = false }: { preserveLayoutDraft?: boolean } = {}): void {
   if (!graph || !currentLayout || !originalLayout) return;
   graph.project = projectHistory.value;
   restoreLayoutPositions(currentLayout, originalLayout);
   for (const [id, p] of Object.entries(graph.project.layout?.positions ?? {}))
     currentLayout.set(id, { ...p });
-  strategyView.reset(graph.project.layout);
+  // Lock-only commits update persisted coordinates/locks, not the user's pending
+  // strategy inputs. Undo/redo, apply and other config transitions still reset.
+  if (!preserveLayoutDraft) strategyView.reset(graph.project.layout);
   rebuildRenderer();
   updateLayoutFields();
   updateLayoutControls();
@@ -187,7 +189,7 @@ const strategyView = createLayoutStrategyView(document, $('layoutStrategyEditor'
     if (locked) ids.add(id);
     else ids.delete(id);
     projectHistory.commit(configWithPositions({ ...settings, locked: [...ids].sort() }, [id]));
-    applyProjectHistory();
+    applyProjectHistory({ preserveLayoutDraft: true });
   },
 });
 let imageUploadSerial = 0;
