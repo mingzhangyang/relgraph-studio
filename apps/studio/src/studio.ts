@@ -747,8 +747,24 @@ scrubber.addEventListener('input', () => {
   setFrame(requestedFrame);
 });
 window.addEventListener('keydown', (event) => {
+  if (loading) return;
+  const target = event.target;
+  const editingField =
+    target instanceof Element &&
+    Boolean(
+      target.closest(
+        'input,textarea,select,[contenteditable="true"],[contenteditable=""],[role="textbox"]',
+      ),
+    );
+  const command = documentCommandFromShortcut(event, editingField);
+  if (command) {
+    if (documentToolbarView.enabled(command)) {
+      event.preventDefault();
+      documentToolbarView.run(command);
+    }
+    return;
+  }
   if (
-    loading ||
     event.altKey ||
     event.ctrlKey ||
     event.metaKey ||
@@ -762,7 +778,6 @@ window.addEventListener('keydown', (event) => {
     stopLayoutEdit();
     return;
   }
-  const target = event.target;
   if (
     target instanceof Element &&
     target.closest('button,input,textarea,select,summary,[contenteditable],[role="button"]')
