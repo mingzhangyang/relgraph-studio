@@ -1743,9 +1743,11 @@ for (const theme of ['dark', 'light']) {
     assert.match(await text(page, '#documentActionStatus'), /请确认浏览器/);
 
     await page.selectOption('#visualPreset', 'presentation');
+    const filmHash = await canvasHash(page);
     const sourceDownload = page.waitForEvent('download');
     await page.click('#layoutExport');
     assert.match((await sourceDownload).suggestedFilename(), /\.positioned\.json$/);
+    assert.equal(await canvasHash(page), filmHash, 'document export must not alter film pixels');
     assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'true');
     assert.match(await text(page, '#documentActionStatus'), /不代表完整项目已保存/);
 
