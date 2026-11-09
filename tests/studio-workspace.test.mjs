@@ -1105,7 +1105,16 @@ test('studio SVG feedback follows the safe inspector selection and scope without
   assert.equal(app.node('saveState').attributes['data-dirty'], 'false', 'selection is not an edit');
 
   await app.node('exampleBiology').click();
-  assert.equal(note.attributes['data-outlined'], '0', 'a new document clears old selection');
+  assert.equal(scope.value, 'global', 'the chosen styling scope is retained');
+  assert.equal(
+    note.attributes['data-affected'],
+    String(app.window.studioFrame().view.nodes.length),
+    'the outline is recalculated from the new safe projection',
+  );
+  assert.ok(
+    stage.children[1].children.every((shape) => !shape.attributes.class.includes('selected')),
+    'the old document selection is cleared',
+  );
   assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
 });
 
