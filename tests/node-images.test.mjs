@@ -61,8 +61,8 @@ test('PNG, JPEG and all WebP header forms enforce the pixel budget before decode
   };
   const jpeg = (w, h) =>
     Uint8Array.from([
-      0xff, 0xd8, 0xff, 0xe1, 0, 7, 0xff, 0xc0, 0xff, 0xd9, 0,
-      0xff, 0xc2, 0, 8, 8, h >> 8, h & 255, w >> 8, w & 255, 0, 0xff, 0xd9,
+      0xff, 0xd8, 0xff, 0xe1, 0, 7, 0xff, 0xc0, 0xff, 0xd9, 0, 0xff, 0xc2, 0, 8, 8, h >> 8,
+      h & 255, w >> 8, w & 255, 0, 0xff, 0xd9,
     ]);
   const webp = (fourcc, w, h) => {
     const size = fourcc === 'VP8L' ? 5 : 10;
@@ -74,12 +74,17 @@ test('PNG, JPEG and all WebP header forms enforce the pixel budget before decode
     view.setUint32(4, bytes.length - 8, true);
     view.setUint32(16, size, true);
     if (fourcc === 'VP8X') {
-      const x = w - 1, y = h - 1;
+      const x = w - 1,
+        y = h - 1;
       bytes.set([x & 255, (x >> 8) & 255, (x >> 16) & 255], 24);
       bytes.set([y & 255, (y >> 8) & 255, (y >> 16) & 255], 27);
     } else if (fourcc === 'VP8L') {
-      const x = w - 1, y = h - 1;
-      bytes.set([0x2f, x & 255, ((x >> 8) & 63) | ((y & 3) << 6), (y >> 2) & 255, (y >> 10) & 15], 20);
+      const x = w - 1,
+        y = h - 1;
+      bytes.set(
+        [0x2f, x & 255, ((x >> 8) & 63) | ((y & 3) << 6), (y >> 2) & 255, (y >> 10) & 15],
+        20,
+      );
     } else {
       bytes.set([0x10, 0, 0, 0x9d, 0x01, 0x2a], 20);
       view.setUint16(26, w, true);
@@ -87,7 +92,12 @@ test('PNG, JPEG and all WebP header forms enforce the pixel budget before decode
     }
     return bytes;
   };
-  for (const make of [png, jpeg, ...['VP8 ', 'VP8L', 'VP8X'].map((cc) => (w, h) => webp(cc, w, h))]) {
+  const formats = [
+    png,
+    jpeg,
+    ...['VP8 ', 'VP8L', 'VP8X'].map((cc) => (w, h) => webp(cc, w, h)),
+  ];
+  for (const make of formats) {
     assert.deepEqual(readEncodedImageDimensions(make(2, 3)), { width: 2, height: 3 });
     const oversized = make(8192, 8192);
     assert.throws(() => readEncodedImageDimensions(oversized), /尺寸过大/);
@@ -95,7 +105,10 @@ test('PNG, JPEG and all WebP header forms enforce the pixel budget before decode
   }
   assert.throws(() => readEncodedImageDimensions(png(0, 50)), /尺寸信息无效/);
   assert.throws(() => readEncodedImageDimensions(png(100, 100).subarray(0, 16)), /尺寸信息无效/);
-  assert.throws(() => readEncodedImageDimensions(webp('VP8X', 2, 3).subarray(0, 24)), /尺寸信息无效/);
+  assert.throws(
+    () => readEncodedImageDimensions(webp('VP8X', 2, 3).subarray(0, 24)),
+    /尺寸信息无效/,
+  );
   // An APP/EXIF segment may contain SOF-like bytes: only real markers count.
   assert.deepEqual(readEncodedImageDimensions(jpeg(2, 3)), { width: 2, height: 3 });
 });
@@ -142,11 +155,16 @@ test('image outlines receive one border stroke for circle, pill and diamond', ()
     const border = items.filter((item) =>
       item.type === 'path' && JSON.stringify(item.d) === JSON.stringify(image.clip),
     );
-    assert.equal(border.filter((item) => item.stroke).length, 1, shape + ': border painted once');
+    assert.equal(
+      border.filter((item) => item.stroke).length,
+      1,
+      shape + ': border painted once',
+    );
     assert.equal(border.filter((item) => item.fill).length, 1, shape + ': fill preserved');
     assert.ok(!border.some((item) => item.fill && item.stroke), shape + ': no double stroke');
   }
 });
+
 test('embedded RGBA codec handles every padding length and rejects malformed/bounded resources', () => {
   for (let size = 1; size < 20; size++) {
     const bytes = Uint8Array.from({ length: size * 4 }, (_, i) => (i * 31) % 256),

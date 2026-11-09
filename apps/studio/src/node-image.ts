@@ -5,9 +5,15 @@ const invalidImage = (): Error => new Error('图片格式或尺寸信息无效�
 const matches = (bytes: Uint8Array, at: number, signature: readonly number[]): boolean =>
   signature.every((value, index) => bytes[at + index] === value);
 const be32 = (bytes: Uint8Array, at: number): number =>
-  bytes[at] * 0x1000000 + bytes[at + 1] * 0x10000 + bytes[at + 2] * 0x100 + bytes[at + 3];
+  bytes[at] * 0x1000000 +
+  bytes[at + 1] * 0x10000 +
+  bytes[at + 2] * 0x100 +
+  bytes[at + 3];
 const le32 = (bytes: Uint8Array, at: number): number =>
-  bytes[at] + bytes[at + 1] * 0x100 + bytes[at + 2] * 0x10000 + bytes[at + 3] * 0x1000000;
+  bytes[at] +
+  bytes[at + 1] * 0x100 +
+  bytes[at + 2] * 0x10000 +
+  bytes[at + 3] * 0x1000000;
 
 /**
  * Read encoded dimensions before the browser decoder allocates full-resolution pixels.
@@ -20,7 +26,11 @@ export function readEncodedImageDimensions(
   let height = 0;
   if (matches(bytes, 0, [137, 80, 78, 71, 13, 10, 26, 10])) {
     // PNG: the first chunk must be the fixed-size IHDR.
-    if (bytes.length < 24 || be32(bytes, 8) !== 13 || !matches(bytes, 12, [73, 72, 68, 82]))
+    if (
+      bytes.length < 24 ||
+      be32(bytes, 8) !== 13 ||
+      !matches(bytes, 12, [73, 72, 68, 82])
+    )
       throw invalidImage();
     width = be32(bytes, 16);
     height = be32(bytes, 20);
@@ -84,6 +94,7 @@ export function readEncodedImageDimensions(
     throw new Error('图片尺寸过大，请先缩小到 1600 万像素以内。');
   return { width, height };
 }
+
 /** Decode once locally, flatten orientation, strip metadata, bound exported pixels. */
 export async function normalizeNodeImage(file: File): Promise<{ id: string; asset: ImageAsset }> {
   if (!file.size || file.size > 8 * 1024 * 1024)
