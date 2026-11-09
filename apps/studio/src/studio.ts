@@ -1,3 +1,5 @@
+import { normalizeNodeImage } from './node-image.js';
+import { setNodeImage } from './project-editor-model.js';
 import { computeLayout, DEFAULT_LAYOUT_SETTINGS, type LayoutSettings } from '@relgraph/core';
 import { createLayoutStrategyView } from './layout-strategy-view.js';
 import { createProject, projectSource, validateProjectConfig } from '@relgraph/core';
@@ -180,10 +182,13 @@ const strategyView = createLayoutStrategyView(document, $('layoutStrategyEditor'
     applyProjectHistory();
   },
 });
+let imageUploadSerial = 0;
 const projectHistory = new ProjectHistory();
 const projectEditor = createProjectEditor(document, $('appearanceEditor'), {
   change(config) {
     if (!graph || loading) return;
+    ++imageUploadSerial;
+    projectEditor.imageBusy(false);
     const errors = validateProjectConfig(config, graph);
     if (errors.length) {
       projectEditor.error('配置无效：' + errors.join('；'));
@@ -196,6 +201,8 @@ const projectEditor = createProjectEditor(document, $('appearanceEditor'), {
     applyProjectHistory();
   },
   undo() {
+    ++imageUploadSerial;
+    projectEditor.imageBusy(false);
     if (graph) {
       cancelLayoutPreview();
       projectHistory.undo();
@@ -203,6 +210,8 @@ const projectEditor = createProjectEditor(document, $('appearanceEditor'), {
     }
   },
   redo() {
+    ++imageUploadSerial;
+    projectEditor.imageBusy(false);
     if (graph) {
       cancelLayoutPreview();
       projectHistory.redo();
@@ -211,6 +220,37 @@ const projectEditor = createProjectEditor(document, $('appearanceEditor'), {
   },
   pause() {
     setPlaying(false);
+  },
+  async uploadImage(file, nodeId) {
+    if (!graph || loading || !currentFrameState?.view.nodes.some((n) => n.id === nodeId)) return;
+    const serial = ++imageUploadSerial,
+      documentSerial = requestSerial,
+      owner = graph;
+    setPlaying(false);
+    projectEditor.error('');
+    projectEditor.imageBusy(true);
+    const current = () =>
+      serial === imageUploadSerial &&
+      documentSerial === requestSerial &&
+      graph === owner &&
+      !loading &&
+      projectEditor.selectedNodeId() === nodeId &&
+      currentFrameState?.view.nodes.some((n) => n.id === nodeId);
+    try {
+      const { id, asset } = await normalizeNodeImage(file);
+      if (!current()) return;
+      const node = currentFrameState!.view.nodes.find((n) => n.id === nodeId)!;
+      const config = setNodeImage(projectHistory.value, node, id, asset),
+        errors = validateProjectConfig(config, owner);
+      if (errors.length) throw new Error('图片配置超出容量或包含无效字段：' + errors.join('；'));
+      cancelLayoutPreview();
+      projectHistory.commit(config);
+      applyProjectHistory();
+    } catch (error) {
+      if (current()) projectEditor.error(error instanceof Error ? error.message : String(error));
+    } finally {
+      if (serial === imageUploadSerial) projectEditor.imageBusy(false);
+    }
   },
   save() {
     if (!graph || !currentLayout || sourceDocument === null || loading) return;
@@ -426,6 +466,8 @@ function applyResult(result: LoadResult, name: string, sourceText?: string): voi
 }
 function beginLoad(): number {
   cancelLayoutPreview();
+  ++imageUploadSerial;
+  projectEditor.imageBusy(false);
   const serial = ++requestSerial;
   if (layoutEditing) stopLayoutEdit();
   loading = true;

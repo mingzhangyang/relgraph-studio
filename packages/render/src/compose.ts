@@ -1,3 +1,4 @@
+import { composeNodeImage } from './image-layout.js';
 import {
   DEFAULT_LOCALE,
   nodeAppearance,
@@ -531,6 +532,16 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
         : shape === 'pill'
           ? [['RR', p.x - r - u(4), p.y - r * 0.75, r * 2 + u(8), r * 1.5, r * 0.65]]
           : [['A', p.x, p.y, r + u(3), 0, TAU]];
+    const asset =
+      custom.image && config?.assets && Object.hasOwn(config.assets, custom.image)
+        ? config.assets[custom.image]
+        : undefined;
+    const imageBox = {
+      x: p.x - r - u(shape === 'pill' ? 4 : 3),
+      y: p.y - (shape === 'pill' ? r * 0.75 : r + u(3)),
+      w: 2 * (r + u(shape === 'pill' ? 4 : 3)),
+      h: shape === 'pill' ? r * 1.5 : 2 * (r + u(3)),
+    };
     if (visibility > 0) {
       const scale = 0.82 + 0.18 * visibility;
       graphItems.push({
@@ -557,11 +568,26 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
             stroke: c,
             width: u(custom.borderWidth ?? 2),
           },
-          {
-            type: 'path',
-            d: [['A', p.x, p.y, shape === 'diamond' ? u(3) : Math.max(u(3), r * 0.32), 0, TAU]],
-            fill: c,
-          },
+          ...(asset && custom.image
+            ? [
+                composeNodeImage(
+                  custom.image,
+                  asset,
+                  imageBox,
+                  outline,
+                  custom.imageFit ?? 'cover',
+                ),
+                { type: 'path' as const, d: outline, stroke: c, width: u(custom.borderWidth ?? 2) },
+              ]
+            : [
+                {
+                  type: 'path' as const,
+                  d: [
+                    ['A', p.x, p.y, shape === 'diamond' ? u(3) : Math.max(u(3), r * 0.32), 0, TAU],
+                  ] as PathCommand[],
+                  fill: c,
+                },
+              ]),
         ],
       });
     }

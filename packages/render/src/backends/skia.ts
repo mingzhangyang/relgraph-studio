@@ -4,7 +4,7 @@ import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Canvas, FontLibrary } from 'skia-canvas';
-import type { VisualGraph } from '@relgraph/core';
+import { decodeImageBytes, type VisualGraph } from '@relgraph/core';
 import {
   createCanvasRenderer,
   type CanvasRenderer,
@@ -91,7 +91,17 @@ export function createHeadlessRenderer(
   registerFilmFonts();
   // The CPU rasterizer: a GPU backend would make pixels depend on the device.
   const canvas = new Canvas(1, 1, { gpu: false });
-  const renderer = createCanvasRenderer(canvas, graph, positions, options);
+  const renderer = createCanvasRenderer(canvas, graph, positions, {
+    ...options,
+    imageFactory: (asset) => {
+      const bitmap = new Canvas(asset.width, asset.height, { gpu: false }),
+        context = bitmap.getContext('2d');
+      const pixels = context.createImageData(asset.width, asset.height);
+      pixels.data.set(decodeImageBytes(asset));
+      context.putImageData(pixels, 0, 0);
+      return bitmap;
+    },
+  });
   const { width, height } = renderer.frameSpec;
   const ctx = canvas.getContext('2d');
   return {

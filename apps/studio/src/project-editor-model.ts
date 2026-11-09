@@ -1,4 +1,5 @@
 import {
+  nodeAppearance,
   type ProjectConfig,
   type VisualNode,
   type VisualEdge,
@@ -9,8 +10,16 @@ import {
 export type Selection = { kind: 'node' | 'edge'; id: string } | null;
 export type Scope = 'global' | 'category' | 'object';
 // Config is JSON data. Copying here isolates history, imports and source evidence.
-export const copyConfig = (value: ProjectConfig): ProjectConfig =>
-  JSON.parse(JSON.stringify(value)) as ProjectConfig;
+export const copyConfig = (value: ProjectConfig): ProjectConfig => {
+  const { assets, ...rest } = value;
+  const copy = JSON.parse(JSON.stringify(rest)) as ProjectConfig;
+  if (assets)
+    copy.assets = Object.fromEntries(
+      Object.entries(assets).map(([id, asset]) => [id, { ...asset }]),
+    );
+  return copy;
+};
+
 export class ProjectHistory {
   value: ProjectConfig = {};
   private undoStack: ProjectConfig[] = [];
@@ -96,4 +105,35 @@ export function clearAppearance(
       scope === 'category' ? item.kind : item.id
     ];
   return next;
+}
+
+/** Drop unreferenced pixels in the next snapshot; earlier undo snapshots own theirs. */
+export function pruneImageAssets(config: ProjectConfig): ProjectConfig {
+  const used = new Set<string>();
+  const layers = config.nodes;
+  for (const style of [
+    layers?.defaults,
+    ...Object.values(layers?.categories ?? {}),
+    ...Object.values(layers?.objects ?? {}),
+  ])
+    if (typeof style?.image === 'string') used.add(style.image);
+  if (config.assets)
+    config.assets = Object.fromEntries(
+      Object.entries(config.assets).filter(([id]) => used.has(id)),
+    );
+  return config;
+}
+export function setNodeImage(
+  config: ProjectConfig,
+  node: VisualNode,
+  id: string | null,
+  asset?: import('@relgraph/core').ImageAsset,
+): ProjectConfig {
+  let next = editAppearance(config, 'node', node, 'object', 'image', id);
+  if (id && asset) {
+    next.assets = { ...next.assets, [id]: { ...asset } };
+    if (nodeAppearance(config, node).size === undefined)
+      next = editAppearance(next, 'node', node, 'object', 'size', 32);
+  }
+  return pruneImageAssets(next);
 }

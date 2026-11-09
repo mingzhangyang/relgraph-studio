@@ -861,6 +861,155 @@ for (const theme of ['light', 'dark'])
     await context.close();
   }
 
+// Uploaded rasters become embedded project pixels; no network/image load during playback.
+for (const theme of ['light', 'dark']) {
+  const { context, page, problems } = await openStudio({ colorScheme: theme });
+  await check(
+    `node image upload, fit, undo, removal and project round trip (${theme})`,
+    async () => {
+      await page.evaluate(() => window.renderAt(84));
+      await page.selectOption('#visualObject', { index: 1 });
+      const id = await page.inputValue('#visualObject'),
+        original = await canvasPng(page);
+      const data = await page.evaluate(() => {
+        const c = document.createElement('canvas');
+        c.width = 128;
+        c.height = 64;
+        const ctx = c.getContext('2d');
+        ctx.fillStyle = '#e64750';
+        ctx.fillRect(0, 0, 64, 64);
+        ctx.fillStyle = '#3b8fce';
+        ctx.fillRect(64, 0, 64, 64);
+        return c.toDataURL('image/png').split(',')[1];
+      });
+      await page.locator('#visualImageFile').setInputFiles({
+        name: 'portrait.png',
+        mimeType: 'image/png',
+        buffer: Buffer.from(data, 'base64'),
+      });
+      await page.waitForFunction(() =>
+        document.getElementById('visualImageStatus').textContent.startsWith('已设置图片'),
+      );
+      const cover = await canvasPng(page);
+      assert.notDeepEqual(cover, original);
+      await page.click('#visualUndo');
+      assert.deepEqual(await canvasPng(page), original);
+      await page.click('#visualRedo');
+      assert.deepEqual(await canvasPng(page), cover);
+      await page.selectOption('#visualImageFit', 'contain');
+      assert.notDeepEqual(await canvasPng(page), cover);
+      await page.selectOption('#visualImageFit', 'cover');
+      assert.deepEqual(await canvasPng(page), cover);
+      await page.locator('#visualImageFile').setInputFiles({
+        name: 'bad.png',
+        mimeType: 'image/png',
+        buffer: Buffer.from('broken image'),
+      });
+      await page.waitForFunction(
+        () => document.getElementById('visualError').textContent.length > 0,
+      );
+      assert.deepEqual(await canvasPng(page), cover);
+      const pending = page.waitForEvent('download');
+      await page.click('#visualSave');
+      const download = await pending;
+      const project = JSON.parse(await readFile(await download.path(), 'utf8'));
+      assert.equal(project.config.assets[project.config.nodes.objects[id].image].format, 'rgba8');
+      assert.deepEqual(project.source, documents.literature);
+      assert.ok(!JSON.stringify(project).includes('portrait.png'));
+      await page.locator('#fileInput').setInputFiles({
+        name: 'image.studio.json',
+        mimeType: 'application/json',
+        buffer: Buffer.from(JSON.stringify(project)),
+      });
+      await page.waitForFunction(
+        () => document.getElementById('sourceName').textContent === 'image.studio.json',
+      );
+      await waitReady(page);
+      await page.evaluate(() => window.renderAt(84));
+      assert.deepEqual(await canvasPng(page), cover);
+      await page.selectOption('#visualObject', id);
+      await page.click('#visualImageRemove');
+      assert.notDeepEqual(await canvasPng(page), cover);
+      await page.click('#visualUndo');
+      assert.deepEqual(await canvasPng(page), cover);
+      await writeFile(join(outputDir, `node-image-${theme}-canvas.png`), cover);
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await page.screenshot({ path: join(outputDir, `node-image-${theme}.png`), fullPage: true });
+      assert.deepEqual(problems, []);
+    },
+  );
+  await context.close();
+}
+{
+  const { context, page } = await openStudio();
+  await check('late image decode cannot modify a newer document', async () => {
+    await page.selectOption('#visualObject', { index: 1 });
+    const data = await page.evaluate(() => {
+      const c = document.createElement('canvas');
+      c.width = 2;
+      c.height = 2;
+      c.getContext('2d').fillRect(0, 0, 2, 2);
+      return c.toDataURL().split(',')[1];
+    });
+    await page.evaluate(() => {
+      const original = window.createImageBitmap;
+      window.createImageBitmap = (...args) =>
+        new Promise((resolve, reject) => {
+          window.releaseNodeImage = () => original(...args).then(resolve, reject);
+        });
+    });
+    await page.locator('#visualImageFile').setInputFiles({
+      name: 'late.png',
+      mimeType: 'image/png',
+      buffer: Buffer.from(data, 'base64'),
+    });
+    await page.waitForFunction(() => typeof window.releaseNodeImage === 'function');
+    await loadExample(page, EXAMPLES[1]);
+    const expected = await canvasPng(page);
+    await page.evaluate(() => window.releaseNodeImage());
+    await page.waitForTimeout(150);
+    assert.deepEqual(await canvasPng(page), expected);
+    assert.ok(!(await page.locator('#visualImageStatus').textContent()).startsWith('已设置图片'));
+  });
+  await context.close();
+}
+
+{
+  const { context, page, problems } = await openStudio();
+  await check(
+    'JPEG and WebP uploads normalize locally into the same node-image pipeline',
+    async () => {
+      await page.selectOption('#visualObject', { index: 1 });
+      for (const [format, mime] of [
+        ['jpg', 'image/jpeg'],
+        ['webp', 'image/webp'],
+      ]) {
+        const data = await page.evaluate((type) => {
+          const c = document.createElement('canvas');
+          c.width = 16;
+          c.height = 16;
+          const ctx = c.getContext('2d');
+          ctx.fillStyle = '#3b8fce';
+          ctx.fillRect(0, 0, 16, 16);
+          return c.toDataURL(type).split(',')[1];
+        }, mime);
+        await page.locator('#visualImageFile').setInputFiles({
+          name: 'portrait.' + format,
+          mimeType: mime,
+          buffer: Buffer.from(data, 'base64'),
+        });
+        await page.waitForFunction(() =>
+          document.getElementById('visualImageStatus').textContent.startsWith('已设置图片'),
+        );
+        assert.equal(await page.locator('#visualError').textContent(), '');
+        assert.equal(await page.locator('#visualImageRemove').isDisabled(), false);
+      }
+      assert.deepEqual(problems, []);
+    },
+  );
+  await context.close();
+}
+
 // Property authoring uses the production projection and both render backends read saved config.
 for (const theme of ['light', 'dark']) {
   const { context, page, problems } = await openStudio({ colorScheme: theme });

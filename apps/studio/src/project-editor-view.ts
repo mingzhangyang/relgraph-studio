@@ -14,6 +14,7 @@ import {
   editAppearance,
   clearAppearance,
   copyConfig,
+  setNodeImage,
   type Selection,
   type Scope,
 } from './project-editor-model.js';
@@ -24,6 +25,7 @@ interface Actions {
   redo(): void;
   save(): void;
   pause(): void;
+  uploadImage(file: File, nodeId: string): Promise<void>;
 }
 const nodeFields: [string, string, string | readonly string[]][] = [
   ['shape', '形状', ['circle', 'pill', 'diamond']],
@@ -125,6 +127,54 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
     buttonHost.append(b);
     return b;
   };
+  const imageSection = el('div'),
+    imageLabel = el('label', '节点图片 · 仅当前节点'),
+    imageFile = el('input'),
+    imageStatus = el('p');
+  imageStatus.id = 'visualImageStatus';
+  imageFile.id = 'visualImageFile';
+  imageFile.type = 'file';
+  imageFile.accept = 'image/png,image/jpeg,image/webp';
+  imageLabel.append(imageFile);
+  imageSection.append(imageLabel, imageStatus);
+  host.append(imageSection);
+  let imageBusy = false;
+  const imageFit = el('select');
+  imageFit.id = 'visualImageFit';
+  for (const [value, text] of [
+    ['cover', '填满 · 居中裁切'],
+    ['contain', '完整显示 · 保留留白'],
+  ]) {
+    const option = el('option', text);
+    option.value = value;
+    imageFit.append(option);
+  }
+  const fitLabel = el('label', '图片适配');
+  fitLabel.append(imageFit);
+  imageSection.append(fitLabel);
+  const removeImage = el('button', '移除图片');
+  removeImage.type = 'button';
+  removeImage.id = 'visualImageRemove';
+  imageSection.append(removeImage);
+  const inheritImage = el('button', '恢复继承图片');
+  inheritImage.type = 'button';
+  inheritImage.id = 'visualImageInherit';
+  imageSection.append(inheritImage);
+  imageFile.addEventListener('change', () => {
+    const file = imageFile.files?.[0];
+    imageFile.value = '';
+    if (file && selection?.kind === 'node') void actions.uploadImage(file, selection.id);
+  });
+  removeImage.addEventListener('click', () => {
+    const node = item();
+    if (node && kind === 'node') actions.change(setNodeImage(config, node as VisualNode, null));
+  });
+  inheritImage.addEventListener('click', () => update('image', undefined));
+  imageFit.addEventListener('change', () => {
+    const node = item();
+    if (node && kind === 'node')
+      actions.change(editAppearance(config, 'node', node, 'object', 'imageFit', imageFit.value));
+  });
   button('恢复原文', 'visualRestoreText', () => {
     if (!selection) return;
     const next = copyConfig(config);
@@ -253,6 +303,20 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
         ? nodeAppearance(config, selected as VisualNode)
         : edgeAppearance(config, selected as VisualEdge)
       : {};
+    imageSection.hidden = kind !== 'node';
+    const imageStyle =
+      selected && kind === 'node' ? nodeAppearance(config, selected as VisualNode) : {};
+    const asset = imageStyle.image ? config.assets?.[imageStyle.image] : undefined;
+    imageFile.disabled = !selected || imageBusy;
+    imageFit.disabled = !selected || !asset || imageBusy;
+    removeImage.disabled = !selected || !asset;
+    inheritImage.disabled = !selected;
+    imageFit.value = imageStyle.imageFit ?? 'cover';
+    imageStatus.textContent = imageBusy
+      ? '正在本地处理图片…'
+      : asset
+        ? `已设置图片 · ${asset.width} × ${asset.height} · ${appearanceOrigin(config.nodes, selected?.kind ?? '', selected?.id ?? '', 'image')}`
+        : 'PNG / JPEG / WebP · 最长边保存为 256 像素 · 不上传服务器';
     for (const [key, c] of controls) {
       c.input.disabled = disabled || (key === 'head' && frame?.view.domain === 'biology');
       const layers = kind === 'node' ? config.nodes : config.edges;
@@ -322,7 +386,15 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
       redo.disabled = !canRedo;
       render();
     },
+    selectedNodeId() {
+      return selection?.kind === 'node' ? selection.id : null;
+    },
+    imageBusy(value: boolean) {
+      imageBusy = value;
+      render();
+    },
     clear() {
+      imageBusy = false;
       selection = null;
       signature = '';
       frame = null;

@@ -1,3 +1,5 @@
+import { normalizeNodeImage } from '../../apps/studio/src/node-image.ts';
+import { setNodeImage } from '../../apps/studio/src/project-editor-model.ts';
 import {
   computeLayout,
   DEFAULT_LAYOUT_SETTINGS,
@@ -66,6 +68,8 @@ export function studioSource() {
 // Pure helpers the workspace imports, supplied as-is to every VM harness so
 // harnesses only stub what touches the canvas, network or storage.
 export const studioImports = {
+  normalizeNodeImage,
+  setNodeImage,
   computeLayout,
   DEFAULT_LAYOUT_SETTINGS,
   createLayoutStrategyView,
