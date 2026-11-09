@@ -9,6 +9,7 @@ import { computeLayout, DEFAULT_LAYOUT_SETTINGS, type LayoutSettings } from '@re
 import { createLayoutStrategyView } from './layout-strategy-view.js';
 import { createProject, projectSource, validateProjectConfig } from '@relgraph/core';
 import { ProjectHistory } from './project-editor-model.js';
+import { ProjectSavepoint } from './unsaved-changes-model.js';
 import { createProjectEditor } from './project-editor-view.js';
 import { parseDocument, applyGraphPositions, type LoadResult } from '@relgraph/core';
 import { layoutGraph } from '@relgraph/core';
@@ -100,6 +101,7 @@ const canvas = requiredElement('stage', HTMLCanvasElement),
   layoutY = requiredElement('layoutY', HTMLInputElement),
   layoutApply = requiredElement('layoutApply', HTMLButtonElement),
   dropzone = requiredElement('dropzone', HTMLLabelElement),
+  saveState = $('saveState'),
   shots = $('shots'),
   strip = $('sceneStrip');
 const playbackControls = {
@@ -141,9 +143,13 @@ let layoutPreview: {
 } | null = null;
 function cancelLayoutPreview(): void {
   if (!layoutPreview) return;
-  if (currentLayout) restoreLayoutPositions(currentLayout, layoutPreview.before);
+  if (currentLayout) {
+    restoreLayoutPositions(currentLayout, layoutPreview.before);
+    projectSavepoint.positionsChanged();
+  }
   layoutPreview = null;
   rebuildRenderer();
+  refreshUnsavedState();
 }
 function configWithPositions(
   settings: LayoutSettings = projectHistory.value.layout ?? DEFAULT_LAYOUT_SETTINGS,
@@ -164,6 +170,8 @@ function applyProjectHistory({
   restoreLayoutPositions(currentLayout, originalLayout);
   for (const [id, p] of Object.entries(graph.project.layout?.positions ?? {}))
     currentLayout.set(id, { ...p });
+  reconcileCommittedCoordinateDrafts();
+  projectSavepoint.positionsChanged();
   // Lock-only commits update persisted coordinates/locks, not the user's pending
   // strategy inputs. Undo/redo, apply and other config transitions still reset.
   if (!preserveLayoutDraft) strategyView.reset(graph.project.layout);
@@ -172,6 +180,9 @@ function applyProjectHistory({
   updateLayoutControls();
 }
 const strategyView = createLayoutStrategyView(document, $('layoutStrategyEditor'), {
+  draftChanged() {
+    refreshUnsavedState();
+  },
   preview(settings) {
     if (!graph || !currentLayout || loading) return;
     if (layoutEditing) stopLayoutEdit();
@@ -182,7 +193,9 @@ const strategyView = createLayoutStrategyView(document, $('layoutStrategyEditor'
       const next = computeLayout(graph, settings, currentLayout);
       layoutPreview = { settings, before, serial: requestSerial };
       restoreLayoutPositions(currentLayout, next);
+      projectSavepoint.positionsChanged();
       rebuildRenderer();
+      refreshUnsavedState();
     } catch (error) {
       strategyView.error(error instanceof Error ? error.message : String(error));
     }
@@ -208,21 +221,23 @@ const strategyView = createLayoutStrategyView(document, $('layoutStrategyEditor'
 });
 let imageUploadSerial = 0;
 const projectHistory = new ProjectHistory();
+const projectSavepoint = new ProjectSavepoint();
 const projectEditor = createProjectEditor(document, $('appearanceEditor'), {
   change(config) {
-    if (!graph || loading) return;
+    if (!graph || loading) return false;
     ++imageUploadSerial;
     projectEditor.imageBusy(false);
     const errors = validateProjectConfig(config, graph);
     if (errors.length) {
       projectEditor.error('配置无效：' + errors.join('；'));
-      return;
+      return false;
     }
     cancelLayoutPreview();
     projectEditor.error('');
     setPlaying(false);
     projectHistory.commit(config);
     applyProjectHistory();
+    return true;
   },
   undo() {
     ++imageUploadSerial;
@@ -244,6 +259,9 @@ const projectEditor = createProjectEditor(document, $('appearanceEditor'), {
   },
   pause() {
     setPlaying(false);
+  },
+  draftChanged() {
+    refreshUnsavedState();
   },
   async uploadImage(file, nodeId) {
     if (!graph || loading || !currentFrameState?.view.nodes.some((n) => n.id === nodeId)) return;
@@ -280,6 +298,17 @@ const projectEditor = createProjectEditor(document, $('appearanceEditor'), {
   },
   save() {
     if (!graph || !currentLayout || sourceDocument === null || loading) return;
+    if (
+      dragging ||
+      hasPendingCoordinateDraft() ||
+      projectEditor.hasPendingDraft() ||
+      strategyView.hasPendingDraft() ||
+      projectEditor.isImageBusy()
+    ) {
+      projectEditor.error('仍有未提交的输入、拖动或图片处理，请完成后再保存项目。');
+      refreshUnsavedState();
+      return;
+    }
     cancelLayoutPreview();
     const config = {
       ...projectHistory.value,
@@ -299,10 +328,18 @@ const projectEditor = createProjectEditor(document, $('appearanceEditor'), {
       projectEditor.error('保存失败：' + errors.join('；'));
       return;
     }
-    downloadJson(
-      createProject(sourceDocument, config),
-      sourceFilename.replace(/\.json$/i, '') + '.studio.json',
-    );
+    try {
+      downloadJson(
+        createProject(sourceDocument, config),
+        sourceFilename.replace(/\.json$/i, '') + '.studio.json',
+      );
+      // Browsers can initiate downloads, but cannot verify the file was kept.
+      projectSavepoint.markClean(projectHistory.value, currentLayout);
+      projectEditor.error('已发起完整项目 JSON 下载，请确认浏览器已将文件保存到本机。');
+      refreshUnsavedState();
+    } catch (error) {
+      projectEditor.error('保存失败：' + (error instanceof Error ? error.message : String(error)));
+    }
   },
 });
 const layoutControls = {
@@ -329,9 +366,70 @@ let originalLayout: ReturnType<typeof layoutGraph> | null = null;
 let sourceDocument: unknown = null;
 let sourceFilename = 'relgraph.json';
 let selectedLayoutNode: string | null = null;
+// Coordinates are edited only on Apply; keep uncommitted X/Y per node even
+// when another node is selected or position-edit mode is temporarily hidden.
+const coordinateDrafts = new Map<string, { x: string; y: string }>();
 let layoutEditing = false;
 let editCamera: DirectorFrameState['cameraResolved'] | null = null;
 let dragging: PositionDrag | null = null;
+const DOCUMENT_TITLE = 'RelGraph Studio · 导演工作台';
+let lastDirtyStatus: boolean | null = null;
+
+// Do not confuse numeric formatting with a meaningful coordinate change.
+function coordinateDraftMatches(
+  draft: { x: string; y: string },
+  point: { x: number; y: number },
+): boolean {
+  const parsed = parseCoordinateInputs(draft.x, draft.y);
+  return parsed !== null && parsed.x === point.x && parsed.y === point.y;
+}
+// The mutable currentLayout also holds temporary preview and drag positions.
+// Only ProjectHistory plus the loaded baseline define *committed* positions.
+function committedCoordinate(id: string): { x: number; y: number } | undefined {
+  return projectHistory.value.layout?.positions?.[id] ?? originalLayout?.get(id);
+}
+// Called only after a real history transition, never from a drag frame/render.
+function reconcileCommittedCoordinateDrafts(): void {
+  for (const [id, draft] of coordinateDrafts) {
+    const point = committedCoordinate(id);
+    if (point && coordinateDraftMatches(draft, point)) coordinateDrafts.delete(id);
+  }
+}
+function hasPendingCoordinateDraft(): boolean {
+  return coordinateDrafts.size > 0;
+}
+
+function hasUnsavedChanges(): boolean {
+  // A load already accepted for discard should not trigger another warning.
+  return Boolean(
+    !loading &&
+    graph &&
+    currentLayout &&
+    (layoutPreview ||
+      dragging ||
+      hasPendingCoordinateDraft() ||
+      projectEditor.isImageBusy() ||
+      projectEditor.hasPendingDraft() ||
+      strategyView.hasPendingDraft() ||
+      projectSavepoint.isDirty(projectHistory.value, currentLayout)),
+  );
+}
+function refreshUnsavedState(): void {
+  const dirty = hasUnsavedChanges();
+  if (lastDirtyStatus === dirty) return;
+  lastDirtyStatus = dirty;
+  saveState.textContent = dirty ? '未保存修改' : '无未保存修改';
+  saveState.setAttribute('data-dirty', String(dirty));
+  document.title = dirty ? `● ${DOCUMENT_TITLE}` : DOCUMENT_TITLE;
+}
+function confirmSourceReplacement(): boolean {
+  return !hasUnsavedChanges() || window.confirm('当前项目有未保存的修改。继续加载其他数据将丢弃这些修改，是否继续？');
+}
+window.addEventListener('beforeunload', (event) => {
+  if (!hasUnsavedChanges()) return;
+  event.preventDefault();
+  event.returnValue = '';
+});
 // Workspace and video share one theme. Without a saved choice it follows the OS.
 const THEME_KEY = 'relgraph-theme',
   lightQuery = globalThis.matchMedia?.('(prefers-color-scheme: light)');
@@ -406,6 +504,8 @@ function clearStudio(): void {
   strategyView.render(null, undefined, false, loading);
   graph = null;
   projectHistory.reset();
+  projectSavepoint.clear();
+  coordinateDrafts.clear();
   projectEditor.clear();
   renderer = null;
   currentLayout = null;
@@ -427,6 +527,7 @@ function clearStudio(): void {
   transcriptView.reset();
   shellView.paintEmptyStage('请选择示例或导入有效的 JSON 数据', theme);
   shellView.resetMetadata();
+  refreshUnsavedState();
 }
 function applyResult(result: LoadResult, name: string, sourceText?: string): void {
   loading = false;
@@ -446,6 +547,7 @@ function applyResult(result: LoadResult, name: string, sourceText?: string): voi
   currentDetailAt = result.detailAt || (() => undefined);
   currentLayout = layoutGraph(graph);
   originalLayout = new Map([...currentLayout].map(([id, point]) => [id, { ...point }]));
+  projectSavepoint.markClean(projectHistory.value, currentLayout);
   renderEditorAvailability(layoutControls, layoutExport, sourceDocument !== null);
   renderer = createCanvasRenderer(canvas, graph, currentLayout, {
     fps: FPS,
@@ -458,6 +560,7 @@ function applyResult(result: LoadResult, name: string, sourceText?: string): voi
   shellView.renderSourceSummary(graph.scenes.length, graph.meta.sourceNote, graph.meta.description);
   setStatus('就绪', 'ready');
   setFrame(0);
+  refreshUnsavedState();
 }
 function beginLoad(): number {
   cancelLayoutPreview();
@@ -466,6 +569,7 @@ function beginLoad(): number {
   const serial = ++requestSerial;
   if (layoutEditing) stopLayoutEdit();
   loading = true;
+  refreshUnsavedState();
   strategyView.render(currentFrameState, projectHistory.value.layout, false, true);
   setPlaying(false);
   disablePlaybackView(playbackControls);
@@ -511,6 +615,7 @@ async function loadExample(path: string, name: string): Promise<void> {
   }
 }
 exampleLiterature.addEventListener('click', () => {
+  if (!confirmSourceReplacement()) return;
   shellView.markSource('exampleLiterature');
   return loadExample(
     '../examples/honglou-provisional.relgraph.json',
@@ -518,11 +623,12 @@ exampleLiterature.addEventListener('click', () => {
   );
 });
 exampleBiology.addEventListener('click', () => {
+  if (!confirmSourceReplacement()) return;
   shellView.markSource('exampleBiology');
   return loadExample('../examples/biology-signaling-synthetic.json', '生物信号 · 虚构合成示例');
 });
 async function loadFile(file: File | undefined): Promise<void> {
-  if (!file) return;
+  if (!file || !confirmSourceReplacement()) return;
   const serial = beginLoad();
   shellView.markSource(null);
   try {
@@ -642,10 +748,19 @@ function availableNodes(): VisualGraph['nodes'] {
     : [];
 }
 function updateLayoutFields(): void {
-  renderEditorFields(
-    layoutControls,
-    selectedLayoutNode ? currentLayout?.get(selectedLayoutNode) : undefined,
-  );
+  const point = selectedLayoutNode ? currentLayout?.get(selectedLayoutNode) : undefined;
+  // The position map stores only applied values; restore this node's draft
+  // after rendering the canonical values for selection or mode transitions.
+  renderEditorFields(layoutControls, point);
+  if (selectedLayoutNode && point) {
+    const draft = coordinateDrafts.get(selectedLayoutNode);
+    const committed = committedCoordinate(selectedLayoutNode);
+    if (draft && (!committed || !coordinateDraftMatches(draft, committed))) {
+      layoutX.value = draft.x;
+      layoutY.value = draft.y;
+    }
+  }
+  refreshUnsavedState();
 }
 function updateLayoutEditor(): void {
   const nodes = availableNodes();
@@ -654,6 +769,26 @@ function updateLayoutEditor(): void {
   renderEditorMode(layoutControls, layoutEditing);
   renderEditorNodes(document, layoutControls, nodes, selectedLayoutNode);
   updateLayoutFields();
+}
+function trackCoordinateDraft(): void {
+  if (
+    !layoutEditing ||
+    !currentLayout ||
+    !selectedLayoutNode ||
+    layoutX.disabled ||
+    layoutY.disabled
+  )
+    return;
+  const point = committedCoordinate(selectedLayoutNode);
+  if (!point) return;
+  const draft = { x: layoutX.value, y: layoutY.value };
+  if (coordinateDraftMatches(draft, point)) coordinateDrafts.delete(selectedLayoutNode);
+  else coordinateDrafts.set(selectedLayoutNode, draft);
+  updateLayoutControls();
+}
+for (const input of [layoutX, layoutY]) {
+  input.addEventListener('input', trackCoordinateDraft);
+  input.addEventListener('change', trackCoordinateDraft);
 }
 layoutNode.addEventListener('change', () => {
   if (!availableNodes().some((node) => node.id === layoutNode.value)) return;
@@ -679,9 +814,13 @@ layoutApply.addEventListener('click', () => {
     !updateEditableNodePosition(currentLayout, currentFrameState, selectedLayoutNode, point)
   )
     return;
+  projectSavepoint.positionsChanged();
   projectHistory.commit(configWithPositions(undefined, [selectedLayoutNode]));
   if (graph) graph.project = projectHistory.value;
+  coordinateDrafts.delete(selectedLayoutNode);
+  reconcileCommittedCoordinateDrafts();
   setFrame(playback.frame, false);
+  updateLayoutFields();
   updateLayoutControls();
 });
 
@@ -690,7 +829,8 @@ layoutApply.addEventListener('click', () => {
 const layoutChanged = (): boolean =>
   Boolean(currentLayout && originalLayout && layoutHasChanges(currentLayout, originalLayout));
 function updateLayoutControls(): void {
-  renderEditorStatus(layoutControls, layoutEditing, layoutChanged());
+  renderEditorStatus(layoutControls, layoutEditing, layoutChanged() || hasPendingCoordinateDraft());
+  refreshUnsavedState();
 }
 function rebuildRenderer(): void {
   if (!graph || !currentLayout) return;
@@ -709,7 +849,10 @@ function releaseLayoutPointer(): void {
 }
 function stopLayoutEdit(): void {
   if (!layoutEditing) return;
-  if (dragging && currentLayout) cancelPositionDrag(currentLayout, dragging);
+  if (dragging && currentLayout) {
+    cancelPositionDrag(currentLayout, dragging);
+    projectSavepoint.positionsChanged();
+  }
   releaseLayoutPointer();
   layoutEditing = false;
   editCamera = null;
@@ -735,8 +878,18 @@ layoutReset.addEventListener('click', () => {
   cancelLayoutPreview();
   if (!currentLayout || !originalLayout) return;
   releaseLayoutPointer();
+  const changedPositions = layoutChanged();
+  // Reset is an explicit discard of all pending coordinate inputs, not a
+  // new authored layout commit when only unsubmitted drafts existed.
+  coordinateDrafts.clear();
+  if (!changedPositions) {
+    updateLayoutFields();
+    updateLayoutControls();
+    return;
+  }
   for (const [id, p] of originalLayout)
     if (!projectHistory.value.layout?.locked.includes(id)) currentLayout.set(id, { ...p });
+  projectSavepoint.positionsChanged();
   projectHistory.commit(configWithPositions());
   if (graph) graph.project = projectHistory.value;
   rebuildRenderer();
@@ -792,6 +945,7 @@ function moveLayoutNode(event: PointerEvent): void {
   );
   if (!moved || !updateEditableNodePosition(currentLayout, currentFrameState, dragging.id, moved))
     return;
+  projectSavepoint.positionsChanged();
   setFrame(playback.frame, false);
   updateLayoutFields();
   updateLayoutControls();
@@ -804,13 +958,16 @@ canvas.addEventListener('pointerup', (event) => {
   if (currentLayout && dragHasChanges(dragging, currentLayout)) {
     projectHistory.commit(configWithPositions(undefined, [dragging.id]));
     if (graph) graph.project = projectHistory.value;
+    reconcileCommittedCoordinateDrafts();
   }
   releaseLayoutPointer();
   setFrame(playback.frame, false);
+  refreshUnsavedState();
 });
 canvas.addEventListener('pointercancel', (event) => {
   if (!dragging || dragging.pointerId !== event.pointerId || !currentLayout) return;
   currentLayout.set(dragging.id, dragging.previous);
+  projectSavepoint.positionsChanged();
   releaseLayoutPointer();
   setFrame(playback.frame, false);
   updateLayoutFields();
@@ -847,7 +1004,7 @@ layoutExport.addEventListener('click', () => {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
     renderEditorMessage(
       layoutControls,
-      '已准备导出：' + link.download + '。修改仅保存在导出的 JSON 文件中。',
+      '已准备导出：' + link.download + '。此文件仅保存源数据坐标，不代表完整项目已保存。',
     );
   } catch (error) {
     renderEditorMessage(

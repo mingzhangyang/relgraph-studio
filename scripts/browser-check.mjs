@@ -847,6 +847,8 @@ const baselineFiles = new Set(reference?.frames.map((frame) => frame.file) ?? []
     assert.deepEqual(await canvasPng(page), preview);
     await page.selectOption('#strategyType', 'layered');
     await page.click('#strategyPreview');
+    // The pending preview/draft now requires explicit acceptance of discarding work.
+    page.once('dialog', (dialog) => void dialog.accept());
     await loadExample(page, EXAMPLES[1]);
     assert.equal(await page.locator('#strategyApply').isDisabled(), true);
     assert.equal(await page.inputValue('#strategyType'), 'manual');
@@ -1166,6 +1168,8 @@ for (const theme of ['light', 'dark']) {
       buffer: Buffer.from(data, 'base64'),
     });
     await page.waitForFunction(() => typeof window.releaseNodeImage === 'function');
+    // An in-flight image is also protected; this test explicitly discards it.
+    page.once('dialog', (dialog) => void dialog.accept());
     await loadExample(page, EXAMPLES[1]);
     const expected = await canvasPng(page);
     await page.evaluate(() => window.releaseNodeImage());
@@ -1493,6 +1497,117 @@ for (const theme of ['dark', 'light']) {
   }
   await page.screenshot({ path: join(outputDir, `workspace-${theme}.png`), fullPage: true });
   await check(`no console errors while capturing ${theme} frames`, async () => {
+    assert.deepEqual(problems, []);
+  });
+  await context.close();
+}
+
+// Unsaved project protection must work with real browser dialogs and downloads.
+{
+  const { context, page, problems } = await openStudio();
+  await check('unsaved project confirmation and complete-project export in Chromium', async () => {
+    const initialSource = await text(page, '#sourceName');
+    assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'false');
+    await page.selectOption('#visualPreset', 'presentation');
+    assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'true');
+
+    page.once('dialog', (dialog) => void dialog.dismiss());
+    await page.click('#exampleBiology');
+    assert.equal(
+      await text(page, '#sourceName'),
+      initialSource,
+      'cancel keeps the original source',
+    );
+    assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'true');
+
+    const download = page.waitForEvent('download');
+    await page.click('#visualSave');
+    assert.match((await download).suggestedFilename(), /\.studio\.json$/);
+    assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'false');
+
+    await page.evaluate(() => window.renderAt(84));
+    await page.selectOption('#visualObject', { index: 1 });
+    await page.locator('#appearanceEditor details').evaluate((element) => {
+      element.open = true;
+    });
+    await page.fill('#visual-size', '999');
+    await page.locator('#visual-size').evaluate((element) => element.blur());
+    assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'true');
+    await page.evaluate(() => window.renderAt(85));
+    assert.equal(await page.inputValue('#visual-size'), '999');
+    await page.click('#visualSave');
+    assert.match(await text(page, '#visualError'), /未提交/);
+    await page.fill('#visual-size', '24');
+    await page.locator('#visual-size').evaluate((element) => element.blur());
+    const correctedDownload = page.waitForEvent('download');
+    await page.click('#visualSave');
+    await correctedDownload;
+    assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'false');
+
+    // A successful empty override inherits the preset's 18px font size.
+    await page.fill('#visual-fontSize', '22');
+    await page.locator('#visual-fontSize').evaluate((element) => element.blur());
+    await page.fill('#visual-fontSize', '');
+    await page.locator('#visual-fontSize').evaluate((element) => element.blur());
+    assert.equal(await page.inputValue('#visual-fontSize'), '18');
+    const inheritedDownload = page.waitForEvent('download');
+    await page.click('#visualSave');
+    await inheritedDownload;
+    assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'false');
+
+    // Number inputs can display a '-' token with value === '' and badInput.
+    // It is neither a valid commit nor an intentional inherit operation.
+    const numberInput = page.locator('#visual-size');
+    await numberInput.fill('');
+    await numberInput.press('-');
+    assert.equal(
+      await numberInput.evaluate((element) => element.validity.badInput),
+      true,
+      'Chromium should report an incomplete numeric token',
+    );
+    assert.equal(await numberInput.inputValue(), '');
+    assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'true');
+    await page.evaluate(() => window.renderAt(86));
+    await page.click('#visualSave');
+    assert.match(await text(page, '#visualError'), /未提交/);
+    await numberInput.fill('24');
+    await numberInput.evaluate((element) => element.blur());
+    const validDownload = page.waitForEvent('download');
+    await page.click('#visualSave');
+    await validDownload;
+    assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'false');
+
+    await page.click('#layoutToggle');
+    assert.equal(await page.isDisabled('#layoutX'), false);
+    const chooserIds = await page.locator('#layoutNode option').evaluateAll((options) =>
+      options.map((option) => option.value),
+    );
+    assert.ok(chooserIds.length >= 2);
+    const firstNode = chooserIds[0];
+    const secondNode = chooserIds[1];
+    await page.selectOption('#layoutNode', firstNode);
+    const originalX = await page.inputValue('#layoutX');
+    const draftX = String(Number(originalX) + 13);
+    await page.fill('#layoutX', draftX);
+    assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'true');
+    await page.selectOption('#layoutNode', secondNode);
+    assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'true');
+    await page.selectOption('#layoutNode', firstNode);
+    assert.equal(await page.inputValue('#layoutX'), draftX);
+    await page.click('#visualSave');
+    assert.match(await text(page, '#visualError'), /未提交/);
+    page.once('dialog', (dialog) => void dialog.dismiss());
+    await page.click('#exampleBiology');
+    assert.equal(await text(page, '#sourceName'), initialSource);
+    await page.fill('#layoutX', originalX);
+    assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'false');
+    await page.click('#layoutToggle');
+
+    await page.selectOption('#visualPreset', 'quiet');
+    assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'true');
+    page.once('dialog', (dialog) => void dialog.accept());
+    await loadExample(page, EXAMPLES[1]);
+    assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'false');
     assert.deepEqual(problems, []);
   });
   await context.close();

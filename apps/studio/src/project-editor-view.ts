@@ -22,12 +22,14 @@ import {
 } from './project-editor-model.js';
 
 interface Actions {
-  change(config: ProjectConfig): void;
+  /** True only when the coordinator accepted the proposed configuration. */
+  change(config: ProjectConfig): boolean;
   undo(): void;
   redo(): void;
   save(): void;
   pause(): void;
   uploadImage(file: File, nodeId: string): Promise<void>;
+  draftChanged?(): void;
 }
 const nodeFields: [string, string, string | readonly string[]][] = [
   ['shape', '形状', ['circle', 'pill', 'diamond']],
@@ -92,6 +94,13 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
     signature = '',
     fieldSignature = '';
   let kind: 'node' | 'edge' = 'node';
+  // Keep uncommitted and rejected edits outside the DOM. Selection changes,
+  // playback redraws and focus loss must not silently discard user input.
+  // A number input can expose value === '' while validity.badInput is true.
+  // Preserve validity with the draft; a bare string cannot distinguish that
+  // state from an intentional empty override.
+  const drafts = new Map<string, { value: string; badInput: boolean }>();
+  let renderedContext = '';
   const el = <K extends keyof HTMLElementTagNameMap>(
     tag: K,
     text = '',
@@ -147,12 +156,18 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
   const labelWrap = el('label', '显示名称 / 关系标签');
   labelWrap.append(label);
   host.append(labelWrap);
+  label.addEventListener('input', () =>
+    rememberDraft('label', label.value, expectedText('label')),
+  );
   const description = el('textarea');
   description.id = 'visualDescription';
   description.maxLength = 2000;
   const descWrap = el('label', '显示说明');
   descWrap.append(description);
   host.append(descWrap);
+  description.addEventListener('input', () =>
+    rememberDraft('description', description.value, expectedText('description')),
+  );
   let buttonHost = host;
   const button = (text: string, id: string, fn: () => void) => {
     const b = el('button', text);
@@ -229,9 +244,13 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
   });
   button('恢复原文', 'visualRestoreText', () => {
     if (!selection) return;
+    // This is an explicit discard of the selected object's text edits.
+    drafts.delete(draftKey('label'));
+    drafts.delete(draftKey('description'));
     const next = copyConfig(config);
     delete next.text?.[kind === 'node' ? 'nodes' : 'edges']?.[selection.id];
     actions.change(next);
+    actions.draftChanged?.();
   });
   const advanced = el('details'),
     summary = el('summary', '高级样式 · 继承与覆盖'),
@@ -253,6 +272,59 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
           (n) => n.id === selection!.id,
         )
       : undefined;
+  const draftKey = (field: string): string =>
+    JSON.stringify([
+      kind,
+      selection?.id ?? null,
+      field === 'label' || field === 'description' ? '' : scope.value,
+      field,
+    ]);
+  const matchesValue = (value: string, expected: string, type?: string): boolean =>
+    value === expected ||
+    (type === 'number' &&
+      value !== '' &&
+      expected !== '' &&
+      Number.isFinite(Number(value)) &&
+      Number(value) === Number(expected));
+  const expectedText = (field: 'label' | 'description'): string => {
+    const selected = item();
+    if (!selected) return '';
+    const copy =
+      kind === 'node' ? displayNodeText(config, selected.id) : displayEdgeText(config, selected.id);
+    return field === 'label'
+      ? (copy?.label ?? selected.label ?? '')
+      : kind === 'node'
+        ? (displayNodeText(config, selected.id)?.description ?? '')
+        : '';
+  };
+  const expectedAppearance = (field: string): string =>
+    String(
+      (inspectorAppearance(config, kind, item(), scope.value as Scope) as Record<string, unknown>)[
+        field
+      ] ?? '',
+    );
+  const rememberDraft = (
+    field: string,
+    value: string,
+    expected: string,
+    type?: string,
+    badInput = false,
+  ): void => {
+    const key = draftKey(field);
+    if (!badInput && matchesValue(value, expected, type)) drafts.delete(key);
+    else drafts.set(key, { value, badInput });
+    actions.draftChanged?.();
+  };
+  const displayedValue = (field: string, expected: string, type?: string): string => {
+    const key = draftKey(field);
+    const pending = drafts.get(key);
+    if (pending === undefined) return expected;
+    if (!pending.badInput && matchesValue(pending.value, expected, type)) {
+      drafts.delete(key);
+      return expected;
+    }
+    return pending.value;
+  };
   const update = (field: string, value: unknown) =>
     actions.change(editAppearance(config, kind, item(), scope.value as Scope, field, value));
   const buildFields = () => {
@@ -283,9 +355,33 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
       }
       reset.type = 'button';
       reset.setAttribute('aria-label', '恢复继承：' + title);
-      reset.addEventListener('click', () => update(key, undefined));
+      reset.addEventListener('click', () => {
+        drafts.delete(draftKey(key));
+        input.setAttribute('aria-invalid', 'false');
+        update(key, undefined);
+        actions.draftChanged?.();
+      });
+      input.addEventListener('input', () => {
+        const badInput = input.type === 'number' && input.validity?.badInput === true;
+        rememberDraft(key, input.value, expectedAppearance(key), input.type, badInput);
+        input.setAttribute('aria-invalid', String(badInput));
+      });
       input.addEventListener('change', () => {
         const raw = input.value;
+        const draft = draftKey(key);
+        // Blurring an incomplete number may sanitize its DOM value to '' and
+        // clear badInput without another input event. Retain the earlier flag
+        // until the user actually enters a valid replacement or explicitly resets.
+        const badInput =
+          input.type === 'number' &&
+          (input.validity?.badInput === true || drafts.get(draft)?.badInput === true);
+        if (badInput) {
+          drafts.set(draft, { value: raw, badInput: true });
+          input.setAttribute('aria-invalid', 'true');
+          error.textContent = '数字输入尚未完成，请修正或恢复继承后再保存。';
+          actions.draftChanged?.();
+          return;
+        }
         const val =
           raw === ''
             ? undefined
@@ -294,7 +390,21 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
               : key === 'showLabel'
                 ? raw === 'true'
                 : raw;
-        update(key, val);
+        // Clearing an override intentionally inherits a nonempty value.
+        // Use validation's outcome instead of comparing raw input against the
+        // inherited appearance, which would report a false pending draft.
+        drafts.delete(draft);
+        const accepted = update(key, val);
+        if (accepted) {
+          // The browser may still regard this input as focused during change.
+          // Display the committed/inherited value immediately in either case.
+          input.value = expectedAppearance(key);
+          input.setAttribute('aria-invalid', 'false');
+        } else if (!matchesValue(raw, expectedAppearance(key), input.type)) {
+          drafts.set(draft, { value: raw, badInput: false });
+          input.value = raw;
+        }
+        actions.draftChanged?.();
       });
       row.append(input, origin, reset);
       fields.append(row);
@@ -322,6 +432,8 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
     }
     objects.value = selection?.id ?? '';
     preset.value = config.preset ?? 'editorial';
+    const context = JSON.stringify([kind, selection?.id ?? null, scope.value]);
+    const contextChanged = renderedContext !== context;
     const selected = item(),
       disabled = !frame || (!selected && scope.value !== 'global');
     const text = selected
@@ -329,12 +441,19 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
         ? displayNodeText(config, selected.id)
         : displayEdgeText(config, selected.id)
       : undefined;
-    // Never overwrite the focused input during playback or redraw.
-    if (!selected || doc.activeElement !== label)
-      label.value = text?.label ?? selected?.label ?? '';
-    if (!selected || doc.activeElement !== description)
-      description.value =
-        kind === 'node' ? ((text as { description?: string })?.description ?? '') : '';
+    // Only preserve focus within the same object/scope; switching context
+    // must show that context's own pending draft (if any), not the old input.
+    if (!selected || contextChanged || doc.activeElement !== label)
+      label.value = selected
+        ? displayedValue('label', text?.label ?? selected.label ?? '')
+        : '';
+    if (!selected || contextChanged || doc.activeElement !== description)
+      description.value = selected
+        ? displayedValue(
+            'description',
+            kind === 'node' ? ((text as { description?: string })?.description ?? '') : '',
+          )
+        : '';
     label.disabled = !selected;
     description.disabled = !selected || kind !== 'node';
     descWrap.hidden = kind !== 'node';
@@ -363,9 +482,20 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
     for (const [key, c] of controls) {
       c.input.disabled = disabled || (key === 'head' && frame?.view.domain === 'biology');
       c.origin.textContent = inspectorOrigin(config, kind, selected, scope.value as Scope, key);
-      if (doc.activeElement !== c.input)
-        c.input.value = String((resolved as Record<string, unknown>)[key] ?? '');
+      if (contextChanged || doc.activeElement !== c.input)
+        c.input.value = displayedValue(
+          key,
+          String((resolved as Record<string, unknown>)[key] ?? ''),
+          c.input.type,
+        );
+      c.input.setAttribute(
+        'aria-invalid',
+        String(drafts.get(draftKey(key))?.badInput === true || c.input.validity?.badInput === true),
+      );
     }
+    renderedContext = context;
+    // Recompute dirty state only after selection and its controls agree.
+    actions.draftChanged?.();
   };
   preset.addEventListener('change', () =>
     actions.change({ ...config, preset: preset.value as ProjectConfig['preset'] }),
@@ -396,21 +526,67 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
       enumerable: true,
       configurable: true,
     });
-    actions.change(next);
+    const draft = draftKey(field);
+    drafts.delete(draft);
+    const accepted = actions.change(next);
+    if (!accepted && value !== expectedText(field)) {
+      drafts.set(draft, { value, badInput: false });
+      if (field === 'label') label.value = value;
+      else description.value = value;
+    }
+    actions.draftChanged?.();
   };
   label.addEventListener('change', () => changeText('label', label.value));
   description.addEventListener('change', () => changeText('description', description.value));
   buttonHost = el('div');
   buttonHost.className = 'property-actions';
   host.append(buttonHost);
-  button('清除当前范围样式', 'visualClear', () =>
-    actions.change(clearAppearance(config, kind, item(), scope.value as Scope)),
-  );
+  button('清除当前范围样式', 'visualClear', () => {
+    for (const key of controls.keys()) drafts.delete(draftKey(key));
+    actions.change(clearAppearance(config, kind, item(), scope.value as Scope));
+    actions.draftChanged?.();
+  });
   const undo = button('撤销', 'visualUndo', actions.undo),
     redo = button('重做', 'visualRedo', actions.redo);
-  button('恢复默认画面', 'visualReset', () => actions.change({}));
+  button('恢复默认画面', 'visualReset', () => {
+    drafts.clear();
+    actions.change({});
+    actions.draftChanged?.();
+  });
   button('保存项目 JSON', 'visualSave', actions.save);
   return {
+    /** Detect unsent text/number drafts, including invalid values not accepted by core. */
+    hasPendingDraft() {
+      if (!frame) return false;
+      // Also guard drafts belonging to other selections and scopes.
+      if (drafts.size > 0) return true;
+      const selected = item();
+      if (selected) {
+        const copy = kind === 'node'
+          ? displayNodeText(config, selected.id)
+          : displayEdgeText(config, selected.id);
+        if (!label.disabled && label.value !== (copy?.label ?? selected.label ?? '')) return true;
+        if (
+          kind === 'node' &&
+          !description.disabled &&
+          description.value !== (displayNodeText(config, selected.id)?.description ?? '')
+        ) return true;
+      }
+      const resolved = inspectorAppearance(config, kind, selected, scope.value as Scope);
+      for (const [key, control] of controls) {
+        if (control.input.disabled) continue;
+        // Check native validity as well as stored drafts. The latter protects
+        // incomplete tokens once focus is lost or a node/scope is switched.
+        if (control.input.type === 'number' && control.input.validity?.badInput === true)
+          return true;
+        const expected = String((resolved as Record<string, unknown>)[key] ?? '');
+        if (!matchesValue(control.input.value, expected, control.input.type)) return true;
+      }
+      return false;
+    },
+    isImageBusy() {
+      return imageBusy;
+    },
     render(
       nextFrame: DirectorFrameState | null,
       nextConfig: ProjectConfig,
@@ -432,9 +608,12 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
     imageBusy(value: boolean) {
       imageBusy = value;
       render();
+      actions.draftChanged?.();
     },
     clear() {
       imageBusy = false;
+      drafts.clear();
+      renderedContext = '';
       setSelection(null);
       signature = '';
       frame = null;

@@ -11,6 +11,7 @@ import {
 } from '../../packages/core/src/director/layout-strategies.ts';
 import { createLayoutStrategyView } from '../../apps/studio/src/layout-strategy-view.ts';
 import { ProjectHistory } from '../../apps/studio/src/project-editor-model.ts';
+import { ProjectSavepoint } from '../../apps/studio/src/unsaved-changes-model.ts';
 import { createProjectEditor } from '../../apps/studio/src/project-editor-view.ts';
 import {
   createProject,
@@ -84,6 +85,7 @@ export const studioImports = {
   DEFAULT_LAYOUT_SETTINGS,
   createLayoutStrategyView,
   ProjectHistory,
+  ProjectSavepoint,
   createProjectEditor,
   createProject,
   projectSource,

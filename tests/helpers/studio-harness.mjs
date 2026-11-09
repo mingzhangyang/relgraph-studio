@@ -36,6 +36,7 @@ export function makeStudio({
   // Test-only way to provide a frame with incremental a11y semantics while
   // continuing to exercise studio.ts through this shared simulated DOM.
   transformFrameText,
+  normalizeImage,
 } = {}) {
   const {
     elements,
@@ -66,6 +67,7 @@ export function makeStudio({
   });
   const context = {
     ...studioImports,
+    normalizeNodeImage: normalizeImage ?? studioImports.normalizeNodeImage,
     document,
     window,
     Element,

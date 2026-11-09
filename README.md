@@ -54,6 +54,8 @@ Use the right-side **画面与属性** panel for safe node/edge selection, spars
 
 Uploaded node images are supported through the node property panel: PNG/JPEG/WebP, shape clipping, cover/contain, undo and self-contained project saving. See [limits, offline export and current main-branch delivery](docs/NODE-IMAGES.md).
 
+The header shows **未保存修改** when the current document differs from the last imported or complete-project-exported state, including temporary layout previews and pending inspector edits. Switching examples, importing a file or dropping JSON asks for confirmation before discarding edits; cancelling leaves the current document and undo history untouched. Closing or reloading a dirty page uses the browser's native unsaved-changes warning where supported. **保存项目 JSON** begins a complete `.studio.json` download and establishes a new working savepoint; confirm that the browser actually saved the file. **导出含坐标 JSON** saves only source coordinates and does not clear the unsaved-project indicator. This is not autosave and there is no server-side persistence.
+
 ## Prepare deterministic coordinates before filming
 
 Use `relgraph layout` to fill **only missing** node coordinates with a seeded, fixed-iteration layout. Existing authored coordinates are never moved, including reaction/process positions. The layout runs before playback; it adds no physics to the renderer or timeline.
