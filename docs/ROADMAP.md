@@ -87,7 +87,10 @@ The earlier validation counts below remain historical.
 The in-review Architecture Consolidation branch proposes one shared simulated
 DOM between source VM and built bundle, an isolated shell presentation adapter
 and [four local test layers](TESTING.md). It is **not** treated as merged into
-`main` before this independent PR is accepted. Golden baselines are unchanged.
+`main` before this independent PR is accepted. Browser reference PNGs remain
+unchanged. This PR also repairs 36 stale native golden hashes after the
+[label-layout baseline review](GOLDEN-BASELINE-REVIEW.md); the other eight native
+hashes and runtime rendering behavior remain unchanged.
 
 ## B2 — Source-verified film
 
