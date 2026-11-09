@@ -48,6 +48,10 @@ The development-only `minimatch` override temporarily selects the patched 11.x r
 
 The browser workspace additionally exposes `window.renderAt(frame)` for a validated integer frame in the loaded film and `window.studioFrame()` for its current safe state. The studio canvas uses the `landscape-720p` frame spec (1280 × 720 at 24 FPS); `renderAt` pauses playback and redraws independently of prior frames. The workspace loads the vendored film fonts before its first frame. Pixel identity in the browser is expected within the same browser version and rasterizer; for video output use `relgraph render`, whose frames are reproducible for the same skia-canvas version and fonts.
 
+## Customize the network
+
+Use the right-side **画面与属性** panel for safe node/edge selection, sparse inherited styles, display-only copy, undo/redo and **保存项目 JSON**. Plain source files remain compatible; Studio projects also render through the CLI. See [configuration and reproduction](docs/NETWORK-AUTHORING.md).
+
 ## Prepare deterministic coordinates before filming
 
 Use `relgraph layout` to fill **only missing** node coordinates with a seeded, fixed-iteration layout. Existing authored coordinates are never moved, including reaction/process positions. The layout runs before playback; it adds no physics to the renderer or timeline.

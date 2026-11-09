@@ -3,9 +3,13 @@ import type { VisualGraph } from '../../types/visual-graph.js';
 type Position = { x: number; y: number };
 
 /** Stable layout prepared once per document, never advanced by playback. */
-export function layoutGraph(graph: Pick<VisualGraph, 'nodes' | 'edges'>): Map<string, Position> {
+export function layoutGraph(
+  graph: Pick<VisualGraph, 'nodes' | 'edges' | 'project'>,
+): Map<string, Position> {
   const positions = new Map<string, Position>();
   for (const node of graph.nodes) if (node.position) positions.set(node.id, { ...node.position });
+  for (const [id, p] of Object.entries(graph.project?.layout?.positions ?? {}))
+    positions.set(id, { ...p });
   const existing = [...positions.values()];
   const originX = existing.length ? Math.max(...existing.map((p) => p.x)) + 150 : 0;
   const originY = existing.length ? Math.min(...existing.map((p) => p.y)) : 0;

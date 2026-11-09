@@ -1,3 +1,10 @@
+import { ProjectHistory } from '../../apps/studio/src/project-editor-model.ts';
+import { createProjectEditor } from '../../apps/studio/src/project-editor-view.ts';
+import {
+  createProject,
+  projectSource,
+  validateProjectConfig,
+} from '../../packages/core/src/project.ts';
 import { readFileSync } from 'node:fs';
 import { transpileModule, ModuleKind, ScriptTarget } from 'typescript';
 import { FILM_FONT_FACES, filmFontQuery } from '../../packages/render/src/fonts.ts';
@@ -54,6 +61,11 @@ export function studioSource() {
 // Pure helpers the workspace imports, supplied as-is to every VM harness so
 // harnesses only stub what touches the canvas, network or storage.
 export const studioImports = {
+  ProjectHistory,
+  createProjectEditor,
+  createProject,
+  projectSource,
+  validateProjectConfig,
   FILM_FONT_FACES,
   filmFontQuery,
   editableNodes,

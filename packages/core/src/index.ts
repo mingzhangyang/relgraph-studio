@@ -14,3 +14,5 @@ export * from './relgraph.js';
 export * from './style.js';
 export type * from '../types/relationship-graph.js';
 export type * from '../types/visual-graph.js';
+
+export * from './project.js';

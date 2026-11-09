@@ -66,10 +66,16 @@ Workspace architecture follow-up (after step 5b, in separate reviewable PRs):
 
 The accepted B1.5 scope is deterministic data → adapter → graph → pure timeline → DisplayList → Canvas/Skia → MP4, plus the separated workspace models and views. Native screen-reader listening, additional platforms and production typography QA are not implied by automated acceptance. With #19/#20 merged and verified, the architecture gate is satisfied; B2-1 data is delivered for independent editorial review below.
 
+## Network authoring before B2-2
+
+- [x] Batch A: coordinated visual presets, inherited node/edge styles, independent display copy, projection-safe stable property panel, local project import/export and history. See [configuration](NETWORK-AUTHORING.md).
+- [ ] Batch B: deterministic layout strategies, locks, explicit preview/apply and layout history.
+
 ## B2 — Source-verified film
 
 - [x] **B2-1 data preparation:** [Chengjia opening subset](../datasets/honglou-chengjia-opening/graph.relgraph.json), 6 people / 9 relations from chapters 2–3 (8 direct confirmations, 1 explicitly labelled inference), first explicit mentions, 15 short evidence excerpts, 39 pinned source revisions and scan fingerprint. [Verification report](../datasets/honglou-chengjia-opening/VERIFICATION.md), 7 focused quality tests, live source audit and [B2-2 handoff](../datasets/honglou-chengjia-opening/B2-2-HANDOFF.md) included; the provisional fixture remains unchanged. First onstage appearances are not claimed systematically audited.
-- [ ] **Dataset editorial review and merge:** inspect the primary evidence and inference labels before B2-2. Only then start formal storyboard/video work from latest main; target 60–90 s, 1920×1080, 24 FPS. The dataset's three-second QA timeline is not a completed film. Audio and subtitle streams are outside B2-1.
+- [x] **Dataset merge:** #21 merged as `7e97225`; editorial review of final production wording remains required.
+- [ ] **B2-2 production editorial review:** inspect the primary evidence and inference labels before B2-2. Only then start formal storyboard/video work from latest main; target 60–90 s, 1920×1080, 24 FPS. The dataset's three-second QA timeline is not a completed film. Audio and subtitle streams are outside B2-1.
 - [ ] Script a 60–90 second narration without premature spoilers
 - [ ] Add optional narration/audio sync, captions, credited licensed sounds and 1080p QA
 
