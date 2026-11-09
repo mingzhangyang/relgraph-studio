@@ -180,13 +180,20 @@ test('full-project savepoint tracks configuration and live positions without dep
   assert.equal(savepoint.isDirty({}, positions), false, 'no document is never dirty');
   savepoint.markClean({}, positions);
   assert.equal(savepoint.isDirty({}, new Map([...positions].reverse())), false);
-  assert.equal(workspaceSnapshot({}, positions), workspaceSnapshot({}, new Map([...positions].reverse())));
+  assert.equal(
+    workspaceSnapshot({}, positions),
+    workspaceSnapshot({}, new Map([...positions].reverse())),
+  );
 
   const history = new ProjectHistory();
   history.commit({ nodes: { defaults: { size: 24 } } });
   assert.equal(savepoint.isDirty(history.value, positions), true);
   history.undo();
-  assert.equal(savepoint.isDirty(history.value, positions), false, 'undo reaches the saved baseline');
+  assert.equal(
+    savepoint.isDirty(history.value, positions),
+    false,
+    'undo reaches the saved baseline',
+  );
   history.redo();
   assert.equal(savepoint.isDirty(history.value, positions), true);
   const moved = new Map(positions);
