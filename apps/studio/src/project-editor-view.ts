@@ -10,6 +10,11 @@ import {
 } from '@relgraph/core';
 import { hitDisplayList, type DisplayList } from '@relgraph/render';
 import {
+  APPEARANCE_FIELD_RULES,
+  type AppearanceKind,
+} from '@relgraph/core';
+import { appearanceFieldHint, parseAppearanceDraft } from './field-validation-model.js';
+import {
   editAppearance,
   inspectorAppearance,
   inspectorOrigin,
@@ -266,8 +271,15 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
   host.append(error);
   const controls = new Map<
     string,
-    { input: HTMLInputElement | HTMLSelectElement; origin: HTMLElement; row: HTMLElement }
+    {
+      input: HTMLInputElement | HTMLSelectElement;
+      picker: HTMLInputElement | null;
+      origin: HTMLElement;
+      feedback: HTMLElement;
+      row: HTMLElement;
+    }
   >();
+  const appearanceKind = (): AppearanceKind => (kind === 'node' ? 'nodes' : 'edges');
   const item = (): VisualNode | VisualEdge | undefined =>
     selection
       ? (kind === 'node' ? frame?.view.nodes : frame?.view.edges)?.find(
@@ -335,82 +347,135 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
     controls.clear();
     fields.replaceChildren();
     for (const [key, title, type] of kind === 'node' ? nodeFields : edgeFields) {
-      const row = el('label', title),
+      const row = el('div'),
+        heading = el('label', title),
+        fieldControls = el('div'),
         input = typeof type === 'string' ? el('input') : el('select'),
         origin = el('small'),
+        hint = el('small', appearanceFieldHint(appearanceKind(), key)),
+        feedback = el('small'),
         reset = el('button', '↺');
+      row.className = 'property-field';
+      fieldControls.className = 'property-control-row';
+      hint.className = 'property-hint';
+      feedback.className = 'property-error';
+      feedback.id = 'visual-' + key + '-error';
+      feedback.setAttribute('aria-live', 'polite');
+      hint.id = 'visual-' + key + '-hint';
+      origin.id = 'visual-' + key + '-origin';
       input.id = 'visual-' + key;
+      heading.setAttribute('for', input.id);
+      input.setAttribute('aria-describedby', hint.id + ' ' + feedback.id + ' ' + origin.id);
+      const rule = APPEARANCE_FIELD_RULES[appearanceKind()][key];
       if (typeof type === 'string') {
         (input as HTMLInputElement).type = type === 'color' ? 'text' : type;
         (input as HTMLInputElement).placeholder =
           type === 'color' ? '#RRGGBB · 留空继承' : '留空继承';
-        (input as HTMLInputElement).step = 'any';
+        if (rule?.type === 'number') {
+          (input as HTMLInputElement).min = String(rule.min);
+          (input as HTMLInputElement).max = String(rule.max);
+          (input as HTMLInputElement).step = 'any';
+          (input as HTMLInputElement).inputMode = 'decimal';
+        } else if (rule?.type === 'color') {
+          (input as HTMLInputElement).setAttribute('pattern', '#[0-9a-fA-F]{6}');
+          (input as HTMLInputElement).maxLength = 7;
+        }
       } else {
         const empty = el('option', '继承');
         empty.value = '';
         input.append(empty);
         for (const value of type) {
-          const o = el('option', value);
-          o.value = value;
-          input.append(o);
+          const option = el('option', value);
+          option.value = value;
+          input.append(option);
         }
       }
-      reset.type = 'button';
-      reset.setAttribute('aria-label', '恢复继承：' + title);
-      reset.addEventListener('click', () => {
-        drafts.delete(draftKey(key));
-        input.setAttribute('aria-invalid', 'false');
-        update(key, undefined);
-        actions.draftChanged?.();
-      });
-      input.addEventListener('input', () => {
+
+      const picker = rule?.type === 'color' ? el('input') : null;
+      if (picker) {
+        picker.type = 'color';
+        picker.id = input.id + '-picker';
+        picker.className = 'property-color-picker';
+        picker.setAttribute('aria-label', '选择' + title);
+        picker.title = '选择' + title;
+      }
+      const showFieldError = (message: string): void => {
+        feedback.textContent = message;
+        input.setAttribute('aria-invalid', String(Boolean(message)));
+        row.setAttribute('data-invalid', String(Boolean(message)));
+      };
+      const validateCurrent = (badInput: boolean): ReturnType<typeof parseAppearanceDraft> =>
+        parseAppearanceDraft(appearanceKind(), key, input.value, badInput);
+      const onDraftInput = (): void => {
         const badInput = input.type === 'number' && input.validity?.badInput === true;
         rememberDraft(key, input.value, expectedAppearance(key), input.type, badInput);
-        input.setAttribute('aria-invalid', String(badInput));
-      });
-      input.addEventListener('change', () => {
+        showFieldError(validateCurrent(badInput).message);
+        if (picker && /^#[0-9a-f]{6}$/i.test(input.value)) picker.value = input.value;
+      };
+      const commit = (): void => {
         const raw = input.value;
         const draft = draftKey(key);
-        // Blurring an incomplete number may sanitize its DOM value to '' and
-        // clear badInput without another input event. Retain the earlier flag
-        // until the user actually enters a valid replacement or explicitly resets.
+        // A number field may lose its native badInput flag on blur. A fresh
+        // valid input event, not a blur-sanitized empty string, must clear it.
         const badInput =
           input.type === 'number' &&
           (input.validity?.badInput === true || drafts.get(draft)?.badInput === true);
-        if (badInput) {
-          drafts.set(draft, { value: raw, badInput: true });
-          input.setAttribute('aria-invalid', 'true');
-          error.textContent = '数字输入尚未完成，请修正或恢复继承后再保存。';
+        const parsed = validateCurrent(badInput);
+        if (!parsed.ok) {
+          drafts.set(draft, { value: raw, badInput });
+          showFieldError(parsed.message);
+          error.textContent = badInput ? parsed.message : '配置无效：' + parsed.message;
           actions.draftChanged?.();
           return;
         }
-        const val =
-          raw === ''
-            ? undefined
-            : ['size', 'borderWidth', 'fontSize', 'fontWeight', 'width', 'curve'].includes(key)
-              ? Number(raw)
-              : key === 'showLabel'
-                ? raw === 'true'
-                : raw;
-        // Clearing an override intentionally inherits a nonempty value.
-        // Use validation's outcome instead of comparing raw input against the
-        // inherited appearance, which would report a false pending draft.
+
+        // Explicitly clearing an override inherits its resolved value.
         drafts.delete(draft);
-        const accepted = update(key, val);
+        const accepted = update(key, parsed.value);
         if (accepted) {
-          // The browser may still regard this input as focused during change.
-          // Display the committed/inherited value immediately in either case.
           input.value = expectedAppearance(key);
-          input.setAttribute('aria-invalid', 'false');
+          showFieldError('');
+          if (picker && /^#[0-9a-f]{6}$/i.test(input.value)) picker.value = input.value;
         } else if (!matchesValue(raw, expectedAppearance(key), input.type)) {
+          // Core still validates the complete project, including cross-field
+          // and domain restrictions. Never lose a rejected edit or its context.
           drafts.set(draft, { value: raw, badInput: false });
           input.value = raw;
+          showFieldError('此值未能应用，请检查项目错误提示。');
+        }
+        actions.draftChanged?.();
+      };
+      reset.type = 'button';
+      reset.setAttribute('aria-label', '恢复继承：' + title);
+      reset.title = '恢复继承';
+      reset.addEventListener('click', () => {
+        drafts.delete(draftKey(key));
+        const accepted = update(key, undefined);
+        if (accepted) {
+          input.value = expectedAppearance(key);
+          showFieldError('');
+          if (picker && /^#[0-9a-f]{6}$/i.test(input.value)) picker.value = input.value;
         }
         actions.draftChanged?.();
       });
-      row.append(input, origin, reset);
+      input.addEventListener('input', onDraftInput);
+      input.addEventListener('change', commit);
+      fieldControls.append(input);
+      if (picker) {
+        picker.addEventListener('input', () => {
+          input.value = picker.value;
+          onDraftInput();
+        });
+        picker.addEventListener('change', () => {
+          input.value = picker.value;
+          commit();
+        });
+        fieldControls.append(picker);
+      }
+      fieldControls.append(reset);
+      row.append(heading, fieldControls, origin, hint, feedback);
       fields.append(row);
-      controls.set(key, { input, origin, row });
+      controls.set(key, { input, picker, origin, feedback, row });
     }
   };
   const render = () => {
