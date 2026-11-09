@@ -174,6 +174,18 @@ button { cursor: pointer; }
 .brand b { display: block; font-size: 16px; font-weight: 600; letter-spacing: .02em; }
 .brand small { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; letter-spacing: .08em; }
 .top-meta { display: flex; align-items: center; gap: 16px; color: var(--muted); font-size: 12px; }
+.save-state {
+  padding: 4px 9px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  white-space: nowrap;
+  font-size: 12px;
+}
+.save-state[data-dirty="true"] {
+  border-color: var(--gold-line);
+  background: var(--gold-soft);
+  color: var(--gold-strong);
+}
 .theme-toggle {
   display: inline-flex;
   align-items: center;
