@@ -38,18 +38,54 @@ const drawable = (hit: HitTarget): boolean => {
 function intersectsClip(hit: HitTarget, clip: { x: number; y: number; w: number; h: number }): boolean {
   if (![clip.x, clip.y, clip.w, clip.h].every(finite) || clip.w <= 0 || clip.h <= 0)
     return false;
-  const xs = hit.box
-    ? [hit.box.x, hit.box.x + hit.box.w]
-    : (hit.points ?? []).map((p) => p.x);
-  const ys = hit.box
-    ? [hit.box.y, hit.box.y + hit.box.h]
-    : (hit.points ?? []).map((p) => p.y);
-  return (
-    Math.max(...xs) >= clip.x &&
-    Math.min(...xs) <= clip.x + clip.w &&
-    Math.max(...ys) >= clip.y &&
-    Math.min(...ys) <= clip.y + clip.h
-  );
+  const right = clip.x + clip.w;
+  const bottom = clip.y + clip.h;
+  if (!finite(right) || !finite(bottom)) return false;
+  if (hit.box)
+    return (
+      hit.box.x <= right &&
+      hit.box.x + hit.box.w >= clip.x &&
+      hit.box.y <= bottom &&
+      hit.box.y + hit.box.h >= clip.y
+    );
+
+  // A polyline's bounding box may overlap a clip corner even when every
+  // segment is outside. Check each segment with Liang-Barsky clipping instead.
+  const points = hit.points ?? [];
+  for (let i = 1; i < points.length; i++) {
+    const a = points[i - 1];
+    const b = points[i];
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    if (!finite(dx) || !finite(dy)) continue;
+    let start = 0;
+    let end = 1;
+    const bounds: [number, number][] = [
+      [-dx, a.x - clip.x],
+      [dx, right - a.x],
+      [-dy, a.y - clip.y],
+      [dy, bottom - a.y],
+    ];
+    let overlaps = true;
+    for (const [direction, distance] of bounds) {
+      if (direction === 0) {
+        if (distance < 0) {
+          overlaps = false;
+          break;
+        }
+        continue;
+      }
+      const t = distance / direction;
+      if (direction < 0) start = Math.max(start, t);
+      else end = Math.min(end, t);
+      if (start > end) {
+        overlaps = false;
+        break;
+      }
+    }
+    if (overlaps) return true;
+  }
+  return false;
 }
 
 /**

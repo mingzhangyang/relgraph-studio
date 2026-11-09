@@ -326,6 +326,54 @@ test('workspace overlays exclude invalid geometry and do not invent hidden selec
   assert.deepEqual(global.targets, [], 'neither invalid hit geometry reaches SVG');
 });
 
+test('workspace overlay counts only segments intersecting the selection clip', () => {
+  const edgeIds = [
+    'outside-corner',
+    'enters-corner',
+    'crosses-stage',
+    'two-segment',
+    'touches-border',
+    'wholly-away',
+  ];
+  const frame = {
+    view: { nodes: [], edges: edgeIds.map((id) => ({ id, kind: 'friend' })) },
+  };
+  const list = {
+    width: 1280,
+    height: 720,
+    selectionClip: { x: 80, y: 90, w: 800, h: 460 },
+    selection: [
+      // The bounding box overlaps the clip corner but the line never enters.
+      { kind: 'edge', id: 'outside-corner', points: [{ x: 0, y: 120 }, { x: 120, y: 0 }] },
+      { kind: 'edge', id: 'enters-corner', points: [{ x: 0, y: 0 }, { x: 130, y: 130 }] },
+      // Both endpoints are outside: the segment still crosses the visible clip.
+      { kind: 'edge', id: 'crosses-stage', points: [{ x: 0, y: 150 }, { x: 1000, y: 150 }] },
+      { kind: 'edge', id: 'two-segment', points: [
+        { x: 0, y: 120 }, { x: 120, y: 0 }, { x: 200, y: 130 },
+      ] },
+      { kind: 'edge', id: 'touches-border', points: [{ x: 0, y: 90 }, { x: 100, y: 90 }] },
+      { kind: 'edge', id: 'wholly-away', points: [{ x: 0, y: 0 }, { x: 20, y: 20 }] },
+      // A hit outside the current spoiler-safe frame must also stay excluded.
+      { kind: 'edge', id: 'hidden-future', points: [{ x: 90, y: 90 }, { x: 100, y: 100 }] },
+    ],
+  };
+  const all = projectSelectionOverlay(frame, list, {
+    kind: 'edge', selection: null, scope: 'global',
+  });
+  assert.equal(all.affectedCount, 6);
+  assert.deepEqual(all.targets.map(({ hit }) => hit.id), [
+    'enters-corner', 'crosses-stage', 'two-segment', 'touches-border',
+  ]);
+  assert.match(all.message, /已描边 4 个/);
+
+  const missed = projectSelectionOverlay(frame, list, {
+    kind: 'edge', selection: { kind: 'edge', id: 'outside-corner' }, scope: 'object',
+  });
+  assert.equal(missed.affectedCount, 1, 'the item still belongs to the safe projection');
+  assert.deepEqual(missed.targets, [], 'no invisible segment can be counted as outlined');
+  assert.match(missed.message, /尚未绘制到当前画面/);
+});
+
 test('shared workspace harness mounts the real property view and retains controls across redraws', async () => {
   const studio = makeStudio();
   await studio.ready;
