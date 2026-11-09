@@ -1523,3 +1523,114 @@ test('pure transition plans preserve playback on theme, drafts on pause and prev
     assert.ok(!(plan.acceptPreview && plan.discardPreview), 'never restore an applied preview');
   }
 });
+
+test('mode coordinator restores preview before playback and retains only layout form drafts', async () => {
+  const app = makeStudio();
+  await app.ready;
+  assert.equal(app.window.renderAt(84), true);
+  await app.node('layoutExport').click();
+  const originalSource = JSON.parse(await app.blobs.at(-1).text());
+  const type = viewControl(app, 'strategyType');
+  const mode = viewControl(app, 'strategyMode');
+  type.value = 'circle';
+  await type.dispatch('change');
+  mode.value = 'rearrange';
+  await mode.dispatch('change');
+  await viewControl(app, 'strategyPreview').click();
+  assert.equal(viewControl(app, 'strategyApply').disabled, false);
+
+  await app.node('play').click();
+  assert.equal(app.node('status').attributes['data-state'], 'playing');
+  assert.equal(viewControl(app, 'strategyApply').disabled, true, 'play discards the preview');
+  await app.node('layoutExport').click();
+  assert.deepEqual(JSON.parse(await app.blobs.at(-1).text()), originalSource);
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true', 'form draft survives');
+
+  await app.node('restart').click();
+  type.value = 'manual';
+  await type.dispatch('change');
+  mode.value = 'preserve';
+  await mode.dispatch('change');
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
+  assert.equal(app.node('visualUndo').disabled, true, 'discarded preview adds no history');
+});
+
+test('playing and positioning switch modes without duplicating or resetting the playback clock', async () => {
+  const app = makeStudio();
+  await app.ready;
+  assert.equal(app.window.renderAt(84), true);
+  await app.node('layoutToggle').click();
+  assert.equal(app.node('layoutToggle').attributes['aria-pressed'], 'true');
+  await app.node('play').click();
+  assert.equal(app.node('layoutToggle').attributes['aria-pressed'], 'false');
+  assert.equal(app.node('status').attributes['data-state'], 'playing');
+  app.tick(1000);
+  app.tick(1042);
+  const beforeTheme = Number(app.node('scrubber').value);
+  assert.ok(beforeTheme >= 84);
+  await app.node('themeToggle').click();
+  assert.equal(app.node('status').attributes['data-state'], 'playing');
+  assert.equal(Number(app.node('scrubber').value), beforeTheme);
+  app.tick(1084);
+  assert.ok(Number(app.node('scrubber').value) >= beforeTheme);
+  await app.node('layoutToggle').click();
+  assert.equal(app.node('status').attributes['data-state'], 'ready');
+  assert.equal(app.node('layoutToggle').attributes['aria-pressed'], 'true');
+  await app.node('restart').click();
+  assert.equal(app.node('layoutToggle').attributes['aria-pressed'], 'false');
+  assert.equal(Number(app.node('scrubber').value), 0);
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
+});
+
+test('switching to playback cancels an in-flight pointer drag without late history commit', async () => {
+  const app = makeStudio();
+  await app.ready;
+  assert.equal(app.window.renderAt(84), true);
+  await app.node('layoutToggle').click();
+  const stage = app.node('stage');
+  const selector = app.node('layoutNode');
+  const camera = app.window.studioFrame().cameraResolved;
+  let start = null;
+  for (const option of selector.children) {
+    selector.value = option.value;
+    await selector.dispatch('change');
+    const x = Number(app.node('layoutX').value),
+      y = Number(app.node('layoutY').value);
+    const screen = {
+      x: 640 + (x - camera.x) * camera.scale,
+      y: 330 + (y - camera.y) * camera.scale,
+    };
+    if (screen.x < 26 || screen.x > 1254 || screen.y < 108 || screen.y > 542) continue;
+    await stage.dispatch('pointerdown', {
+      pointerId: 47,
+      isPrimary: true,
+      pointerType: 'mouse',
+      button: 0,
+      clientX: screen.x,
+      clientY: screen.y,
+    });
+    if (stage.pointerCaptured === 47) {
+      start = screen;
+      break;
+    }
+  }
+  assert.ok(start, 'a safe visible node should be draggable');
+  await stage.dispatch('pointermove', {
+    pointerId: 47,
+    clientX: start.x + 22,
+    clientY: start.y + 9,
+  });
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
+  await app.node('play').click();
+  assert.equal(stage.pointerCaptured, null, 'mode exit releases pointer capture');
+  assert.equal(app.node('layoutToggle').attributes['aria-pressed'], 'false');
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
+  await stage.dispatch('pointerup', {
+    pointerId: 47,
+    clientX: start.x + 22,
+    clientY: start.y + 9,
+  });
+  assert.equal(app.node('visualUndo').disabled, true, 'stale pointerup cannot commit');
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
+  assert.equal(app.node('status').attributes['data-state'], 'playing');
+});
