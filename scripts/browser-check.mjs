@@ -1807,6 +1807,48 @@ for (const theme of ['dark', 'light']) {
   await context.close();
 }
 
+// All user-visible mode transitions go through a single DOM-free policy.
+// Real Chromium validates rollback pixels, Escape and playback across themes.
+{
+  const { context, page, problems } = await openStudio();
+  await check('working mode transitions retain film pixels and drop only transient previews', async () => {
+    assert.equal(await page.evaluate(() => window.renderAt(84)), true);
+    const baseline = await canvasPng(page);
+    await page.locator('#layoutStrategies').evaluate((element) => {
+      element.open = true;
+    });
+    await page.selectOption('#strategyType', 'circle');
+    await page.selectOption('#strategyMode', 'rearrange');
+    await page.click('#strategyPreview');
+    assert.equal(await page.isDisabled('#strategyApply'), false);
+    assert.notDeepEqual(await canvasPng(page), baseline, 'preview changes the film stage');
+    await page.click('#play');
+    assert.equal(await page.isDisabled('#strategyApply'), true, 'play discards the preview');
+    assert.equal(await status(page), 'playing');
+    assert.equal(await page.evaluate(() => window.renderAt(84)), true);
+    assert.deepEqual(await canvasPng(page), baseline, 'cancelled preview fully restores positions');
+
+    await page.selectOption('#strategyType', 'manual');
+    await page.selectOption('#strategyMode', 'preserve');
+    assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'false');
+
+    await page.click('#layoutToggle');
+    assert.equal(await page.getAttribute('#layoutToggle', 'aria-pressed'), 'true');
+    await page.keyboard.press('Escape');
+    assert.equal(await page.getAttribute('#layoutToggle', 'aria-pressed'), 'false');
+    await page.click('#play');
+    assert.equal(await status(page), 'playing');
+    await page.click('#themeToggle');
+    assert.equal(await status(page), 'playing', 'changing theme keeps playback clock running');
+    await page.click('#restart');
+    assert.equal(await status(page), 'ready');
+    assert.equal(await frameNumber(page), 0);
+    assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'false');
+    assert.deepEqual(problems, []);
+  });
+  await context.close();
+}
+
 // UI-only outlines must be visible in the composite screenshot, not Canvas
 // pixels or native video output. Exercise real Chromium geometry and scrolling.
 {
