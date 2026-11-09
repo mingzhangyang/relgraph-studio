@@ -160,6 +160,11 @@ const projectEditor = createProjectEditor(document, $('appearanceEditor'), {
         positions: Object.fromEntries(currentLayout),
       },
     };
+    const errors = validateProjectConfig(config, graph);
+    if (errors.length) {
+      projectEditor.error('保存失败：' + errors.join('；'));
+      return;
+    }
     downloadJson(
       createProject(sourceDocument, config),
       sourceFilename.replace(/\.json$/i, '') + '.studio.json',
@@ -634,6 +639,7 @@ canvas.addEventListener('pointerdown', (event) => {
     point,
     radius,
     event.pointerId,
+    graph?.project,
   );
   if (!nextDrag) return;
   dragging = nextDrag;

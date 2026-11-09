@@ -3,6 +3,7 @@ import {
   projectCameraPoint,
   worldWithScreenOffset,
   nodeGlyphIntersectsStage,
+  nodeGlyphContainsPoint,
   type FrameSpec,
 } from '@relgraph/render';
 import {
@@ -10,6 +11,7 @@ import {
   type DirectorFrameState,
   type DomainStyle,
   type VisualNode,
+  type ProjectConfig,
 } from '@relgraph/core';
 
 export type Point = { x: number; y: number };
@@ -66,6 +68,7 @@ export function hitVisibleNode(
   point: Point,
   radius: number,
   style: DomainStyle = NEUTRAL_STYLE,
+  config?: ProjectConfig,
 ): string | null {
   // The composer clips all graph drawing to this stage. Without the same
   // constraint, a node outside it can be dragged through the caption band.
@@ -80,16 +83,39 @@ export function hitVisibleNode(
   )
     return null;
   let closest: string | null = null;
-  let best = radius * radius;
+  let best = Infinity;
   for (const node of nodes) {
     if (!isNodeEditableNow(node.id, reveal)) continue;
     const position = positions.get(node.id);
     if (!position) continue;
     const screen = screenPosition(position, camera, spec);
-    if (!nodeGlyphIntersectsStage(node, screen, camera.scale, spec, style, reveal.nodes[node.id]))
+    if (
+      !nodeGlyphIntersectsStage(
+        node,
+        screen,
+        camera.scale,
+        spec,
+        style,
+        reveal.nodes[node.id],
+        config,
+      )
+    )
       continue;
     const distance = (screen.x - point.x) ** 2 + (screen.y - point.y) ** 2;
-    if (distance <= best) {
+    if (
+      distance <= best &&
+      (distance <= radius * radius ||
+        nodeGlyphContainsPoint(
+          node,
+          screen,
+          point,
+          camera.scale,
+          spec,
+          style,
+          reveal.nodes[node.id],
+          config,
+        ))
+    ) {
       best = distance;
       closest = node.id;
     }

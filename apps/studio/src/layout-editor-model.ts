@@ -3,6 +3,7 @@ import {
   roundPositionCoordinate,
   type DirectorFrameState,
   type VisualNode,
+  type ProjectConfig,
 } from '@relgraph/core';
 import { worldWithScreenOffset, type FrameSpec } from '@relgraph/render';
 import { hitVisibleNode, isNodeEditableNow, type Point } from './position-tool.js';
@@ -79,6 +80,7 @@ export function startPositionDrag(
   point: Point,
   radius: number,
   pointerId: number,
+  config?: ProjectConfig,
 ): PositionDrag | null {
   if (!(radius > 0) || !Number.isFinite(radius)) return null;
   const id = hitVisibleNode(
@@ -90,6 +92,7 @@ export function startPositionDrag(
     point,
     radius,
     domainStyle(frame.view.domain),
+    config,
   );
   const previous = id ? positions.get(id) : undefined;
   if (!id || !previous || !editableNodes(frame, positions).some((node) => node.id === id))

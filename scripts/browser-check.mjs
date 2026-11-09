@@ -779,6 +779,75 @@ const captured = [];
 // Every frame this run is expected to produce, captured or not.
 const expectedFiles = [];
 const baselineFiles = new Set(reference?.frames.map((frame) => frame.file) ?? []);
+{
+  const { context, page, problems } = await openStudio();
+  await check(
+    'review: global values, pending edits on Canvas selection, and invalid project save',
+    async () => {
+      await page.locator('#appearanceEditor details').evaluate((e) => (e.open = true));
+      await page.selectOption('#visualScope', 'global');
+      await page.fill('#visual-fontSize', '23');
+      await page.locator('#visual-fontSize').dispatchEvent('change');
+      await page.focus('#visualPreset');
+      await page.evaluate(() => window.renderAt(1));
+      assert.equal(await page.inputValue('#visual-fontSize'), '23');
+      await page.selectOption('#visualScope', 'object');
+      const ids = await page
+        .locator('#visualObject option')
+        .evaluateAll((options) => options.map((o) => o.value).filter(Boolean));
+      const [a, b] = ids;
+      const pointFor = async (id) => {
+        await page.locator('#stage').scrollIntoViewIfNeeded();
+        return page.evaluate((id) => {
+          const state = window.studioFrame(),
+            node = state.view.nodes.find((n) => n.id === id),
+            r = document.getElementById('stage').getBoundingClientRect();
+          return {
+            x:
+              r.left +
+              ((640 + (node.position.x - state.cameraResolved.x) * state.cameraResolved.scale) *
+                r.width) /
+                1280,
+            y:
+              r.top +
+              ((330 + (node.position.y - state.cameraResolved.y) * state.cameraResolved.scale) *
+                r.height) /
+                720,
+          };
+        }, id);
+      };
+      await page.selectOption('#visualObject', a);
+      await page.fill('#visualLabel', 'Pending A');
+      let point = await pointFor(b);
+      await page.mouse.click(point.x, point.y);
+      assert.equal(await page.inputValue('#visualObject'), b);
+      assert.notEqual(await page.inputValue('#visualLabel'), 'Pending A');
+      await page.selectOption('#visualObject', a);
+      assert.equal(await page.inputValue('#visualLabel'), 'Pending A');
+      await page.locator('#appearanceEditor details').evaluate((e) => (e.open = true));
+      await page.fill('#visual-fontSize', '27');
+      point = await pointFor(b);
+      await page.mouse.click(point.x, point.y);
+      assert.equal(await page.inputValue('#visualObject'), b);
+      assert.equal(await page.inputValue('#visual-fontSize'), '23');
+      await page.selectOption('#visualObject', a);
+      assert.equal(await page.inputValue('#visual-fontSize'), '27');
+      await page.click('#layoutToggle');
+      await page.selectOption('#layoutNode', a);
+      await page.fill('#layoutX', '10000001');
+      await page.fill('#layoutY', '0');
+      await page.click('#layoutApply');
+      let downloads = 0;
+      page.on('download', () => downloads++);
+      await page.click('#visualSave');
+      assert.ok((await page.locator('#visualError').textContent()).includes('保存失败'));
+      assert.equal(downloads, 0);
+      assert.deepEqual(problems, []);
+    },
+  );
+  await context.close();
+}
+
 // Property authoring uses the production projection and both render backends read saved config.
 for (const theme of ['light', 'dark']) {
   const { context, page, problems } = await openStudio({ colorScheme: theme });
