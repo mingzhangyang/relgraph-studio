@@ -1486,7 +1486,7 @@ test('pure workspace mode policy derives from authoritative owners without a sec
   assert.equal(mode(true, true, true), 'layoutPreview', 'preview ownership wins a stale clock');
 });
 
-test('pure transition plans preserve playback on theme, drafts on pause and preview acceptance', () => {
+test('pure mode plans preserve theme playback and preview outcomes', () => {
   const expected = [
     ['playing', 'theme', 'playing', false, false, false],
     ['playing', 'navigate', 'idle', true, false, false],
@@ -1524,7 +1524,7 @@ test('pure transition plans preserve playback on theme, drafts on pause and prev
   }
 });
 
-test('mode coordinator restores preview before playback and retains only layout form drafts', async () => {
+test('mode coordinator rolls back preview and retains only form drafts', async () => {
   const app = makeStudio();
   await app.ready;
   assert.equal(app.window.renderAt(84), true);
@@ -1555,7 +1555,7 @@ test('mode coordinator restores preview before playback and retains only layout 
   assert.equal(app.node('visualUndo').disabled, true, 'discarded preview adds no history');
 });
 
-test('playing and positioning switch modes without duplicating or resetting the playback clock', async () => {
+test('mode switching preserves the playback clock and frozen-camera exits', async () => {
   const app = makeStudio();
   await app.ready;
   assert.equal(app.window.renderAt(84), true);
@@ -1582,7 +1582,7 @@ test('playing and positioning switch modes without duplicating or resetting the 
   assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
 });
 
-test('switching to playback cancels an in-flight pointer drag without late history commit', async () => {
+test('playback discards in-flight pointer drags without late commits', async () => {
   const app = makeStudio();
   await app.ready;
   assert.equal(app.window.renderAt(84), true);
