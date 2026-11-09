@@ -15,6 +15,7 @@ export type StudioModeIntent =
   | 'theme'
   | 'play'
   | 'pause'
+  | 'commitEdit'
   | 'beginPreview'
   | 'acceptPreview'
   | 'cancelPreview'
@@ -51,6 +52,10 @@ export function planStudioModeTransition(
     case 'navigate':
       next = 'idle';
       break;
+    case 'commitEdit':
+      // Applying copy/style pauses playback but keeps manual position mode.
+      next = from === 'positionEdit' ? 'positionEdit' : 'idle';
+      break;
     case 'theme':
       // Theme changes intentionally preserve an already-playing film.
       next = from === 'playing' ? 'playing' : 'idle';
@@ -79,7 +84,13 @@ export function planStudioModeTransition(
   return {
     from,
     next,
-    pausePlayback: from === 'playing' && next !== 'playing',
+    pausePlayback:
+      intent === 'navigate' ||
+      intent === 'pause' ||
+      intent === 'commitEdit' ||
+      intent === 'beginPreview' ||
+      intent === 'enterPositionEdit' ||
+      (from === 'playing' && next !== 'playing'),
     discardPreview:
       from === 'layoutPreview' &&
       intent !== 'acceptPreview' &&
