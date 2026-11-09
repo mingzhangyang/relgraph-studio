@@ -1,5 +1,6 @@
 import { walkDisplayItems } from '../packages/render/src/display-list.ts';
 import { hitDisplayList } from '../packages/render/src/selection.ts';
+import { rectsIntersect } from '../packages/render/src/node-geometry.ts';
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import literature from '../examples/honglou-provisional.relgraph.json' with { type: 'json' };
@@ -247,4 +248,61 @@ test('edge hit targets end at the drawn reveal prefix', () => {
   assert.ok(prefix.points.at(-1).x < complete.points.at(-1).x);
   assert.equal(hitDisplayList(list, complete.points.at(-1)), null);
   assert.deepEqual(hitDisplayList(list, prefix.points.at(-1)), { kind: 'edge', id: 'e' });
+});
+
+test('label obstacles include thick authored glyph borders at both output sizes', () => {
+  // B's right-side label ends just inside the stroked outline of A when
+  // A uses the largest supported border; radius-only obstacles miss it.
+  for (const shape of ['circle', 'pill', 'diamond']) {
+    for (const spec of Object.values(FRAME_SPECS)) {
+      const render = (borderWidth) => {
+        const graph = {
+          domain: 'neutral',
+          meta: { title: 'glyph clearance' },
+          nodes: [
+            { id: 'a', kind: 'person', label: 'A', position: { x: 100, y: 0 } },
+            { id: 'b', kind: 'person', label: 'Label', position: { x: 0, y: 0 } },
+          ],
+          edges: [],
+          groups: [],
+          scenes: [{ id: 's', title: 'glyph clearance', durationSec: 5 }],
+          project: { nodes: { objects: { a: { size: 30, shape, borderWidth } } } },
+        };
+        const positions = layoutGraph(graph);
+        const state = directorFrameAt(graph, positions, 0, 24, { fit: cameraFitFor(spec) });
+        state.cameraResolved = { x: 0, y: 0, scale: 1 };
+        state.reveal.nodes = { a: 1, b: 1 };
+        const list = composeFrame(state, {
+          graph,
+          positions,
+          frame: 0,
+          fps: 24,
+          measure,
+          frameSpec: spec,
+          style: domainStyle('neutral'),
+        });
+        const glyph = list.selection.find((target) => target.kind === 'node' && target.id === 'a')?.box;
+        const label = [...walkDisplayItems(list.items)].find(
+          (item) => item.type === 'text' && item.text === 'Label',
+        );
+        assert.ok(glyph, `${shape} at ${spec.name}: node must be selectable`);
+        assert.ok(label, `${shape} at ${spec.name}: neighboring label must remain visible`);
+        const labelBox = {
+          x: label.x,
+          y: label.y,
+          w: measure(label.text, label.font),
+          h: label.font.size * 1.3,
+        };
+        return { label, intersects: rectsIntersect(labelBox, glyph) };
+      };
+      const ordinary = render(2);
+      const thick = render(8);
+      assert.equal(ordinary.intersects, false);
+      assert.equal(thick.intersects, false, `${shape} at ${spec.name}: label crosses border`);
+      assert.ok(
+        thick.label.x < ordinary.label.x,
+        `${shape} at ${spec.name}: thick stroke should move the neighbor's label`,
+      );
+    }
+  }
 });

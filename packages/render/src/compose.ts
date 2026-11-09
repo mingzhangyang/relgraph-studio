@@ -519,8 +519,20 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
         id: node.id,
         box: nodeGlyphBounds(node, p, cam.scale, spec, style, visibility, config),
       });
-    if (visibility > 0.5)
-      occupied.push({ x: p.x - r - u(4), y: p.y - r - u(4), w: r * 2 + u(8), h: r * 2 + u(8) });
+    if (visibility > 0.5) {
+      // Reserve the full authored glyph, including its shape and stroke, while
+      // retaining the former minimum gutter for smaller/default outlines.
+      // Full-size obstacles also prevent labels hopping during a node reveal.
+      const glyphBox = nodeGlyphBounds(node, p, cam.scale, spec, style, 1, config);
+      const halfWidth = Math.max(r + u(4), glyphBox.w / 2);
+      const halfHeight = Math.max(r + u(4), glyphBox.h / 2);
+      occupied.push({
+        x: p.x - halfWidth,
+        y: p.y - halfHeight,
+        w: 2 * halfWidth,
+        h: 2 * halfHeight,
+      });
+    }
     const outline = nodeOutline(p, glyphGeometry(node, cam.scale, spec, style, 1, config));
     if (visibility > 0) {
       const scale = 0.82 + 0.18 * visibility;
