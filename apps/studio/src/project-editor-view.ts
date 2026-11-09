@@ -15,6 +15,7 @@ import {
   clearAppearance,
   copyConfig,
   setNodeImage,
+  inheritNodeImage,
   type Selection,
   type Scope,
 } from './project-editor-model.js';
@@ -169,7 +170,10 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
     const node = item();
     if (node && kind === 'node') actions.change(setNodeImage(config, node as VisualNode, null));
   });
-  inheritImage.addEventListener('click', () => update('image', undefined));
+  inheritImage.addEventListener('click', () => {
+    const node = item();
+    if (node && kind === 'node') actions.change(inheritNodeImage(config, node as VisualNode));
+  });
   imageFit.addEventListener('change', () => {
     const node = item();
     if (node && kind === 'node')

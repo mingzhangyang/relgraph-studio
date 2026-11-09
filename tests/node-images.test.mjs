@@ -22,8 +22,13 @@ import { createHeadlessRenderer } from '../packages/render/src/backends/skia.ts'
 import {
   ProjectHistory,
   setNodeImage,
+  inheritNodeImage,
   copyConfig,
 } from '../apps/studio/src/project-editor-model.ts';
+import {
+  normalizeNodeImage,
+  readEncodedImageDimensions,
+} from '../apps/studio/src/node-image.ts';
 import { measure } from './helpers/display-list.mjs';
 const asset = {
   format: 'rgba8',
@@ -44,6 +49,104 @@ const at = (graph, frame, spec = FRAME_SPECS['landscape-720p']) => {
     style: domainStyle(graph.domain),
   });
 };
+
+test('PNG, JPEG and all WebP header forms enforce the pixel budget before decode', async () => {
+  const png = (w, h) => {
+    const bytes = new Uint8Array(24);
+    bytes.set([137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82]);
+    const view = new DataView(bytes.buffer);
+    view.setUint32(16, w);
+    view.setUint32(20, h);
+    return bytes;
+  };
+  const jpeg = (w, h) =>
+    Uint8Array.from([
+      0xff, 0xd8, 0xff, 0xe1, 0, 7, 0xff, 0xc0, 0xff, 0xd9, 0,
+      0xff, 0xc2, 0, 8, 8, h >> 8, h & 255, w >> 8, w & 255, 0, 0xff, 0xd9,
+    ]);
+  const webp = (fourcc, w, h) => {
+    const size = fourcc === 'VP8L' ? 5 : 10;
+    const bytes = new Uint8Array(20 + size + (size & 1));
+    bytes.set([82, 73, 70, 70]);
+    bytes.set([87, 69, 66, 80], 8);
+    bytes.set([...fourcc].map((c) => c.charCodeAt(0)), 12);
+    const view = new DataView(bytes.buffer);
+    view.setUint32(4, bytes.length - 8, true);
+    view.setUint32(16, size, true);
+    if (fourcc === 'VP8X') {
+      const x = w - 1, y = h - 1;
+      bytes.set([x & 255, (x >> 8) & 255, (x >> 16) & 255], 24);
+      bytes.set([y & 255, (y >> 8) & 255, (y >> 16) & 255], 27);
+    } else if (fourcc === 'VP8L') {
+      const x = w - 1, y = h - 1;
+      bytes.set([0x2f, x & 255, ((x >> 8) & 63) | ((y & 3) << 6), (y >> 2) & 255, (y >> 10) & 15], 20);
+    } else {
+      bytes.set([0x10, 0, 0, 0x9d, 0x01, 0x2a], 20);
+      view.setUint16(26, w, true);
+      view.setUint16(28, h, true);
+    }
+    return bytes;
+  };
+  for (const make of [png, jpeg, ...['VP8 ', 'VP8L', 'VP8X'].map((cc) => (w, h) => webp(cc, w, h))]) {
+    assert.deepEqual(readEncodedImageDimensions(make(2, 3)), { width: 2, height: 3 });
+    const oversized = make(8192, 8192);
+    assert.throws(() => readEncodedImageDimensions(oversized), /尺寸过大/);
+    await assert.rejects(normalizeNodeImage(new Blob([oversized])), /尺寸过大/);
+  }
+  assert.throws(() => readEncodedImageDimensions(png(0, 50)), /尺寸信息无效/);
+  assert.throws(() => readEncodedImageDimensions(png(100, 100).subarray(0, 16)), /尺寸信息无效/);
+  assert.throws(() => readEncodedImageDimensions(webp('VP8X', 2, 3).subarray(0, 24)), /尺寸信息无效/);
+  // An APP/EXIF segment may contain SOF-like bytes: only real markers count.
+  assert.deepEqual(readEncodedImageDimensions(jpeg(2, 3)), { width: 2, height: 3 });
+});
+
+test('restoring image inheritance edits only the selected node and prunes orphan pixels', () => {
+  const graph = loadDocument(literature).graph;
+  const node = graph.nodes[0];
+  const other = graph.nodes.find((item) => item.id !== node.id);
+  const original = {
+    assets: { inherited: asset, custom: asset },
+    nodes: {
+      defaults: { image: 'inherited' },
+      categories: { [node.kind]: { imageFit: 'contain' } },
+      objects: { [node.id]: { image: 'custom' } },
+    },
+  };
+  const history = new ProjectHistory();
+  history.commit(original);
+  const result = inheritNodeImage(history.value, node);
+  history.commit(result);
+  assert.equal(nodeAppearance(result, node).image, 'inherited');
+  assert.equal(result.nodes.objects[node.id].image, undefined);
+  assert.equal(result.nodes.defaults.image, 'inherited');
+  assert.equal(result.nodes.categories[node.kind].imageFit, 'contain');
+  assert.deepEqual(Object.keys(result.assets), ['inherited']);
+  if (other) assert.equal(nodeAppearance(result, other).image, 'inherited');
+  history.undo();
+  assert.equal(nodeAppearance(history.value, node).image, 'custom');
+  const hidden = setNodeImage(history.value, node, null);
+  const restored = inheritNodeImage(hidden, node);
+  assert.equal(nodeAppearance(restored, node).image, 'inherited');
+});
+
+test('image outlines receive one border stroke for circle, pill and diamond', () => {
+  for (const shape of ['circle', 'pill', 'diamond']) {
+    const graph = loadDocument(literature).graph;
+    const node = graph.nodes[0];
+    const config = setNodeImage({}, node, 'portrait', asset);
+    config.nodes.objects[node.id].shape = shape;
+    graph.project = config;
+    const items = [...walkDisplayItems(at(graph, 100).items)];
+    const image = items.find((item) => item.type === 'image' && item.assetId === 'portrait');
+    assert.ok(image, shape + ': expected visible image');
+    const border = items.filter((item) =>
+      item.type === 'path' && JSON.stringify(item.d) === JSON.stringify(image.clip),
+    );
+    assert.equal(border.filter((item) => item.stroke).length, 1, shape + ': border painted once');
+    assert.equal(border.filter((item) => item.fill).length, 1, shape + ': fill preserved');
+    assert.ok(!border.some((item) => item.fill && item.stroke), shape + ': no double stroke');
+  }
+});
 test('embedded RGBA codec handles every padding length and rejects malformed/bounded resources', () => {
   for (let size = 1; size < 20; size++) {
     const bytes = Uint8Array.from({ length: size * 4 }, (_, i) => (i * 31) % 256),

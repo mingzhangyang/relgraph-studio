@@ -900,6 +900,15 @@ for (const theme of ['light', 'dark']) {
       assert.notDeepEqual(await canvasPng(page), cover);
       await page.selectOption('#visualImageFit', 'cover');
       assert.deepEqual(await canvasPng(page), cover);
+      // Image inheritance is object-only even while category/global styles are selected.
+      for (const imageScope of ['category', 'global']) {
+        await page.selectOption('#visualScope', imageScope);
+        await page.click('#visualImageInherit');
+        assert.notDeepEqual(await canvasPng(page), cover);
+        await page.click('#visualUndo');
+        assert.deepEqual(await canvasPng(page), cover);
+      }
+      await page.selectOption('#visualScope', 'object');
       await page.locator('#visualImageFile').setInputFiles({
         name: 'bad.png',
         mimeType: 'image/png',
