@@ -168,6 +168,8 @@ export function createSimulatedStudioDom({
     },
   };
   const window = {
+    // Native confirmations are an explicit user decision; override in tests.
+    confirm: () => true,
     addEventListener(name, callback) {
       (windowListeners.get(name) ?? windowListeners.set(name, []).get(name)).push(callback);
     },
