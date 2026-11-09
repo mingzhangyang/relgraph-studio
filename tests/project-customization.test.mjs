@@ -37,6 +37,7 @@ import {
   clearAppearance,
 } from '../apps/studio/src/project-editor-model.ts';
 import { makeStudio } from './helpers/studio-harness.mjs';
+import { ProjectSavepoint, workspaceSnapshot } from '../apps/studio/src/unsaved-changes-model.ts';
 import { visibleObjectEntries } from '../apps/studio/src/project-editor-view.ts';
 
 const compose = (graph, frame = 0, spec = FRAME_SPECS['landscape-720p'], theme = 'light') => {
@@ -170,6 +171,33 @@ test('history isolates nested config, supports undo/redo and resets per document
   assert.equal(history.canUndo, false);
   assert.equal(history.canRedo, false);
 });
+test('full-project savepoint tracks configuration and live positions without depending on Map order', () => {
+  const savepoint = new ProjectSavepoint();
+  const positions = new Map([
+    ['b', { x: 2, y: 3 }],
+    ['a', { x: 1, y: 4 }],
+  ]);
+  assert.equal(savepoint.isDirty({}, positions), false, 'no document is never dirty');
+  savepoint.markClean({}, positions);
+  assert.equal(savepoint.isDirty({}, new Map([...positions].reverse())), false);
+  assert.equal(workspaceSnapshot({}, positions), workspaceSnapshot({}, new Map([...positions].reverse())));
+
+  const history = new ProjectHistory();
+  history.commit({ nodes: { defaults: { size: 24 } } });
+  assert.equal(savepoint.isDirty(history.value, positions), true);
+  history.undo();
+  assert.equal(savepoint.isDirty(history.value, positions), false, 'undo reaches the saved baseline');
+  history.redo();
+  assert.equal(savepoint.isDirty(history.value, positions), true);
+  const moved = new Map(positions);
+  moved.set('a', { x: 7, y: 4 });
+  savepoint.markClean(history.value, positions);
+  assert.equal(savepoint.isDirty(history.value, moved), true, 'uncommitted drag still counts');
+  assert.equal(savepoint.isDirty(history.value, positions), false);
+  savepoint.clear();
+  assert.equal(savepoint.isDirty(history.value, moved), false);
+});
+
 test('shared workspace harness mounts the real property view and retains controls across redraws', async () => {
   const studio = makeStudio();
   await studio.ready;
