@@ -1243,8 +1243,11 @@ test('resetting an already-inherited invalid input clears its draft without addi
 
   size.value = '999';
   await size.dispatch('input');
+  await size.dispatch('change');
+  assert.match(viewControl(app, 'visualError').textContent, /配置无效/);
   assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
   await viewControl(app, 'visual-size-reset').click();
+  assert.equal(viewControl(app, 'visualError').textContent, '');
   assert.equal(size.value, inherited);
   assert.equal(size.attributes['aria-invalid'], 'false');
   assert.equal(viewControl(app, 'visual-size-error').textContent, '');
