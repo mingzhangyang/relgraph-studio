@@ -34,7 +34,10 @@ export function createSelectionOverlayView(
     group.setAttribute('clip-path', 'url(#studioSelectionClip)');
     for (const { hit, selected } of projection.targets) {
       const shape = element(hit.box ? 'rect' : 'polyline');
-      shape.setAttribute('class', selected ? 'selection-target selected' : 'selection-target affected');
+      shape.setAttribute(
+        'class',
+        selected ? 'selection-target selected' : 'selection-target affected',
+      );
       if (hit.box) {
         shape.setAttribute('x', String(hit.box.x));
         shape.setAttribute('y', String(hit.box.y));
