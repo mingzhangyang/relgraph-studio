@@ -38,8 +38,16 @@ export function makeStudio({
   transformFrameText,
 } = {}) {
   const {
-    elements, document, window, downloads, Element, HTMLCanvasElement,
-    HTMLButtonElement, HTMLInputElement, HTMLLabelElement, HTMLSelectElement,
+    elements,
+    document,
+    window,
+    downloads,
+    Element,
+    HTMLCanvasElement,
+    HTMLButtonElement,
+    HTMLInputElement,
+    HTMLLabelElement,
+    HTMLSelectElement,
   } = createSimulatedStudioDom({ fonts, loadFont, missingId, wrongId });
   const jobs = new Map();
   const mediaListeners = [];

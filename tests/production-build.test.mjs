@@ -24,20 +24,30 @@ test('production build includes both examples and the bundled workspace loads th
     }
 
     const {
-      elements, document, window, Element, HTMLCanvasElement,
-      HTMLButtonElement, HTMLInputElement, HTMLLabelElement, HTMLSelectElement,
+      elements,
+      document,
+      window,
+      Element,
+      HTMLCanvasElement,
+      HTMLButtonElement,
+      HTMLInputElement,
+      HTMLLabelElement,
+      HTMLSelectElement,
     } = createSimulatedStudioDom({
       // Keep Vite's actual bundled modules; stub only Canvas rasterization.
       canvasContext: () => {
         const gradient = { addColorStop() {} };
-        return new Proxy({}, {
-          get(target, key) {
-            if (key === 'measureText') return (text) => ({ width: String(text).length * 8 });
-            if (key === 'createLinearGradient' || key === 'createRadialGradient')
-              return () => gradient;
-            return target[key] ?? (() => {});
+        return new Proxy(
+          {},
+          {
+            get(target, key) {
+              if (key === 'measureText') return (text) => ({ width: String(text).length * 8 });
+              if (key === 'createLinearGradient' || key === 'createRadialGradient')
+                return () => gradient;
+              return target[key] ?? (() => {});
+            },
           },
-        });
+        );
       },
     });
     const env = {

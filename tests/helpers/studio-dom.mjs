@@ -29,10 +29,15 @@ export function createSimulatedStudioDom({
       this.textWrites = 0;
       this.classList = {
         add: (...names) => {
-          this.className = [...new Set([...this.className.split(/\s+/).filter(Boolean), ...names])].join(' ');
+          this.className = [
+            ...new Set([...this.className.split(/\s+/).filter(Boolean), ...names]),
+          ].join(' ');
         },
         remove: (...names) => {
-          this.className = this.className.split(/\s+/).filter((part) => part && !names.includes(part)).join(' ');
+          this.className = this.className
+            .split(/\s+/)
+            .filter((part) => part && !names.includes(part))
+            .join(' ');
         },
         contains: (name) => this.className.split(/\s+/).includes(name),
       };
@@ -171,7 +176,15 @@ export function createSimulatedStudioDom({
   };
 
   return {
-    elements, document, window, downloads, Element, HTMLCanvasElement,
-    HTMLButtonElement, HTMLInputElement, HTMLLabelElement, HTMLSelectElement,
+    elements,
+    document,
+    window,
+    downloads,
+    Element,
+    HTMLCanvasElement,
+    HTMLButtonElement,
+    HTMLInputElement,
+    HTMLLabelElement,
+    HTMLSelectElement,
   };
 }

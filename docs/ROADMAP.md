@@ -84,9 +84,10 @@ The earlier validation counts below remain historical.
 - [x] Historical acceptance evidence: #22/#23 original delivery reported **201/201 tests, 47/47 Chromium, 44/44 Golden frames, 13/13 export checks**; the final #24 combined snapshot reported **228/228 tests (28 files), 55/55 Chromium, 44/44 Goldens, 13/13 exports**. These are **previously executed snapshot results**, not a new run for #25. See [review fixes](NETWORK-REVIEW-FIXES.md), [acceptance](NETWORK-AUTHORING-ACCEPTANCE.md) and [image report](NODE-IMAGES.md#review-correction-validation).
 - [x] Delivery gate: #25 merged directly into main; final reviewed and merged trees match. Its historical test counts are not new local runtime evidence.
 
-Architecture Consolidation subsequently unifies the simulated DOM between
-source VM and built bundle, isolates residual shell presentation and documents
-[four local test layers](TESTING.md). Golden baselines are unchanged.
+The in-review Architecture Consolidation branch proposes one shared simulated
+DOM between source VM and built bundle, an isolated shell presentation adapter
+and [four local test layers](TESTING.md). It is **not** treated as merged into
+`main` before this independent PR is accepted. Golden baselines are unchanged.
 
 ## B2 — Source-verified film
 

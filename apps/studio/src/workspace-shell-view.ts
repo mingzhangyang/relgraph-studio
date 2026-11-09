@@ -45,9 +45,8 @@ export function createWorkspaceShellView(
       elements.sourceNote.textContent = '—';
     },
     renderDomainTime(domainAt: number | null, unit: string | undefined): void {
-      const text = domainAt === null
-        ? '领域时间：未指定'
-        : `领域时间：${unit || '时点'} ${domainAt}`;
+      const text =
+        domainAt === null ? '领域时间：未指定' : `领域时间：${unit || '时点'} ${domainAt}`;
       if (elements.domainTime.textContent !== text) elements.domainTime.textContent = text;
     },
     renderSourceName(name: string): void {
@@ -58,7 +57,10 @@ export function createWorkspaceShellView(
       elements.sourceNote.textContent = note || description || '此数据未提供来源说明。';
     },
     markSource(id: ExampleId | null): void {
-      elements.exampleLiterature.setAttribute('aria-pressed', String(id === 'exampleLiterature'));
+      elements.exampleLiterature.setAttribute(
+        'aria-pressed',
+        String(id === 'exampleLiterature'),
+      );
       elements.exampleBiology.setAttribute('aria-pressed', String(id === 'exampleBiology'));
     },
     renderTheme(theme: Theme, persist: boolean): void {
