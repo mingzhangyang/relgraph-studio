@@ -1784,7 +1784,9 @@ for (const theme of ['dark', 'light']) {
           toolbarWidth: rect.width,
           toolbarBottom: rect.bottom,
           stageTop: stageRect.top,
-          minButtonHeight: Math.min(...buttons.map((button) => button.getBoundingClientRect().height)),
+          minButtonHeight: Math.min(
+            ...buttons.map((button) => button.getBoundingClientRect().height),
+          ),
           enabled: buttons.filter((button) => !button.disabled).length,
         };
       });
