@@ -1558,7 +1558,7 @@ for (const theme of ['dark', 'light']) {
     // Number inputs can display a '-' token with value === '' and badInput.
     // It is neither a valid commit nor an intentional inherit operation.
     const numberInput = page.locator('#visual-size');
-    await numberInput.focus();
+    await numberInput.fill('');
     await numberInput.press('-');
     assert.equal(
       await numberInput.evaluate((element) => element.validity.badInput),
