@@ -1465,7 +1465,9 @@ test('document toolbar disables commands while a replacement source is loading',
       prevented = true;
     },
   });
-  assert.equal(prevented, false, 'disabled command does not suppress browser default');
+  assert.equal(prevented, true, 'unavailable project save cannot fall through to HTML Save As');
+  assert.match(app.node('documentActionStatus').textContent, /没有可保存的完整项目/);
+  assert.equal(app.downloads.length, 0);
   pending.resolve({ ok: true, text: async () => JSON.stringify(biology) });
   await loading;
   assert.equal(download.disabled, false);
