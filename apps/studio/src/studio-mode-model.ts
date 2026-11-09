@@ -47,7 +47,7 @@ export function planStudioModeTransition(
   from: StudioMode,
   intent: StudioModeIntent,
 ): StudioModePlan {
-  let next: StudioMode;
+  let next: StudioMode = from;
   switch (intent) {
     case 'navigate':
       next = 'idle';
