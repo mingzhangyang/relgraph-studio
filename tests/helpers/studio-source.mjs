@@ -10,6 +10,10 @@ import {
   DEFAULT_LAYOUT_SETTINGS,
 } from '../../packages/core/src/director/layout-strategies.ts';
 import { createLayoutStrategyView } from '../../apps/studio/src/layout-strategy-view.ts';
+import {
+  currentStudioMode,
+  planStudioModeTransition,
+} from '../../apps/studio/src/studio-mode-model.ts';
 import { ProjectHistory } from '../../apps/studio/src/project-editor-model.ts';
 import { ProjectSavepoint } from '../../apps/studio/src/unsaved-changes-model.ts';
 import { createProjectEditor } from '../../apps/studio/src/project-editor-view.ts';
@@ -88,6 +92,8 @@ export const studioImports = {
   computeLayout,
   DEFAULT_LAYOUT_SETTINGS,
   createLayoutStrategyView,
+  currentStudioMode,
+  planStudioModeTransition,
   ProjectHistory,
   ProjectSavepoint,
   createProjectEditor,

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import literature from '../examples/honglou-provisional.relgraph.json' with { type: 'json' };
 import biology from '../examples/biology-signaling-synthetic.json' with { type: 'json' };
 import { deferred, flush, makeStudio } from './helpers/studio-harness.mjs';
+import { currentStudioMode, planStudioModeTransition } from '../apps/studio/src/studio-mode-model.ts';
 import { documentCommandFromShortcut } from '../apps/studio/src/document-command-model.ts';
 
 const readFile = (name, value) => ({ name, text: () => Promise.resolve(value) });
@@ -1473,4 +1474,163 @@ test('document toolbar disables commands while a replacement source is loading',
   assert.equal(download.disabled, false);
   assert.equal(coords.disabled, false);
   assert.equal(app.node('sourceName').textContent, '生物信号 · 虚构合成示例');
+});
+
+test('pure workspace mode policy derives from authoritative owners without a second clock', () => {
+  const mode = (playing, editing, previewing) =>
+    currentStudioMode({ playing, editing, previewing });
+  assert.equal(mode(false, false, false), 'idle');
+  assert.equal(mode(true, false, false), 'playing');
+  assert.equal(mode(false, true, false), 'positionEdit');
+  assert.equal(mode(false, false, true), 'layoutPreview');
+  assert.equal(mode(true, true, true), 'layoutPreview', 'preview ownership wins a stale clock');
+});
+
+test('pure mode plans preserve theme playback and preview outcomes', () => {
+  const expected = [
+    ['playing', 'theme', 'playing', false, false, false],
+    ['playing', 'navigate', 'idle', true, false, false],
+    ['playing', 'pause', 'idle', true, false, false],
+    ['playing', 'beginPreview', 'layoutPreview', true, false, false],
+    ['playing', 'enterPositionEdit', 'positionEdit', true, false, false],
+    ['positionEdit', 'play', 'playing', false, false, true],
+    ['positionEdit', 'navigate', 'idle', true, false, true],
+    ['positionEdit', 'theme', 'idle', false, false, true],
+    ['positionEdit', 'commitEdit', 'positionEdit', true, false, false],
+    ['positionEdit', 'pause', 'positionEdit', true, false, false],
+    ['layoutPreview', 'cancelPreview', 'idle', false, true, false],
+    ['layoutPreview', 'acceptPreview', 'idle', false, false, false],
+    ['layoutPreview', 'beginPreview', 'layoutPreview', true, true, false],
+    ['layoutPreview', 'enterPositionEdit', 'positionEdit', true, true, false],
+    ['layoutPreview', 'play', 'playing', false, true, false],
+    ['layoutPreview', 'commitEdit', 'idle', true, true, false],
+    ['layoutPreview', 'theme', 'idle', false, true, false],
+    ['idle', 'cancelPreview', 'idle', false, false, false],
+    ['idle', 'navigate', 'idle', true, false, false],
+  ];
+  for (const [from, intent, next, pause, discard, exit] of expected) {
+    const plan = planStudioModeTransition(from, intent);
+    assert.equal(plan.from, from, from + '/' + intent);
+    assert.equal(plan.next, next, from + '/' + intent);
+    assert.equal(plan.pausePlayback, pause, from + '/' + intent + ' pause');
+    assert.equal(plan.discardPreview, discard, from + '/' + intent + ' discard');
+    assert.equal(plan.exitPositionEdit, exit, from + '/' + intent + ' exit');
+    assert.equal(
+      plan.acceptPreview,
+      from === 'layoutPreview' && intent === 'acceptPreview',
+      from + '/' + intent + ' accept',
+    );
+    assert.ok(!(plan.acceptPreview && plan.discardPreview), 'never restore an applied preview');
+  }
+});
+
+test('mode coordinator rolls back preview and retains only form drafts', async () => {
+  const app = makeStudio();
+  await app.ready;
+  assert.equal(app.window.renderAt(84), true);
+  await app.node('layoutExport').click();
+  const originalSource = JSON.parse(await app.blobs.at(-1).text());
+  const type = viewControl(app, 'strategyType');
+  const mode = viewControl(app, 'strategyMode');
+  type.value = 'circle';
+  await type.dispatch('change');
+  mode.value = 'rearrange';
+  await mode.dispatch('change');
+  await viewControl(app, 'strategyPreview').click();
+  assert.equal(viewControl(app, 'strategyApply').disabled, false);
+
+  await app.node('play').click();
+  assert.equal(app.node('status').attributes['data-state'], 'playing');
+  assert.equal(viewControl(app, 'strategyApply').disabled, true, 'play discards the preview');
+  await app.node('layoutExport').click();
+  assert.deepEqual(JSON.parse(await app.blobs.at(-1).text()), originalSource);
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true', 'form draft survives');
+
+  await app.node('restart').click();
+  type.value = 'manual';
+  await type.dispatch('change');
+  mode.value = 'preserve';
+  await mode.dispatch('change');
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
+  assert.equal(app.node('visualUndo').disabled, true, 'discarded preview adds no history');
+});
+
+test('mode switching preserves the playback clock and frozen-camera exits', async () => {
+  const app = makeStudio();
+  await app.ready;
+  assert.equal(app.window.renderAt(84), true);
+  await app.node('layoutToggle').click();
+  assert.equal(app.node('layoutToggle').attributes['aria-pressed'], 'true');
+  await app.node('play').click();
+  assert.equal(app.node('layoutToggle').attributes['aria-pressed'], 'false');
+  assert.equal(app.node('status').attributes['data-state'], 'playing');
+  app.tick(1000);
+  app.tick(1042);
+  const beforeTheme = Number(app.node('scrubber').value);
+  assert.ok(beforeTheme >= 84);
+  await app.node('themeToggle').click();
+  assert.equal(app.node('status').attributes['data-state'], 'playing');
+  assert.equal(Number(app.node('scrubber').value), beforeTheme);
+  app.tick(1084);
+  assert.ok(Number(app.node('scrubber').value) >= beforeTheme);
+  await app.node('layoutToggle').click();
+  assert.equal(app.node('status').attributes['data-state'], 'ready');
+  assert.equal(app.node('layoutToggle').attributes['aria-pressed'], 'true');
+  await app.node('restart').click();
+  assert.equal(app.node('layoutToggle').attributes['aria-pressed'], 'false');
+  assert.equal(Number(app.node('scrubber').value), 0);
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
+});
+
+test('playback discards in-flight pointer drags without late commits', async () => {
+  const app = makeStudio();
+  await app.ready;
+  assert.equal(app.window.renderAt(84), true);
+  await app.node('layoutToggle').click();
+  const stage = app.node('stage');
+  const selector = app.node('layoutNode');
+  const camera = app.window.studioFrame().cameraResolved;
+  let start = null;
+  for (const option of selector.children) {
+    selector.value = option.value;
+    await selector.dispatch('change');
+    const x = Number(app.node('layoutX').value),
+      y = Number(app.node('layoutY').value);
+    const screen = {
+      x: 640 + (x - camera.x) * camera.scale,
+      y: 330 + (y - camera.y) * camera.scale,
+    };
+    if (screen.x < 26 || screen.x > 1254 || screen.y < 108 || screen.y > 542) continue;
+    await stage.dispatch('pointerdown', {
+      pointerId: 47,
+      isPrimary: true,
+      pointerType: 'mouse',
+      button: 0,
+      clientX: screen.x,
+      clientY: screen.y,
+    });
+    if (stage.pointerCaptured === 47) {
+      start = screen;
+      break;
+    }
+  }
+  assert.ok(start, 'a safe visible node should be draggable');
+  await stage.dispatch('pointermove', {
+    pointerId: 47,
+    clientX: start.x + 22,
+    clientY: start.y + 9,
+  });
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
+  await app.node('play').click();
+  assert.equal(stage.pointerCaptured, null, 'mode exit releases pointer capture');
+  assert.equal(app.node('layoutToggle').attributes['aria-pressed'], 'false');
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
+  await stage.dispatch('pointerup', {
+    pointerId: 47,
+    clientX: start.x + 22,
+    clientY: start.y + 9,
+  });
+  assert.equal(app.node('visualUndo').disabled, true, 'stale pointerup cannot commit');
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
+  assert.equal(app.node('status').attributes['data-state'], 'playing');
 });

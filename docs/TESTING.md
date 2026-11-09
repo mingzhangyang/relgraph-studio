@@ -48,9 +48,11 @@ npm test -- tests/playback-model.test.mjs tests/layout-editor-model.test.mjs tes
 
 Other model tests include `layout.test.mjs`, `timeline.test.mjs`,
 `graph-kernel.test.mjs`, `domain-migration.test.mjs`,
-and the pure model cases in `project-customization.test.mjs` and
-`node-images.test.mjs`. Those two files also contain simulated-DOM or native
-Skia cases; selecting an entire file does not isolate the pure layer.
+and the pure model cases in `project-customization.test.mjs`,
+`studio-workspace.test.mjs` (the `studio-mode-model.ts` transition table),
+and `node-images.test.mjs`. These are mixed-layer test files, also containing
+simulated DOM or native Skia cases; selecting an entire file does not isolate the
+pure layer.
 
 ## Layer 2 — Shared simulated DOM
 
@@ -71,7 +73,9 @@ npm test -- tests/studio-dom.test.mjs tests/workspace-shell-view.test.mjs tests/
 
 Related Layer 2 coverage includes `position-tool.test.mjs`,
 `project-customization.test.mjs`, `node-images.test.mjs` for async
-ownership, layout/history, focus and ARIA. DOM simulation never proves
+ownership, layout/history, focus and ARIA. The shared Studio harness also
+checks mode changes while playing, layout previews, and active pointer drags,
+including rejected late events. DOM simulation never proves
 Chromium behavior. `workspace-shell-view.test.mjs` records Canvas commands,
 colors, text and retained messages; it does not rasterize pixels.
 

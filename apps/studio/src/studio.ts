@@ -8,6 +8,11 @@ import {
 import { computeLayout, DEFAULT_LAYOUT_SETTINGS, type LayoutSettings } from '@relgraph/core';
 import { createLayoutStrategyView } from './layout-strategy-view.js';
 import {
+  currentStudioMode,
+  planStudioModeTransition,
+  type StudioModeIntent,
+} from './studio-mode-model.js';
+import {
   createProject,
   projectSource,
   validateProjectConfig,
@@ -158,7 +163,7 @@ let layoutPreview: {
   before: Map<string, { x: number; y: number }>;
   serial: number;
 } | null = null;
-function cancelLayoutPreview(): void {
+function discardLayoutPreview(): void {
   if (!layoutPreview) return;
   if (currentLayout) {
     restoreLayoutPositions(currentLayout, layoutPreview.before);
@@ -167,6 +172,41 @@ function cancelLayoutPreview(): void {
   layoutPreview = null;
   rebuildRenderer();
   refreshUnsavedState();
+}
+/**
+ * The single coordinator for working-mode changes. Live state is derived from
+ * existing owners, never duplicated in another mutable mode variable.
+ */
+function transitionStudio(intent: StudioModeIntent): void {
+  const plan = planStudioModeTransition(
+    currentStudioMode({
+      playing: playback.playing,
+      editing: layoutEditing,
+      previewing: layoutPreview !== null,
+    }),
+    intent,
+  );
+  if (plan.discardPreview) discardLayoutPreview();
+  if (plan.exitPositionEdit) leavePositionEdit();
+  if (plan.pausePlayback) setPlaying(false);
+  if (plan.acceptPreview) {
+    // Keep the previewed coordinates; only application writes them to history.
+    layoutPreview = null;
+    refreshUnsavedState();
+  }
+  if (intent === 'enterPositionEdit' && renderer && currentFrameState && currentLayout) {
+    // Preview rollback may change the camera, so freeze it afterwards.
+    editCamera = { ...currentFrameState.cameraResolved };
+    layoutEditing = true;
+    rebuildRenderer();
+    updateLayoutEditor();
+    updateLayoutControls();
+    refreshSelectionFeedback();
+  }
+  if (intent === 'play') {
+    if (!playback.playing && playback.frame >= playback.totalFrames - 1) setFrame(0);
+    setPlaying(true);
+  }
 }
 function configWithPositions(
   settings: LayoutSettings = projectHistory.value.layout ?? DEFAULT_LAYOUT_SETTINGS,
@@ -206,9 +246,7 @@ const strategyView = createLayoutStrategyView(document, $('layoutStrategyEditor'
   },
   preview(settings) {
     if (!graph || !currentLayout || loading) return;
-    if (layoutEditing) stopLayoutEdit();
-    setPlaying(false);
-    cancelLayoutPreview();
+    transitionStudio('beginPreview');
     try {
       const before = new Map([...currentLayout].map(([id, p]) => [id, { ...p }]));
       const next = computeLayout(graph, settings, currentLayout);
@@ -224,14 +262,16 @@ const strategyView = createLayoutStrategyView(document, $('layoutStrategyEditor'
   apply() {
     if (!graph || !layoutPreview || loading || layoutPreview.serial !== requestSerial) return;
     const next = configWithPositions(layoutPreview.settings);
-    layoutPreview = null;
+    transitionStudio('acceptPreview');
     projectHistory.commit(next);
     applyProjectHistory();
   },
-  cancel: cancelLayoutPreview,
+  cancel() {
+    transitionStudio('cancelPreview');
+  },
   lock(id, locked) {
     if (!graph || !currentFrameState?.view.nodes.some((n) => n.id === id) || loading) return;
-    cancelLayoutPreview();
+    transitionStudio('cancelPreview');
     const settings = projectHistory.value.layout ?? DEFAULT_LAYOUT_SETTINGS;
     const ids = new Set(settings.locked);
     if (locked) ids.add(id);
@@ -260,9 +300,8 @@ const projectActions: Parameters<typeof createProjectEditor>[2] & {
       projectEditor.error('配置无效：' + errors.join('；'));
       return false;
     }
-    cancelLayoutPreview();
+    transitionStudio('commitEdit');
     projectEditor.error('');
-    setPlaying(false);
     projectHistory.commit(config);
     applyProjectHistory();
     return true;
@@ -271,7 +310,7 @@ const projectActions: Parameters<typeof createProjectEditor>[2] & {
     ++imageUploadSerial;
     projectEditor.imageBusy(false);
     if (graph) {
-      cancelLayoutPreview();
+      transitionStudio('cancelPreview');
       projectHistory.undo();
       applyProjectHistory();
     }
@@ -280,13 +319,13 @@ const projectActions: Parameters<typeof createProjectEditor>[2] & {
     ++imageUploadSerial;
     projectEditor.imageBusy(false);
     if (graph) {
-      cancelLayoutPreview();
+      transitionStudio('cancelPreview');
       projectHistory.redo();
       applyProjectHistory();
     }
   },
   pause() {
-    setPlaying(false);
+    transitionStudio('pause');
   },
   draftChanged() {
     refreshUnsavedState();
@@ -297,7 +336,7 @@ const projectActions: Parameters<typeof createProjectEditor>[2] & {
       documentSerial = requestSerial,
       selectionRevision = projectEditor.selectionRevision(),
       owner = graph;
-    setPlaying(false);
+    transitionStudio('pause');
     projectEditor.error('');
     projectEditor.imageBusy(true);
     const current = () =>
@@ -315,7 +354,7 @@ const projectActions: Parameters<typeof createProjectEditor>[2] & {
       const config = setNodeImage(projectHistory.value, node, id, asset),
         errors = validateProjectConfig(config, owner);
       if (errors.length) throw new Error('图片配置超出容量或包含无效字段：' + errors.join('；'));
-      cancelLayoutPreview();
+      transitionStudio('cancelPreview');
       projectHistory.commit(config);
       applyProjectHistory();
     } catch (error) {
@@ -339,7 +378,7 @@ const projectActions: Parameters<typeof createProjectEditor>[2] & {
       refreshUnsavedState();
       return;
     }
-    cancelLayoutPreview();
+    transitionStudio('cancelPreview');
     const config = {
       ...projectHistory.value,
       layout: {
@@ -524,16 +563,14 @@ function tick(now: number): void {
   playback = advancePlayback(playback, now);
   setFrame(playback.frame, false);
   if (!playback.playing) {
-    setPlaying(false);
+    transitionStudio('pause');
     return;
   }
   animationId = requestAnimationFrame(tick);
 }
 function seekToShot(targetFrame: number): void {
-  cancelLayoutPreview();
-  if (layoutEditing) stopLayoutEdit();
+  transitionStudio('navigate');
   if (loading) return;
-  setPlaying(false);
   setFrame(targetFrame);
 }
 function refreshSelectionFeedback(): void {
@@ -575,7 +612,8 @@ function setFrame(next: number, updatePosition = true): DirectorFrameState | und
   return state;
 }
 function clearStudio(): void {
-  setPlaying(false);
+  transitionStudio('navigate');
+  // Full document replacement also resets all authoritative mode owners.
   layoutPreview = null;
   strategyView.reset(undefined);
   strategyView.render(null, undefined, false, loading);
@@ -644,16 +682,14 @@ function applyResult(result: LoadResult, name: string, sourceText?: string): voi
   refreshUnsavedState();
 }
 function beginLoad(): number {
-  cancelLayoutPreview();
+  transitionStudio('navigate');
   ++imageUploadSerial;
   projectEditor.imageBusy(false);
   const serial = ++requestSerial;
-  if (layoutEditing) stopLayoutEdit();
   loading = true;
   renderDocumentToolbar();
   refreshUnsavedState();
   strategyView.render(currentFrameState, projectHistory.value.layout, false, true);
-  setPlaying(false);
   disablePlaybackView(playbackControls);
   renderEditorAvailability(layoutControls, false);
   updateLayoutEditor();
@@ -738,23 +774,16 @@ dropzone.addEventListener('drop', (event) => {
   void loadFile(event.dataTransfer?.files?.[0]);
 });
 play.addEventListener('click', () => {
-  cancelLayoutPreview();
-  if (layoutEditing) stopLayoutEdit();
-  if (!playback.playing && playback.frame >= playback.totalFrames - 1) setFrame(0);
-  setPlaying(!playback.playing);
+  transitionStudio(playback.playing ? 'pause' : 'play');
 });
 restart.addEventListener('click', () => {
-  cancelLayoutPreview();
-  if (layoutEditing) stopLayoutEdit();
-  setPlaying(false);
+  transitionStudio('navigate');
   setFrame(0);
 });
 scrubber.addEventListener('input', () => {
   // Editing teardown redraws the prior frame, so capture the requested frame first.
   const requestedFrame = Number(scrubber.value);
-  cancelLayoutPreview();
-  if (layoutEditing) stopLayoutEdit();
-  setPlaying(false);
+  transitionStudio('navigate');
   setFrame(requestedFrame);
 });
 window.addEventListener('keydown', (event) => {
@@ -792,7 +821,7 @@ window.addEventListener('keydown', (event) => {
   // Escape must work even while the position-mode button has keyboard focus.
   if (event.code === 'Escape' && layoutEditing) {
     event.preventDefault();
-    stopLayoutEdit();
+    transitionStudio('exitPositionEdit');
     return;
   }
   if (
@@ -804,21 +833,16 @@ window.addEventListener('keydown', (event) => {
     event.preventDefault();
     play.click();
   } else if (event.code === 'ArrowRight') {
-    cancelLayoutPreview();
-    if (layoutEditing) stopLayoutEdit();
-    setPlaying(false);
+    transitionStudio('navigate');
     setFrame(playback.frame + FPS);
   } else if (event.code === 'ArrowLeft') {
-    cancelLayoutPreview();
-    if (layoutEditing) stopLayoutEdit();
-    setPlaying(false);
+    transitionStudio('navigate');
     setFrame(playback.frame - FPS);
   }
 });
 function applyTheme(next: Theme, persist: boolean): void {
-  cancelLayoutPreview();
-  // A theme is a normal renderer transition; never carry a frozen shot camera.
-  if (layoutEditing) stopLayoutEdit();
+  // A theme transition exits editing and preview but preserves playback clock.
+  transitionStudio('theme');
   theme = next;
   if (persist) {
     pinnedTheme = theme;
@@ -963,7 +987,7 @@ function cancelActiveLayoutDrag(): boolean {
   releaseLayoutPointer();
   return restored;
 }
-function stopLayoutEdit(): void {
+function leavePositionEdit(): void {
   if (!layoutEditing) return;
   cancelActiveLayoutDrag();
   layoutEditing = false;
@@ -974,22 +998,14 @@ function stopLayoutEdit(): void {
   refreshSelectionFeedback();
 }
 layoutToggle.addEventListener('click', () => {
-  cancelLayoutPreview();
-  if (!renderer || !currentFrameState || !currentLayout) return;
-  if (layoutEditing) {
-    stopLayoutEdit();
+  if (!renderer || !currentFrameState || !currentLayout) {
+    transitionStudio('cancelPreview');
     return;
   }
-  setPlaying(false);
-  editCamera = { ...currentFrameState.cameraResolved };
-  layoutEditing = true;
-  rebuildRenderer();
-  updateLayoutEditor();
-  updateLayoutControls();
-  refreshSelectionFeedback();
+  transitionStudio(layoutEditing ? 'exitPositionEdit' : 'enterPositionEdit');
 });
 layoutReset.addEventListener('click', () => {
-  cancelLayoutPreview();
+  transitionStudio('cancelPreview');
   if (!currentLayout || !originalLayout) return;
   const restoredDragPreview = cancelActiveLayoutDrag();
   const changedPositions = layoutChanged();
@@ -1103,7 +1119,7 @@ function downloadJson(value: unknown, filename: string): void {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 function exportPositionedSource(): void {
-  cancelLayoutPreview();
+  transitionStudio('cancelPreview');
   if (!graph || !currentLayout || sourceDocument === null) return;
   try {
     const output = applyGraphPositions(sourceDocument, graph, currentLayout);
@@ -1137,9 +1153,7 @@ lightQuery?.addEventListener?.('change', (event) => {
 // Headless frame export and independent frame inspection; no recording or animation state.
 window.renderAt = (f) => {
   if (!renderer || !Number.isInteger(f) || f < 0 || f >= playback.totalFrames) return false;
-  cancelLayoutPreview();
-  if (layoutEditing) stopLayoutEdit();
-  setPlaying(false);
+  transitionStudio('navigate');
   setFrame(f);
   return true;
 };
