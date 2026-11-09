@@ -24,6 +24,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 import { build, preview } from 'vite';
+import { encodedSizeFixtures } from '../tests/helpers/encoded-image-fixtures.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const referenceDir = join(root, 'output/browser-reference');
@@ -935,6 +936,93 @@ for (const theme of ['light', 'dark']) {
       await writeFile(join(outputDir, `node-image-${theme}-canvas.png`), cover);
       await page.evaluate(() => window.scrollTo(0, 0));
       await page.screenshot({ path: join(outputDir, `node-image-${theme}.png`), fullPage: true });
+      assert.deepEqual(problems, []);
+    },
+  );
+  await context.close();
+}
+{
+  const { context, page, problems } = await openStudio();
+  await check(
+    'review: oversized PNG/JPEG/WebP headers are rejected before bitmap decoding',
+    async () => {
+      await page.selectOption('#visualObject', { index: 1 });
+      const original = await canvasPng(page);
+      await page.evaluate(() => {
+        window.nodeImageDecoderCalls = 0;
+        window.createImageBitmap = async () => {
+          window.nodeImageDecoderCalls++;
+          throw new Error('Decoder must not run for an oversized header');
+        };
+      });
+      for (const [name, buffer] of encodedSizeFixtures(4097, 4096)) {
+        await page.locator('#visualImageFile').setInputFiles({
+          name,
+          mimeType: name.endsWith('png')
+            ? 'image/png'
+            : name.endsWith('jpeg')
+              ? 'image/jpeg'
+              : 'image/webp',
+          buffer,
+        });
+        await page.waitForFunction(() =>
+          document.getElementById('visualError').textContent.includes('尺寸过大'),
+        );
+        assert.equal(await page.evaluate(() => window.nodeImageDecoderCalls), 0);
+        assert.deepEqual(await canvasPng(page), original);
+      }
+      assert.deepEqual(problems, []);
+    },
+  );
+  await context.close();
+}
+{
+  const { context, page, problems } = await openStudio();
+  await check(
+    'review: restore node-image inheritance ignores global/category style scope',
+    async () => {
+      const id = documents.literature.characters[0].id;
+      for (const scope of ['global', 'category'])
+        for (const override of ['b', null]) {
+          const config = {
+            assets: {
+              a: { format: 'rgba8', width: 1, height: 1, data: '/wAA/w==' },
+              b: { format: 'rgba8', width: 1, height: 1, data: 'AAD//w==' },
+            },
+            nodes: {
+              defaults: { image: 'a' },
+              categories: { person: { image: 'a' } },
+              objects: { [id]: { image: override } },
+            },
+          };
+          await page.locator('#fileInput').setInputFiles({
+            name: `inherit-${scope}-${override}.studio.json`,
+            mimeType: 'application/json',
+            buffer: Buffer.from(
+              JSON.stringify({ format: 'relgraph.studio/1', source: documents.literature, config }),
+            ),
+          });
+          await page.waitForFunction(
+            (name) => document.getElementById('sourceName').textContent === name,
+            `inherit-${scope}-${override}.studio.json`,
+          );
+          await waitReady(page);
+          await page.evaluate(() => window.renderAt(84));
+          await page.selectOption('#visualObject', id);
+          await page.selectOption('#visualScope', scope);
+          await page.click('#visualImageInherit');
+          assert.match(await page.locator('#visualImageStatus').textContent(), /全局|类别/);
+          const pending = page.waitForEvent('download');
+          await page.click('#visualSave');
+          const download = await pending;
+          const saved = JSON.parse(await readFile(await download.path(), 'utf8'));
+          assert.equal(Object.hasOwn(saved.config.nodes.objects[id], 'image'), false);
+          assert.deepEqual(saved.config.nodes.defaults, config.nodes.defaults);
+          assert.deepEqual(saved.config.nodes.categories, config.nodes.categories);
+          assert.deepEqual(saved.config.assets.a, config.assets.a);
+          assert.ok(!Object.hasOwn(saved.config.assets, 'b'));
+          assert.deepEqual(saved.source, documents.literature);
+        }
       assert.deepEqual(problems, []);
     },
   );

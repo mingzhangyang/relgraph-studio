@@ -25,6 +25,17 @@ import {
   copyConfig,
 } from '../apps/studio/src/project-editor-model.ts';
 import { measure } from './helpers/display-list.mjs';
+import { checkEncodedImageDimensions } from '../apps/studio/src/image-dimensions.ts';
+import { normalizeNodeImage } from '../apps/studio/src/node-image.ts';
+import {
+  encodedSizeFixtures,
+  pngHeader,
+  jpegHeader,
+  webpContainer,
+  webpChunk,
+  webpFrame,
+  webpExtended,
+} from './helpers/encoded-image-fixtures.mjs';
 const asset = {
   format: 'rgba8',
   width: 2,
@@ -44,6 +55,82 @@ const at = (graph, frame, spec = FRAME_SPECS['landscape-720p']) => {
     style: domainStyle(graph.domain),
   });
 };
+test('encoded PNG, JPEG and all WebP dimension headers enforce the budget before decoding', () => {
+  for (const [, bytes] of encodedSizeFixtures(4096, 4096))
+    assert.doesNotThrow(() => checkEncodedImageDimensions(bytes));
+  for (const [, bytes] of encodedSizeFixtures(4097, 4096))
+    assert.throws(() => checkEncodedImageDimensions(bytes), /尺寸过大/);
+  const frame = Buffer.alloc(16);
+  frame.writeUIntLE(4096, 6, 3);
+  frame.writeUIntLE(4095, 9, 3);
+  for (const bytes of [
+    webpContainer(webpExtended(1, 1), webpFrame(4097, 4096)),
+    webpContainer(webpExtended(1, 1), webpChunk('ANMF', Buffer.concat([frame, webpFrame(1, 1)]))),
+  ])
+    assert.throws(() => checkEncodedImageDimensions(bytes), /尺寸过大/);
+  for (const bytes of [
+    pngHeader(0, 16),
+    pngHeader(16, 16).subarray(0, 24),
+    jpegHeader(16, 16).subarray(0, 15),
+    Buffer.from([255, 216, 255, 224, 0, 1]),
+    webpContainer(webpExtended(16, 16)),
+    webpContainer(webpFrame(16, 16)).subarray(0, 24),
+    webpContainer(webpChunk('VP8L', Buffer.from([0x2f, 0, 0, 0, 0x20]))),
+    webpContainer(webpChunk('ANMF', Buffer.alloc(16))),
+  ])
+    assert.throws(() => checkEncodedImageDimensions(bytes), /尺寸信息/);
+});
+test('upload preflight never invokes the decoder for oversized headers and retains the decoded guard', async () => {
+  const original = Object.getOwnPropertyDescriptor(globalThis, 'createImageBitmap');
+  let calls = 0,
+    closed = 0;
+  Object.defineProperty(globalThis, 'createImageBitmap', {
+    configurable: true,
+    value: async () => {
+      calls++;
+      return { width: 4097, height: 4096, close: () => closed++ };
+    },
+  });
+  try {
+    for (const [name, bytes] of encodedSizeFixtures(4097, 4096))
+      await assert.rejects(normalizeNodeImage(new File([bytes], name)), /尺寸过大/);
+    assert.equal(calls, 0);
+    await assert.rejects(
+      normalizeNodeImage(new File([pngHeader(16, 16)], 'small.png')),
+      /尺寸过大/,
+    );
+    assert.equal(calls, 1);
+    assert.equal(closed, 1);
+  } finally {
+    if (original) Object.defineProperty(globalThis, 'createImageBitmap', original);
+    else delete globalThis.createImageBitmap;
+  }
+});
+test('image outlines stroke once after the bitmap under reveal and dimming opacity', () => {
+  const groups = (items) =>
+    items.flatMap((i) => (i.type === 'group' ? [i, ...groups(i.items)] : []));
+  let reveal = false,
+    dimmed = false;
+  for (const [source, frames] of [
+    [literature, [84, 300]],
+    [verified, [29, 48]],
+  ]) {
+    const graph = loadDocument(source).graph;
+    graph.project = { assets: { a: asset }, nodes: { defaults: { image: 'a' } } };
+    for (const frame of frames)
+      for (const group of groups(at(graph, frame).items)) {
+        if (!group.items.some((i) => i.type === 'image')) continue;
+        const imageIndex = group.items.findIndex((i) => i.type === 'image'),
+          strokes = group.items.filter((i) => i.type === 'path' && i.stroke !== undefined);
+        assert.equal(strokes.length, 1);
+        assert.ok(group.items.indexOf(strokes[0]) > imageIndex);
+        if (group.transform) reveal = true;
+        if (!group.transform && group.alpha < 1) dimmed = true;
+      }
+  }
+  assert.ok(reveal);
+  assert.ok(dimmed);
+});
 test('embedded RGBA codec handles every padding length and rejects malformed/bounded resources', () => {
   for (let size = 1; size < 20; size++) {
     const bytes = Uint8Array.from({ length: size * 4 }, (_, i) => (i * 31) % 256),
