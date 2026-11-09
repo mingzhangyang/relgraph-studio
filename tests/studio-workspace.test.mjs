@@ -778,7 +778,12 @@ test('incomplete native numbers remain drafts even when the browser reports an e
   };
   await app.node('exampleBiology').click();
   assert.equal(prompts, 1);
-  const exit = { prevented: false, preventDefault() { this.prevented = true; } };
+  const exit = {
+    prevented: false,
+    preventDefault() {
+      this.prevented = true;
+    },
+  };
   app.window.dispatch('beforeunload', exit);
   assert.equal(exit.prevented, true);
 
@@ -857,8 +862,12 @@ test('cancelled drags must preserve coordinate drafts matching transient positio
     };
     if (screen.x < 26 || screen.x > 1254 || screen.y < 108 || screen.y > 542) continue;
     await stage.dispatch('pointerdown', {
-      pointerId: 11, isPrimary: true, pointerType: 'mouse', button: 0,
-      clientX: screen.x, clientY: screen.y,
+      pointerId: 11,
+      isPrimary: true,
+      pointerType: 'mouse',
+      button: 0,
+      clientX: screen.x,
+      clientY: screen.y,
     });
     if (stage.pointerCaptured === 11 && chooser.value === id) {
       candidate = { id, x, y, screen, camera };
@@ -868,6 +877,8 @@ test('cancelled drags must preserve coordinate drafts matching transient positio
       await stage.dispatch('pointercancel', { pointerId: 11 });
   }
   assert.ok(candidate, 'the shared DOM hit test should find a movable visible node');
+  // Release the probe drag. The draft must exist BEFORE the real drag begins.
+  await stage.dispatch('pointercancel', { pointerId: 11 });
   const { id, x, screen, camera } = candidate;
   const draftX = x + 10;
   const xInput = app.node('layoutX');
@@ -875,13 +886,22 @@ test('cancelled drags must preserve coordinate drafts matching transient positio
   await xInput.dispatch('input');
   assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
 
+  await stage.dispatch('pointerdown', {
+    pointerId: 12,
+    isPrimary: true,
+    pointerType: 'mouse',
+    button: 0,
+    clientX: screen.x,
+    clientY: screen.y,
+  });
+  assert.equal(stage.pointerCaptured, 12);
   await stage.dispatch('pointermove', {
-    pointerId: 11,
+    pointerId: 12,
     clientX: screen.x + 10 * camera.scale,
     clientY: screen.y,
   });
   assert.equal(xInput.value, String(draftX), 'temporary drag reaches the typed coordinate');
-  await stage.dispatch('pointercancel', { pointerId: 11 });
+  await stage.dispatch('pointercancel', { pointerId: 12 });
   assert.equal(xInput.value, String(draftX), 'cancelled drag restores the pending input');
   assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
 
