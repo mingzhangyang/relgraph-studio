@@ -7,7 +7,7 @@ inline threads. Its review still calls for independent editorial comparison of
 source quotations and kinship interpretation before production. There is no
 repository AGENTS.md or Actions workflow. Read README, architecture/ADR 003,
 B1.5 acceptance, models/views, shared harness, render/layout/export code, and
-#21's verification and B2-2 handoff. No dataset or domain schema was changed.
+#21's verification and B2-2 handoff. No graph/evidence data or domain schema was changed.
 
 ## Delivery and architecture
 
@@ -15,11 +15,14 @@ B1.5 acceptance, models/views, shared harness, render/layout/export code, and
   `feat/network-appearance` → `main`. Appearance/text projects, shared default
   rendering, strict validation, pure continuous/clipped hit testing, safe stable
   property view, per-document history and configuration round trips.
-- B: `feat/network-layouts` → `feat/network-appearance` (stacked Draft PR).
+- B: [Draft PR #23](https://github.com/mingzhangyang/relgraph-studio/pull/23),
+  `feat/network-layouts` → `feat/network-appearance` (stacked).
   Deterministic generic layered/force/circle/manual layouts, explicit coordinate
   intent, safe locks, transient preview/apply/cancel and manual/layout history.
   Merge A first, then retarget B onto the resulting main and verify the remaining
   diff. Neither PR is automatically merged.
+  Verified code snapshots: A `eb28307`, B `6bb3527`; this report/handoff is
+  recorded in a separate documentation commit.
 
 The [format/use guide](NETWORK-AUTHORING.md) documents all configuration fields,
 limits and CLI reproduction. Source facts/provenance remain separate from display
@@ -56,6 +59,21 @@ spacing adjustment or manual coordinates for final production. Group decoration
 uses original group colors. Existing offline Noto fonts remain unchanged.
 
 ## Verification layers
+
+| Actually executed command / layer | Result |
+| --- | --- |
+| `npm ci` | 157 pinned packages installed |
+| `typecheck`, `lint`, `format:check`, `check:types` | All pass |
+| `npm test -- --maxWorkers=1` on frozen code | **201/201**, **27/27 files**; no assertion/deadline changes |
+| `build:packages`, `build` | Pass, JS/declarations and production Studio |
+| `check:browser` on frozen code | **47/47 real Chromium checks** |
+| Browser frames | **16/16** updated references match; 12 extra deterministic layout previews captured |
+| `check:export` (repeated with `--no-build` after final package builds) | **13/13**, **44/44 Golden frames**, two full example MP4s and eight custom-project clips |
+| `git diff --check` | Pass |
+
+There are **20 new tests** over main: 7 configuration/appearance/hit tests and
+13 layout strategy tests. The full 201 also includes pure functions, shared VM,
+package-consumer/native-worker and integration checks; it is not 201 browser tests.
 
 Pure/config tests exercise sparse inheritance, origins, clearing, invalid fields,
 references/ranges, independent copy, saved positions, all three automatic
@@ -96,20 +114,25 @@ FFmpeg/ffprobe 7.1.5. `npm ci` installed 157 pinned packages; lockfile and fonts
 are unchanged. Playwright Chromium was initially absent and was actually
 installed. The default command sandbox could not reach the inherited network
 proxy; approved outer-executor commands completed Git/npm/browser/nested tests.
-No check remains blocked by this environment.
+No check remains blocked by this environment. Final logs are retained under
+`output/network-acceptance/`; full clips and PNGs under `output/export-check/`,
+with browser references/previews under `output/browser-reference/`,
+`output/browser-check/` and `output/visual-main/`.
 
 Initial tests exposed the expected old golden mismatch and an absent offline
 npm registry metadata cache. Primed cache under `/tmp/relgraph-cache-prime`
 without changing repository dependencies. A packed-consumer test also hit its
 existing 60-second limit when competing with export; isolated execution passed
-in 59.28 seconds. Full-suite execution with `--maxWorkers=2` passed without
-relaxing assertions or deadlines. Browser pixel hashing now computes the exact
+in 59.28 seconds. Frozen-code full-suite execution with `--maxWorkers=1` passed without
+relaxing assertions or deadlines; the earlier two-worker run also passed before
+the final additional boundary regressions. Browser pixel hashing now computes the exact
 same raw RGBA SHA-256 in the page instead of transporting millions of integers
 through Playwright; this removes a large test transport cost.
 
 Acceptance review also fixed custom biological edge copy missing from a11y,
 custom edge-label boxes not reserving their actual font height, negative-zero
-layout serialization, and sampled-edge hit gaps/clipping. The reaction-copy test
+layout serialization, sampled-edge hit gaps/clipping, and array-order dependence in missing-position
+manual fallback. The focused layout run passed 31/31 after that correction. The reaction-copy test
 initially asserted at stage 1 before the edge was safe to reveal; it now tests
 stage 2 and explicitly asserts absence at stage 1. These are recorded failures
 and fixes, not claims that the initial candidate passed.

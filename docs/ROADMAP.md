@@ -71,6 +71,8 @@ The accepted B1.5 scope is deterministic data → adapter → graph → pure tim
 - [x] Batch A: coordinated visual presets, inherited node/edge styles, independent display copy, projection-safe stable property panel, local project import/export and history. See [configuration](NETWORK-AUTHORING.md).
 - [x] Batch B: deterministic force/circle/generic layered/manual strategies; preserve/missing/rearrange, locks, explicit preview/apply/cancel and unified layout/manual history. Saved coordinates drive playback, without runtime simulation.
 
+Implementation and local acceptance are complete in Draft [#22](https://github.com/mingzhangyang/relgraph-studio/pull/22) (A) and stacked [#23](https://github.com/mingzhangyang/relgraph-studio/pull/23) (B); review/merge remains pending. Final frozen-code checks: **201/201 tests**, **47/47 Chromium**, **44/44 Golden frames**, **13/13 export checks**. See [acceptance and remaining limits](NETWORK-AUTHORING-ACCEPTANCE.md). Merge A before B, then start B2-2 from the resulting main.
+
 ## B2 — Source-verified film
 
 - [x] **B2-1 data preparation:** [Chengjia opening subset](../datasets/honglou-chengjia-opening/graph.relgraph.json), 6 people / 9 relations from chapters 2–3 (8 direct confirmations, 1 explicitly labelled inference), first explicit mentions, 15 short evidence excerpts, 39 pinned source revisions and scan fingerprint. [Verification report](../datasets/honglou-chengjia-opening/VERIFICATION.md), 7 focused quality tests, live source audit and [B2-2 handoff](../datasets/honglou-chengjia-opening/B2-2-HANDOFF.md) included; the provisional fixture remains unchanged. First onstage appearances are not claimed systematically audited.
