@@ -9,6 +9,7 @@ export interface DocumentShortcut {
   shiftKey?: boolean;
   isComposing?: boolean;
   defaultPrevented?: boolean;
+  repeat?: boolean;
 }
 
 /**
@@ -22,6 +23,7 @@ export function documentCommandFromShortcut(
   if (
     event.defaultPrevented ||
     event.isComposing ||
+    event.repeat ||
     event.altKey ||
     !(event.ctrlKey || event.metaKey)
   )
