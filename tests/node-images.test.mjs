@@ -15,6 +15,7 @@ import { directorFrameAt } from '../packages/core/src/director/state.ts';
 import { domainStyle } from '../packages/core/src/style.ts';
 import { composeFrame } from '../packages/render/src/compose.ts';
 import { composeNodeImage } from '../packages/render/src/image-layout.ts';
+import { glyphGeometry, nodeOutline } from '../packages/render/src/node-geometry.ts';
 import { walkDisplayItems } from '../packages/render/src/display-list.ts';
 import { FRAME_SPECS, cameraFitFor } from '../packages/render/src/frame-spec.ts';
 import { VIDEO_THEMES } from '../packages/render/src/theme.ts';
@@ -343,6 +344,91 @@ test('cover/contain geometry uses one crop contract and scales only destination 
   assert.deepEqual(cover.source, large.source);
   assert.equal(large.w, cover.w * 1.5);
 });
+
+test('contain keeps every image corner inside real circle, pill and diamond clips', () => {
+  const graph = loadDocument(literature).graph;
+  const node = graph.nodes[0];
+  const spec = FRAME_SPECS['landscape-720p'];
+  const style = domainStyle(graph.domain);
+  for (const shape of ['circle', 'pill', 'diamond']) {
+    for (const size of [16, 32]) {
+      const config = { nodes: { objects: { [node.id]: { shape, size } } } };
+      const g = glyphGeometry(node, 1, spec, style, 1, config);
+      const center = { x: 110, y: 125 };
+      const box = {
+        x: center.x - g.halfWidth,
+        y: center.y - g.halfHeight,
+        w: 2 * g.halfWidth,
+        h: 2 * g.halfHeight,
+      };
+      const clip = nodeOutline(center, g);
+      for (const [width, height] of [
+        [16, 16],
+        [64, 8],
+        [8, 64],
+        [12, 25],
+      ]) {
+        const testAsset = {
+          format: 'rgba8',
+          width,
+          height,
+          data: encodeImageBytes(new Uint8Array(width * height * 4)),
+        };
+        const result = composeNodeImage('portrait', testAsset, box, clip, 'contain');
+        assert.deepEqual(result.source, { x: 0, y: 0, w: width, h: height });
+        assert.ok(result.w <= box.w && result.h <= box.h);
+        assert.ok(Math.abs(result.x + result.w / 2 - center.x) < 1e-7);
+        assert.ok(Math.abs(result.y + result.h / 2 - center.y) < 1e-7);
+        for (const x of [result.x, result.x + result.w]) {
+          for (const y of [result.y, result.y + result.h]) {
+            const dx = Math.abs(x - center.x);
+            const dy = Math.abs(y - center.y);
+            const inside =
+              shape === 'circle'
+                ? Math.hypot(dx, dy) <= g.halfWidth + 1e-6
+                : shape === 'diamond'
+                  ? dx / g.halfWidth + dy / g.halfHeight <= 1 + 1e-6
+                  : Math.hypot(
+                      Math.max(0, dx - (g.halfWidth - g.cornerRadius)),
+                      Math.max(0, dy - (g.halfHeight - g.cornerRadius)),
+                    ) <= g.cornerRadius + 1e-6;
+            assert.ok(inside, `${shape} ${size}px ${width}x${height}: corner outside clip`);
+          }
+        }
+        // Cover's geometry must remain byte-for-byte equivalent to rectangular fitting.
+        const cover = composeNodeImage('portrait', testAsset, box, clip, 'cover');
+        const old = composeNodeImage(
+          'portrait',
+          testAsset,
+          box,
+          [['R', box.x, box.y, box.w, box.h]],
+          'cover',
+        );
+        assert.deepEqual(cover.source, old.source);
+        assert.deepEqual(
+          [cover.x, cover.y, cover.w, cover.h],
+          [old.x, old.y, old.w, old.h],
+        );
+      }
+    }
+  }
+  // A square image can no longer be cropped at the four tips of a diamond or circle.
+  const square = { x: 10, y: 20, w: 40, h: 40 };
+  for (const clip of [
+    [['A', 30, 40, 20, 0, Math.PI * 2]],
+    [
+      ['M', 30, 20],
+      ['L', 50, 40],
+      ['L', 30, 60],
+      ['L', 10, 40],
+      ['Z'],
+    ],
+  ]) {
+    const contain = composeNodeImage('portrait', asset, square, clip, 'contain');
+    assert.ok(contain.w < square.w);
+  }
+});
+
 test('hidden node images never enter the display list, selections or a11y before safe projection', () => {
   const base = loadDocument(verified).graph,
     node = base.nodes[0];

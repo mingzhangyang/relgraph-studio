@@ -6,8 +6,10 @@ The first decoded frame is used; animated playback is not supported. SVG, GIF,
 remote URLs and unreadable files are rejected with a message.
 
 - **填满 · 居中裁切** fills the current node shape. **完整显示 · 保留留白** keeps
-  the entire image within it. Circle, pill and diamond clips share composition
-  with Canvas and Skia; labels and border styles remain independently editable.
+  the entire image within the shape's inscribed content area (not merely its
+  bounding rectangle). This adds intentional padding at round/diamond corners.
+  Circle, pill and diamond clips share composition with Canvas and Skia; labels
+  and border styles remain independently editable. Cover cropping is unchanged.
 - If no explicit node radius is inherited, uploading sets a 32-design-pixel
   radius so the image is visible; an existing custom size is preserved. Change
   the radius in advanced styles. Removing an image keeps other style settings.
