@@ -1316,7 +1316,7 @@ test('pure document shortcut policy respects platform modifiers and editable foc
   assert.equal(shortcut('z', { shiftKey: true }), null);
   assert.equal(shortcut('z', { ctrlKey: true, altKey: true }), null);
   assert.equal(shortcut('z', { metaKey: true, isComposing: true }), null);
-  assert.equal(shortcut('s', { metaKey: true, repeat: true }), null);
+  assert.equal(shortcut('s', { metaKey: true, repeat: true }), 'save');
   assert.equal(shortcut('s', { metaKey: true, defaultPrevented: true }), null);
   assert.equal(shortcut('y', { ctrlKey: true, shiftKey: true }), null);
 });
@@ -1425,7 +1425,7 @@ test('document shortcuts use the toolbar history; input undo stays native, save 
   assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
 
   await label.dispatch('change');
-  assert.equal(key('s', { repeat: true }), false, 'held shortcut cannot repeat download');
+  assert.equal(key('s', { repeat: true }), true, 'held shortcut is consumed without another download');
   assert.equal(key('s'), true);
   assert.equal(app.downloads.length, previous + 1);
   assert.match(app.downloads.at(-1).filename, /\.studio\.json$/);
