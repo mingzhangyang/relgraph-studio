@@ -141,7 +141,7 @@ test('position mode pauses playback, drags only visible nodes, exports JSON and 
   assert.equal(app.node('layoutToggle').attributes['aria-pressed'], 'false');
 });
 
-test('locking a node preserves draft layout parameters until preview; undo and document load reset them', async () => {
+test('node locks preserve strategy drafts; undo and document switch reset them', async () => {
   const app = makeStudio();
   await app.ready;
   assert.equal(app.window.renderAt(84), true);

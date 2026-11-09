@@ -144,7 +144,9 @@ function configWithPositions(
     editedIds,
   );
 }
-function applyProjectHistory({ preserveLayoutDraft = false }: { preserveLayoutDraft?: boolean } = {}): void {
+function applyProjectHistory(
+  { preserveLayoutDraft = false }: { preserveLayoutDraft?: boolean } = {},
+): void {
   if (!graph || !currentLayout || !originalLayout) return;
   graph.project = projectHistory.value;
   restoreLayoutPositions(currentLayout, originalLayout);
