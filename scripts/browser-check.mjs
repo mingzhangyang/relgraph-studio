@@ -1628,7 +1628,11 @@ for (const theme of ['dark', 'light']) {
     assert.equal(await page.getAttribute('#selectionFeedback', 'data-affected'), '1');
     assert.equal(await canvasHash(page), beforePixels, 'SVG feedback cannot change canvas pixels');
     const afterComposite = await page.locator('.stage-image').screenshot();
-    assert.notDeepEqual(afterComposite, beforeComposite, 'composited stage visibly outlines selection');
+    assert.notDeepEqual(
+      afterComposite,
+      beforeComposite,
+      'composited stage visibly outlines selection',
+    );
 
     await page.selectOption('#visualScope', 'global');
     const safeNodeCount = await page.evaluate(() => window.studioFrame().view.nodes.length);
