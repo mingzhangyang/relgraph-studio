@@ -1,5 +1,10 @@
 # Network authoring acceptance · 2026-11-09
 
+This is the original delivery snapshot. Subsequent Copilot corrections, new
+regressions, six inspected Golden changes and squash handling are documented in
+[the review-correction report](NETWORK-REVIEW-FIXES.md). Its results supersede
+the original counts below.
+
 The starting workspace was an empty managed `/workspace`; a fresh clone was clean.
 Main was rechecked as `7e97225b73d17f3eaf695d0335b84cd16fc5bec4` (#21 merged).
 #19/#20 are also merged. No competing PR was open, and #21 had no unresolved
@@ -19,8 +24,9 @@ B1.5 acceptance, models/views, shared harness, render/layout/export code, and
   `feat/network-layouts` → `feat/network-appearance` (stacked).
   Deterministic generic layered/force/circle/manual layouts, explicit coordinate
   intent, safe locks, transient preview/apply/cancel and manual/layout history.
-  Merge A first, then retarget B onto the resulting main and verify the remaining
-  diff. Neither PR is automatically merged.
+  Squash A first, then transplant B's independent tree delta onto the resulting
+  main, retarget B and verify the remaining diff. See the correction report for
+  preserving review-fix merge resolutions. Neither PR is automatically merged.
   Verified code snapshots: A `eb28307`, B `6bb3527`; this report/handoff is
   recorded in a separate documentation commit.
 
