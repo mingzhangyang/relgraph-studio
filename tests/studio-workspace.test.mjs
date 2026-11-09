@@ -506,6 +506,98 @@ test('cancelled source replacements preserve the edited document and history', a
   assert.equal(viewControl(app, 'visualUndo').disabled, true);
 });
 
+test('selection changes reconcile controls before updating the unsaved indicator', async () => {
+  const app = makeStudio();
+  await app.ready;
+  assert.equal(app.window.renderAt(84), true);
+  const objects = viewControl(app, 'visualObject');
+  const choices = objects.children.filter((option) => option.value).map((option) => option.value);
+  assert.ok(choices.length > 0);
+  for (const id of choices.slice(0, 2)) {
+    objects.value = id;
+    await objects.dispatch('change');
+    assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
+    assert.doesNotMatch(app.document.title, /^● /);
+  }
+  objects.value = '';
+  await objects.dispatch('change');
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
+});
+
+test('pending numeric appearance drafts work in the shared source-VM harness', async () => {
+  const app = makeStudio();
+  await app.ready;
+  assert.equal(app.window.renderAt(84), true);
+  const objects = viewControl(app, 'visualObject');
+  objects.value = objects.children[1].value;
+  await objects.dispatch('change');
+  const size = viewControl(app, 'visual-size');
+  assert.equal(size.disabled, false);
+  const original = size.value;
+  size.value = original === '999' ? '998' : '999';
+  await size.dispatch('input');
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
+  const count = app.downloads.length;
+  await viewControl(app, 'visualSave').click();
+  assert.equal(app.downloads.length, count, 'uncommitted number cannot be exported as saved');
+  size.value = original;
+  await size.dispatch('input');
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
+});
+
+test('unapplied manual coordinates block export and warn on source replacement', async () => {
+  const app = makeStudio();
+  await app.ready;
+  assert.equal(app.window.renderAt(84), true);
+  await app.node('layoutToggle').click();
+  const x = app.node('layoutX');
+  const y = app.node('layoutY');
+  assert.equal(x.disabled, false);
+  assert.equal(y.disabled, false);
+  const originalX = x.value;
+  const originalY = y.value;
+  x.value = String(Number(originalX) + 13);
+  await x.dispatch('input');
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
+  const exit = { prevented: false, preventDefault() { this.prevented = true; } };
+  app.window.dispatch('beforeunload', exit);
+  assert.equal(exit.prevented, true);
+
+  let confirmations = 0;
+  app.window.confirm = () => {
+    confirmations++;
+    return false;
+  };
+  const originalSource = app.node('sourceName').textContent;
+  await app.node('exampleBiology').click();
+  assert.equal(confirmations, 1);
+  assert.equal(app.node('sourceName').textContent, originalSource);
+  const downloads = app.downloads.length;
+  await viewControl(app, 'visualSave').click();
+  assert.equal(app.downloads.length, downloads);
+  assert.match(viewControl(app, 'visualError').textContent, /未提交/);
+
+  x.value = originalX;
+  await x.dispatch('input');
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
+  y.value = '';
+  await y.dispatch('input');
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
+  await viewControl(app, 'visualSave').click();
+  assert.equal(app.downloads.length, downloads, 'invalid coordinate draft cannot be saved');
+  y.value = originalY;
+  await y.dispatch('input');
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
+
+  x.value = String(Number(originalX) + 13);
+  await x.dispatch('input');
+  await app.node('layoutApply').click();
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
+  await viewControl(app, 'visualSave').click();
+  assert.equal(app.downloads.length, downloads + 1);
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
+});
+
 test('unsent copy drafts are protected and cannot be mistaken for a saved project', async () => {
   const app = makeStudio();
   await app.ready;

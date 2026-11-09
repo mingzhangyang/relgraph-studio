@@ -293,6 +293,7 @@ const projectEditor = createProjectEditor(document, $('appearanceEditor'), {
     if (!graph || !currentLayout || sourceDocument === null || loading) return;
     if (
       dragging ||
+      hasPendingCoordinateDraft() ||
       projectEditor.hasPendingDraft() ||
       strategyView.hasPendingDraft() ||
       projectEditor.isImageBusy()
@@ -364,6 +365,23 @@ let dragging: PositionDrag | null = null;
 const DOCUMENT_TITLE = 'RelGraph Studio · 导演工作台';
 let lastDirtyStatus: boolean | null = null;
 
+// Draft coordinate values are not in history until the user presses Apply.
+// Compare numeric values so equivalent input notation is not treated as an edit.
+function hasPendingCoordinateDraft(): boolean {
+  if (
+    !layoutEditing ||
+    !currentLayout ||
+    !selectedLayoutNode ||
+    layoutX.disabled ||
+    layoutY.disabled
+  )
+    return false;
+  const point = currentLayout.get(selectedLayoutNode);
+  if (!point) return false;
+  const draft = parseCoordinateInputs(layoutX.value, layoutY.value);
+  return !draft || draft.x !== point.x || draft.y !== point.y;
+}
+
 function hasUnsavedChanges(): boolean {
   // A load already accepted for discard should not trigger another warning.
   return Boolean(
@@ -372,6 +390,7 @@ function hasUnsavedChanges(): boolean {
     currentLayout &&
     (layoutPreview ||
       dragging ||
+      hasPendingCoordinateDraft() ||
       projectEditor.isImageBusy() ||
       projectEditor.hasPendingDraft() ||
       strategyView.hasPendingDraft() ||
@@ -715,6 +734,7 @@ function updateLayoutFields(): void {
     layoutControls,
     selectedLayoutNode ? currentLayout?.get(selectedLayoutNode) : undefined,
   );
+  refreshUnsavedState();
 }
 function updateLayoutEditor(): void {
   const nodes = availableNodes();
@@ -724,6 +744,8 @@ function updateLayoutEditor(): void {
   renderEditorNodes(document, layoutControls, nodes, selectedLayoutNode);
   updateLayoutFields();
 }
+layoutX.addEventListener('input', refreshUnsavedState);
+layoutY.addEventListener('input', refreshUnsavedState);
 layoutNode.addEventListener('change', () => {
   if (!availableNodes().some((node) => node.id === layoutNode.value)) return;
   selectedLayoutNode = layoutNode.value;

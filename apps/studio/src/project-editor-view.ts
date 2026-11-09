@@ -190,7 +190,6 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
       imageBusy = false;
     }
     selection = next;
-    actions.draftChanged?.();
   };
   const imageFit = el('select');
   imageFit.id = 'visualImageFit';
@@ -372,6 +371,8 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
       if (doc.activeElement !== c.input)
         c.input.value = String((resolved as Record<string, unknown>)[key] ?? '');
     }
+    // Recompute dirty state only after selection and its controls agree.
+    actions.draftChanged?.();
   };
   preset.addEventListener('change', () =>
     actions.change({ ...config, preset: preset.value as ProjectConfig['preset'] }),
@@ -438,7 +439,6 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
         const expected = String((resolved as Record<string, unknown>)[key] ?? '');
         if (control.input.value === expected) continue;
         if (
-          control.input instanceof HTMLInputElement &&
           control.input.type === 'number' &&
           control.input.value !== '' &&
           expected !== '' &&

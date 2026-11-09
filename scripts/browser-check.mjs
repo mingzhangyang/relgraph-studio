@@ -1522,8 +1522,23 @@ for (const theme of ['dark', 'light']) {
 
     const download = page.waitForEvent('download');
     await page.click('#visualSave');
-    assert.match((await download).suggestedFilename(), /\\.studio\\.json$/);
+    assert.match((await download).suggestedFilename(), /\.studio\.json$/);
     assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'false');
+
+    await page.evaluate(() => window.renderAt(84));
+    await page.click('#layoutToggle');
+    assert.equal(await page.isDisabled('#layoutX'), false);
+    const originalX = await page.inputValue('#layoutX');
+    await page.fill('#layoutX', String(Number(originalX) + 13));
+    assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'true');
+    await page.click('#visualSave');
+    assert.match(await text(page, '#visualError'), /未提交/);
+    page.once('dialog', (dialog) => void dialog.dismiss());
+    await page.click('#exampleBiology');
+    assert.equal(await text(page, '#sourceName'), initialSource);
+    await page.fill('#layoutX', originalX);
+    assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'false');
+    await page.click('#layoutToggle');
 
     await page.selectOption('#visualPreset', 'quiet');
     assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'true');
