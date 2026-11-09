@@ -1526,6 +1526,24 @@ for (const theme of ['dark', 'light']) {
     assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'false');
 
     await page.evaluate(() => window.renderAt(84));
+    await page.selectOption('#visualObject', { index: 1 });
+    await page.locator('#appearanceEditor details').evaluate((element) => {
+      element.open = true;
+    });
+    await page.fill('#visual-size', '999');
+    await page.locator('#visual-size').evaluate((element) => element.blur());
+    assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'true');
+    await page.evaluate(() => window.renderAt(85));
+    assert.equal(await page.inputValue('#visual-size'), '999');
+    await page.click('#visualSave');
+    assert.match(await text(page, '#visualError'), /未提交/);
+    await page.fill('#visual-size', '24');
+    await page.locator('#visual-size').evaluate((element) => element.blur());
+    const correctedDownload = page.waitForEvent('download');
+    await page.click('#visualSave');
+    await correctedDownload;
+    assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'false');
+
     await page.click('#layoutToggle');
     assert.equal(await page.isDisabled('#layoutX'), false);
     const originalX = await page.inputValue('#layoutX');

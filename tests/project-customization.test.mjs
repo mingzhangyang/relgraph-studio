@@ -205,6 +205,49 @@ test('full-project savepoint tracks configuration and live positions without dep
   assert.equal(savepoint.isDirty(history.value, moved), false);
 });
 
+test('savepoint reuses snapshots across redraws and invalidates live position edits', () => {
+  let configReads = 0;
+  const config = {
+    get preset() {
+      ++configReads;
+      return 'editorial';
+    },
+    assets: { large: { data: 'x'.repeat(200_000) } },
+  };
+  let positionReads = 0;
+  const position = {
+    get x() {
+      ++positionReads;
+      return 1;
+    },
+    y: 2,
+  };
+  const points = new Map([['node', position]]);
+  const savepoint = new ProjectSavepoint();
+  savepoint.markClean(config, points);
+  const readsAfterSave = { config: configReads, position: positionReads };
+  for (let frame = 0; frame < 200; frame++)
+    assert.equal(savepoint.isDirty(config, points), false);
+  assert.deepEqual(
+    { config: configReads, position: positionReads },
+    readsAfterSave,
+    'playback must not repeatedly serialize images or sort positions',
+  );
+
+  points.set('node', { x: 7, y: 2 });
+  savepoint.positionsChanged();
+  assert.equal(savepoint.isDirty(config, points), true, 'in-place drag must invalidate');
+  points.set('node', { x: 1, y: 2 });
+  savepoint.positionsChanged();
+  assert.equal(savepoint.isDirty(config, points), false, 'cancelled drag returns to savepoint');
+
+  assert.equal(savepoint.isDirty({ preset: 'editorial', assets: config.assets }, points), false);
+  assert.equal(savepoint.isDirty({ preset: 'quiet', assets: config.assets }, points), true);
+  assert.equal(savepoint.isDirty(config, points), false, 'undo returns to saved configuration');
+  savepoint.clear();
+  assert.equal(savepoint.isDirty({ preset: 'quiet' }, points), false);
+});
+
 test('shared workspace harness mounts the real property view and retains controls across redraws', async () => {
   const studio = makeStudio();
   await studio.ready;

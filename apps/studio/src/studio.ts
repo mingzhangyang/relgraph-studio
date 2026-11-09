@@ -143,7 +143,10 @@ let layoutPreview: {
 } | null = null;
 function cancelLayoutPreview(): void {
   if (!layoutPreview) return;
-  if (currentLayout) restoreLayoutPositions(currentLayout, layoutPreview.before);
+  if (currentLayout) {
+    restoreLayoutPositions(currentLayout, layoutPreview.before);
+    projectSavepoint.positionsChanged();
+  }
   layoutPreview = null;
   rebuildRenderer();
   refreshUnsavedState();
@@ -167,6 +170,7 @@ function applyProjectHistory({
   restoreLayoutPositions(currentLayout, originalLayout);
   for (const [id, p] of Object.entries(graph.project.layout?.positions ?? {}))
     currentLayout.set(id, { ...p });
+  projectSavepoint.positionsChanged();
   // Lock-only commits update persisted coordinates/locks, not the user's pending
   // strategy inputs. Undo/redo, apply and other config transitions still reset.
   if (!preserveLayoutDraft) strategyView.reset(graph.project.layout);
@@ -188,6 +192,7 @@ const strategyView = createLayoutStrategyView(document, $('layoutStrategyEditor'
       const next = computeLayout(graph, settings, currentLayout);
       layoutPreview = { settings, before, serial: requestSerial };
       restoreLayoutPositions(currentLayout, next);
+      projectSavepoint.positionsChanged();
       rebuildRenderer();
       refreshUnsavedState();
     } catch (error) {
@@ -770,6 +775,7 @@ layoutApply.addEventListener('click', () => {
     !updateEditableNodePosition(currentLayout, currentFrameState, selectedLayoutNode, point)
   )
     return;
+  projectSavepoint.positionsChanged();
   projectHistory.commit(configWithPositions(undefined, [selectedLayoutNode]));
   if (graph) graph.project = projectHistory.value;
   setFrame(playback.frame, false);
@@ -801,7 +807,10 @@ function releaseLayoutPointer(): void {
 }
 function stopLayoutEdit(): void {
   if (!layoutEditing) return;
-  if (dragging && currentLayout) cancelPositionDrag(currentLayout, dragging);
+  if (dragging && currentLayout) {
+    cancelPositionDrag(currentLayout, dragging);
+    projectSavepoint.positionsChanged();
+  }
   releaseLayoutPointer();
   layoutEditing = false;
   editCamera = null;
@@ -829,6 +838,7 @@ layoutReset.addEventListener('click', () => {
   releaseLayoutPointer();
   for (const [id, p] of originalLayout)
     if (!projectHistory.value.layout?.locked.includes(id)) currentLayout.set(id, { ...p });
+  projectSavepoint.positionsChanged();
   projectHistory.commit(configWithPositions());
   if (graph) graph.project = projectHistory.value;
   rebuildRenderer();
@@ -884,6 +894,7 @@ function moveLayoutNode(event: PointerEvent): void {
   );
   if (!moved || !updateEditableNodePosition(currentLayout, currentFrameState, dragging.id, moved))
     return;
+  projectSavepoint.positionsChanged();
   setFrame(playback.frame, false);
   updateLayoutFields();
   updateLayoutControls();
@@ -904,6 +915,7 @@ canvas.addEventListener('pointerup', (event) => {
 canvas.addEventListener('pointercancel', (event) => {
   if (!dragging || dragging.pointerId !== event.pointerId || !currentLayout) return;
   currentLayout.set(dragging.id, dragging.previous);
+  projectSavepoint.positionsChanged();
   releaseLayoutPointer();
   setFrame(playback.frame, false);
   updateLayoutFields();

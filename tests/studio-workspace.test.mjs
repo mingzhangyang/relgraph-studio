@@ -548,6 +548,54 @@ test('pending numeric appearance drafts work in the shared source-VM harness', a
   assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
 });
 
+test('rejected property changes survive blur, redraw and selection changes until corrected', async () => {
+  const app = makeStudio();
+  await app.ready;
+  assert.equal(app.window.renderAt(84), true);
+  const objects = viewControl(app, 'visualObject');
+  const visible = objects.children.filter((o) => o.value).map((o) => o.value);
+  assert.ok(visible.length >= 2);
+  objects.value = visible[0];
+  await objects.dispatch('change');
+  const size = viewControl(app, 'visual-size');
+  const original = size.value;
+  size.value = '999';
+  size.focus();
+  await size.dispatch('input');
+  await size.dispatch('change');
+  assert.match(viewControl(app, 'visualError').textContent, /配置无效/);
+  size.blur();
+
+  assert.equal(app.window.renderAt(85), true);
+  assert.equal(size.value, '999', 'rejected size draft must survive redraw');
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
+  let confirmations = 0;
+  app.window.confirm = () => {
+    ++confirmations;
+    return false;
+  };
+  const originalSource = app.node('sourceName').textContent;
+  await app.node('exampleBiology').click();
+  assert.equal(confirmations, 1);
+  assert.equal(app.node('sourceName').textContent, originalSource);
+  const downloads = app.downloads.length;
+  await viewControl(app, 'visualSave').click();
+  assert.equal(app.downloads.length, downloads, 'rejected draft blocks full export');
+
+  objects.value = visible[1];
+  await objects.dispatch('change');
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true', 'hidden draft persists');
+  objects.value = visible[0];
+  await objects.dispatch('change');
+  assert.equal(size.value, '999', 'returning to object restores rejected value');
+
+  size.value = original;
+  await size.dispatch('input');
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
+  await viewControl(app, 'visualSave').click();
+  assert.equal(app.downloads.length, downloads + 1);
+});
+
 test('unapplied manual coordinates block export and warn on source replacement', async () => {
   const app = makeStudio();
   await app.ready;
