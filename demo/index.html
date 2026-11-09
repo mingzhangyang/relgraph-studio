@@ -19,7 +19,6 @@
   </div>
   <div class="top-meta">
     <span class="top-note">本地运行 · 不上传数据</span>
-    <span id="saveState" class="save-state" data-dirty="false" role="status" aria-live="polite">无未保存修改</span>
     <span class="pill">B1 · 逐帧预览</span>
     <button id="themeToggle" class="theme-toggle" type="button" aria-label="切换浅色 / 深色模式"><svg class="theme-icon" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.25"/><path d="M8 1.75a6.25 6.25 0 0 1 0 12.5z"/></svg><span class="theme-label">主题</span></button>
   </div>
@@ -30,6 +29,19 @@
     <div class="sectionline">
       <div><span class="section-index">01</span><h1 id="previewHeading">导演预览</h1></div>
       <span id="status" class="status" data-state="loading" role="status">正在加载…</span>
+    </div>
+
+    <div class="document-toolbar" role="toolbar" aria-label="文档操作" id="documentToolbar">
+      <div class="document-toolbar-buttons">
+        <button id="visualUndo" type="button" disabled title="撤销 · Ctrl/⌘+Z" aria-keyshortcuts="Control+Z Meta+Z">撤销</button>
+        <button id="visualRedo" type="button" disabled title="重做 · Ctrl+Y / Ctrl/⌘+Shift+Z" aria-keyshortcuts="Control+Y Control+Shift+Z Meta+Shift+Z">重做</button>
+        <button id="visualSave" class="document-save" type="button" disabled title="保存完整 .studio.json（Ctrl/⌘+S）" aria-keyshortcuts="Control+S Meta+S">保存完整项目</button>
+        <button id="layoutExport" type="button" disabled title="仅导出源数据的节点坐标，不保存画面属性">仅导出坐标 JSON</button>
+      </div>
+      <div class="document-toolbar-state">
+        <span id="saveState" class="save-state" data-dirty="false" role="status" aria-live="polite">无未保存修改</span>
+        <span id="documentActionStatus" class="document-action-status" role="status" aria-live="polite">完整项目包含外观、文案及坐标；坐标导出不保存样式。</span>
+      </div>
     </div>
 
     <div class="stage-shell">
@@ -43,8 +55,7 @@
     <div class="layout-tools" role="group" aria-label="节点位置微调">
       <button id="layoutToggle" type="button" aria-pressed="false" disabled>调整节点位置</button>
       <button id="layoutReset" type="button" disabled>重置调整</button>
-      <button id="layoutExport" type="button" disabled>导出含坐标 JSON</button>
-      <span id="layoutNote" class="layout-note" role="status">调整模式关闭 · 只修改导出文件</span>
+      <span id="layoutNote" class="layout-note" role="status">调整模式关闭 · 修改仅保留在当前会话</span>
     </div>
     <div id="layoutEditor" class="layout-editor" role="group" aria-label="键盘坐标调整" hidden>
       <label for="layoutNode">当前可见节点</label>
@@ -70,6 +81,7 @@
     </div>
     <p class="hint">
       <span><kbd>Space</kbd> 播放 / 暂停</span>
+      <span><kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>Z</kbd> 撤销 · <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>S</kbd> 保存</span>
       <span><kbd>←</kbd><kbd>→</kbd> 前后 1 秒</span>
       <span class="hint-note">播放器显示视频时间；章节 / 阶段为领域时间，二者独立计算。</span>
     </p>
