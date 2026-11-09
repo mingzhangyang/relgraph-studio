@@ -39,6 +39,7 @@ import {
 import { makeStudio } from './helpers/studio-harness.mjs';
 import { ProjectSavepoint, workspaceSnapshot } from '../apps/studio/src/unsaved-changes-model.ts';
 import { visibleObjectEntries } from '../apps/studio/src/project-editor-view.ts';
+import { projectSelectionOverlay } from '../apps/studio/src/selection-overlay-model.ts';
 
 const compose = (graph, frame = 0, spec = FRAME_SPECS['landscape-720p'], theme = 'light') => {
   const positions = layoutGraph(graph);
@@ -246,6 +247,82 @@ test('savepoint reuses snapshots across redraws and invalidates live position ed
   assert.equal(savepoint.isDirty(config, points), false, 'undo returns to saved configuration');
   savepoint.clear();
   assert.equal(savepoint.isDirty({ preset: 'quiet' }, points), false);
+});
+
+test('workspace selection overlay uses safe projected IDs and composed hit geometry only', () => {
+  const frame = {
+    view: {
+      nodes: [
+        { id: 'shown-a', kind: 'person' },
+        { id: 'shown-b', kind: 'person' },
+        { id: 'shown-c', kind: 'other' },
+      ],
+      edges: [
+        { id: 'parallel-1', kind: 'friend' },
+        { id: 'parallel-2', kind: 'friend' },
+      ],
+    },
+  };
+  const list = {
+    width: 1280,
+    height: 720,
+    selectionClip: { x: 80, y: 90, w: 800, h: 460 },
+    selection: [
+      { kind: 'node', id: 'shown-a', box: { x: 100, y: 100, w: 60, h: 44 } },
+      { kind: 'node', id: 'shown-c', box: { x: 220, y: 100, w: 70, h: 44 } },
+      { kind: 'node', id: 'hidden-future', box: { x: 0, y: 0, w: 30, h: 30 } },
+      { kind: 'edge', id: 'parallel-1', points: [{ x: 120, y: 130 }, { x: 250, y: 200 }] },
+      { kind: 'edge', id: 'parallel-2', points: [{ x: 130, y: 130 }, { x: 260, y: 210 }] },
+      { kind: 'edge', id: 'hidden-edge', points: [{ x: 1, y: 1 }, { x: 2, y: 2 }] },
+    ],
+  };
+  const node = { kind: 'node', selection: { kind: 'node', id: 'shown-a' }, scope: 'object' };
+  const single = projectSelectionOverlay(frame, list, node);
+  assert.equal(single.affectedCount, 1);
+  assert.deepEqual(single.targets.map(({ hit }) => hit.id), ['shown-a']);
+  assert.equal(single.targets[0].selected, true);
+  assert.deepEqual(single.clip, list.selectionClip);
+
+  const category = projectSelectionOverlay(frame, list, { ...node, scope: 'category' });
+  assert.equal(category.affectedCount, 2, 'category counts visible even if not yet drawn');
+  assert.deepEqual(category.targets.map(({ hit }) => hit.id), ['shown-a']);
+  const global = projectSelectionOverlay(frame, list, {
+    kind: 'node', selection: null, scope: 'global',
+  });
+  assert.equal(global.affectedCount, 3);
+  assert.deepEqual(global.targets.map(({ hit }) => hit.id), ['shown-a', 'shown-c']);
+  assert.ok(global.targets.every((target) => !target.selected));
+
+  const edge = projectSelectionOverlay(frame, list, {
+    kind: 'edge', selection: { kind: 'edge', id: 'parallel-2' }, scope: 'category',
+  });
+  assert.equal(edge.affectedCount, 2);
+  assert.deepEqual(edge.targets.map(({ hit }) => hit.id), ['parallel-1', 'parallel-2']);
+  assert.equal(edge.targets[1].selected, true);
+  assert.ok(!JSON.stringify([single, category, global, edge]).includes('hidden-future'));
+  assert.ok(!JSON.stringify([single, category, global, edge]).includes('hidden-edge'));
+});
+
+test('workspace overlays exclude invalid geometry and do not invent hidden selections', () => {
+  const frame = { view: { nodes: [{ id: 'visible', kind: 'item' }], edges: [] } };
+  const list = {
+    width: 1280,
+    height: 720,
+    selection: [
+      { kind: 'node', id: 'visible', box: { x: NaN, y: 0, w: 20, h: 20 } },
+      { kind: 'node', id: 'visible', points: [{ x: 0, y: 0 }, { x: Infinity, y: 1 }] },
+    ],
+  };
+  const missing = projectSelectionOverlay(frame, list, {
+    kind: 'node', selection: { kind: 'node', id: 'future' }, scope: 'object',
+  });
+  assert.equal(missing.affectedCount, 0);
+  assert.deepEqual(missing.targets, []);
+  const global = projectSelectionOverlay(frame, list, {
+    kind: 'node', selection: null, scope: 'global',
+  });
+  assert.equal(global.affectedCount, 1);
+  assert.deepEqual(global.targets, [], 'neither invalid hit geometry reaches SVG');
 });
 
 test('shared workspace harness mounts the real property view and retains controls across redraws', async () => {
