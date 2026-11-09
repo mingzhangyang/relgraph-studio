@@ -141,6 +141,15 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
   imageSection.append(imageLabel, imageStatus);
   host.append(imageSection);
   let imageBusy = false;
+  // A selection's ID can repeat after A -> B -> A; only its revision is unique.
+  let selectionRevision = 0;
+  const setSelection = (next: Selection) => {
+    if (selection?.kind !== next?.kind || selection?.id !== next?.id) {
+      ++selectionRevision;
+      imageBusy = false;
+    }
+    selection = next;
+  };
   const imageFit = el('select');
   imageFit.id = 'visualImageFit';
   for (const [value, text] of [
@@ -257,7 +266,7 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
   const render = () => {
     buildFields();
     const candidates = kind === 'node' ? (frame?.view.nodes ?? []) : (frame?.view.edges ?? []);
-    if (selection && !candidates.some((n) => n.id === selection!.id)) selection = null;
+    if (selection && !candidates.some((n) => n.id === selection!.id)) setSelection(null);
     const entries = candidates.map((n) => ({
       id: n.id,
       label:
@@ -330,12 +339,12 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
   );
   kindSelect.addEventListener('change', () => {
     kind = kindSelect.value as typeof kind;
-    selection = null;
+    setSelection(null);
     render();
   });
   objects.addEventListener('change', () => {
     actions.pause();
-    selection = objects.value ? { kind, id: objects.value } : null;
+    setSelection(objects.value ? { kind, id: objects.value } : null);
     render();
   });
   scope.addEventListener('change', render);
@@ -384,13 +393,16 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
     selectedNodeId() {
       return selection?.kind === 'node' ? selection.id : null;
     },
+    selectionRevision() {
+      return selectionRevision;
+    },
     imageBusy(value: boolean) {
       imageBusy = value;
       render();
     },
     clear() {
       imageBusy = false;
-      selection = null;
+      setSelection(null);
       signature = '';
       frame = null;
       config = {};
@@ -406,7 +418,7 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
         const active = doc.activeElement;
         if (active && host.contains(active)) (active as HTMLElement).blur();
         actions.pause();
-        selection = { kind: hit.kind, id: hit.id };
+        setSelection({ kind: hit.kind, id: hit.id });
         kind = hit.kind;
         kindSelect.value = kind;
         render();

@@ -233,6 +233,7 @@ const projectEditor = createProjectEditor(document, $('appearanceEditor'), {
     if (!graph || loading || !currentFrameState?.view.nodes.some((n) => n.id === nodeId)) return;
     const serial = ++imageUploadSerial,
       documentSerial = requestSerial,
+      selectionRevision = projectEditor.selectionRevision(),
       owner = graph;
     setPlaying(false);
     projectEditor.error('');
@@ -243,6 +244,7 @@ const projectEditor = createProjectEditor(document, $('appearanceEditor'), {
       graph === owner &&
       !loading &&
       projectEditor.selectedNodeId() === nodeId &&
+      projectEditor.selectionRevision() === selectionRevision &&
       currentFrameState?.view.nodes.some((n) => n.id === nodeId);
     try {
       const { id, asset } = await normalizeNodeImage(file);

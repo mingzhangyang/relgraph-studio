@@ -1038,6 +1038,57 @@ for (const theme of ['light', 'dark']) {
   await context.close();
 }
 {
+  const { context, page, problems } = await openStudio();
+  await check('pending image uploads cannot revive after A -> B -> A selection', async () => {
+    await page.evaluate(() => window.renderAt(84));
+    const ids = await page
+      .locator('#visualObject option')
+      .evaluateAll((options) => options.map((o) => o.value).filter(Boolean));
+    assert.ok(ids.length >= 2, 'need two safe nodes for the selection regression');
+    const [a, b] = ids;
+    await page.selectOption('#visualObject', a);
+    const before = await canvasPng(page);
+    const data = await page.evaluate(() => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 4;
+      canvas.height = 4;
+      canvas.getContext('2d').fillRect(0, 0, 4, 4);
+      return canvas.toDataURL('image/png').split(',')[1];
+    });
+    await page.evaluate(() => {
+      const original = window.createImageBitmap;
+      window.createImageBitmap = (...args) =>
+        new Promise((resolve, reject) => {
+          window.releaseOldSelectionImage = () => original(...args).then(resolve, reject);
+        });
+    });
+    await page.locator('#visualImageFile').setInputFiles({
+      name: 'stale-selection.png',
+      mimeType: 'image/png',
+      buffer: Buffer.from(data, 'base64'),
+    });
+    await page.waitForFunction(() => typeof window.releaseOldSelectionImage === 'function');
+    await page.selectOption('#visualObject', b);
+    assert.ok(
+      !(await page.locator('#visualImageStatus').textContent()).includes('正在本地处理图片'),
+      'leaving A clears its pending upload indicator',
+    );
+    await page.selectOption('#visualObject', a);
+    await page.evaluate(() => window.releaseOldSelectionImage());
+    await page.waitForTimeout(150);
+    assert.equal(await page.inputValue('#visualObject'), a);
+    assert.deepEqual(await canvasPng(page), before, 'stale image must not alter Canvas');
+    const waitingForDownload = page.waitForEvent('download');
+    await page.click('#visualSave');
+    const saved = JSON.parse(await readFile(await (await waitingForDownload).path(), 'utf8'));
+    assert.equal(saved.config.nodes?.objects?.[a]?.image, undefined);
+    assert.equal(Object.keys(saved.config.assets ?? {}).length, 0);
+    assert.deepEqual(problems, []);
+  });
+  await context.close();
+}
+
+{
   const { context, page } = await openStudio();
   await check('late image decode cannot modify a newer document', async () => {
     await page.selectOption('#visualObject', { index: 1 });
