@@ -416,7 +416,8 @@ test('contain keeps every image corner inside real circle, pill and diamond clip
                   : Math.hypot(
                       Math.max(0, dx - (g.halfWidth - g.cornerRadius)),
                       Math.max(0, dy - (g.halfHeight - g.cornerRadius)),
-                    ) <= g.cornerRadius + 1e-6;
+                    ) <=
+                    g.cornerRadius + 1e-6;
             assert.ok(inside, `${shape} ${size}px ${width}x${height}: corner outside clip`);
           }
         }
@@ -430,10 +431,7 @@ test('contain keeps every image corner inside real circle, pill and diamond clip
           'cover',
         );
         assert.deepEqual(cover.source, old.source);
-        assert.deepEqual(
-          [cover.x, cover.y, cover.w, cover.h],
-          [old.x, old.y, old.w, old.h],
-        );
+        assert.deepEqual([cover.x, cover.y, cover.w, cover.h], [old.x, old.y, old.w, old.h]);
       }
     }
   }
@@ -441,13 +439,7 @@ test('contain keeps every image corner inside real circle, pill and diamond clip
   const square = { x: 10, y: 20, w: 40, h: 40 };
   for (const clip of [
     [['A', 30, 40, 20, 0, Math.PI * 2]],
-    [
-      ['M', 30, 20],
-      ['L', 50, 40],
-      ['L', 30, 60],
-      ['L', 10, 40],
-      ['Z'],
-    ],
+    [['M', 30, 20], ['L', 50, 40], ['L', 30, 60], ['L', 10, 40], ['Z']],
   ]) {
     const contain = composeNodeImage('portrait', asset, square, clip, 'contain');
     assert.ok(contain.w < square.w);

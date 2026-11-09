@@ -902,11 +902,13 @@ for (const theme of ['light', 'dark']) {
         return c.toDataURL('image/png').split(',')[1];
       });
       assert.deepEqual(
-        await page.locator('#visualImageStatus').evaluate((status) => [
-          status.getAttribute('role'),
-          status.getAttribute('aria-live'),
-          status.getAttribute('aria-atomic'),
-        ]),
+        await page
+          .locator('#visualImageStatus')
+          .evaluate((status) => [
+            status.getAttribute('role'),
+            status.getAttribute('aria-live'),
+            status.getAttribute('aria-atomic'),
+          ]),
         ['status', 'polite', 'true'],
       );
       await page.evaluate(() => {

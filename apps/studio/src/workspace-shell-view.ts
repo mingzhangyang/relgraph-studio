@@ -57,10 +57,7 @@ export function createWorkspaceShellView(
       elements.sourceNote.textContent = note || description || '此数据未提供来源说明。';
     },
     markSource(id: ExampleId | null): void {
-      elements.exampleLiterature.setAttribute(
-        'aria-pressed',
-        String(id === 'exampleLiterature'),
-      );
+      elements.exampleLiterature.setAttribute('aria-pressed', String(id === 'exampleLiterature'));
       elements.exampleBiology.setAttribute('aria-pressed', String(id === 'exampleBiology'));
     },
     renderTheme(theme: Theme, persist: boolean): void {

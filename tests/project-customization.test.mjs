@@ -22,7 +22,11 @@ import { layoutGraph } from '../packages/core/src/director/layout.ts';
 import { directorFrameAt } from '../packages/core/src/director/state.ts';
 import { domainStyle } from '../packages/core/src/style.ts';
 import { composeFrame } from '../packages/render/src/compose.ts';
-import { FRAME_SPECS, cameraFitFor, projectCameraPoint } from '../packages/render/src/frame-spec.ts';
+import {
+  FRAME_SPECS,
+  cameraFitFor,
+  projectCameraPoint,
+} from '../packages/render/src/frame-spec.ts';
 import { VIDEO_THEMES } from '../packages/render/src/theme.ts';
 import { texts, measure } from './helpers/display-list.mjs';
 import {
@@ -287,7 +291,9 @@ test('label obstacles include thick authored glyph borders at both output sizes'
           frameSpec: spec,
           style: domainStyle('neutral'),
         });
-        const glyph = list.selection.find((target) => target.kind === 'node' && target.id === 'a')?.box;
+        const glyph = list.selection.find(
+          (target) => target.kind === 'node' && target.id === 'a',
+        )?.box;
         const label = [...walkDisplayItems(list.items)].find(
           (item) => item.type === 'text' && item.text === 'Label',
         );
@@ -325,10 +331,16 @@ test('stroked glyph ray intersection agrees with shared hit geometry for all sha
           const radius = nodeGlyphRayDistance(node, direction, 1, spec, style, config);
           const before = { x: direction.x * (radius - 0.01), y: direction.y * (radius - 0.01) };
           const after = { x: direction.x * (radius + 0.01), y: direction.y * (radius + 0.01) };
-          assert.equal(nodeGlyphContainsPoint(node, { x: 0, y: 0 }, before, 1, spec, style, 1, config), true,
-            `${shape} ${spec.name} ${borderWidth} at ${angle}: interior`);
-          assert.equal(nodeGlyphContainsPoint(node, { x: 0, y: 0 }, after, 1, spec, style, 1, config), false,
-            `${shape} ${spec.name} ${borderWidth} at ${angle}: exterior`);
+          assert.equal(
+            nodeGlyphContainsPoint(node, { x: 0, y: 0 }, before, 1, spec, style, 1, config),
+            true,
+            `${shape} ${spec.name} ${borderWidth} at ${angle}: interior`,
+          );
+          assert.equal(
+            nodeGlyphContainsPoint(node, { x: 0, y: 0 }, after, 1, spec, style, 1, config),
+            false,
+            `${shape} ${spec.name} ${borderWidth} at ${angle}: exterior`,
+          );
         }
       }
 });
@@ -344,13 +356,19 @@ test('directed role bars attach beyond the authored stroked glyph at both endpoi
         domain: 'biology',
         meta: { title: 'inhibition' },
         nodes,
-        edges: [{ id: 'inhibit', kind: 'inhibition', source: 'from', target: 'to', directed: true }],
+        edges: [
+          { id: 'inhibit', kind: 'inhibition', source: 'from', target: 'to', directed: true },
+        ],
         groups: [],
         scenes: [{ id: 's', title: 'inhibition', durationSec: 5 }],
-        project: { nodes: { objects: {
-          from: { shape, size: 23, borderWidth: 8 },
-          to: { shape, size: 23, borderWidth: 8 },
-        } } },
+        project: {
+          nodes: {
+            objects: {
+              from: { shape, size: 23, borderWidth: 8 },
+              to: { shape, size: 23, borderWidth: 8 },
+            },
+          },
+        },
       };
       const positions = layoutGraph(graph);
       const state = directorFrameAt(graph, positions, 0, 24, { fit: cameraFitFor(spec) });
@@ -359,18 +377,43 @@ test('directed role bars attach beyond the authored stroked glyph at both endpoi
       state.reveal.edges = { inhibit: 1 };
       const style = domainStyle('biology');
       const list = composeFrame(state, {
-        graph, positions, frame: 0, fps: 24, measure, frameSpec: spec, style,
+        graph,
+        positions,
+        frame: 0,
+        fps: 24,
+        measure,
+        frameSpec: spec,
+        style,
       });
-      const points = list.selection.find((entry) => entry.kind === 'edge' && entry.id === 'inhibit')?.points;
+      const points = list.selection.find(
+        (entry) => entry.kind === 'edge' && entry.id === 'inhibit',
+      )?.points;
       assert.ok(points && points.length > 2, `${shape} ${spec.name}: edge is selectable`);
       const from = projectCameraPoint(nodes[0].position, state.cameraResolved, spec);
       const to = projectCameraPoint(nodes[1].position, state.cameraResolved, spec);
       const first = points[0];
       const last = points.at(-1);
-      const sourceDistance = nodeGlyphRayDistance(nodes[0], { x: 1, y: 0 }, 1, spec, style, graph.project);
-      const targetDistance = nodeGlyphRayDistance(nodes[1], { x: -1, y: 0 }, 1, spec, style, graph.project);
+      const sourceDistance = nodeGlyphRayDistance(
+        nodes[0],
+        { x: 1, y: 0 },
+        1,
+        spec,
+        style,
+        graph.project,
+      );
+      const targetDistance = nodeGlyphRayDistance(
+        nodes[1],
+        { x: -1, y: 0 },
+        1,
+        spec,
+        style,
+        graph.project,
+      );
       assert.ok(first.x >= from.x + sourceDistance - 1e-7, `${shape} source clears border`);
-      assert.ok(last.x <= to.x - targetDistance - 5 * spec.typeScale + 1e-7, `${shape} role marker clears target border`);
+      assert.ok(
+        last.x <= to.x - targetDistance - 5 * spec.typeScale + 1e-7,
+        `${shape} role marker clears target border`,
+      );
       assert.equal(
         nodeGlyphContainsPoint(nodes[1], to, last, 1, spec, style, 1, graph.project),
         false,
@@ -382,11 +425,20 @@ test('authored top labels use the full stroked obstacle, not the unadorned radiu
   const graph = {
     domain: 'neutral',
     meta: { title: 'top label' },
-    nodes: [{ id: 'n', kind: 'person', label: 'ABCDEFGHIJKLMNOPQRSTUVWXABCDEFGH', position: { x: 0, y: 0 } }],
+    nodes: [
+      {
+        id: 'n',
+        kind: 'person',
+        label: 'ABCDEFGHIJKLMNOPQRSTUVWXABCDEFGH',
+        position: { x: 0, y: 0 },
+      },
+    ],
     edges: [],
     groups: [],
     scenes: [{ id: 's', title: 'top label', durationSec: 5 }],
-    project: { nodes: { objects: { n: { shape: 'circle', size: 23, borderWidth: 8, textPosition: 'top' } } } },
+    project: {
+      nodes: { objects: { n: { shape: 'circle', size: 23, borderWidth: 8, textPosition: 'top' } } },
+    },
   };
   for (const spec of Object.values(FRAME_SPECS)) {
     const positions = layoutGraph(graph);
@@ -394,21 +446,39 @@ test('authored top labels use the full stroked obstacle, not the unadorned radiu
     state.cameraResolved = { x: 0, y: 0, scale: 1 };
     state.reveal.nodes = { n: 1 };
     const list = composeFrame(state, {
-      graph, positions, frame: 0, fps: 24, measure, frameSpec: spec, style: domainStyle('neutral'),
+      graph,
+      positions,
+      frame: 0,
+      fps: 24,
+      measure,
+      frameSpec: spec,
+      style: domainStyle('neutral'),
     });
     const lines = [...walkDisplayItems(list.items)].filter(
-      (item) => item.type === 'text' && graph.nodes[0].label.includes(item.text) && item.text.length > 0,
+      (item) =>
+        item.type === 'text' && graph.nodes[0].label.includes(item.text) && item.text.length > 0,
     );
     assert.equal(lines.length, 2, `${spec.name}: both label lines shown`);
-    const obstacle = nodeLabelObstacleBounds(graph.nodes[0],
+    const obstacle = nodeLabelObstacleBounds(
+      graph.nodes[0],
       projectCameraPoint(graph.nodes[0].position, state.cameraResolved, spec),
-      1, spec, domainStyle('neutral'), graph.project);
+      1,
+      spec,
+      domainStyle('neutral'),
+      graph.project,
+    );
     const bottom = Math.max(...lines.map((line) => line.y + line.font.size * 1.3));
-    assert.ok(bottom <= obstacle.y - 0.001, `${spec.name}: requested top position clears the stroke`);
+    assert.ok(
+      bottom <= obstacle.y - 0.001,
+      `${spec.name}: requested top position clears the stroke`,
+    );
     const nodeCenter = projectCameraPoint(graph.nodes[0].position, state.cameraResolved, spec);
     const firstLine = lines[0];
-    assert.ok(Math.abs((firstLine.x + measure(firstLine.text, firstLine.font) / 2) - nodeCenter.x) < 20 * spec.typeScale,
-      `${spec.name}: text is above its own node, not beside it`);
+    assert.ok(
+      Math.abs(firstLine.x + measure(firstLine.text, firstLine.font) / 2 - nodeCenter.x) <
+        20 * spec.typeScale,
+      `${spec.name}: text is above its own node, not beside it`,
+    );
   }
 });
 
@@ -469,17 +539,39 @@ test('authored curved edge role marks clear the node outline at every supported 
           state.reveal.edges = { edge: 1 };
           const style = domainStyle('neutral');
           const list = composeFrame(state, {
-            graph, positions, frame: 0, fps: 24, measure, frameSpec: spec, style,
+            graph,
+            positions,
+            frame: 0,
+            fps: 24,
+            measure,
+            frameSpec: spec,
+            style,
           });
-          const drawnEnd = list.selection.find((entry) => entry.id === 'edge' && entry.kind === 'edge')?.points.at(-1);
+          const drawnEnd = list.selection
+            .find((entry) => entry.id === 'edge' && entry.kind === 'edge')
+            ?.points.at(-1);
           assert.ok(drawnEnd, `${shape} ${head} ${curve} ${spec.name}`);
           const center = projectCameraPoint(graph.nodes[1].position, state.cameraResolved, spec);
-          const boundary = nodeGlyphRayDistance(graph.nodes[1], { x: -1, y: 0 }, 1, spec, style, graph.project);
+          const boundary = nodeGlyphRayDistance(
+            graph.nodes[1],
+            { x: -1, y: 0 },
+            1,
+            spec,
+            style,
+            graph.project,
+          );
           const width = 8 * spec.typeScale;
-          const reach = head === 'hollow-circle' ? 4 * spec.typeScale + width / 2
-            : head === 'bar' ? 5 * spec.typeScale + width / 2
-            : head === 'arrow' ? 8 * spec.typeScale : width / 2;
-          assert.ok(center.x - drawnEnd.x >= boundary + reach + spec.typeScale - 1e-7,
-            `${shape} ${head} curve=${curve} at ${spec.name}: role mark within stroked node`);
+          const reach =
+            head === 'hollow-circle'
+              ? 4 * spec.typeScale + width / 2
+              : head === 'bar'
+                ? 5 * spec.typeScale + width / 2
+                : head === 'arrow'
+                  ? 8 * spec.typeScale
+                  : width / 2;
+          assert.ok(
+            center.x - drawnEnd.x >= boundary + reach + spec.typeScale - 1e-7,
+            `${shape} ${head} curve=${curve} at ${spec.name}: role mark within stroked node`,
+          );
         }
 });

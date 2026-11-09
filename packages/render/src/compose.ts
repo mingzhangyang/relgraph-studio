@@ -664,17 +664,11 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
       height = lines.length * font.size * 1.3;
     const rightX = Math.max(p.x + r + u(9), obstacle.x + obstacle.w + u(5));
     const leftX = Math.min(p.x - r - u(9) - width, obstacle.x - width - u(5));
-    const topY = Math.min(
-      p.y - r - Math.max(u(25), height + u(4)),
-      obstacle.y - height - u(4),
-    );
+    const topY = Math.min(p.y - r - Math.max(u(25), height + u(4)), obstacle.y - height - u(4));
     const bottomY = Math.max(p.y + r + u(6), obstacle.y + obstacle.h + u(2));
     const nearRightX = Math.max(p.x + r + u(5), obstacle.x + obstacle.w + u(1));
     const nearLeftX = Math.min(p.x - r - u(5) - width, obstacle.x - width - u(1));
-    const upperY = Math.min(
-      p.y - r - Math.max(u(24), height + u(4)),
-      obstacle.y - height - u(1),
-    );
+    const upperY = Math.min(p.y - r - Math.max(u(24), height + u(4)), obstacle.y - height - u(1));
     const candidates = [
       { x: rightX, y: p.y - u(10) },
       { x: leftX, y: p.y - u(10) },

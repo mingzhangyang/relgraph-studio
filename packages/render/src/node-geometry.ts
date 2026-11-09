@@ -105,7 +105,12 @@ export function nodeGlyphRayDistance(
   const vertical = uy ? (g.halfHeight + g.halfStroke) / uy : Infinity;
   if (vertical * ux <= cornerX) return vertical;
   const dot = ux * cornerX + uy * cornerY;
-  return dot + Math.sqrt(Math.max(0, dot * dot - cornerX * cornerX - cornerY * cornerY + outerRadius * outerRadius));
+  return (
+    dot +
+    Math.sqrt(
+      Math.max(0, dot * dot - cornerX * cornerX - cornerY * cornerY + outerRadius * outerRadius),
+    )
+  );
 }
 
 /**

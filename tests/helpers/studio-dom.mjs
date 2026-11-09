@@ -156,13 +156,14 @@ export function createSimulatedStudioDom({
       return elements.get(id);
     },
     createElement(tag) {
-      const Constructor = {
-        button: HTMLButtonElement,
-        input: HTMLInputElement,
-        label: HTMLLabelElement,
-        select: HTMLSelectElement,
-        canvas: HTMLCanvasElement,
-      }[tag] ?? Element;
+      const Constructor =
+        {
+          button: HTMLButtonElement,
+          input: HTMLInputElement,
+          label: HTMLLabelElement,
+          select: HTMLSelectElement,
+          canvas: HTMLCanvasElement,
+        }[tag] ?? Element;
       return new Constructor(tag);
     },
   };

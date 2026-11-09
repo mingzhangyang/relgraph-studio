@@ -19,10 +19,7 @@ function containScale(asset: ImageAsset, box: ImageBox, clip: readonly PathComma
     clip[4]?.[0] === 'Z'
   ) {
     // Diamond: |x| / halfWidth + |y| / halfHeight <= 1 at every corner.
-    return Math.min(
-      initial,
-      2 / (asset.width / (box.w / 2) + asset.height / (box.h / 2)),
-    );
+    return Math.min(initial, 2 / (asset.width / (box.w / 2) + asset.height / (box.h / 2)));
   }
   if (first?.[0] === 'RR') {
     // Rounded pill: a corner must lie inside the straight sides or corner arc.
