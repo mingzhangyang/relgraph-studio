@@ -617,3 +617,4 @@ footer span { color: var(--gold); }
 .appearance-editor input,.appearance-editor select,.appearance-editor textarea { background: var(--bg-raised); }
 .appearance-editor .property-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 #visualSave { border-color: var(--gold-line); color: var(--gold-strong); }
+#layoutStrategies > summary { cursor: pointer; font-size: 13px; }

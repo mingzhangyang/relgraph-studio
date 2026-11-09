@@ -69,7 +69,7 @@ The accepted B1.5 scope is deterministic data → adapter → graph → pure tim
 ## Network authoring before B2-2
 
 - [x] Batch A: coordinated visual presets, inherited node/edge styles, independent display copy, projection-safe stable property panel, local project import/export and history. See [configuration](NETWORK-AUTHORING.md).
-- [ ] Batch B: deterministic layout strategies, locks, explicit preview/apply and layout history.
+- [x] Batch B: deterministic force/circle/generic layered/manual strategies; preserve/missing/rearrange, locks, explicit preview/apply/cancel and unified layout/manual history. Saved coordinates drive playback, without runtime simulation.
 
 ## B2 — Source-verified film
 

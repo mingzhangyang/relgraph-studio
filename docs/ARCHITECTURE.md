@@ -38,3 +38,30 @@ Workspace models own position-edit and playback policy; the corresponding views,
 ## Consequences and limits
 
 The graph projection cannot verify a source's scientific truth or turn unverified literary dates into facts. It cannot infer secrets in author-written labels, narration or summaries. Imported data and scripts require review before publishing; the Honglou fixture is explicitly provisional and the biology fixture synthetic. Large-scale layout, standards-based bio import, audio, 9:16 composition and an export UI remain future work.
+
+## Local network authoring projects
+
+`relgraph.studio/1` wraps an unchanged domain `source` plus a separately validated
+`config` (`packages/core/src/project.ts`). The loader adapts the source normally,
+then attaches authoring configuration to the full graph. `projectVisualGraph`
+continues to construct an explicit safe view and never includes configuration or
+future object maps. The composer resolves sparse appearance/copy only for that
+safe view. Selection targets derive from the same projected paths and node
+geometry; they are data, not another rendering backend. The DOM property adapter
+keeps controls mounted and receives only the current projected frame.
+
+`layout-strategies.ts` is a synchronous DOM-free authoring step over stable IDs.
+It supports generic layered SCC/distance packing, the existing seeded force
+solver, circle and manual strategies. Coordinate intent (preserve, fill missing,
+rearrange) and locks are explicit. No generation or reaction meaning is inferred
+from text. Layout computation never runs inside a frame evaluator. A transient
+preview is applied explicitly, with document serial validation; saved coordinates
+are then the authoritative input to playback and both rendering backends.
+
+`ProjectHistory` owns immutable sparse configuration snapshots. The coordinator
+routes style/copy, manual drag/numeric positions, locks and applied layouts through
+that history. Preview cancellation is separate from history. Document loads clear
+selection/history and retain the existing request-serial protection. No new domain
+schema fields, DOM simulation, framework, physical playback model or source
+verification claims are introduced. See [network authoring](NETWORK-AUTHORING.md)
+for format, limits and reproduction.

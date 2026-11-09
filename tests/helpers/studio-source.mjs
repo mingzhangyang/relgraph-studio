@@ -1,3 +1,8 @@
+import {
+  computeLayout,
+  DEFAULT_LAYOUT_SETTINGS,
+} from '../../packages/core/src/director/layout-strategies.ts';
+import { createLayoutStrategyView } from '../../apps/studio/src/layout-strategy-view.ts';
 import { ProjectHistory } from '../../apps/studio/src/project-editor-model.ts';
 import { createProjectEditor } from '../../apps/studio/src/project-editor-view.ts';
 import {
@@ -61,6 +66,9 @@ export function studioSource() {
 // Pure helpers the workspace imports, supplied as-is to every VM harness so
 // harnesses only stub what touches the canvas, network or storage.
 export const studioImports = {
+  computeLayout,
+  DEFAULT_LAYOUT_SETTINGS,
+  createLayoutStrategyView,
   ProjectHistory,
   createProjectEditor,
   createProject,
