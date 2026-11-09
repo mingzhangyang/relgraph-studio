@@ -548,17 +548,26 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
     if (imageStatus.textContent !== nextImageStatus) imageStatus.textContent = nextImageStatus;
     for (const [key, c] of controls) {
       c.input.disabled = disabled || (key === 'head' && frame?.view.domain === 'biology');
+      if (c.picker) c.picker.disabled = c.input.disabled;
       c.origin.textContent = inspectorOrigin(config, kind, selected, scope.value as Scope, key);
+      const inherited = String((resolved as Record<string, unknown>)[key] ?? '');
       if (contextChanged || doc.activeElement !== c.input)
-        c.input.value = displayedValue(
-          key,
-          String((resolved as Record<string, unknown>)[key] ?? ''),
-          c.input.type,
-        );
-      c.input.setAttribute(
-        'aria-invalid',
-        String(drafts.get(draftKey(key))?.badInput === true || c.input.validity?.badInput === true),
-      );
+        c.input.value = displayedValue(key, inherited, c.input.type);
+      const badInput =
+        c.input.type === 'number' &&
+        (drafts.get(draftKey(key))?.badInput === true || c.input.validity?.badInput === true);
+      const parsed = parseAppearanceDraft(appearanceKind(), key, c.input.value, badInput);
+      c.input.setAttribute('aria-invalid', String(!parsed.ok));
+      c.row.setAttribute('data-invalid', String(!parsed.ok));
+      if (c.feedback.textContent !== parsed.message) c.feedback.textContent = parsed.message;
+      if (c.picker && doc.activeElement !== c.picker) {
+        const color = /^#[0-9a-f]{6}$/i.test(c.input.value)
+          ? c.input.value
+          : /^#[0-9a-f]{6}$/i.test(inherited)
+            ? inherited
+            : '#808080';
+        c.picker.value = color;
+      }
     }
     renderedContext = context;
     // Recompute dirty state only after selection and its controls agree.
