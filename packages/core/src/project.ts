@@ -1,7 +1,10 @@
+import { validImageAsset, MAX_IMAGE_BYTES, type ImageAsset } from './image-assets.js';
 import type { VisualGraph, VisualNode, VisualEdge } from '../types/visual-graph.js';
 import type { NodeShape, EdgeHead } from './style.js';
 
 export interface NodeAppearance {
+  image?: string | null;
+  imageFit?: 'cover' | 'contain';
   shape?: NodeShape;
   size?: number;
   fill?: string;
@@ -29,6 +32,7 @@ export interface AppearanceLayers<T> {
   objects?: Record<string, T>;
 }
 export interface ProjectConfig {
+  assets?: Record<string, ImageAsset>;
   preset?: 'editorial' | 'quiet' | 'presentation';
   nodes?: AppearanceLayers<NodeAppearance>;
   edges?: AppearanceLayers<EdgeAppearance>;
@@ -59,6 +63,8 @@ const numberIn = (v: unknown, min: number, max: number): boolean =>
   typeof v === 'number' && Number.isFinite(v) && v >= min && v <= max;
 const paint = (v: unknown): boolean => typeof v === 'string' && /^#[a-f0-9]{6}$/i.test(v);
 const rules: Record<string, (v: unknown) => boolean> = {
+  image: (v) => v === null || (typeof v === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(v)),
+  imageFit: (v) => enumValue(v, ['cover', 'contain']),
   shape: (v) => enumValue(v, ['circle', 'pill', 'diamond']),
   size: (v) => numberIn(v, 8, 48),
   fill: paint,
@@ -76,6 +82,8 @@ const rules: Record<string, (v: unknown) => boolean> = {
   showLabel: (v) => typeof v === 'boolean',
 };
 const nodeKeys = [
+  'image',
+  'imageFit',
   'shape',
   'size',
   'fill',
@@ -111,12 +119,26 @@ export function validateProjectConfig(value: unknown, graph?: VisualGraph): stri
     if (Object.keys(v).some((k) => !allowed.includes(k))) fail(path + ': unknown field');
     return true;
   };
-  if (!keys(value, ['preset', 'nodes', 'edges', 'text', 'layout'], 'config')) return errors;
+  if (!keys(value, ['preset', 'nodes', 'edges', 'text', 'layout', 'assets'], 'config'))
+    return errors;
   if (
     value.preset !== undefined &&
     !enumValue(value.preset, ['editorial', 'quiet', 'presentation'])
   )
     fail('config.preset');
+  if (value.assets !== undefined) {
+    if (!isRecord(value.assets)) fail('config.assets');
+    else {
+      let bytes = 0;
+      if (Object.keys(value.assets).length > 32) fail('config.assets: at most 32 images');
+      for (const [id, asset] of Object.entries(value.assets)) {
+        if (!/^[a-zA-Z0-9_-]{1,100}$/.test(id) || !validImageAsset(asset))
+          fail('config.assets: invalid raster');
+        else bytes += asset.width * asset.height * 4;
+      }
+      if (bytes > MAX_IMAGE_BYTES) fail('config.assets: pixel budget exceeded');
+    }
+  }
   for (const kind of ['nodes', 'edges'] as const) {
     const layer = value[kind];
     if (layer === undefined) continue;
@@ -124,6 +146,12 @@ export function validateProjectConfig(value: unknown, graph?: VisualGraph): stri
     const check = (v: unknown): void => {
       const allowed = kind === 'nodes' ? nodeKeys : edgeKeys;
       if (!keys(v, allowed, `config.${kind}.style`)) return;
+      if (
+        kind === 'nodes' &&
+        typeof v.image === 'string' &&
+        (!isRecord(value.assets) || !Object.hasOwn(value.assets, v.image))
+      )
+        fail('config.nodes.image: missing asset');
       for (const [k, x] of Object.entries(v))
         if (!allowed.includes(k) || !rules[k]?.(x)) fail(`config.${kind}.${k}`);
     };

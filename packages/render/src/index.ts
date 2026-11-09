@@ -9,3 +9,5 @@ export * from './theme.js';
 export * from './backends/canvas2d.js';
 
 export * from './selection.js';
+
+export * from './images.js';

@@ -6,8 +6,12 @@ type Position = { x: number; y: number };
 export function layoutGraph(
   graph: Pick<VisualGraph, 'nodes' | 'edges' | 'project'>,
 ): Map<string, Position> {
+  const compare = (a: { id: string }, b: { id: string }): number =>
+    a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+  const nodes = [...graph.nodes].sort(compare),
+    edges = [...graph.edges].sort(compare);
   const positions = new Map<string, Position>();
-  for (const node of graph.nodes) if (node.position) positions.set(node.id, { ...node.position });
+  for (const node of nodes) if (node.position) positions.set(node.id, { ...node.position });
   for (const [id, p] of Object.entries(graph.project?.layout?.positions ?? {}))
     positions.set(id, { ...p });
   const existing = [...positions.values()];
@@ -33,13 +37,13 @@ export function layoutGraph(
   }
   // Lay out missing participants first, so reaction centroids use all known
   // inputs/outputs rather than coinciding with the one positioned participant.
-  for (const node of graph.nodes) {
+  for (const node of nodes) {
     if (!positions.has(node.id) && node.kind !== 'reaction') positions.set(node.id, fallback());
   }
   // Catalyst position does not pull a process away from the reaction flow.
-  for (const node of graph.nodes) {
+  for (const node of nodes) {
     if (positions.has(node.id) || node.kind !== 'reaction') continue;
-    const neighbors = graph.edges
+    const neighbors = edges
       .filter(
         (edge) =>
           (edge.kind === 'consumption' && edge.target === node.id) ||

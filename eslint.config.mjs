@@ -28,6 +28,8 @@ export default tseslint.config(
       'tests/transcript-model.test.mjs',
       'tests/honglou-dataset.test.mjs',
       'tests/project-customization.test.mjs',
+      'tests/layout-strategies.test.mjs',
+      'tests/node-images.test.mjs',
       'tests/helpers/**/*.mjs',
     ],
     extends: [js.configs.recommended],

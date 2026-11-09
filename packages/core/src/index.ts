@@ -16,3 +16,7 @@ export type * from '../types/relationship-graph.js';
 export type * from '../types/visual-graph.js';
 
 export * from './project.js';
+
+export * from './director/layout-strategies.js';
+
+export * from './image-assets.js';

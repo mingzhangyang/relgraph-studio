@@ -48,3 +48,41 @@ Captured on the same Chromium 153 / Linux x64, before baseline update. The defau
 | Literature · dark | [Before](visuals/network/literature-dark-before.png) | [After](visuals/network/literature-dark-after.png) |
 | Biology · light | [Before](visuals/network/biology-light-before.png) | [After](visuals/network/biology-light-after.png) |
 | Biology · dark | [Before](visuals/network/biology-dark-before.png) | [After](visuals/network/biology-dark-after.png) |
+
+## Layout strategy and reproducible editing
+
+Open **布局策略 · 预览后应用** beneath the source card. The initial choice is manual/preserve. Select:
+
+- **通用分层**: stable connected-component packing; directed strongly connected components share a level, followed by topological depth. Components with only undirected links use generic graph-distance levels. No relationship label or `family` kind is interpreted as a parent/child generation. This is not a genealogy algorithm.
+- **确定性力导向**: the existing ID-sorted seeded solver, fixed 0–2000 iterations, with spacing 64–400. No simulation runs while playing.
+- **圆形**: stable ID order, seed-controlled rotation and circumference-based spacing.
+- **手动**: retain the existing drag/keyboard position tools.
+
+Coordinate modes are explicit: **保留现有坐标** returns the current resolved positions; **只填补缺失坐标** preserves authored/saved coordinates and fills missing positions; **重排未锁定节点** moves every unlocked node. A fallback preview coordinate is not an authored coordinate. Locks preserve the exact current coordinate in all strategies and in manual edits. Only safe currently projected nodes are listed for locking; imported lock IDs for future nodes remain saved but do not appear early.
+
+**预览布局** changes the temporary picture only. **取消预览** restores it; **应用布局** stores settings and coordinates as one undoable commit. Changing parameters, seeking, playback, theme, saving or loading another document cancels an uncommitted preview. The solver is synchronous, bounded and DOM-free; a request serial also guards application. There is no old async result that can replace a new document. Very large graphs may block the UI during calculation; worker offloading is a future optimization.
+
+Manual numeric coordinate edits, complete drags, reset and lock changes enter the same per-document history. A cancelled drag restores its prior point. A locked node cannot be dragged or moved by a typed coordinate. Undo/redo restores coordinates, locks, style and copy together. The configuration stores:
+
+```json
+{
+  "layout": {
+    "type": "layered",
+    "mode": "rearrange",
+    "seed": 42,
+    "spacing": 160,
+    "iterations": 160,
+    "locked": ["example-id"],
+    "positions": { "example-id": { "x": 120, "y": 180 } }
+  }
+}
+```
+
+Reimport uses the saved coordinates directly. Merely loading or playing never reruns a selected algorithm. `computeLayout` is the exported pure core entry for programmatic authoring. Coordinates produced by strategies are quantized to .01 world units (including normalization of negative zero); authored/locked precision remains intact. All original domain formats, reaction nodes, directed roles and source evidence are retained.
+
+## Node images
+
+Use **节点图片 · 仅当前节点** for local PNG/JPEG/WebP upload, shape clipping,
+cover/contain, removal and inherited-image reset. Saved projects embed normalized
+pixels alongside sparse `image`/`imageFit` references; the original domain source
+stays unchanged. See [image limits, export and current main-branch delivery](NODE-IMAGES.md).

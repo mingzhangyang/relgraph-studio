@@ -1,4 +1,6 @@
 import {
+  nodeAppearance,
+  appearanceOrigin,
   displayNodeText,
   displayEdgeText,
   type ProjectConfig,
@@ -13,6 +15,8 @@ import {
   inspectorOrigin,
   clearAppearance,
   copyConfig,
+  setNodeImage,
+  inheritNodeImage,
   type Selection,
   type Scope,
 } from './project-editor-model.js';
@@ -23,6 +27,7 @@ interface Actions {
   redo(): void;
   save(): void;
   pause(): void;
+  uploadImage(file: File, nodeId: string): Promise<void>;
 }
 const nodeFields: [string, string, string | readonly string[]][] = [
   ['shape', '形状', ['circle', 'pill', 'diamond']],
@@ -157,6 +162,71 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
     buttonHost.append(b);
     return b;
   };
+  const imageSection = el('div'),
+    imageLabel = el('label', '节点图片 · 仅当前节点'),
+    imageFile = el('input'),
+    imageStatus = el('p');
+  imageStatus.id = 'visualImageStatus';
+  // Announce asynchronous image processing and completion without repeatedly
+  // announcing the same text on every playback-driven render.
+  imageStatus.setAttribute('role', 'status');
+  imageStatus.setAttribute('aria-live', 'polite');
+  imageStatus.setAttribute('aria-atomic', 'true');
+  imageFile.id = 'visualImageFile';
+  imageFile.type = 'file';
+  imageFile.accept = 'image/png,image/jpeg,image/webp';
+  imageLabel.append(imageFile);
+  imageSection.append(imageLabel, imageStatus);
+  host.append(imageSection);
+  let imageBusy = false;
+  // A selection's ID can repeat after A -> B -> A; only its revision is unique.
+  let selectionRevision = 0;
+  const setSelection = (next: Selection) => {
+    if (selection?.kind !== next?.kind || selection?.id !== next?.id) {
+      ++selectionRevision;
+      imageBusy = false;
+    }
+    selection = next;
+  };
+  const imageFit = el('select');
+  imageFit.id = 'visualImageFit';
+  for (const [value, text] of [
+    ['cover', '填满 · 居中裁切'],
+    ['contain', '完整显示 · 保留留白'],
+  ]) {
+    const option = el('option', text);
+    option.value = value;
+    imageFit.append(option);
+  }
+  const fitLabel = el('label', '图片适配');
+  fitLabel.append(imageFit);
+  imageSection.append(fitLabel);
+  const removeImage = el('button', '移除图片');
+  removeImage.type = 'button';
+  removeImage.id = 'visualImageRemove';
+  imageSection.append(removeImage);
+  const inheritImage = el('button', '恢复继承图片');
+  inheritImage.type = 'button';
+  inheritImage.id = 'visualImageInherit';
+  imageSection.append(inheritImage);
+  imageFile.addEventListener('change', () => {
+    const file = imageFile.files?.[0];
+    imageFile.value = '';
+    if (file && selection?.kind === 'node') void actions.uploadImage(file, selection.id);
+  });
+  removeImage.addEventListener('click', () => {
+    const node = item();
+    if (node && kind === 'node') actions.change(setNodeImage(config, node as VisualNode, null));
+  });
+  inheritImage.addEventListener('click', () => {
+    const node = item();
+    if (node && kind === 'node') actions.change(inheritNodeImage(config, node as VisualNode));
+  });
+  imageFit.addEventListener('change', () => {
+    const node = item();
+    if (node && kind === 'node')
+      actions.change(editAppearance(config, 'node', node, 'object', 'imageFit', imageFit.value));
+  });
   button('恢复原文', 'visualRestoreText', () => {
     if (!selection) return;
     const next = copyConfig(config);
@@ -234,7 +304,7 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
   const render = () => {
     buildFields();
     const candidates = kind === 'node' ? (frame?.view.nodes ?? []) : (frame?.view.edges ?? []);
-    if (selection && !candidates.some((n) => n.id === selection!.id)) selection = null;
+    if (selection && !candidates.some((n) => n.id === selection!.id)) setSelection(null);
     const entries = visibleObjectEntries(frame, config, kind);
     const nextSignature = JSON.stringify([kind, entries]);
     if (signature !== nextSignature) {
@@ -275,6 +345,21 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
           : '')
       : '全局样式可作用于未来对象，列表只显示当前投影。';
     const resolved = inspectorAppearance(config, kind, selected, scope.value as Scope);
+    imageSection.hidden = kind !== 'node';
+    const imageStyle =
+      selected && kind === 'node' ? nodeAppearance(config, selected as VisualNode) : {};
+    const asset = imageStyle.image ? config.assets?.[imageStyle.image] : undefined;
+    imageFile.disabled = !selected || imageBusy;
+    imageFit.disabled = !selected || !asset || imageBusy;
+    removeImage.disabled = !selected || !asset;
+    inheritImage.disabled = !selected;
+    imageFit.value = imageStyle.imageFit ?? 'cover';
+    const nextImageStatus = imageBusy
+      ? '正在本地处理图片…'
+      : asset
+        ? `已设置图片 · ${asset.width} × ${asset.height} · ${appearanceOrigin(config.nodes, selected?.kind ?? '', selected?.id ?? '', 'image')}`
+        : 'PNG / JPEG / WebP · 最长边保存为 256 像素 · 不上传服务器';
+    if (imageStatus.textContent !== nextImageStatus) imageStatus.textContent = nextImageStatus;
     for (const [key, c] of controls) {
       c.input.disabled = disabled || (key === 'head' && frame?.view.domain === 'biology');
       c.origin.textContent = inspectorOrigin(config, kind, selected, scope.value as Scope, key);
@@ -287,12 +372,12 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
   );
   kindSelect.addEventListener('change', () => {
     kind = kindSelect.value as typeof kind;
-    selection = null;
+    setSelection(null);
     render();
   });
   objects.addEventListener('change', () => {
     actions.pause();
-    selection = objects.value ? { kind, id: objects.value } : null;
+    setSelection(objects.value ? { kind, id: objects.value } : null);
     render();
   });
   scope.addEventListener('change', render);
@@ -338,8 +423,19 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
       redo.disabled = !canRedo;
       render();
     },
+    selectedNodeId() {
+      return selection?.kind === 'node' ? selection.id : null;
+    },
+    selectionRevision() {
+      return selectionRevision;
+    },
+    imageBusy(value: boolean) {
+      imageBusy = value;
+      render();
+    },
     clear() {
-      selection = null;
+      imageBusy = false;
+      setSelection(null);
       signature = '';
       frame = null;
       config = {};
@@ -355,7 +451,7 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
         const active = doc.activeElement;
         if (active && host.contains(active)) (active as HTMLElement).blur();
         actions.pause();
-        selection = { kind: hit.kind, id: hit.id };
+        setSelection({ kind: hit.kind, id: hit.id });
         kind = hit.kind;
         kindSelect.value = kind;
         render();

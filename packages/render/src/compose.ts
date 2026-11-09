@@ -1,3 +1,4 @@
+import { composeNodeImage } from './image-layout.js';
 import {
   DEFAULT_LOCALE,
   nodeAppearance,
@@ -575,7 +576,18 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
       nodeLabelBounds.set(node.id, obstacle);
       occupied.push(obstacle);
     }
-    const outline = nodeOutline(p, glyphGeometry(node, cam.scale, spec, style, 1, config));
+    const geometry = glyphGeometry(node, cam.scale, spec, style, 1, config);
+    const outline = nodeOutline(p, geometry);
+    const asset =
+      custom.image && config?.assets && Object.hasOwn(config.assets, custom.image)
+        ? config.assets[custom.image]
+        : undefined;
+    const imageBox = {
+      x: p.x - geometry.halfWidth,
+      y: p.y - geometry.halfHeight,
+      w: geometry.halfWidth * 2,
+      h: geometry.halfHeight * 2,
+    };
     if (visibility > 0) {
       const scale = 0.82 + 0.18 * visibility;
       graphItems.push({
@@ -599,14 +611,28 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
             type: 'path',
             d: outline,
             fill: custom.fill ?? P.nodeFill,
-            stroke: c,
-            width: u(custom.borderWidth ?? 2),
+            ...(asset && custom.image ? {} : { stroke: c, width: u(custom.borderWidth ?? 2) }),
           },
-          {
-            type: 'path',
-            d: [['A', p.x, p.y, shape === 'diamond' ? u(3) : Math.max(u(3), r * 0.32), 0, TAU]],
-            fill: c,
-          },
+          ...(asset && custom.image
+            ? [
+                composeNodeImage(
+                  custom.image,
+                  asset,
+                  imageBox,
+                  outline,
+                  custom.imageFit ?? 'cover',
+                ),
+                { type: 'path' as const, d: outline, stroke: c, width: u(custom.borderWidth ?? 2) },
+              ]
+            : [
+                {
+                  type: 'path' as const,
+                  d: [
+                    ['A', p.x, p.y, shape === 'diamond' ? u(3) : Math.max(u(3), r * 0.32), 0, TAU],
+                  ] as PathCommand[],
+                  fill: c,
+                },
+              ]),
         ],
       });
     }

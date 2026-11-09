@@ -74,7 +74,18 @@ export interface GroupItem {
   alpha?: number;
   items: DisplayItem[];
 }
-export type DisplayItem = PathItem | TextItem | GroupItem;
+export interface ImageItem {
+  type: 'image';
+  assetId: string;
+  source: { x: number; y: number; w: number; h: number };
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  clip: PathCommand[];
+  alpha?: number;
+}
+export type DisplayItem = PathItem | TextItem | GroupItem | ImageItem;
 
 /** The visible, spoiler-filtered text of a frame, from the same source as its pixels. */
 export interface FrameText {
@@ -104,7 +115,9 @@ export interface DisplayList {
 export type TextMeasurer = (text: string, font: FontRef) => number;
 
 /** Depth-first walk over all drawable items, e.g. for tests and text search. */
-export function* walkDisplayItems(items: readonly DisplayItem[]): Generator<PathItem | TextItem> {
+export function* walkDisplayItems(
+  items: readonly DisplayItem[],
+): Generator<PathItem | TextItem | ImageItem> {
   for (const item of items) {
     if (item.type === 'group') yield* walkDisplayItems(item.items);
     else yield item;
