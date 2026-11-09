@@ -31,6 +31,7 @@ import {
 } from '../../apps/studio/src/layout-editor-model.ts';
 import {
   renderEditorAvailability,
+  renderEditorAvailability,
   renderEditorFields,
   renderEditorMessage,
   renderEditorMode,
@@ -72,8 +73,8 @@ export function studioSource() {
     .replace(/^export \{\};?\n/gm, '');
 }
 
-// Pure helpers the workspace imports, supplied as-is to every VM harness so
-// harnesses only stub what touches the canvas, network or storage.
+// Workspace dependency functions and views are supplied to the source VM as-is;
+// only Canvas drawing, network, animation and browser storage are stubbed.
 export const studioImports = {
   normalizeNodeImage,
   setNodeImage,

@@ -12,6 +12,8 @@ export default tseslint.config(
     files: [
       'scripts/**/*.mjs',
       '*.config.mjs',
+      'tests/studio-dom.test.mjs',
+      'tests/workspace-shell-view.test.mjs',
       'tests/production-build.test.mjs',
       'tests/graph-kernel.test.mjs',
       'tests/domain-migration.test.mjs',
