@@ -9,7 +9,9 @@ export function configWithLayoutPositions(
   editedIds?: readonly string[],
 ): ProjectConfig {
   const next = copyConfig(config);
-  const positions = editedIds ? { ...config.layout?.positions } : Object.fromEntries(current);
+  const positions = editedIds
+    ? { ...next.layout?.positions }
+    : Object.fromEntries([...current].map(([id, p]) => [id, { ...p }]));
   if (editedIds)
     for (const id of editedIds) {
       const p = current.get(id);

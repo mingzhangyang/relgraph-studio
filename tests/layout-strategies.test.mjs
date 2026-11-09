@@ -150,6 +150,13 @@ test('individual coordinate/lock edits keep other fallback nodes eligible for mi
         (next.get(n.id).x !== original.get(n.id).x || next.get(n.id).y !== original.get(n.id).y),
     ),
   );
+  const owned = configWithLayoutPositions(config, original, settings, []);
+  owned.layout.positions[id].x += 1;
+  assert.deepEqual(
+    config.layout.positions[id],
+    original.get(id),
+    'sparse snapshots do not alias previous coordinates',
+  );
   const applied = configWithLayoutPositions(config, next, settings);
   assert.equal(Object.keys(applied.layout.positions).length, graph.nodes.length);
 });
