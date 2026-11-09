@@ -240,9 +240,13 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
   });
   button('恢复原文', 'visualRestoreText', () => {
     if (!selection) return;
+    // This is an explicit discard of the selected object's text edits.
+    drafts.delete(draftKey('label'));
+    drafts.delete(draftKey('description'));
     const next = copyConfig(config);
     delete next.text?.[kind === 'node' ? 'nodes' : 'edges']?.[selection.id];
     actions.change(next);
+    actions.draftChanged?.();
   });
   const advanced = el('details'),
     summary = el('summary', '高级样式 · 继承与覆盖'),

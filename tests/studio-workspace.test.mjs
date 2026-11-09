@@ -596,6 +596,23 @@ test('rejected property changes survive blur, redraw and selection changes until
   assert.equal(app.downloads.length, downloads + 1);
 });
 
+test('restoring original copy explicitly discards uncommitted text drafts', async () => {
+  const app = makeStudio();
+  await app.ready;
+  assert.equal(app.window.renderAt(84), true);
+  const objects = viewControl(app, 'visualObject');
+  objects.value = objects.children[1].value;
+  await objects.dispatch('change');
+  const label = viewControl(app, 'visualLabel');
+  const original = label.value;
+  label.value += ' · 不提交的文字';
+  await label.dispatch('input');
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
+  await viewControl(app, 'visualRestoreText').click();
+  assert.equal(label.value, original);
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
+});
+
 test('unapplied manual coordinates block export and warn on source replacement', async () => {
   const app = makeStudio();
   await app.ready;
