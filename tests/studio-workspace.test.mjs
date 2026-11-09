@@ -512,13 +512,16 @@ test('selection changes reconcile controls before updating the unsaved indicator
   assert.equal(app.window.renderAt(84), true);
   const objects = viewControl(app, 'visualObject');
   const choices = objects.children.filter((option) => option.value).map((option) => option.value);
-  assert.ok(choices.length > 0);
+  assert.ok(choices.length >= 2, 'the test needs two visible nodes');
+  const labels = [];
   for (const id of choices.slice(0, 2)) {
     objects.value = id;
     await objects.dispatch('change');
+    labels.push(viewControl(app, 'visualLabel').value);
     assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
     assert.doesNotMatch(app.document.title, /^● /);
   }
+  assert.notEqual(labels[0], labels[1], 'selection should change the displayed label');
   objects.value = '';
   await objects.dispatch('change');
   assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
