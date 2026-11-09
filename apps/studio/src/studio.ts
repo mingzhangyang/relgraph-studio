@@ -872,8 +872,15 @@ layoutReset.addEventListener('click', () => {
   cancelLayoutPreview();
   if (!currentLayout || !originalLayout) return;
   releaseLayoutPointer();
-  // Reset is an explicit discard of all pending coordinate inputs.
+  const changedPositions = layoutChanged();
+  // Reset is an explicit discard of all pending coordinate inputs, not a
+  // new authored layout commit when only unsubmitted drafts existed.
   coordinateDrafts.clear();
+  if (!changedPositions) {
+    updateLayoutFields();
+    updateLayoutControls();
+    return;
+  }
   for (const [id, p] of originalLayout)
     if (!projectHistory.value.layout?.locked.includes(id)) currentLayout.set(id, { ...p });
   projectSavepoint.positionsChanged();

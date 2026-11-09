@@ -572,6 +572,7 @@ test('removing a scoped override accepts an inherited nonempty value without lea
   await font.dispatch('change');
   assert.equal(font.value, '18', 'successful removal displays inherited value');
   assert.equal(viewControl(app, 'visualError').textContent, '');
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true', 'prior preset still differs');
 
   const count = app.downloads.length;
   await viewControl(app, 'visualSave').click();

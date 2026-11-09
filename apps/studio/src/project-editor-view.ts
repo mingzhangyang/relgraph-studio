@@ -370,7 +370,11 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
         // inherited appearance, which would report a false pending draft.
         drafts.delete(draft);
         const accepted = update(key, val);
-        if (!accepted && !matchesValue(raw, expectedAppearance(key), input.type)) {
+        if (accepted) {
+          // The browser may still regard this input as focused during change.
+          // Display the committed/inherited value immediately in either case.
+          input.value = expectedAppearance(key);
+        } else if (!matchesValue(raw, expectedAppearance(key), input.type)) {
           drafts.set(draft, raw);
           input.value = raw;
         }

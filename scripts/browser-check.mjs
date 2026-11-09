@@ -1544,6 +1544,17 @@ for (const theme of ['dark', 'light']) {
     await correctedDownload;
     assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'false');
 
+    // A successful empty override inherits the preset's 18px font size.
+    await page.fill('#visual-fontSize', '22');
+    await page.locator('#visual-fontSize').evaluate((element) => element.blur());
+    await page.fill('#visual-fontSize', '');
+    await page.locator('#visual-fontSize').evaluate((element) => element.blur());
+    assert.equal(await page.inputValue('#visual-fontSize'), '18');
+    const inheritedDownload = page.waitForEvent('download');
+    await page.click('#visualSave');
+    await inheritedDownload;
+    assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'false');
+
     await page.click('#layoutToggle');
     assert.equal(await page.isDisabled('#layoutX'), false);
     const chooserIds = await page.locator('#layoutNode option').evaluateAll((options) =>
