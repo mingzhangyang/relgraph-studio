@@ -31,7 +31,6 @@ import {
 } from '../../apps/studio/src/layout-editor-model.ts';
 import {
   renderEditorAvailability,
-  renderEditorAvailability,
   renderEditorFields,
   renderEditorMessage,
   renderEditorMode,
@@ -98,6 +97,7 @@ export const studioImports = {
   restoreLayoutPositions,
   startPositionDrag,
   updateEditableNodePosition,
+  renderEditorAvailability,
   renderEditorFields,
   renderEditorMessage,
   renderEditorMode,
