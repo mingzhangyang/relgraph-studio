@@ -584,6 +584,8 @@ test('clearing an override inherits a value without an unsaved draft', async () 
   const count = app.downloads.length;
   await viewControl(app, 'visualSave').click();
   assert.equal(app.downloads.length, count + 1, 'accepted inherited value must not block export');
+  const exported = JSON.parse(await app.blobs.at(-1).text());
+  assert.equal(exported.config.nodes?.objects?.[objects.value]?.fontSize, undefined);
   assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
 });
 
@@ -700,6 +702,9 @@ test('manual X/Y drafts persist per node, including when position mode is closed
   await app.node('layoutApply').click();
   await viewControl(app, 'visualSave').click();
   assert.equal(app.downloads.length, before + 1);
+  const exported = JSON.parse(await app.blobs.at(-1).text());
+  assert.equal(exported.config.layout.positions[ids[0]].x, Number(draftAX));
+  assert.equal(exported.config.layout.positions[ids[1]].y, Number(draftBY));
   assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
 });
 
@@ -735,6 +740,7 @@ test('unapplied coordinates survive switching nodes until explicitly reset', asy
   await chooser.dispatch('change');
   assert.equal(x.value, original, 'explicit reset discards the earlier coordinate draft');
   assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
+  assert.equal(viewControl(app, 'visualUndo').disabled, true, 'draft-only reset adds no history');
 });
 
 test('unapplied manual coordinates block export and warn on source replacement', async () => {
