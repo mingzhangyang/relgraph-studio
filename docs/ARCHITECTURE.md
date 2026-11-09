@@ -42,6 +42,16 @@ empty Canvas placeholder. Position availability updates belong in
 identity, spoiler-safe graph handling, all playback transitions, renderer
 lifecycle, layout/history and download decisions.
 
+Document-wide actions use one toolbar above the preview instead of duplicates
+inside the object inspector. `document-command-model.ts` is a pure shortcut
+policy, `document-toolbar-view.ts` is a DOM-only action/availability/status
+adapter, and `studio.ts` reuses its existing history, complete-project download
+and source-coordinate export logic. Keyboard shortcuts and buttons pass through
+the same enabled-state gate; focused form fields retain native undo/redo.
+`ProjectSavepoint` and pending-draft checks remain the source of truth for
+unsaved status and whether full-project download may start. The toolbar does
+not change the film's frame state, DisplayList or Skia/Canvas rendering.
+
 Source-VM and real Vite bundle tests now share one simulated DOM implementation,
 `tests/helpers/studio-dom.mjs`. Simulated DOM is not real Chromium or native
 Skia; see [four-layer local verification](TESTING.md).
