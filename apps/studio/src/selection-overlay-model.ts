@@ -9,6 +9,7 @@ export interface InspectorFocus {
 }
 
 type HitTarget = NonNullable<DisplayList['selection']>[number];
+type VisibleObject = DirectorFrameState['view']['nodes'][number] | DirectorFrameState['view']['edges'][number];
 
 export interface OverlayProjection {
   width: number;
@@ -65,12 +66,14 @@ export function projectSelectionOverlay(
   const height = list?.height ?? 720;
   const clip = list?.selectionClip ?? { x: 0, y: 0, w: width, h: height };
   const noun = focus.kind === 'node' ? '节点' : '连线';
-  const visible = frame ? frame.view[focus.kind === 'node' ? 'nodes' : 'edges'] : [];
+  const visible: readonly VisibleObject[] = frame
+    ? frame.view[focus.kind === 'node' ? 'nodes' : 'edges']
+    : [];
   const selected = focus.selection?.kind === focus.kind
     ? visible.find((item) => item.id === focus.selection?.id)
     : undefined;
 
-  let affected = typeof selected === 'object' && focus.scope === 'object' ? [selected] : [];
+  let affected: readonly VisibleObject[] = selected && focus.scope === 'object' ? [selected] : [];
   if (focus.scope === 'global') affected = visible;
   if (focus.scope === 'category' && selected)
     affected = visible.filter((item) => item.kind === selected.kind);
