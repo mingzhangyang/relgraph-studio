@@ -743,6 +743,158 @@ test('unapplied coordinates survive switching nodes until explicitly reset', asy
   assert.equal(viewControl(app, 'visualUndo').disabled, true, 'draft-only reset adds no history');
 });
 
+test('incomplete native numbers remain drafts even when the browser reports an empty value', async () => {
+  const app = makeStudio();
+  await app.ready;
+  assert.equal(app.window.renderAt(84), true);
+  const objects = viewControl(app, 'visualObject');
+  objects.value = objects.children[1].value;
+  await objects.dispatch('change');
+  const size = viewControl(app, 'visual-size');
+  assert.equal(size.value, '', 'no size override is initially authored');
+
+  // Native type=number exposes value === '' for an incomplete '-' token.
+  size.validity = { badInput: true };
+  size.value = '';
+  await size.dispatch('input');
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
+  assert.equal(size.attributes['aria-invalid'], 'true');
+  const before = app.downloads.length;
+  await viewControl(app, 'visualSave').click();
+  assert.equal(app.downloads.length, before);
+
+  // Some browsers sanitize validity on blur before change is dispatched.
+  // The earlier badInput observation must still prevent committing 'inherit'.
+  size.validity.badInput = false;
+  await size.dispatch('change');
+  assert.match(viewControl(app, 'visualError').textContent, /数字输入/);
+  assert.equal(app.window.renderAt(85), true);
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
+
+  let prompts = 0;
+  app.window.confirm = () => {
+    ++prompts;
+    return false;
+  };
+  await app.node('exampleBiology').click();
+  assert.equal(prompts, 1);
+  const exit = { prevented: false, preventDefault() { this.prevented = true; } };
+  app.window.dispatch('beforeunload', exit);
+  assert.equal(exit.prevented, true);
+
+  // A new, valid user input clears the invalid marker. Empty is a deliberate
+  // inherit only after a fresh valid input event, not a blur sanitization.
+  size.value = '24';
+  await size.dispatch('input');
+  assert.equal(size.attributes['aria-invalid'], 'false');
+  await size.dispatch('change');
+  size.value = '';
+  await size.dispatch('input');
+  await size.dispatch('change');
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
+  await viewControl(app, 'visualSave').click();
+  assert.equal(app.downloads.length, before + 1);
+  const exported = JSON.parse(await app.blobs.at(-1).text());
+  assert.equal(exported.config.nodes?.objects?.[objects.value]?.size, undefined);
+});
+
+test('invalid number tokens cannot remove an existing saved override', async () => {
+  const app = makeStudio();
+  await app.ready;
+  assert.equal(app.window.renderAt(84), true);
+  const objects = viewControl(app, 'visualObject');
+  objects.value = objects.children[1].value;
+  await objects.dispatch('change');
+  const size = viewControl(app, 'visual-size');
+  size.value = '24';
+  await size.dispatch('input');
+  await size.dispatch('change');
+  await viewControl(app, 'visualSave').click();
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
+
+  size.validity = { badInput: true };
+  size.value = '';
+  await size.dispatch('input');
+  size.validity.badInput = false;
+  await size.dispatch('change');
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
+  assert.equal(size.attributes['aria-invalid'], 'true');
+  const count = app.downloads.length;
+  await viewControl(app, 'visualSave').click();
+  assert.equal(app.downloads.length, count);
+  size.value = '24';
+  await size.dispatch('input');
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
+  await size.dispatch('change');
+  await viewControl(app, 'visualSave').click();
+  assert.equal(app.downloads.length, count + 1);
+  const exported = JSON.parse(await app.blobs.at(-1).text());
+  assert.equal(exported.config.nodes.objects[objects.value].size, 24);
+});
+
+test('cancelled drags must preserve coordinate drafts matching transient positions', async () => {
+  const app = makeStudio();
+  await app.ready;
+  assert.equal(app.window.renderAt(84), true);
+  await app.node('layoutToggle').click();
+
+  const chooser = app.node('layoutNode');
+  const stage = app.node('stage');
+  const frame = app.window.studioFrame();
+  let candidate = null;
+  for (const option of chooser.children) {
+    const id = option.value;
+    chooser.value = id;
+    await chooser.dispatch('change');
+    const x = Number(app.node('layoutX').value);
+    const y = Number(app.node('layoutY').value);
+    const camera = frame.cameraResolved;
+    const screen = {
+      x: 640 + (x - camera.x) * camera.scale,
+      y: 330 + (y - camera.y) * camera.scale,
+    };
+    if (screen.x < 26 || screen.x > 1254 || screen.y < 108 || screen.y > 542) continue;
+    await stage.dispatch('pointerdown', {
+      pointerId: 11, isPrimary: true, pointerType: 'mouse', button: 0,
+      clientX: screen.x, clientY: screen.y,
+    });
+    if (stage.pointerCaptured === 11 && chooser.value === id) {
+      candidate = { id, x, y, screen, camera };
+      break;
+    }
+    if (stage.pointerCaptured === 11)
+      await stage.dispatch('pointercancel', { pointerId: 11 });
+  }
+  assert.ok(candidate, 'the shared DOM hit test should find a movable visible node');
+  const { id, x, screen, camera } = candidate;
+  const draftX = x + 10;
+  const xInput = app.node('layoutX');
+  xInput.value = String(draftX);
+  await xInput.dispatch('input');
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
+
+  await stage.dispatch('pointermove', {
+    pointerId: 11,
+    clientX: screen.x + 10 * camera.scale,
+    clientY: screen.y,
+  });
+  assert.equal(xInput.value, String(draftX), 'temporary drag reaches the typed coordinate');
+  await stage.dispatch('pointercancel', { pointerId: 11 });
+  assert.equal(xInput.value, String(draftX), 'cancelled drag restores the pending input');
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
+
+  const count = app.downloads.length;
+  await viewControl(app, 'visualSave').click();
+  assert.equal(app.downloads.length, count);
+  const select = app.node('layoutNode');
+  assert.equal(select.value, id);
+  await app.node('layoutApply').click();
+  await viewControl(app, 'visualSave').click();
+  assert.equal(app.downloads.length, count + 1);
+  const data = JSON.parse(await app.blobs.at(-1).text());
+  assert.equal(data.config.layout.positions[id].x, draftX);
+});
+
 test('unapplied manual coordinates block export and warn on source replacement', async () => {
   const app = makeStudio();
   await app.ready;

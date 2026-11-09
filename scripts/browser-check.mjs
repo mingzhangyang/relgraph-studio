@@ -1555,6 +1555,28 @@ for (const theme of ['dark', 'light']) {
     await inheritedDownload;
     assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'false');
 
+    // Number inputs can display a '-' token with value === '' and badInput.
+    // It is neither a valid commit nor an intentional inherit operation.
+    const numberInput = page.locator('#visual-size');
+    await numberInput.focus();
+    await numberInput.press('-');
+    assert.equal(
+      await numberInput.evaluate((element) => element.validity.badInput),
+      true,
+      'Chromium should report an incomplete numeric token',
+    );
+    assert.equal(await numberInput.inputValue(), '');
+    assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'true');
+    await page.evaluate(() => window.renderAt(86));
+    await page.click('#visualSave');
+    assert.match(await text(page, '#visualError'), /未提交/);
+    await numberInput.fill('24');
+    await numberInput.evaluate((element) => element.blur());
+    const validDownload = page.waitForEvent('download');
+    await page.click('#visualSave');
+    await validDownload;
+    assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'false');
+
     await page.click('#layoutToggle');
     assert.equal(await page.isDisabled('#layoutX'), false);
     const chooserIds = await page.locator('#layoutNode option').evaluateAll((options) =>
