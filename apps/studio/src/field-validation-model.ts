@@ -39,7 +39,7 @@ export function parseAppearanceDraft(
 ): AppearanceDraftResult {
   const rule = valuesFor(kind, field);
   if (!rule) return { ok: false, message: '不支持的样式字段。' };
-  if (badInput) return { ok: false, message: '数字尚未输入完整，请修正后再应用。' };
+  if (badInput) return { ok: false, message: '数字输入尚未完成，请修正后再应用。' };
   if (raw === '') return { ok: true, value: undefined, message: '' };
 
   let value: string | number | boolean = raw;
