@@ -430,10 +430,15 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
             ? u(8)
             : width / 2
       : width / 2;
-    const ra = Math.max(
-      radius(source) + u(4),
-      sourceBoundary + (editedGeometry ? width / 2 : 0),
-    );
+    const sourceAppearance = nodeAppearance(config, source);
+    const editedSource =
+      sourceAppearance.size !== undefined ||
+      sourceAppearance.shape !== undefined ||
+      sourceAppearance.borderWidth !== undefined ||
+      custom.width !== undefined;
+    const ra = editedSource
+      ? Math.max(radius(source) + u(4), sourceBoundary + width / 2 + u(1))
+      : radius(source) + u(4);
     const rb = editedGeometry
       ? Math.max(originalTarget, targetBoundary + markerReach + u(1))
       : originalTarget;
