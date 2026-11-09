@@ -50,7 +50,9 @@ The browser workspace additionally exposes `window.renderAt(frame)` for a valida
 
 ## Customize the network
 
-Use the right-side **画面与属性** panel for safe node/edge selection, sparse inherited styles, display-only copy, undo/redo and **保存项目 JSON**. Plain source files remain compatible; Studio projects also render through the CLI. See [configuration and reproduction](docs/NETWORK-AUTHORING.md).
+Use the right-side **画面与属性** panel for safe node/edge selection, sparse inherited styles and display-only copy. **Document-wide actions are in one toolbar above the film preview**: Undo/Redo, **保存完整项目** (download `.studio.json` including styles, copy and coordinates), and **仅导出坐标 JSON** (source document coordinates only, **not** a full-project save). The toolbar shows unsaved status and download/validation feedback. Plain source files remain compatible; Studio projects also render through the CLI. See [configuration and reproduction](docs/NETWORK-AUTHORING.md).
+
+For document history, use `Ctrl/⌘+Z` to undo and `Ctrl+Y` or `Ctrl/⌘+Shift+Z` to redo. `Ctrl/⌘+S` starts a guarded complete-project download; confirm that the browser retained the file. **Native undo/redo in text, number and selection inputs remains untouched.** Pending invalid or unsubmitted editor drafts block the full save, and holding a save shortcut does not trigger repeated downloads. The browser retains the existing source-switch and page-exit warnings.
 
 Advanced appearance fields display the core's allowed numeric range and an inline accessible error before invalid values enter history. Six-digit hex color fields pair text entry with a native swatch/picker; empty means inherit, and ↺ clears drafts without creating a no-op edit. Rejected numeric and color drafts remain available when changing the selected object or playing through frames.
 
