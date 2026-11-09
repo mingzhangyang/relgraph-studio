@@ -20,14 +20,19 @@ export interface OverlayProjection {
 }
 
 const finite = (value: number): boolean => Number.isFinite(value);
-const drawable = (hit: HitTarget): boolean =>
-  (hit.box !== undefined &&
-    [hit.box.x, hit.box.y, hit.box.w, hit.box.h].every(finite) &&
-    hit.box.w > 0 &&
-    hit.box.h > 0) ||
-  (hit.points !== undefined &&
+const drawable = (hit: HitTarget): boolean => {
+  if (hit.box)
+    return (
+      [hit.box.x, hit.box.y, hit.box.w, hit.box.h].every(finite) &&
+      hit.box.w > 0 &&
+      hit.box.h > 0
+    );
+  return (
+    hit.points !== undefined &&
     hit.points.length > 1 &&
-    hit.points.every((point) => finite(point.x) && finite(point.y)));
+    hit.points.every((point) => finite(point.x) && finite(point.y))
+  );
+};
 
 /**
  * Selection feedback is strictly a WORKSPACE projection of already-safe frame
