@@ -69,6 +69,70 @@ function boundsFor(point: NodePoint, g: GlyphGeometry): Rect {
   return { x: point.x - width, y: point.y - height, w: 2 * width, h: 2 * height };
 }
 
+/**
+ * Exact screen-space distance to the *stroked* glyph boundary along a ray.
+ * Circle, diamond (miter-joined corners), and rounded-pill share the same
+ * dimensions used by nodeOutline(), selection, and stage clipping.
+ */
+export function nodeGlyphRayDistance(
+  node: GeometryNode,
+  direction: NodePoint,
+  cameraScale: number,
+  spec: FrameSpec,
+  style: DomainStyle,
+  config?: ProjectConfig,
+): number {
+  const length = Math.hypot(direction.x, direction.y);
+  if (!Number.isFinite(length) || length === 0)
+    throw new RangeError('Node glyph ray must be finite and nonzero');
+  const ux = Math.abs(direction.x / length);
+  const uy = Math.abs(direction.y / length);
+  const g = glyphGeometry(node, cameraScale, spec, style, 1, config);
+  if (g.shape === 'circle') return g.halfWidth + g.halfStroke;
+  if (g.shape === 'diamond') {
+    // Offset the diamond's sloped edges by half the stroke; miter joins
+    // extend to the intersections of those offset edges at both tips.
+    const slope = Math.hypot(1 / g.halfWidth, 1 / g.halfHeight);
+    return (1 + g.halfStroke * slope) / (ux / g.halfWidth + uy / g.halfHeight);
+  }
+  // A pill is a rounded rectangle: straight runs end at the corner centre,
+  // with its border increasing the corner radius and overall half-extents.
+  const cornerX = g.halfWidth - g.cornerRadius;
+  const cornerY = g.halfHeight - g.cornerRadius;
+  const outerRadius = g.cornerRadius + g.halfStroke;
+  const horizontal = ux ? (g.halfWidth + g.halfStroke) / ux : Infinity;
+  if (horizontal * uy <= cornerY) return horizontal;
+  const vertical = uy ? (g.halfHeight + g.halfStroke) / uy : Infinity;
+  if (vertical * ux <= cornerX) return vertical;
+  const dot = ux * cornerX + uy * cornerY;
+  return dot + Math.sqrt(Math.max(0, dot * dot - cornerX * cornerX - cornerY * cornerY + outerRadius * outerRadius));
+}
+
+/**
+ * Full-size label obstacle, retaining the historical radius+4 minimum
+ * whitespace, but never smaller than the authored shape and stroke.
+ * Reused for both node avoidance and a node's own label candidates.
+ */
+export function nodeLabelObstacleBounds(
+  node: GeometryNode,
+  point: NodePoint,
+  cameraScale: number,
+  spec: FrameSpec,
+  style: DomainStyle,
+  config?: ProjectConfig,
+): Rect {
+  const glyph = nodeGlyphBounds(node, point, cameraScale, spec, style, 1, config);
+  const minimum = nodeRadius(node, cameraScale, spec, style, config) + 4 * spec.typeScale;
+  const halfWidth = Math.max(minimum, glyph.w / 2);
+  const halfHeight = Math.max(minimum, glyph.h / 2);
+  return {
+    x: point.x - halfWidth,
+    y: point.y - halfHeight,
+    w: halfWidth * 2,
+    h: halfHeight * 2,
+  };
+}
+
 /** Conservative screen-space box of the rendered node glyph. */
 export function nodeGlyphBounds(
   node: GeometryNode,
@@ -114,7 +178,10 @@ export function nodeGlyphIntersectsStage(
 }
 function containsOffset(dx: number, dy: number, g: GlyphGeometry): boolean {
   if (g.shape === 'circle') return Math.hypot(dx, dy) < g.halfWidth + g.halfStroke;
-  if (g.shape === 'diamond') return dx + dy < g.halfWidth + Math.SQRT2 * g.halfStroke;
+  if (g.shape === 'diamond') {
+    const slope = Math.hypot(1 / g.halfWidth, 1 / g.halfHeight);
+    return dx / g.halfWidth + dy / g.halfHeight < 1 + g.halfStroke * slope;
+  }
   const qx = dx - (g.halfWidth - g.cornerRadius),
     qy = dy - (g.halfHeight - g.cornerRadius);
   const distance =

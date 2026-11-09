@@ -35,6 +35,8 @@ import {
   glyphGeometry,
   nodeOutline,
   nodeGlyphBounds,
+  nodeGlyphRayDistance,
+  nodeLabelObstacleBounds,
 } from './node-geometry.js';
 import { RENDER_MESSAGES } from './locale.js';
 import { edgePaint, VIDEO_THEMES, type VideoTheme } from './theme.js';
@@ -384,9 +386,63 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
       len = Math.hypot(dx, dy);
     if (len < u(1)) continue;
     const ux = dx / len,
-      uy = dy / len,
-      ra = radius(source) + u(4),
-      rb = radius(target) + u(5);
+      uy = dy / len;
+    const edgeStyle = edgeStyleFor(style, edge.kind),
+      highlighted = highlight.edgeIds.includes(edge.id),
+      active = attention(edge),
+      stroke = custom.color ?? (highlighted ? P.edge.highlight : edgePaint(P, edgeStyle.stroke)),
+      width = u(custom.width ?? (highlighted ? 2.6 : 1.4));
+    const head = view.domain === 'biology' ? edgeStyle.head : (custom.head ?? edgeStyle.head);
+    const sourceBoundary = nodeGlyphRayDistance(
+      source,
+      { x: ux, y: uy },
+      cam.scale,
+      spec,
+      style,
+      config,
+    );
+    const targetBoundary = nodeGlyphRayDistance(
+      target,
+      { x: -ux, y: -uy },
+      cam.scale,
+      spec,
+      style,
+      config,
+    );
+    const originalTarget = radius(target) + u(5);
+    const targetAppearance = nodeAppearance(config, target);
+    // Preserve the existing film attachment where no geometry is authored.
+    // Otherwise reserve the full role-marker footprint beyond the stroked
+    // shape, not just the centre of the endpoint. This includes curved bars
+    // whose tangent is rotated and outlined circles with custom line widths.
+    const editedGeometry =
+      targetBoundary > originalTarget ||
+      targetAppearance.size !== undefined ||
+      targetAppearance.shape !== undefined ||
+      targetAppearance.borderWidth !== undefined ||
+      custom.width !== undefined ||
+      custom.head !== undefined;
+    const markerReach = edge.directed
+      ? head === 'hollow-circle'
+        ? u(4) + width / 2
+        : head === 'bar'
+          ? u(5) + width / 2
+          : head === 'arrow'
+            ? u(8)
+            : width / 2
+      : width / 2;
+    const sourceAppearance = nodeAppearance(config, source);
+    const editedSource =
+      sourceAppearance.size !== undefined ||
+      sourceAppearance.shape !== undefined ||
+      sourceAppearance.borderWidth !== undefined ||
+      custom.width !== undefined;
+    const ra = editedSource
+      ? Math.max(radius(source) + u(4), sourceBoundary + width / 2 + u(1))
+      : radius(source) + u(4);
+    const rb = editedGeometry
+      ? Math.max(originalTarget, targetBoundary + markerReach + u(1))
+      : originalTarget;
     const start = { x: a.x + ux * ra, y: a.y + uy * ra },
       end = { x: b.x - ux * rb, y: b.y - uy * rb };
     const key = [edge.source, edge.target].sort().join('\0');
@@ -420,11 +476,6 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
         edgeObstacles.push({ x: x - u(4), y: y - u(4), w: u(8), h: u(8) });
       }
     }
-    const edgeStyle = edgeStyleFor(style, edge.kind),
-      highlighted = highlight.edgeIds.includes(edge.id),
-      active = attention(edge),
-      stroke = custom.color ?? (highlighted ? P.edge.highlight : edgePaint(P, edgeStyle.stroke)),
-      width = u(custom.width ?? (highlighted ? 2.6 : 1.4));
     const dash =
       custom.dash === undefined
         ? edgeStyle.dash
@@ -433,7 +484,6 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
           : custom.dash === 'dotted'
             ? [2, 4]
             : [];
-    const head = view.domain === 'biology' ? edgeStyle.head : (custom.head ?? edgeStyle.head);
     const parts: DisplayItem[] = [
       {
         type: 'path',
@@ -501,6 +551,7 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
   }
 
   const occupied: Rect[] = [];
+  const nodeLabelBounds = new Map<string, Rect>();
   for (const node of view.nodes) {
     const custom = nodeAppearance(config, node);
     const visibility = nodeProgress(node.id);
@@ -520,8 +571,11 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
         id: node.id,
         box: nodeGlyphBounds(node, p, cam.scale, spec, style, visibility, config),
       });
-    if (visibility > 0.5)
-      occupied.push({ x: p.x - r - u(4), y: p.y - r - u(4), w: r * 2 + u(8), h: r * 2 + u(8) });
+    if (visibility > 0.5) {
+      const obstacle = nodeLabelObstacleBounds(node, p, cam.scale, spec, style, config);
+      nodeLabelBounds.set(node.id, obstacle);
+      occupied.push(obstacle);
+    }
     const geometry = glyphGeometry(node, cam.scale, spec, style, 1, config);
     const outline = nodeOutline(p, geometry);
     const asset =
@@ -598,6 +652,8 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
     const p = pointFor(node.id),
       r = radius(node),
       active = attention(node);
+    const obstacle = nodeLabelBounds.get(node.id);
+    if (!obstacle) continue;
     const custom = nodeAppearance(config, node);
     const font = sans(
       custom.fontSize ?? ((node.importance ?? 0) >= 5 ? 19 : 16),
@@ -606,15 +662,28 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
     const lines = wrapText(measure, nodeLabel(node), font, u(170), 2);
     const width = Math.max(0, ...lines.map((line) => measure(line, font))),
       height = lines.length * font.size * 1.3;
+    const rightX = Math.max(p.x + r + u(9), obstacle.x + obstacle.w + u(5));
+    const leftX = Math.min(p.x - r - u(9) - width, obstacle.x - width - u(5));
+    const topY = Math.min(
+      p.y - r - Math.max(u(25), height + u(4)),
+      obstacle.y - height - u(4),
+    );
+    const bottomY = Math.max(p.y + r + u(6), obstacle.y + obstacle.h + u(2));
+    const nearRightX = Math.max(p.x + r + u(5), obstacle.x + obstacle.w + u(1));
+    const nearLeftX = Math.min(p.x - r - u(5) - width, obstacle.x - width - u(1));
+    const upperY = Math.min(
+      p.y - r - Math.max(u(24), height + u(4)),
+      obstacle.y - height - u(1),
+    );
     const candidates = [
-      { x: p.x + r + u(9), y: p.y - u(10) },
-      { x: p.x - r - u(9) - width, y: p.y - u(10) },
-      { x: p.x - width / 2, y: p.y - r - Math.max(u(25), height + u(4)) },
-      { x: p.x - width / 2, y: p.y + r + u(6) },
-      { x: p.x + r + u(5), y: p.y - r - Math.max(u(24), height + u(4)) },
-      { x: p.x - r - u(5) - width, y: p.y - r - Math.max(u(24), height + u(4)) },
-      { x: p.x + r + u(5), y: p.y + r + u(6) },
-      { x: p.x - r - u(5) - width, y: p.y + r + u(6) },
+      { x: rightX, y: p.y - u(10) },
+      { x: leftX, y: p.y - u(10) },
+      { x: p.x - width / 2, y: topY },
+      { x: p.x - width / 2, y: bottomY },
+      { x: nearRightX, y: upperY },
+      { x: nearLeftX, y: upperY },
+      { x: nearRightX, y: bottomY },
+      { x: nearLeftX, y: bottomY },
     ].map((c) => ({ ...c, w: width, h: height }));
     const preferred = { auto: 0, right: 0, left: 1, top: 2, bottom: 3 }[
       custom.textPosition ?? 'right'
