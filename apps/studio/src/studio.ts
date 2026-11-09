@@ -234,7 +234,11 @@ const strategyView = createLayoutStrategyView(document, $('layoutStrategyEditor'
 let imageUploadSerial = 0;
 const projectHistory = new ProjectHistory();
 const projectSavepoint = new ProjectSavepoint();
-const projectActions = {
+const projectActions: Parameters<typeof createProjectEditor>[2] & {
+  undo(): void;
+  redo(): void;
+  save(): void;
+} = {
   selectionChanged() {
     refreshSelectionFeedback();
   },
@@ -320,7 +324,9 @@ const projectActions = {
       strategyView.hasPendingDraft() ||
       projectEditor.isImageBusy()
     ) {
-      projectEditor.error('仍有未提交的输入、拖动或图片处理，请完成后再保存项目。');
+      const message = '仍有未提交的输入、拖动或图片处理，请完成后再保存项目。';
+      projectEditor.error(message);
+      documentToolbarView.message(message, true);
       refreshUnsavedState();
       return;
     }
@@ -340,7 +346,9 @@ const projectActions = {
     };
     const errors = validateProjectConfig(config, graph);
     if (errors.length) {
-      projectEditor.error('保存失败：' + errors.join('；'));
+      const message = '保存失败：' + errors.join('；');
+      projectEditor.error(message);
+      documentToolbarView.message(message, true);
       return;
     }
     try {
@@ -350,10 +358,14 @@ const projectActions = {
       );
       // Browsers can initiate downloads, but cannot verify the file was kept.
       projectSavepoint.markClean(projectHistory.value, currentLayout);
-      projectEditor.error('已发起完整项目 JSON 下载，请确认浏览器已将文件保存到本机。');
+      const message = '已发起完整项目 JSON 下载，请确认浏览器已将文件保存到本机。';
+      projectEditor.error(message);
+      documentToolbarView.message(message);
       refreshUnsavedState();
     } catch (error) {
-      projectEditor.error('保存失败：' + (error instanceof Error ? error.message : String(error)));
+      const message = '保存失败：' + (error instanceof Error ? error.message : String(error));
+      projectEditor.error(message);
+      documentToolbarView.message(message, true);
     }
   },
 };
