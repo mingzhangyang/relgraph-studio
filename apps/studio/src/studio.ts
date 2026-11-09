@@ -7,10 +7,12 @@ import {
 } from './layout-history-model.js';
 import { computeLayout, DEFAULT_LAYOUT_SETTINGS, type LayoutSettings } from '@relgraph/core';
 import { createLayoutStrategyView } from './layout-strategy-view.js';
-import { createProject, projectSource, validateProjectConfig } from '@relgraph/core';
+import { createProject, projectSource, validateProjectConfig, type ProjectConfig } from '@relgraph/core';
 import { ProjectHistory } from './project-editor-model.js';
 import { ProjectSavepoint } from './unsaved-changes-model.js';
 import { createProjectEditor } from './project-editor-view.js';
+import { createDocumentToolbarView } from './document-toolbar-view.js';
+import { documentCommandFromShortcut } from './document-command-model.js';
 import { parseDocument, applyGraphPositions, type LoadResult } from '@relgraph/core';
 import { layoutGraph } from '@relgraph/core';
 import { frameCount } from '@relgraph/core';
@@ -232,11 +234,11 @@ const strategyView = createLayoutStrategyView(document, $('layoutStrategyEditor'
 let imageUploadSerial = 0;
 const projectHistory = new ProjectHistory();
 const projectSavepoint = new ProjectSavepoint();
-const projectEditor = createProjectEditor(document, $('appearanceEditor'), {
+const projectActions = {
   selectionChanged() {
     refreshSelectionFeedback();
   },
-  change(config) {
+  change(config: ProjectConfig) {
     if (!graph || loading) return false;
     ++imageUploadSerial;
     projectEditor.imageBusy(false);
@@ -276,7 +278,7 @@ const projectEditor = createProjectEditor(document, $('appearanceEditor'), {
   draftChanged() {
     refreshUnsavedState();
   },
-  async uploadImage(file, nodeId) {
+  async uploadImage(file: File, nodeId: string) {
     if (!graph || loading || !currentFrameState?.view.nodes.some((n) => n.id === nodeId)) return;
     const serial = ++imageUploadSerial,
       documentSerial = requestSerial,
@@ -354,7 +356,23 @@ const projectEditor = createProjectEditor(document, $('appearanceEditor'), {
       projectEditor.error('保存失败：' + (error instanceof Error ? error.message : String(error)));
     }
   },
-});
+};
+const projectEditor = createProjectEditor(document, $('appearanceEditor'), projectActions);
+const documentToolbarView = createDocumentToolbarView(
+  {
+    undo: requiredElement('visualUndo', HTMLButtonElement),
+    redo: requiredElement('visualRedo', HTMLButtonElement),
+    save: requiredElement('visualSave', HTMLButtonElement),
+    exportSource: layoutExport,
+    message: $('documentActionStatus'),
+  },
+  {
+    undo: () => projectActions.undo(),
+    redo: () => projectActions.redo(),
+    save: () => projectActions.save(),
+    exportSource: exportPositionedSource,
+  },
+);
 const layoutControls = {
   canvas,
   toggle: layoutToggle,
@@ -427,6 +445,13 @@ function hasUnsavedChanges(): boolean {
       strategyView.hasPendingDraft() ||
       projectSavepoint.isDirty(projectHistory.value, currentLayout)),
   );
+}
+function renderDocumentToolbar(): void {
+  documentToolbarView.render({
+    loaded: !loading && Boolean(graph && currentLayout && sourceDocument !== null),
+    canUndo: projectHistory.canUndo,
+    canRedo: projectHistory.canRedo,
+  });
 }
 function refreshUnsavedState(): void {
   const dirty = hasUnsavedChanges();
@@ -520,7 +545,8 @@ function setFrame(next: number, updatePosition = true): DirectorFrameState | und
   );
   renderPlaybackFrame(playbackControls, playbackDisplay(playback, p.index, p.totalSec));
   transcriptView.render(list.a11y);
-  projectEditor.render(state, projectHistory.value, projectHistory.canUndo, projectHistory.canRedo);
+  projectEditor.render(state, projectHistory.value);
+  renderDocumentToolbar();
   refreshSelectionFeedback();
   shellView.renderDomainTime(p.domainAt, state.view.timeline?.unit);
   shotsView.render(p.index, list.a11y.scene.title, p.progress);
@@ -545,9 +571,10 @@ function clearStudio(): void {
   dragging = null;
   editCamera = null;
   layoutEditing = false;
-  renderEditorAvailability(layoutControls, layoutExport, false);
+  renderEditorAvailability(layoutControls, false);
   updateLayoutEditor();
   updateLayoutControls();
+  renderDocumentToolbar();
   currentFrameState = null;
   currentDetailAt = () => undefined;
   playback = createPlaybackState(1, FPS);
@@ -579,7 +606,7 @@ function applyResult(result: LoadResult, name: string, sourceText?: string): voi
   currentLayout = layoutGraph(graph);
   originalLayout = new Map([...currentLayout].map(([id, point]) => [id, { ...point }]));
   projectSavepoint.markClean(projectHistory.value, currentLayout);
-  renderEditorAvailability(layoutControls, layoutExport, sourceDocument !== null);
+  renderEditorAvailability(layoutControls, sourceDocument !== null);
   renderer = createCanvasRenderer(canvas, graph, currentLayout, {
     fps: FPS,
     detailAt: currentDetailAt,
@@ -600,11 +627,12 @@ function beginLoad(): number {
   const serial = ++requestSerial;
   if (layoutEditing) stopLayoutEdit();
   loading = true;
+  renderDocumentToolbar();
   refreshUnsavedState();
   strategyView.render(currentFrameState, projectHistory.value.layout, false, true);
   setPlaying(false);
   disablePlaybackView(playbackControls);
-  renderEditorAvailability(layoutControls, layoutExport, false);
+  renderEditorAvailability(layoutControls, false);
   updateLayoutEditor();
   // Only the coordinator may commit a result after checking requestSerial.
   diagnosticsView.clear();
@@ -1020,7 +1048,7 @@ function downloadJson(value: unknown, filename: string): void {
   link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-layoutExport.addEventListener('click', () => {
+function exportPositionedSource(): void {
   cancelLayoutPreview();
   if (!graph || !currentLayout || sourceDocument === null) return;
   try {
@@ -1037,17 +1065,16 @@ layoutExport.addEventListener('click', () => {
     link.click();
     link.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
-    renderEditorMessage(
-      layoutControls,
-      '已准备导出：' + link.download + '。此文件仅保存源数据坐标，不代表完整项目已保存。',
-    );
+    const message =
+      '已准备导出：' + link.download + '。此文件仅保存源数据坐标，不代表完整项目已保存。';
+    renderEditorMessage(layoutControls, message);
+    documentToolbarView.message(message);
   } catch (error) {
-    renderEditorMessage(
-      layoutControls,
-      '导出失败：' + (error instanceof Error ? error.message : String(error)),
-    );
+    const message = '导出失败：' + (error instanceof Error ? error.message : String(error));
+    renderEditorMessage(layoutControls, message);
+    documentToolbarView.message(message, true);
   }
-});
+}
 
 themeToggle.addEventListener('click', () => applyTheme(theme === 'light' ? 'dark' : 'light', true));
 lightQuery?.addEventListener?.('change', (event) => {
