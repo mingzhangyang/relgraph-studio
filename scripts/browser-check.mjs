@@ -1811,7 +1811,7 @@ for (const theme of ['dark', 'light']) {
 // Real Chromium validates rollback pixels, Escape and playback across themes.
 {
   const { context, page, problems } = await openStudio();
-  await check('working mode transitions retain film pixels and drop only transient previews', async () => {
+  await check('mode transitions retain film pixels and cancel transient previews', async () => {
     assert.equal(await page.evaluate(() => window.renderAt(84)), true);
     const baseline = await canvasPng(page);
     await page.locator('#layoutStrategies').evaluate((element) => {
