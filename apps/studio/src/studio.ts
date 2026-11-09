@@ -380,7 +380,7 @@ const projectActions: Parameters<typeof createProjectEditor>[2] & {
       refreshUnsavedState();
       return;
     }
-    cancelLayoutPreview();
+    transitionStudio('cancelPreview');
     const config = {
       ...projectHistory.value,
       layout: {
@@ -565,16 +565,14 @@ function tick(now: number): void {
   playback = advancePlayback(playback, now);
   setFrame(playback.frame, false);
   if (!playback.playing) {
-    setPlaying(false);
+    transitionStudio('pause');
     return;
   }
   animationId = requestAnimationFrame(tick);
 }
 function seekToShot(targetFrame: number): void {
-  cancelLayoutPreview();
-  if (layoutEditing) stopLayoutEdit();
+  transitionStudio('navigate');
   if (loading) return;
-  setPlaying(false);
   setFrame(targetFrame);
 }
 function refreshSelectionFeedback(): void {
@@ -685,16 +683,14 @@ function applyResult(result: LoadResult, name: string, sourceText?: string): voi
   refreshUnsavedState();
 }
 function beginLoad(): number {
-  cancelLayoutPreview();
+  transitionStudio('navigate');
   ++imageUploadSerial;
   projectEditor.imageBusy(false);
   const serial = ++requestSerial;
-  if (layoutEditing) stopLayoutEdit();
   loading = true;
   renderDocumentToolbar();
   refreshUnsavedState();
   strategyView.render(currentFrameState, projectHistory.value.layout, false, true);
-  setPlaying(false);
   disablePlaybackView(playbackControls);
   renderEditorAvailability(layoutControls, false);
   updateLayoutEditor();
@@ -779,23 +775,16 @@ dropzone.addEventListener('drop', (event) => {
   void loadFile(event.dataTransfer?.files?.[0]);
 });
 play.addEventListener('click', () => {
-  cancelLayoutPreview();
-  if (layoutEditing) stopLayoutEdit();
-  if (!playback.playing && playback.frame >= playback.totalFrames - 1) setFrame(0);
-  setPlaying(!playback.playing);
+  transitionStudio(playback.playing ? 'pause' : 'play');
 });
 restart.addEventListener('click', () => {
-  cancelLayoutPreview();
-  if (layoutEditing) stopLayoutEdit();
-  setPlaying(false);
+  transitionStudio('navigate');
   setFrame(0);
 });
 scrubber.addEventListener('input', () => {
   // Editing teardown redraws the prior frame, so capture the requested frame first.
   const requestedFrame = Number(scrubber.value);
-  cancelLayoutPreview();
-  if (layoutEditing) stopLayoutEdit();
-  setPlaying(false);
+  transitionStudio('navigate');
   setFrame(requestedFrame);
 });
 window.addEventListener('keydown', (event) => {
@@ -833,7 +822,7 @@ window.addEventListener('keydown', (event) => {
   // Escape must work even while the position-mode button has keyboard focus.
   if (event.code === 'Escape' && layoutEditing) {
     event.preventDefault();
-    stopLayoutEdit();
+    transitionStudio('exitPositionEdit');
     return;
   }
   if (
@@ -845,21 +834,16 @@ window.addEventListener('keydown', (event) => {
     event.preventDefault();
     play.click();
   } else if (event.code === 'ArrowRight') {
-    cancelLayoutPreview();
-    if (layoutEditing) stopLayoutEdit();
-    setPlaying(false);
+    transitionStudio('navigate');
     setFrame(playback.frame + FPS);
   } else if (event.code === 'ArrowLeft') {
-    cancelLayoutPreview();
-    if (layoutEditing) stopLayoutEdit();
-    setPlaying(false);
+    transitionStudio('navigate');
     setFrame(playback.frame - FPS);
   }
 });
 function applyTheme(next: Theme, persist: boolean): void {
-  cancelLayoutPreview();
-  // A theme is a normal renderer transition; never carry a frozen shot camera.
-  if (layoutEditing) stopLayoutEdit();
+  // A theme transition exits editing and preview but preserves playback clock.
+  transitionStudio('theme');
   theme = next;
   if (persist) {
     pinnedTheme = theme;
