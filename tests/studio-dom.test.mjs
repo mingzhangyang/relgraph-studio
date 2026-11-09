@@ -58,14 +58,17 @@ test('simulated DOM preserves typed elements, injected failures and per-instance
   assert.equal(wrong.document.getElementById('stage') instanceof wrong.HTMLCanvasElement, false);
 });
 
-test('production and source harnesses use the single DOM implementation without weakening bundle checks', () => {
-  for (const path of ['./helpers/studio-harness.mjs', './production-build.test.mjs']) {
-    const code = readFileSync(new URL(path, import.meta.url), 'utf8');
-    assert.match(code, /createSimulatedStudioDom\(/);
-    assert.doesNotMatch(code, /class (?:Element|Document|HTMLCanvasElement)\b/);
-  }
-  const production = readFileSync(new URL('./production-build.test.mjs', import.meta.url), 'utf8');
-  assert.match(production, /await build\(/);
-  assert.match(production, /const script = await readFile\(/);
-  assert.match(production, /runInNewContext\(/);
-});
+test(
+  'production and source harnesses use the single DOM implementation without weakening bundle checks',
+  () => {
+    for (const path of ['./helpers/studio-harness.mjs', './production-build.test.mjs']) {
+      const code = readFileSync(new URL(path, import.meta.url), 'utf8');
+      assert.match(code, /createSimulatedStudioDom\(/);
+      assert.doesNotMatch(code, /class (?:Element|Document|HTMLCanvasElement)\b/);
+    }
+    const production = readFileSync(new URL('./production-build.test.mjs', import.meta.url), 'utf8');
+    assert.match(production, /await build\(/);
+    assert.match(production, /const script = await readFile\(/);
+    assert.match(production, /runInNewContext\(/);
+  },
+);
