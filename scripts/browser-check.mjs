@@ -1736,7 +1736,7 @@ for (const theme of ['dark', 'light']) {
     const fullDownload = page.waitForEvent('download');
     await page.keyboard.press('Control+s');
     const full = await fullDownload;
-    assert.match(full.suggestedFilename(), /\\.studio\\.json$/);
+    assert.match(full.suggestedFilename(), /\.studio\.json$/);
     const project = JSON.parse(await readFile(await full.path(), 'utf8'));
     assert.equal(project.config.preset, 'quiet');
     assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'false');
@@ -1745,7 +1745,7 @@ for (const theme of ['dark', 'light']) {
     await page.selectOption('#visualPreset', 'presentation');
     const sourceDownload = page.waitForEvent('download');
     await page.click('#layoutExport');
-    assert.match((await sourceDownload).suggestedFilename(), /\\.positioned\\.json$/);
+    assert.match((await sourceDownload).suggestedFilename(), /\.positioned\.json$/);
     assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'true');
     assert.match(await text(page, '#documentActionStatus'), /不代表完整项目已保存/);
 
