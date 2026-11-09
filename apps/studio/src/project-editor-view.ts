@@ -144,6 +144,7 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
     ['category', '当前类别'],
     ['global', '全局默认'],
   ]);
+  scope.value = 'object';
   const provenance = el('p');
   provenance.id = 'visualFacts';
   provenance.className = 'muted';
