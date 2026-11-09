@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { createWorkspaceShellView } from '../apps/studio/src/workspace-shell-view.ts';
 import { createSimulatedStudioDom } from './helpers/studio-dom.mjs';
 
-function makeView() {
-  const dom = createSimulatedStudioDom();
+function makeView(options = {}) {
+  const dom = createSimulatedStudioDom(options);
   const id = (key) => dom.document.getElementById(key);
   const view = createWorkspaceShellView(dom.document, {
     canvas: id('stage'),
@@ -57,8 +57,59 @@ test('shell keeps source pressed states, theme affordance and dropzone presentat
   assert.equal(id('dropzone').className, 'dropzone');
 });
 
-test('empty Canvas uses the existing stage copy and remains theme-sensitive', () => {
-  const { view } = makeView();
-  view.paintEmptyStage('未加载', 'dark');
-  view.repaintEmptyStage('light');
-});
+for (const theme of ['dark', 'light']) {
+  test(`empty Canvas paints ${theme} and retains the latest message across theme repaints`, () => {
+    const calls = [];
+    const context = {
+      fillRect(...bounds) {
+        calls.push({ method: 'fillRect', bounds, fillStyle: this.fillStyle });
+      },
+      fillText(...text) {
+        calls.push({
+          method: 'fillText',
+          text,
+          fillStyle: this.fillStyle,
+          font: this.font,
+          textAlign: this.textAlign,
+        });
+      },
+    };
+    const { id, view } = makeView({ canvasContext: () => context });
+    // Use non-default dimensions so a hard-coded clear cannot pass.
+    id('stage').width = 960;
+    id('stage').height = 540;
+    function assertPaint(message, paintedTheme) {
+      const [background, kicker, text] =
+        paintedTheme === 'dark'
+          ? ['#101b2a', '#cfae84', '#c4d0d1']
+          : ['#f6f1e8', '#a0672a', '#3f4c57'];
+      assert.deepEqual(calls.splice(0), [
+        { method: 'fillRect', bounds: [0, 0, 960, 540], fillStyle: background },
+        {
+          method: 'fillText',
+          text: ['RELGRAPH  /  DIRECTOR STUDIO', 640, 330],
+          fillStyle: kicker,
+          font: '600 13px system-ui',
+          textAlign: 'center',
+        },
+        {
+          method: 'fillText',
+          text: [message, 640, 372],
+          fillStyle: text,
+          font: '22px system-ui',
+          textAlign: 'center',
+        },
+      ]);
+      assert.equal(context.textAlign, 'left', 'restore alignment after drawing');
+    }
+    const otherTheme = theme === 'dark' ? 'light' : 'dark';
+    view.paintEmptyStage('未加载', theme);
+    assertPaint('未加载', theme);
+    view.repaintEmptyStage(otherTheme);
+    assertPaint('未加载', otherTheme);
+    view.paintEmptyStage('加载失败，请重试', otherTheme);
+    assertPaint('加载失败，请重试', otherTheme);
+    view.repaintEmptyStage(theme);
+    assertPaint('加载失败，请重试', theme);
+  });
+}
