@@ -355,7 +355,7 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
         hint = el('small', appearanceFieldHint(appearanceKind(), key)),
         feedback = el('small'),
         reset = el('button', '↺');
-      row.className = 'property-field';
+      row.className = 'property-field' + (type === 'color' ? ' is-color' : '');
       fieldControls.className = 'property-control-row';
       hint.className = 'property-hint';
       feedback.className = 'property-error';
