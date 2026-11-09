@@ -1,7 +1,6 @@
 import {
-  appearanceOrigin,
   nodeAppearance,
-  edgeAppearance,
+  appearanceOrigin,
   displayNodeText,
   displayEdgeText,
   type ProjectConfig,
@@ -12,6 +11,8 @@ import {
 import { hitDisplayList, type DisplayList } from '@relgraph/render';
 import {
   editAppearance,
+  inspectorAppearance,
+  inspectorOrigin,
   clearAppearance,
   copyConfig,
   setNodeImage,
@@ -298,11 +299,7 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
           ? ` · ${'directed' in selected && selected.directed ? '有向' : '无向'} · 关系事实保持原样`
           : '')
       : '全局样式可作用于未来对象，列表只显示当前投影。';
-    const resolved = selected
-      ? kind === 'node'
-        ? nodeAppearance(config, selected as VisualNode)
-        : edgeAppearance(config, selected as VisualEdge)
-      : {};
+    const resolved = inspectorAppearance(config, kind, selected, scope.value as Scope);
     imageSection.hidden = kind !== 'node';
     const imageStyle =
       selected && kind === 'node' ? nodeAppearance(config, selected as VisualNode) : {};
@@ -319,13 +316,7 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
         : 'PNG / JPEG / WebP · 最长边保存为 256 像素 · 不上传服务器';
     for (const [key, c] of controls) {
       c.input.disabled = disabled || (key === 'head' && frame?.view.domain === 'biology');
-      const layers = kind === 'node' ? config.nodes : config.edges;
-      c.origin.textContent = appearanceOrigin(
-        layers as never,
-        selected?.kind ?? '',
-        selected?.id ?? '',
-        key as never,
-      );
+      c.origin.textContent = inspectorOrigin(config, kind, selected, scope.value as Scope, key);
       if (doc.activeElement !== c.input)
         c.input.value = String((resolved as Record<string, unknown>)[key] ?? '');
     }
@@ -407,6 +398,9 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
     pick(list: DisplayList, point: { x: number; y: number }) {
       const hit = hitDisplayList(list, point);
       if (hit) {
+        // Native blur commits pending change events while the old object is selected.
+        const active = doc.activeElement;
+        if (active && host.contains(active)) (active as HTMLElement).blur();
         actions.pause();
         selection = { kind: hit.kind, id: hit.id };
         kind = hit.kind;

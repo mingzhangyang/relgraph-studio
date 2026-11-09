@@ -7,7 +7,6 @@ import {
   displayEdgeText,
   edgeStyleFor,
   localize,
-  nodeStyleFor,
   NEUTRAL_STYLE,
 } from '@relgraph/core';
 import type {
@@ -30,7 +29,13 @@ import type {
   TextMeasurer,
 } from './display-list.js';
 import { projectCameraPoint, DEFAULT_FRAME_SPEC, type FrameSpec, type Rect } from './frame-spec.js';
-import { nodeRadius, rectsIntersect } from './node-geometry.js';
+import {
+  nodeRadius,
+  rectsIntersect,
+  glyphGeometry,
+  nodeOutline,
+  nodeGlyphBounds,
+} from './node-geometry.js';
 import { RENDER_MESSAGES } from './locale.js';
 import { edgePaint, VIDEO_THEMES, type VideoTheme } from './theme.js';
 
@@ -260,10 +265,7 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
       shotAttention(item, highlight, view),
       transition,
     );
-  const radius = (node: VisualNode): number =>
-    nodeAppearance(config, node).size !== undefined
-      ? u(nodeAppearance(config, node).size!)
-      : nodeRadius(node, cam.scale, spec, style);
+  const radius = (node: VisualNode): number => nodeRadius(node, cam.scale, spec, style, config);
   const nodeLabel = (node: VisualNode): string =>
     displayNodeText(config, node.id)?.label ?? node.label;
   const edgeLabel = (edge: VisualEdge): string | undefined =>
@@ -399,7 +401,7 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
     };
     if (visibility > 0.5) {
       const samples = Array.from({ length: 33 }, (_, i) => {
-        const t = i / 32,
+        const t = (i / 32) * visibility,
           v = 1 - t;
         return {
           x: v * v * start.x + 2 * v * t * control.x + t * t * end.x,
@@ -504,7 +506,7 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
     const visibility = nodeProgress(node.id);
     const p = pointFor(node.id),
       r = radius(node),
-      shape = custom.shape ?? nodeStyleFor(style, node.kind).shape,
+      shape = glyphGeometry(node, cam.scale, spec, style, 1, config).shape,
       c =
         custom.border ??
         color(
@@ -516,31 +518,21 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
       selection.push({
         kind: 'node',
         id: node.id,
-        box: { x: p.x - r - u(5), y: p.y - r - u(5), w: 2 * r + u(10), h: 2 * r + u(10) },
+        box: nodeGlyphBounds(node, p, cam.scale, spec, style, visibility, config),
       });
     if (visibility > 0.5)
       occupied.push({ x: p.x - r - u(4), y: p.y - r - u(4), w: r * 2 + u(8), h: r * 2 + u(8) });
-    const outline: PathCommand[] =
-      shape === 'diamond'
-        ? [
-            ['M', p.x, p.y - r - u(3)],
-            ['L', p.x + r + u(3), p.y],
-            ['L', p.x, p.y + r + u(3)],
-            ['L', p.x - r - u(3), p.y],
-            ['Z'],
-          ]
-        : shape === 'pill'
-          ? [['RR', p.x - r - u(4), p.y - r * 0.75, r * 2 + u(8), r * 1.5, r * 0.65]]
-          : [['A', p.x, p.y, r + u(3), 0, TAU]];
+    const geometry = glyphGeometry(node, cam.scale, spec, style, 1, config);
+    const outline = nodeOutline(p, geometry);
     const asset =
       custom.image && config?.assets && Object.hasOwn(config.assets, custom.image)
         ? config.assets[custom.image]
         : undefined;
     const imageBox = {
-      x: p.x - r - u(shape === 'pill' ? 4 : 3),
-      y: p.y - (shape === 'pill' ? r * 0.75 : r + u(3)),
-      w: 2 * (r + u(shape === 'pill' ? 4 : 3)),
-      h: shape === 'pill' ? r * 1.5 : 2 * (r + u(3)),
+      x: p.x - geometry.halfWidth,
+      y: p.y - geometry.halfHeight,
+      w: geometry.halfWidth * 2,
+      h: geometry.halfHeight * 2,
     };
     if (visibility > 0) {
       const scale = 0.82 + 0.18 * visibility;
@@ -618,10 +610,10 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
     const candidates = [
       { x: p.x + r + u(9), y: p.y - u(10) },
       { x: p.x - r - u(9) - width, y: p.y - u(10) },
-      { x: p.x - width / 2, y: p.y - r - u(25) },
+      { x: p.x - width / 2, y: p.y - r - Math.max(u(25), height + u(4)) },
       { x: p.x - width / 2, y: p.y + r + u(6) },
-      { x: p.x + r + u(5), y: p.y - r - u(24) },
-      { x: p.x - r - u(5) - width, y: p.y - r - u(24) },
+      { x: p.x + r + u(5), y: p.y - r - Math.max(u(24), height + u(4)) },
+      { x: p.x - r - u(5) - width, y: p.y - r - Math.max(u(24), height + u(4)) },
       { x: p.x + r + u(5), y: p.y + r + u(6) },
       { x: p.x - r - u(5) - width, y: p.y + r + u(6) },
     ].map((c) => ({ ...c, w: width, h: height }));

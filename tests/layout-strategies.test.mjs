@@ -1,3 +1,9 @@
+import {
+  configWithLayoutPositions,
+  dragHasChanges,
+  cancelPositionDrag,
+} from '../apps/studio/src/layout-history-model.ts';
+import { ProjectHistory } from '../apps/studio/src/project-editor-model.ts';
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import literature from '../examples/honglou-provisional.relgraph.json' with { type: 'json' };
@@ -123,6 +129,74 @@ test('manual/preserve missing-position fallback also ignores node and edge array
     assert.deepEqual(
       sorted(computeLayout(graph, DEFAULT_LAYOUT_SETTINGS)),
       sorted(computeLayout(reversed, DEFAULT_LAYOUT_SETTINGS)),
+    );
+  }
+});
+
+test('individual coordinate/lock edits keep other fallback nodes eligible for missing-position layout', () => {
+  const { graph } = loadDocument(literature);
+  graph.nodes = graph.nodes.map((n) => ({ ...n, position: undefined }));
+  const original = layoutGraph(graph),
+    id = graph.nodes[0].id;
+  const settings = { ...DEFAULT_LAYOUT_SETTINGS, type: 'force', mode: 'missing', locked: [id] };
+  const config = configWithLayoutPositions({}, original, settings, [id]);
+  assert.deepEqual(Object.keys(config.layout.positions), [id]);
+  const next = computeLayout(graph, config.layout, original);
+  assert.deepEqual(next.get(id), original.get(id));
+  assert.ok(
+    graph.nodes.some(
+      (n) =>
+        n.id !== id &&
+        (next.get(n.id).x !== original.get(n.id).x || next.get(n.id).y !== original.get(n.id).y),
+    ),
+  );
+  const applied = configWithLayoutPositions(config, next, settings);
+  assert.equal(Object.keys(applied.layout.positions).length, graph.nodes.length);
+});
+test('a no-move gesture preserves redo and unfinished movement cancels back to its exact point', () => {
+  const current = new Map([['a', { x: 1.123456, y: 2.345678 }]]),
+    drag = { id: 'a', pointerId: 1, previous: { ...current.get('a') }, start: { x: 0, y: 0 } };
+  const history = new ProjectHistory();
+  history.commit({ preset: 'quiet' });
+  history.undo();
+  if (dragHasChanges(drag, current))
+    history.commit(configWithLayoutPositions(history.value, current, undefined, ['a']));
+  assert.equal(history.canRedo, true);
+  assert.equal(history.canUndo, false);
+  current.set('a', { x: 45, y: 67 });
+  assert.equal(dragHasChanges(drag, current), true);
+  cancelPositionDrag(current, drag);
+  assert.deepEqual(current.get('a'), drag.previous);
+  assert.equal(dragHasChanges(drag, current), false);
+});
+test('force spacing preserves extreme finite anchors without scaling them', () => {
+  const graph = {
+    domain: 'neutral',
+    meta: { title: 'huge' },
+    nodes: [
+      { id: 'a', kind: 'person', label: 'A', position: { x: 1.5e308, y: -1.5e308 } },
+      { id: 'b', kind: 'person', label: 'B' },
+    ],
+    edges: [],
+    groups: [],
+    scenes: [],
+  };
+  for (const spacing of [64, 160, 400]) {
+    const settings = {
+      ...DEFAULT_LAYOUT_SETTINGS,
+      type: 'force',
+      mode: 'missing',
+      spacing,
+      locked: ['a'],
+    };
+    const current = layoutGraph(graph),
+      result = computeLayout(graph, settings, current);
+    assert.deepEqual(result.get('a'), graph.nodes[0].position);
+    for (const point of result.values())
+      assert.ok(Number.isFinite(point.x) && Number.isFinite(point.y));
+    assert.deepEqual(
+      sorted(computeLayout({ ...graph, nodes: [...graph.nodes].reverse() }, settings, current)),
+      sorted(result),
     );
   }
 });

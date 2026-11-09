@@ -1,5 +1,7 @@
 import {
   nodeAppearance,
+  edgeAppearance,
+  appearanceOrigin,
   type ProjectConfig,
   type VisualNode,
   type VisualEdge,
@@ -136,4 +138,48 @@ export function setNodeImage(
       next = editAppearance(next, 'node', node, 'object', 'size', 32);
   }
   return pruneImageAssets(next);
+}
+
+/** Resolve only layers at/below the inspector's editing scope. */
+function inspectorLayers<T>(
+  layers: AppearanceLayers<T> | undefined,
+  scope: Scope,
+): AppearanceLayers<T> | undefined {
+  if (scope === 'object') return layers;
+  return {
+    defaults: layers?.defaults,
+    ...(scope === 'category' ? { categories: layers?.categories } : {}),
+  };
+}
+export function inspectorAppearance(
+  config: ProjectConfig,
+  kind: 'node' | 'edge',
+  item: VisualNode | VisualEdge | undefined,
+  scope: Scope,
+): NodeAppearance | EdgeAppearance {
+  if (kind === 'node')
+    return nodeAppearance(
+      { ...config, nodes: inspectorLayers(config.nodes, scope) },
+      (item ?? { id: '', kind: '', label: '' }) as VisualNode,
+    );
+  return edgeAppearance(
+    { ...config, edges: inspectorLayers(config.edges, scope) },
+    (item ?? { id: '', kind: '', source: '', target: '' }) as VisualEdge,
+  );
+}
+export function inspectorOrigin(
+  config: ProjectConfig,
+  kind: 'node' | 'edge',
+  item: VisualNode | VisualEdge | undefined,
+  scope: Scope,
+  key: string,
+): string {
+  return appearanceOrigin(
+    inspectorLayers(kind === 'node' ? config.nodes : config.edges, scope) as AppearanceLayers<
+      Record<string, unknown>
+    >,
+    item?.kind ?? '',
+    item?.id ?? '',
+    key,
+  );
 }

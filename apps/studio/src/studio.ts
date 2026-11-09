@@ -1,5 +1,10 @@
 import { normalizeNodeImage } from './node-image.js';
 import { setNodeImage } from './project-editor-model.js';
+import {
+  configWithLayoutPositions,
+  dragHasChanges,
+  cancelPositionDrag,
+} from './layout-history-model.js';
 import { computeLayout, DEFAULT_LAYOUT_SETTINGS, type LayoutSettings } from '@relgraph/core';
 import { createLayoutStrategyView } from './layout-strategy-view.js';
 import { createProject, projectSource, validateProjectConfig } from '@relgraph/core';
@@ -130,11 +135,14 @@ function cancelLayoutPreview(): void {
 }
 function configWithPositions(
   settings: LayoutSettings = projectHistory.value.layout ?? DEFAULT_LAYOUT_SETTINGS,
+  editedIds?: readonly string[],
 ) {
-  return {
-    ...projectHistory.value,
-    layout: { ...settings, positions: Object.fromEntries(currentLayout ?? []) },
-  };
+  return configWithLayoutPositions(
+    projectHistory.value,
+    currentLayout ?? new Map(),
+    settings,
+    editedIds,
+  );
 }
 function applyProjectHistory(): void {
   if (!graph || !currentLayout || !originalLayout) return;
@@ -178,7 +186,7 @@ const strategyView = createLayoutStrategyView(document, $('layoutStrategyEditor'
     const ids = new Set(settings.locked);
     if (locked) ids.add(id);
     else ids.delete(id);
-    projectHistory.commit(configWithPositions({ ...settings, locked: [...ids].sort() }));
+    projectHistory.commit(configWithPositions({ ...settings, locked: [...ids].sort() }, [id]));
     applyProjectHistory();
   },
 });
@@ -694,7 +702,7 @@ layoutApply.addEventListener('click', () => {
     !updateEditableNodePosition(currentLayout, currentFrameState, selectedLayoutNode, point)
   )
     return;
-  projectHistory.commit(configWithPositions());
+  projectHistory.commit(configWithPositions(undefined, [selectedLayoutNode]));
   if (graph) graph.project = projectHistory.value;
   setFrame(playback.frame, false);
   updateLayoutControls();
@@ -724,6 +732,7 @@ function releaseLayoutPointer(): void {
 }
 function stopLayoutEdit(): void {
   if (!layoutEditing) return;
+  if (dragging && currentLayout) cancelPositionDrag(currentLayout, dragging);
   releaseLayoutPointer();
   layoutEditing = false;
   editCamera = null;
@@ -777,6 +786,7 @@ canvas.addEventListener('pointerdown', (event) => {
     point,
     radius,
     event.pointerId,
+    graph?.project,
   );
   if (!nextDrag || projectHistory.value.layout?.locked.includes(nextDrag.id)) return;
   dragging = nextDrag;
@@ -814,8 +824,10 @@ canvas.addEventListener('pointermove', moveLayoutNode);
 canvas.addEventListener('pointerup', (event) => {
   if (!dragging || dragging.pointerId !== event.pointerId) return;
   moveLayoutNode(event);
-  projectHistory.commit(configWithPositions());
-  if (graph) graph.project = projectHistory.value;
+  if (currentLayout && dragHasChanges(dragging, currentLayout)) {
+    projectHistory.commit(configWithPositions(undefined, [dragging.id]));
+    if (graph) graph.project = projectHistory.value;
+  }
   releaseLayoutPointer();
   setFrame(playback.frame, false);
 });
@@ -840,6 +852,7 @@ function downloadJson(value: unknown, filename: string): void {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 layoutExport.addEventListener('click', () => {
+  cancelLayoutPreview();
   if (!graph || !currentLayout || sourceDocument === null) return;
   try {
     const output = applyGraphPositions(sourceDocument, graph, currentLayout);

@@ -3,6 +3,8 @@ import type { VisualGraph } from '../../types/visual-graph.js';
 export type LayoutPoint = { x: number; y: number };
 
 export interface SeededLayoutOptions {
+  /** Preferred separation in world units; never rescales supplied anchors. */
+  spacing?: number;
   /** Unsigned 32-bit seed; the same input and seed always produce the same coordinates. */
   seed?: number;
   /** Bounded, fixed count of relaxation steps. */
@@ -50,13 +52,16 @@ function finiteMean(points: readonly LayoutPoint[], axis: 'x' | 'y'): number {
  */
 export function layoutMissingNodes(
   graph: Pick<VisualGraph, 'nodes' | 'edges'>,
-  { seed = 0, iterations = 160 }: SeededLayoutOptions = {},
+  { seed = 0, iterations = 160, spacing = 160 }: SeededLayoutOptions = {},
 ): Map<string, LayoutPoint> {
   if (!Number.isInteger(seed) || seed < 0 || seed > 0xffffffff)
     throw new RangeError('Layout seed must be an unsigned 32-bit integer');
   if (!Number.isInteger(iterations) || iterations < 0 || iterations > 2000)
     throw new RangeError('Layout iterations must be between 0 and 2000');
 
+  if (!Number.isFinite(spacing) || spacing < 64 || spacing > 400)
+    throw new RangeError('Layout spacing must be between 64 and 400');
+  const ratio = spacing / 160;
   const nodes = [...graph.nodes].sort(compareIds);
   const positions = new Map<string, LayoutPoint>();
   for (const node of nodes) {
@@ -88,7 +93,7 @@ export function layoutMissingNodes(
       ? { x: finiteMean(adjacent, 'x'), y: finiteMean(adjacent, 'y') }
       : center;
     const angle = hash(node.id + ':angle', seed) * Math.PI * 2;
-    const radius = adjacent.length ? 32 : 145 * Math.sqrt(index + 1);
+    const radius = adjacent.length ? 32 * ratio : 145 * ratio * Math.sqrt(index + 1);
     positions.set(node.id, {
       x: anchor.x + Math.cos(angle) * radius,
       y: anchor.y + Math.sin(angle) * radius,
@@ -112,8 +117,8 @@ export function layoutMissingNodes(
         dy = Math.sin(angle);
       }
       const distance = Math.hypot(dx, dy);
-      if (!(distance > 0) || !Number.isFinite(distance) || distance >= 112) return;
-      const push = ((112 - distance) * 0.085) / distance;
+      if (!(distance > 0) || !Number.isFinite(distance) || distance >= 112 * ratio) return;
+      const push = ((112 * ratio - distance) * 0.085) / distance;
       if (!Number.isFinite(push)) return;
       const fa = forces.get(aId),
         fb = forces.get(bId);
@@ -145,7 +150,7 @@ export function layoutMissingNodes(
       // Subtraction/hypot can overflow even if every authored point is finite.
       // Skipping such a spring is better than poisoning every mobile force with NaN.
       if (!(distance > 0) || !Number.isFinite(distance)) continue;
-      const pull = ((distance - 160) / distance) * 0.022;
+      const pull = ((distance - spacing) / distance) * 0.022;
       if (!Number.isFinite(pull)) continue;
       const fa = forces.get(edge.source),
         fb = forces.get(edge.target);
@@ -158,7 +163,7 @@ export function layoutMissingNodes(
         fb.y -= dy * pull;
       }
     }
-    const maxMove = 10 - (step / Math.max(1, iterations)) * 7;
+    const maxMove = (10 - (step / Math.max(1, iterations)) * 7) * ratio;
     for (const node of missing) {
       const p = positions.get(node.id),
         f = forces.get(node.id);
@@ -190,18 +195,18 @@ export function layoutMissingNodes(
       if (
         Number.isFinite(chosen.x) &&
         Number.isFinite(chosen.y) &&
-        occupied.every((other) => Math.hypot(chosen.x - other.x, chosen.y - other.y) >= 64)
+        occupied.every((other) => Math.hypot(chosen.x - other.x, chosen.y - other.y) >= 64 * ratio)
       )
         break;
       const offset = angle + attempt * 2.399963229728653;
       // At huge coordinates a 72-unit offset is smaller than one ULP.
       // Scale by the local float spacing, otherwise every candidate collides.
-      const spacing = Math.max(
-        72,
+      const collisionStep = Math.max(
+        72 * ratio,
         Math.abs(point.x) * Number.EPSILON * 4,
         Math.abs(point.y) * Number.EPSILON * 4,
       );
-      const radius = spacing * Math.sqrt(attempt + 1);
+      const radius = collisionStep * Math.sqrt(attempt + 1);
       const offsetX = Math.cos(offset) * radius,
         offsetY = Math.sin(offset) * radius;
       const candidateX = point.x + offsetX,

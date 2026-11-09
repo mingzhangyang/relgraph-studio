@@ -187,17 +187,8 @@ export function computeLayout(
   const nodes = graph.nodes.map((n) => ({ ...n, position: anchors.get(n.id) }));
   let result: Map<string, LayoutPoint>;
   if (type === 'force') {
-    // Reuse the existing deterministic solver; scale its world to honor spacing.
-    const factor = spacing / 160;
-    const scaled = nodes.map((n) => ({
-      ...n,
-      position: n.position ? { x: n.position.x / factor, y: n.position.y / factor } : undefined,
-    }));
-    result = new Map(
-      [...layoutMissingNodes({ nodes: scaled, edges: graph.edges }, { seed, iterations })].map(
-        ([id, p]) => [id, { x: p.x * factor, y: p.y * factor }],
-      ),
-    );
+    // Preferred spacing belongs to the solver, never to authored coordinates.
+    result = layoutMissingNodes({ nodes, edges: graph.edges }, { seed, iterations, spacing });
   } else if (type === 'circle') {
     const sorted = [...nodes].sort((a, b) => compare(a.id, b.id)),
       radius = Math.max(spacing, (sorted.length * spacing) / (2 * Math.PI));

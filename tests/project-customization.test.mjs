@@ -1,3 +1,4 @@
+import { walkDisplayItems } from '../packages/render/src/display-list.ts';
 import { hitDisplayList } from '../packages/render/src/selection.ts';
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
@@ -20,6 +21,8 @@ import { VIDEO_THEMES } from '../packages/render/src/theme.ts';
 import { texts, measure } from './helpers/display-list.mjs';
 import {
   ProjectHistory,
+  inspectorAppearance,
+  inspectorOrigin,
   editAppearance,
   clearAppearance,
 } from '../apps/studio/src/project-editor-model.ts';
@@ -182,4 +185,66 @@ test('continuous safe display-list hit testing respects graph clipping and node 
   assert.deepEqual(hitDisplayList(list, { x: 100, y: 100 }), { kind: 'node', id: 'node' });
   assert.equal(hitDisplayList(list, { x: 1001, y: 100 }), null);
   assert.equal(hitDisplayList(list, { x: NaN, y: 0 }), null);
+});
+
+test('inspector global/category values remain editable without an object or through object overrides', () => {
+  const node = { id: 'a', kind: 'person', label: 'A' },
+    config = {
+      nodes: {
+        defaults: { fontSize: 23 },
+        categories: { person: { fontSize: 25 } },
+        objects: { a: { fontSize: 27 } },
+      },
+    };
+  assert.equal(inspectorAppearance(config, 'node', undefined, 'global').fontSize, 23);
+  assert.equal(inspectorOrigin(config, 'node', undefined, 'global', 'fontSize'), '全局');
+  assert.equal(inspectorAppearance(config, 'node', node, 'global').fontSize, 23);
+  assert.equal(inspectorAppearance(config, 'node', node, 'category').fontSize, 25);
+  assert.equal(inspectorAppearance(config, 'node', node, 'object').fontSize, 27);
+});
+test('top-positioned multiline text fits above the glyph instead of falling back beside it', () => {
+  const node = {
+    id: 'a',
+    kind: 'person',
+    label: 'ABCDEFGHIJKLMNOPQRSTUVWXABCDEFGH',
+    position: { x: 0, y: 0 },
+  };
+  const graph = {
+    domain: 'neutral',
+    meta: { title: 'test' },
+    nodes: [node],
+    edges: [],
+    groups: [],
+    scenes: [{ id: 's', title: 'test', durationSec: 5 }],
+    project: { nodes: { defaults: { fontSize: 16, textPosition: 'top' } } },
+  };
+  const list = compose(graph),
+    lines = [...walkDisplayItems(list.items)].filter(
+      (i) => i.type === 'text' && i.text && node.label.includes(i.text),
+    );
+  assert.equal(lines.length, 2);
+  for (const line of lines) assert.ok(line.y + line.font.size * 1.3 <= 330 - 8 - 4);
+});
+test('edge hit targets end at the drawn reveal prefix', () => {
+  const graph = {
+    domain: 'neutral',
+    meta: { title: 't' },
+    nodes: [
+      { id: 'a', kind: 'person', label: 'A', position: { x: -100, y: 0 } },
+      { id: 'b', kind: 'person', label: 'B', position: { x: 100, y: 0 } },
+    ],
+    edges: [{ id: 'e', kind: 'link', source: 'a', target: 'b' }],
+    groups: [],
+    scenes: [{ id: 's', title: 't', durationSec: 5 }],
+  };
+  const positions = layoutGraph(graph),
+    state = directorFrameAt(graph, positions, 0),
+    options = { graph, positions, frame: 0, fps: 24, measure };
+  const complete = composeFrame(state, options).selection.find((s) => s.kind === 'edge');
+  state.reveal.edges.e = 0.6;
+  const list = composeFrame(state, options),
+    prefix = list.selection.find((s) => s.kind === 'edge');
+  assert.ok(prefix.points.at(-1).x < complete.points.at(-1).x);
+  assert.equal(hitDisplayList(list, complete.points.at(-1)), null);
+  assert.deepEqual(hitDisplayList(list, prefix.points.at(-1)), { kind: 'edge', id: 'e' });
 });

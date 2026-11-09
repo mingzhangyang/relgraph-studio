@@ -1,6 +1,11 @@
 import { normalizeNodeImage } from '../../apps/studio/src/node-image.ts';
 import { setNodeImage } from '../../apps/studio/src/project-editor-model.ts';
 import {
+  configWithLayoutPositions,
+  dragHasChanges,
+  cancelPositionDrag,
+} from '../../apps/studio/src/layout-history-model.ts';
+import {
   computeLayout,
   DEFAULT_LAYOUT_SETTINGS,
 } from '../../packages/core/src/director/layout-strategies.ts';
@@ -70,6 +75,9 @@ export function studioSource() {
 export const studioImports = {
   normalizeNodeImage,
   setNodeImage,
+  configWithLayoutPositions,
+  dragHasChanges,
+  cancelPositionDrag,
   computeLayout,
   DEFAULT_LAYOUT_SETTINGS,
   createLayoutStrategyView,
