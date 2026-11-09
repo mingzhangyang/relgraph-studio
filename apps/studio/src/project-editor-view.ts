@@ -27,9 +27,6 @@ import {
 interface Actions {
   /** True only when the coordinator accepted the proposed configuration. */
   change(config: ProjectConfig): boolean;
-  undo(): void;
-  redo(): void;
-  save(): void;
   pause(): void;
   uploadImage(file: File, nodeId: string): Promise<void>;
   draftChanged?(): void;
@@ -658,14 +655,11 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
     actions.change(clearAppearance(config, kind, item(), scope.value as Scope));
     actions.draftChanged?.();
   });
-  const undo = button('撤销', 'visualUndo', actions.undo),
-    redo = button('重做', 'visualRedo', actions.redo);
   button('恢复默认画面', 'visualReset', () => {
     drafts.clear();
     actions.change({});
     actions.draftChanged?.();
   });
-  button('保存项目 JSON', 'visualSave', actions.save);
   return {
     focus(): { kind: 'node' | 'edge'; selection: Selection; scope: Scope } {
       return { kind, selection, scope: scope.value as Scope };
@@ -702,16 +696,9 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
     isImageBusy() {
       return imageBusy;
     },
-    render(
-      nextFrame: DirectorFrameState | null,
-      nextConfig: ProjectConfig,
-      canUndo = false,
-      canRedo = false,
-    ) {
+    render(nextFrame: DirectorFrameState | null, nextConfig: ProjectConfig) {
       frame = nextFrame;
       config = nextConfig;
-      undo.disabled = !canUndo;
-      redo.disabled = !canRedo;
       render();
     },
     selectedNodeId() {

@@ -21,11 +21,9 @@ export interface EditorControls {
 /** Coordinator owns eligibility; this adapter only updates button state. */
 export function renderEditorAvailability(
   controls: EditorControls,
-  exportButton: HTMLButtonElement,
   available: boolean,
 ): void {
   controls.toggle.disabled = !available;
-  exportButton.disabled = !available;
   if (!available) controls.reset.disabled = true;
 }
 
@@ -69,10 +67,10 @@ export function renderEditorStatus(
 ): void {
   controls.reset.disabled = !dirty;
   controls.note.textContent = active
-    ? '拖动当前可见的节点 · ' + (dirty ? '有未保存调整' : '尚未调整') + ' · 导出后才会写入 JSON'
+    ? '拖动当前可见节点 · ' + (dirty ? '有坐标调整' : '尚未调整') + ' · 通过文档工具栏导出保存'
     : dirty
-      ? '有未保存调整 · 点击导出含坐标 JSON 保存'
-      : '调整模式关闭 · 只修改导出文件';
+      ? '已有坐标调整 · 可保存完整项目或单独导出坐标'
+      : '调整模式关闭 · 保存完整项目请使用上方工具栏';
 }
 
 export function renderEditorSelection(controls: EditorControls, selected: string): void {

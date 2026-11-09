@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import literature from '../examples/honglou-provisional.relgraph.json' with { type: 'json' };
 import biology from '../examples/biology-signaling-synthetic.json' with { type: 'json' };
 import { deferred, flush, makeStudio } from './helpers/studio-harness.mjs';
+import { documentCommandFromShortcut } from '../apps/studio/src/document-command-model.ts';
 
 const readFile = (name, value) => ({ name, text: () => Promise.resolve(value) });
 
@@ -403,6 +404,9 @@ test('pending and stale loads cannot expose outdated diagnostics', async () => {
 });
 
 function viewControl(app, id) {
+  // Document commands moved out of the object inspector; preserve the test
+  // helper for legacy interactions while asserting their new single home.
+  if (['visualUndo', 'visualRedo', 'visualSave'].includes(id)) return app.node(id);
   const stack = [app.node('appearanceEditor'), app.node('layoutStrategyEditor')];
   while (stack.length) {
     const element = stack.pop();
@@ -1295,3 +1299,178 @@ test('resetting an already-inherited invalid input clears its draft without addi
   );
 });
 
+test('pure document shortcut policy respects platform modifiers and editable focus', () => {
+  const shortcut = (key, modifiers = {}, editable = false) =>
+    documentCommandFromShortcut({ key, ...modifiers }, editable);
+  assert.equal(shortcut('z', { ctrlKey: true }), 'undo');
+  assert.equal(shortcut('Z', { metaKey: true }), 'undo');
+  assert.equal(shortcut('z', { ctrlKey: true, shiftKey: true }), 'redo');
+  assert.equal(shortcut('z', { metaKey: true, shiftKey: true }), 'redo');
+  assert.equal(shortcut('y', { ctrlKey: true }), 'redo');
+  assert.equal(shortcut('s', { ctrlKey: true }), 'save');
+  assert.equal(shortcut('S', { metaKey: true }), 'save');
+  assert.equal(documentCommandFromShortcut({ code: 'KeyZ', metaKey: true }, false), 'undo');
+  assert.equal(shortcut('z', { ctrlKey: true }, true), null, 'native input undo stays native');
+  assert.equal(shortcut('y', { ctrlKey: true }, true), null, 'native input redo stays native');
+  assert.equal(shortcut('s', { ctrlKey: true }, true), 'save', 'saving validates pending drafts');
+  assert.equal(shortcut('z', { shiftKey: true }), null);
+  assert.equal(shortcut('z', { ctrlKey: true, altKey: true }), null);
+  assert.equal(shortcut('z', { metaKey: true, isComposing: true }), null);
+  assert.equal(shortcut('s', { metaKey: true, repeat: true }), 'save');
+  assert.equal(shortcut('s', { metaKey: true, defaultPrevented: true }), null);
+  assert.equal(shortcut('y', { ctrlKey: true, shiftKey: true }), null);
+});
+
+test('document toolbar unifies history, saves, exports and dirty state', async () => {
+  const app = makeStudio();
+  await app.ready;
+  const undo = app.node('visualUndo');
+  const redo = app.node('visualRedo');
+  const save = app.node('visualSave');
+  const exportCoords = app.node('layoutExport');
+  const state = app.node('saveState');
+  const message = app.node('documentActionStatus');
+  assert.equal(undo.tagName, 'BUTTON');
+  assert.equal(undo.disabled, true);
+  assert.equal(redo.disabled, true);
+  assert.equal(save.disabled, false);
+  assert.equal(exportCoords.disabled, false);
+  assert.equal(state.attributes['data-dirty'], 'false');
+
+  const preset = viewControl(app, 'visualPreset');
+  preset.value = 'presentation';
+  await preset.dispatch('change');
+  assert.equal(undo.disabled, false);
+  assert.equal(redo.disabled, true);
+  assert.equal(state.attributes['data-dirty'], 'true');
+
+  const count = app.downloads.length;
+  await exportCoords.click();
+  assert.equal(app.downloads.length, count + 1);
+  assert.match(app.downloads.at(-1).filename, /\.positioned\.json$/);
+  assert.equal(state.attributes['data-dirty'], 'true');
+  assert.match(message.textContent, /不代表完整项目已保存/);
+
+  await undo.click();
+  assert.equal(undo.disabled, true);
+  assert.equal(redo.disabled, false);
+  assert.equal(state.attributes['data-dirty'], 'false');
+  await redo.click();
+  assert.equal(undo.disabled, false);
+  assert.equal(redo.disabled, true);
+  assert.equal(state.attributes['data-dirty'], 'true');
+
+  await save.click();
+  assert.equal(app.downloads.length, count + 2);
+  assert.match(app.downloads.at(-1).filename, /\.studio\.json$/);
+  assert.match(message.textContent, /请确认浏览器/);
+  assert.equal(state.attributes['data-dirty'], 'false');
+  const project = JSON.parse(await app.blobs.at(-1).text());
+  assert.equal(project.config.preset, 'presentation');
+  assert.ok(Object.keys(project.config.layout.positions).length > 0);
+
+  await app.node('exampleBiology').click();
+  assert.equal(undo.disabled, true);
+  assert.equal(redo.disabled, true);
+  assert.equal(save.disabled, false);
+  assert.equal(exportCoords.disabled, false);
+  assert.equal(state.attributes['data-dirty'], 'false');
+});
+
+test('document shortcuts preserve input undo and guard save', async () => {
+  const app = makeStudio();
+  await app.ready;
+  const preset = viewControl(app, 'visualPreset');
+  preset.value = 'quiet';
+  await preset.dispatch('change');
+  const stage = app.node('stage');
+  let prevented = false;
+  const key = (value, options = {}, target = stage) => {
+    prevented = false;
+    app.window.dispatch('keydown', {
+      key: value,
+      ctrlKey: true,
+      target,
+      preventDefault() {
+        prevented = true;
+      },
+      ...options,
+    });
+    return prevented;
+  };
+
+  assert.equal(key('z'), true, 'Ctrl+Z consumed outside editors');
+  assert.equal(viewControl(app, 'visualUndo').disabled, true);
+  assert.equal(viewControl(app, 'visualRedo').disabled, false);
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
+  assert.equal(key('z', { shiftKey: true }), true, 'Ctrl+Shift+Z redoes');
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
+
+  const input = viewControl(app, 'visualLabel');
+  input.focusSelector = 'input';
+  assert.equal(key('z', {}, input), false, 'input keeps native Ctrl+Z');
+  assert.equal(viewControl(app, 'visualUndo').disabled, false);
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
+
+  assert.equal(key('z', { metaKey: true, ctrlKey: false }), true, 'Cmd+Z undoes');
+  assert.equal(key('y'), true, 'Ctrl+Y redoes');
+  const objects = viewControl(app, 'visualObject');
+  objects.value = objects.children[1].value;
+  await objects.dispatch('change');
+  const label = viewControl(app, 'visualLabel');
+  label.value += ' · 未应用';
+  await label.dispatch('input');
+  const previous = app.downloads.length;
+  assert.equal(key('s', {}, input), true, 'Ctrl+S from input calls guarded project save');
+  assert.equal(app.downloads.length, previous, 'pending label draft blocks download');
+  assert.match(app.node('documentActionStatus').textContent, /未提交/);
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
+
+  await label.dispatch('change');
+  assert.equal(
+    key('s', { repeat: true }),
+    true,
+    'held shortcut is consumed without another download',
+  );
+  assert.equal(key('s'), true);
+  assert.equal(app.downloads.length, previous + 1);
+  assert.match(app.downloads.at(-1).filename, /\.studio\.json$/);
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
+});
+
+test('document toolbar disables commands while a replacement source is loading', async () => {
+  const pending = deferred();
+  const app = makeStudio({
+    fetcher: async (url) =>
+      url.includes('biology')
+        ? pending.promise
+        : { ok: true, text: async () => JSON.stringify(literature) },
+  });
+  await app.ready;
+  const download = app.node('visualSave');
+  const coords = app.node('layoutExport');
+  assert.equal(download.disabled, false);
+  const loading = app.node('exampleBiology').click();
+  assert.equal(download.disabled, true);
+  assert.equal(coords.disabled, true);
+  assert.equal(app.node('visualUndo').disabled, true);
+  assert.equal(app.node('visualRedo').disabled, true);
+
+  let prevented = false;
+  app.window.dispatch('keydown', {
+    key: 's',
+    ctrlKey: true,
+    target: app.node('stage'),
+    preventDefault() {
+      prevented = true;
+    },
+  });
+  assert.equal(prevented, true, 'unavailable project save cannot fall through to HTML Save As');
+  assert.match(app.node('documentActionStatus').textContent, /没有可保存的完整项目/);
+  assert.equal(app.downloads.length, 0);
+  pending.resolve({ ok: true, text: async () => JSON.stringify(biology) });
+  await loading;
+  assert.equal(download.disabled, false);
+  assert.equal(coords.disabled, false);
+  assert.equal(app.node('sourceName').textContent, '生物信号 · 虚构合成示例');
+});

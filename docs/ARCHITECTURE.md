@@ -31,7 +31,7 @@ The same backend runs headlessly. `packages/render/src/backends/skia.ts` (the No
 
 `packages/cli` (`relgraph`) validates documents with the workspace's diagnostics text and renders films. Worker threads each load the document and draw whichever frame indices they receive; the main thread streams raw RGBA frames to FFmpeg in frame order. Because a frame depends only on `(document, layout, frame, options)`, the thread split cannot change a pixel. `examples/golden-frames.json` records RGBA hashes of key frames together with the skia-canvas version and a font digest, and `npm run check:export` enforces them only for those versions.
 
-The integrated workspace is `demo/index.html`, served over local HTTP, with behavior in `apps/studio/src/studio.ts`. The private npm workspaces `@relgraph/core`, `@relgraph/render` and `@relgraph/cli` have explicit ESM/type exports and separate TypeScript builds; render depends on core's public interface, and the CLI on both. The studio resolves those names to source for development and its own Vite build, while installed consumers resolve the generated package outputs. `demo/standalone.html` remains the original independent prototype and is not the integrated renderer. Browser pixels depend on the browser version and rasterizer; determinism there means repeated frames in the same browser. Exported frames are reproducible for the same skia-canvas version and fonts. There is no export UI in the workspace yet; export is the `relgraph render` command. Step 4 is merged. The final acceptance candidate preserves all 44 stored golden hashes and all 16 browser baseline frames, and re-exports both full example MP4s; see the [acceptance report](B1.5-FINAL-ACCEPTANCE.md) for results and the remaining main merge gate.
+The integrated workspace is `demo/index.html`, served over local HTTP, with behavior in `apps/studio/src/studio.ts`. The private npm workspaces `@relgraph/core`, `@relgraph/render` and `@relgraph/cli` have explicit ESM/type exports and separate TypeScript builds; render depends on core's public interface, and the CLI on both. The studio resolves those names to source for development and its own Vite build, while installed consumers resolve the generated package outputs. `demo/standalone.html` remains the original independent prototype and is not the integrated renderer. Browser pixels depend on the browser version and rasterizer; determinism there means repeated frames in the same browser. Exported frames are reproducible for the same skia-canvas version and fonts. There is no film/MP4 export UI in the workspace yet; film export uses the `relgraph render` command. Local JSON project and source-coordinate downloads are separate document actions in the Studio toolbar. Step 4 is merged. The final acceptance candidate preserves all 44 stored golden hashes and all 16 browser baseline frames, and re-exports both full example MP4s; see the [acceptance report](B1.5-FINAL-ACCEPTANCE.md) for results and the remaining main merge gate.
 
 Workspace models own position-edit and playback policy; the corresponding views, shot view, diagnostics view and transcript view own DOM presentation. `transcript-model.ts` compares snapshots of `DisplayList.a11y` semantics, so changes within a shot update the transcript while identical frames avoid DOM replacement and repeated live messages. The coordinator alone accepts asynchronous load results after checking `requestSerial`. No view reads unprojected domain data to decide what to reveal.
 
@@ -41,6 +41,16 @@ empty Canvas placeholder. Position availability updates belong in
 `layout-editor-view.ts`. The Studio coordinator still owns request/selection
 identity, spoiler-safe graph handling, all playback transitions, renderer
 lifecycle, layout/history and download decisions.
+
+Document-wide actions use one toolbar above the preview instead of duplicates
+inside the object inspector. `document-command-model.ts` is a pure shortcut
+policy, `document-toolbar-view.ts` is a DOM-only action/availability/status
+adapter, and `studio.ts` reuses its existing history, complete-project download
+and source-coordinate export logic. Keyboard shortcuts and buttons pass through
+the same enabled-state gate; focused form fields retain native undo/redo.
+`ProjectSavepoint` and pending-draft checks remain the source of truth for
+unsaved status and whether full-project download may start. The toolbar does
+not change the film's frame state, DisplayList or Skia/Canvas rendering.
 
 Source-VM and real Vite bundle tests now share one simulated DOM implementation,
 `tests/helpers/studio-dom.mjs`. Simulated DOM is not real Chromium or native

@@ -1707,6 +1707,106 @@ for (const theme of ['dark', 'light']) {
   await context.close();
 }
 
+// A single document toolbar must own project actions without stealing native
+// text editing or changing film pixels. Exercise real Chromium shortcuts.
+{
+  const { context, page, problems } = await openStudio();
+  await check('document toolbar keyboard history, downloads and mobile reachability', async () => {
+    assert.equal(await page.locator('#documentToolbar #visualSave').count(), 1);
+    assert.equal(await page.locator('#appearanceEditor #visualSave').count(), 0);
+    assert.equal(await page.locator('#documentToolbar #layoutExport').count(), 1);
+    assert.equal(await page.locator('#documentToolbar #saveState').count(), 1);
+    assert.equal(await page.isDisabled('#visualUndo'), true);
+    assert.equal(await page.isDisabled('#visualRedo'), true);
+    assert.equal(await page.isDisabled('#visualSave'), false);
+    assert.equal(await page.isDisabled('#layoutExport'), false);
+    await page.selectOption('#visualPreset', 'quiet');
+    assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'true');
+    assert.equal(await page.isDisabled('#visualUndo'), false);
+
+    await page.evaluate(() => document.activeElement?.blur?.());
+    await page.keyboard.press('Control+z');
+    assert.equal(await page.isDisabled('#visualUndo'), true);
+    assert.equal(await page.isDisabled('#visualRedo'), false);
+    assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'false');
+    await page.keyboard.press('Control+Shift+z');
+    assert.equal(await page.isDisabled('#visualUndo'), false);
+    assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'true');
+
+    const fullDownload = page.waitForEvent('download');
+    await page.keyboard.press('Control+s');
+    const full = await fullDownload;
+    assert.match(full.suggestedFilename(), /\.studio\.json$/);
+    const project = JSON.parse(await readFile(await full.path(), 'utf8'));
+    assert.equal(project.config.preset, 'quiet');
+    assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'false');
+    assert.match(await text(page, '#documentActionStatus'), /请确认浏览器/);
+
+    await page.selectOption('#visualPreset', 'presentation');
+    const filmHash = await canvasHash(page);
+    const sourceDownload = page.waitForEvent('download');
+    await page.click('#layoutExport');
+    assert.match((await sourceDownload).suggestedFilename(), /\.positioned\.json$/);
+    assert.equal(await canvasHash(page), filmHash, 'document export must not alter film pixels');
+    assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'true');
+    assert.match(await text(page, '#documentActionStatus'), /不代表完整项目已保存/);
+
+    await page.evaluate(() => window.renderAt(84));
+    await page.selectOption('#visualObject', { index: 1 });
+    await page.focus('#visualLabel');
+    await page.keyboard.press('Control+z');
+    assert.equal(await page.inputValue('#visualPreset'), 'presentation');
+    assert.equal(await page.isDisabled('#visualUndo'), false, 'text-field undo stays native');
+
+    const earlierLabel = await page.inputValue('#visualLabel');
+    await page.fill('#visualLabel', earlierLabel + ' · 尚未提交');
+    const unexpected = [];
+    page.on('download', (item) => unexpected.push(item.suggestedFilename()));
+    await page.keyboard.press('Control+s');
+    assert.deepEqual(unexpected, [], 'an uncommitted draft must not download');
+    assert.match(await text(page, '#documentActionStatus'), /未提交/);
+    assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'true');
+
+    await page.locator('#visualLabel').evaluate((element) => element.blur());
+    const corrected = page.waitForEvent('download');
+    await page.click('#visualSave');
+    await corrected;
+    assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'false');
+
+    for (const width of [1280, 390]) {
+      await page.setViewportSize({ width, height: 840 });
+      const geometry = await page.evaluate(() => {
+        const toolbar = document.getElementById('documentToolbar');
+        const stage = document.getElementById('stage');
+        const rect = toolbar.getBoundingClientRect();
+        const stageRect = stage.getBoundingClientRect();
+        const buttons = [...toolbar.querySelectorAll('button')];
+        return {
+          overflow: document.documentElement.scrollWidth - window.innerWidth,
+          toolbarWidth: rect.width,
+          toolbarBottom: rect.bottom,
+          stageTop: stageRect.top,
+          minButtonHeight: Math.min(
+            ...buttons.map((button) => button.getBoundingClientRect().height),
+          ),
+          enabled: buttons.filter((button) => !button.disabled).length,
+        };
+      });
+      assert.ok(geometry.overflow <= 2, `no horizontal toolbar overflow at ${width}px`);
+      assert.ok(geometry.toolbarWidth > 200);
+      assert.ok(geometry.stageTop >= geometry.toolbarBottom, 'document toolbar precedes the stage');
+      assert.ok(geometry.minButtonHeight >= 36, 'document actions remain touch-target sized');
+      assert.ok(geometry.enabled >= 2);
+      await page.screenshot({
+        path: join(outputDir, `document-toolbar-${width}.png`),
+        fullPage: true,
+      });
+    }
+    assert.deepEqual(problems, []);
+  });
+  await context.close();
+}
+
 // UI-only outlines must be visible in the composite screenshot, not Canvas
 // pixels or native video output. Exercise real Chromium geometry and scrolling.
 {
