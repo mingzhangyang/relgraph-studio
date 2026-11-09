@@ -84,6 +84,8 @@ For ADR 003 step 5, position authoring is deliberately split across three bounda
 - `layout-editor-view.ts`: **DOM-only** rendering for the edit panel, node dropdown, status text and coordinate inputs.
 - `studio.ts`: browser event adapters (pointer capture, form input reading, redraw, file download), delegating to model + view. No duplicate drag or visibility math.
 
+The pure `studio-mode-model.ts` decides whether playback, position editing or a temporary layout preview must exit when the user navigates, changes themes, plays or applies a layout. `studio.ts` executes those transitions in one place while retaining the existing authoritative playback clock, preview snapshot, pointer transaction and request serial. Preview cancellation restores coordinates; applying preview commits them through project history. Changing themes does not stop ongoing playback, and switching modes cancels an unfinished drag rather than committing stale pointer-up data.
+
 The shared `tests/helpers/studio-harness.mjs` covers cross-component DOM integration; older standalone workspace DOM stubs have been migrated to it. Render/video golden tests exercise the composition layer separately. Playback policy lives in `playback-model.ts`; playback, shot, diagnostic and transcript DOM updates have focused view adapters. The transcript consumes only `DisplayList.a11y`, with pure semantic snapshots in `transcript-model.ts`. `studio.ts` retains scheduling, event routing and request-serial guards. See the [B1.5 final acceptance report](docs/B1.5-FINAL-ACCEPTANCE.md) for verification and the B2 merge gate.
 
 ## Tweak positions in the director workspace
