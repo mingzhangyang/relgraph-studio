@@ -403,6 +403,9 @@ test('pending and stale loads cannot expose outdated diagnostics', async () => {
 });
 
 function viewControl(app, id) {
+  // Document commands moved out of the object inspector; preserve the test
+  // helper for legacy interactions while asserting their new single home.
+  if (['visualUndo', 'visualRedo', 'visualSave'].includes(id)) return app.node(id);
   const stack = [app.node('appearanceEditor'), app.node('layoutStrategyEditor')];
   while (stack.length) {
     const element = stack.pop();
