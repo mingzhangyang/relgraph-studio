@@ -269,6 +269,7 @@ test('workspace selection overlay uses safe projected IDs and composed hit geome
     selectionClip: { x: 80, y: 90, w: 800, h: 460 },
     selection: [
       { kind: 'node', id: 'shown-a', box: { x: 100, y: 100, w: 60, h: 44 } },
+      { kind: 'node', id: 'shown-b', box: { x: 990, y: 100, w: 50, h: 44 } },
       { kind: 'node', id: 'shown-c', box: { x: 220, y: 100, w: 70, h: 44 } },
       { kind: 'node', id: 'hidden-future', box: { x: 0, y: 0, w: 30, h: 30 } },
       { kind: 'edge', id: 'parallel-1', points: [{ x: 120, y: 130 }, { x: 250, y: 200 }] },
@@ -284,7 +285,7 @@ test('workspace selection overlay uses safe projected IDs and composed hit geome
   assert.deepEqual(single.clip, list.selectionClip);
 
   const category = projectSelectionOverlay(frame, list, { ...node, scope: 'category' });
-  assert.equal(category.affectedCount, 2, 'category counts visible even if not yet drawn');
+  assert.equal(category.affectedCount, 2, 'off-stage members still belong to the category');
   assert.deepEqual(category.targets.map(({ hit }) => hit.id), ['shown-a']);
   const global = projectSelectionOverlay(frame, list, {
     kind: 'node', selection: null, scope: 'global',
