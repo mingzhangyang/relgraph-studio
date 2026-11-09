@@ -752,7 +752,6 @@ scrubber.addEventListener('input', () => {
   setFrame(requestedFrame);
 });
 window.addEventListener('keydown', (event) => {
-  if (loading) return;
   const target = event.target;
   const editingField =
     target instanceof Element &&
@@ -763,13 +762,20 @@ window.addEventListener('keydown', (event) => {
     );
   const command = documentCommandFromShortcut(event, editingField);
   if (command) {
-    if (documentToolbarView.enabled(command)) {
+    const enabled = documentToolbarView.enabled(command);
+    // Ctrl/Cmd+S must never accidentally save the HTML page instead of the
+    // project, even while a new document is loading or validation has failed.
+    if (enabled || command === 'save') {
       event.preventDefault();
-      if (!event.repeat) documentToolbarView.run(command);
+      if (!event.repeat) {
+        if (enabled) documentToolbarView.run(command);
+        else documentToolbarView.message('当前没有可保存的完整项目，请先加载有效数据。', true);
+      }
     }
     return;
   }
   if (
+    loading ||
     event.altKey ||
     event.ctrlKey ||
     event.metaKey ||
