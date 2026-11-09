@@ -3,16 +3,14 @@ import {
   appearanceOrigin,
   displayNodeText,
   displayEdgeText,
+  APPEARANCE_FIELD_RULES,
+  type AppearanceKind,
   type ProjectConfig,
   type DirectorFrameState,
   type VisualNode,
   type VisualEdge,
 } from '@relgraph/core';
 import { hitDisplayList, type DisplayList } from '@relgraph/render';
-import {
-  APPEARANCE_FIELD_RULES,
-  type AppearanceKind,
-} from '@relgraph/core';
 import { appearanceFieldHint, parseAppearanceDraft } from './field-validation-model.js';
 import {
   editAppearance,
