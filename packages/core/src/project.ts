@@ -61,26 +61,69 @@ export const isRecord = (v: unknown): v is Record<string, unknown> =>
 const enumValue = (v: unknown, values: readonly unknown[]): boolean => values.includes(v);
 const numberIn = (v: unknown, min: number, max: number): boolean =>
   typeof v === 'number' && Number.isFinite(v) && v >= min && v <= max;
-const paint = (v: unknown): boolean => typeof v === 'string' && /^#[a-f0-9]{6}$/i.test(v);
-const rules: Record<string, (v: unknown) => boolean> = {
-  image: (v) => v === null || (typeof v === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(v)),
-  imageFit: (v) => enumValue(v, ['cover', 'contain']),
-  shape: (v) => enumValue(v, ['circle', 'pill', 'diamond']),
-  size: (v) => numberIn(v, 8, 48),
-  fill: paint,
-  border: paint,
-  borderWidth: (v) => numberIn(v, 0, 8),
-  fontSize: (v) => numberIn(v, 9, 32),
-  fontWeight: (v) => enumValue(v, [400, 600]),
-  textColor: paint,
-  textPosition: (v) => enumValue(v, ['auto', 'top', 'bottom', 'left', 'right']),
-  color: paint,
-  width: (v) => numberIn(v, 0.5, 8),
-  dash: (v) => enumValue(v, ['solid', 'dashed', 'dotted']),
-  head: (v) => enumValue(v, ['arrow', 'bar', 'hollow-circle', 'none']),
-  curve: (v) => numberIn(v, -160, 160),
-  showLabel: (v) => typeof v === 'boolean',
+
+/** One authoritative rule set for imported projects AND Studio field controls. */
+export type AppearanceFieldRule =
+  | { type: 'number'; min: number; max: number }
+  | { type: 'enum'; values: readonly (string | number)[] }
+  | { type: 'color' }
+  | { type: 'boolean' }
+  | { type: 'image' };
+export type AppearanceKind = 'nodes' | 'edges';
+export const APPEARANCE_FIELD_RULES: Record<
+  AppearanceKind,
+  Record<string, AppearanceFieldRule>
+> = {
+  nodes: {
+    image: { type: 'image' },
+    imageFit: { type: 'enum', values: ['cover', 'contain'] },
+    shape: { type: 'enum', values: ['circle', 'pill', 'diamond'] },
+    size: { type: 'number', min: 8, max: 48 },
+    fill: { type: 'color' },
+    border: { type: 'color' },
+    borderWidth: { type: 'number', min: 0, max: 8 },
+    fontSize: { type: 'number', min: 9, max: 32 },
+    fontWeight: { type: 'enum', values: [400, 600] },
+    textColor: { type: 'color' },
+    textPosition: { type: 'enum', values: ['auto', 'top', 'bottom', 'left', 'right'] },
+  },
+  edges: {
+    color: { type: 'color' },
+    width: { type: 'number', min: 0.5, max: 8 },
+    dash: { type: 'enum', values: ['solid', 'dashed', 'dotted'] },
+    head: { type: 'enum', values: ['arrow', 'bar', 'hollow-circle', 'none'] },
+    curve: { type: 'number', min: -160, max: 160 },
+    showLabel: { type: 'boolean' },
+    fontSize: { type: 'number', min: 9, max: 32 },
+    fontWeight: { type: 'enum', values: [400, 600] },
+    textColor: { type: 'color' },
+  },
 };
+
+/** Evaluate a field using the same constraints as full-project validation. */
+export function validAppearanceField(
+  kind: AppearanceKind,
+  key: string,
+  value: unknown,
+): boolean {
+  const rule = APPEARANCE_FIELD_RULES[kind][key];
+  if (!rule) return false;
+  switch (rule.type) {
+    case 'number':
+      return numberIn(value, rule.min, rule.max);
+    case 'enum':
+      return enumValue(value, rule.values);
+    case 'color':
+      return typeof value === 'string' && /^#[a-f0-9]{6}$/i.test(value);
+    case 'boolean':
+      return typeof value === 'boolean';
+    case 'image':
+      return (
+        value === null ||
+        (typeof value === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(value))
+      );
+  }
+}
 const nodeKeys = [
   'image',
   'imageFit',
@@ -153,7 +196,8 @@ export function validateProjectConfig(value: unknown, graph?: VisualGraph): stri
       )
         fail('config.nodes.image: missing asset');
       for (const [k, x] of Object.entries(v))
-        if (!allowed.includes(k) || !rules[k]?.(x)) fail(`config.${kind}.${k}`);
+        if (!allowed.includes(k) || !validAppearanceField(kind, k, x))
+          fail(`config.${kind}.${k}`);
     };
     if (layer.defaults !== undefined) check(layer.defaults);
     for (const scope of ['categories', 'objects']) {
