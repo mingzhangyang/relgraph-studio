@@ -28,6 +28,7 @@ interface Actions {
   save(): void;
   pause(): void;
   uploadImage(file: File, nodeId: string): Promise<void>;
+  draftChanged?(): void;
 }
 const nodeFields: [string, string, string | readonly string[]][] = [
   ['shape', '形状', ['circle', 'pill', 'diamond']],
@@ -147,12 +148,14 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
   const labelWrap = el('label', '显示名称 / 关系标签');
   labelWrap.append(label);
   host.append(labelWrap);
+  label.addEventListener('input', () => actions.draftChanged?.());
   const description = el('textarea');
   description.id = 'visualDescription';
   description.maxLength = 2000;
   const descWrap = el('label', '显示说明');
   descWrap.append(description);
   host.append(descWrap);
+  description.addEventListener('input', () => actions.draftChanged?.());
   let buttonHost = host;
   const button = (text: string, id: string, fn: () => void) => {
     const b = el('button', text);
@@ -187,6 +190,7 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
       imageBusy = false;
     }
     selection = next;
+    actions.draftChanged?.();
   };
   const imageFit = el('select');
   imageFit.id = 'visualImageFit';
@@ -284,6 +288,7 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
       reset.type = 'button';
       reset.setAttribute('aria-label', '恢复继承：' + title);
       reset.addEventListener('click', () => update(key, undefined));
+      input.addEventListener('input', () => actions.draftChanged?.());
       input.addEventListener('change', () => {
         const raw = input.value;
         const val =
@@ -295,6 +300,7 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
                 ? raw === 'true'
                 : raw;
         update(key, val);
+        actions.draftChanged?.();
       });
       row.append(input, origin, reset);
       fields.append(row);
@@ -411,6 +417,40 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
   button('恢复默认画面', 'visualReset', () => actions.change({}));
   button('保存项目 JSON', 'visualSave', actions.save);
   return {
+    /** Detect unsent text/number drafts, including invalid values not accepted by core. */
+    hasPendingDraft() {
+      if (!frame) return false;
+      const selected = item();
+      if (selected) {
+        const copy = kind === 'node'
+          ? displayNodeText(config, selected.id)
+          : displayEdgeText(config, selected.id);
+        if (!label.disabled && label.value !== (copy?.label ?? selected.label ?? '')) return true;
+        if (
+          kind === 'node' &&
+          !description.disabled &&
+          description.value !== (displayNodeText(config, selected.id)?.description ?? '')
+        ) return true;
+      }
+      const resolved = inspectorAppearance(config, kind, selected, scope.value as Scope);
+      for (const [key, control] of controls) {
+        if (control.input.disabled) continue;
+        const expected = String((resolved as Record<string, unknown>)[key] ?? '');
+        if (control.input.value === expected) continue;
+        if (
+          control.input instanceof HTMLInputElement &&
+          control.input.type === 'number' &&
+          control.input.value !== '' &&
+          expected !== '' &&
+          Number(control.input.value) === Number(expected)
+        ) continue;
+        return true;
+      }
+      return false;
+    },
+    isImageBusy() {
+      return imageBusy;
+    },
     render(
       nextFrame: DirectorFrameState | null,
       nextConfig: ProjectConfig,
@@ -432,6 +472,7 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
     imageBusy(value: boolean) {
       imageBusy = value;
       render();
+      actions.draftChanged?.();
     },
     clear() {
       imageBusy = false;
