@@ -35,6 +35,17 @@ export interface Canvas2DGradient {
  * skia-canvas satisfy it; it does not depend on the DOM library.
  */
 export interface Canvas2D {
+  drawImage(
+    image: unknown,
+    sx: number,
+    sy: number,
+    sw: number,
+    sh: number,
+    dx: number,
+    dy: number,
+    dw: number,
+    dh: number,
+  ): void;
   arc(x: number, y: number, radius: number, startAngle: number, endAngle: number): void;
   beginPath(): void;
   clearRect(x: number, y: number, w: number, h: number): void;
@@ -153,7 +164,12 @@ function trace(ctx: Canvas2D, commands: readonly PathCommand[]): void {
 type RectCommand = Extract<PathCommand, ['R', ...number[]]>;
 const isRect = (command: PathCommand): command is RectCommand => command[0] === 'R';
 
-function drawItems(ctx: Canvas2D, items: readonly DisplayItem[], alpha: number): void {
+function drawItems(
+  ctx: Canvas2D,
+  items: readonly DisplayItem[],
+  alpha: number,
+  images: ReadonlyMap<string, unknown>,
+): void {
   for (const item of items) {
     if (item.type === 'group') {
       ctx.save();
@@ -163,7 +179,18 @@ function drawItems(ctx: Canvas2D, items: readonly DisplayItem[], alpha: number):
         ctx.rect(item.clip.x, item.clip.y, item.clip.w, item.clip.h);
         ctx.clip();
       }
-      drawItems(ctx, item.items, alpha * (item.alpha ?? 1));
+      drawItems(ctx, item.items, alpha * (item.alpha ?? 1), images);
+      ctx.restore();
+    } else if (item.type === 'image') {
+      const image = images.get(item.assetId);
+      if (!image) throw new Error('Unprepared node image');
+      ctx.save();
+      ctx.globalAlpha = alpha * (item.alpha ?? 1);
+      ctx.beginPath();
+      trace(ctx, item.clip);
+      ctx.clip();
+      const source = item.source;
+      ctx.drawImage(image, source.x, source.y, source.w, source.h, item.x, item.y, item.w, item.h);
       ctx.restore();
     } else if (item.type === 'path') {
       ctx.globalAlpha = alpha * (item.alpha ?? 1);
@@ -214,10 +241,14 @@ function drawItems(ctx: Canvas2D, items: readonly DisplayItem[], alpha: number):
 }
 
 /** Draw a display list onto a context whose canvas has the list's size. */
-export function drawDisplayList(ctx: Canvas2D, list: DisplayList): void {
+export function drawDisplayList(
+  ctx: Canvas2D,
+  list: DisplayList,
+  images: ReadonlyMap<string, unknown> = new Map(),
+): void {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalAlpha = 1;
   ctx.setLineDash([]);
   ctx.clearRect(0, 0, list.width, list.height);
-  drawItems(ctx, list.items, 1);
+  drawItems(ctx, list.items, 1, images);
 }

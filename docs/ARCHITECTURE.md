@@ -65,3 +65,13 @@ selection/history and retain the existing request-serial protection. No new doma
 schema fields, DOM simulation, framework, physical playback model or source
 verification claims are introduced. See [network authoring](NETWORK-AUTHORING.md)
 for format, limits and reproduction.
+
+Node image uploads normalize once in the browser to bounded, embedded RGBA assets
+under project configuration. Node styles reference assets through the same sparse
+cascade. The pure composer resolves references after projection and emits an image
+item with source crop, destination geometry and the existing node outline clip.
+Display lists never contain the global asset collection. Browser and Skia prepare
+native bitmap canvases outside frame evaluation, then draw the same image items.
+No remote URL, filesystem path, asynchronous decoder or new simulation enters
+playback. Async upload commits recheck document serial, selection and safe view.
+See [node images](NODE-IMAGES.md) for representation and merge/reproduction details.
