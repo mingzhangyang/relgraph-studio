@@ -85,4 +85,4 @@ Reimport uses the saved coordinates directly. Merely loading or playing never re
 Use **节点图片 · 仅当前节点** for local PNG/JPEG/WebP upload, shape clipping,
 cover/contain, removal and inherited-image reset. Saved projects embed normalized
 pixels alongside sparse `image`/`imageFit` references; the original domain source
-stays unchanged. See [image limits, export and squash merge order](NODE-IMAGES.md).
+stays unchanged. See [image limits, export and current main-branch delivery](NODE-IMAGES.md).

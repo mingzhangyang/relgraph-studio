@@ -1,9 +1,18 @@
 # Network authoring acceptance · 2026-11-09
 
-This is the original delivery snapshot. Subsequent Copilot corrections, new
-regressions, six inspected Golden changes and squash handling are documented in
-[the review-correction report](NETWORK-REVIEW-FIXES.md). Its results supersede
-the original counts below.
+> **Historical acceptance snapshot; not a live merge procedure.**
+> #22 subsequently merged into `main`. #23 and #24 were marked merged only
+> into feature branches; their reviewed code did **not** reach `main` through
+> those merges. The current restoration is
+> [PR #25](https://github.com/mingzhangyang/relgraph-studio/pull/25),
+> a single direct-to-`main` PR. Before merging #25, run fresh local checks;
+> afterwards verify the expected layout/image features and fixes actually
+> landed on `main`. See [current delivery guidance](NODE-IMAGES.md#delivery-and-main-branch-verification--updated-2026-11-09).
+>
+> The original checks and tree descriptions below are retained as dated,
+> **historical** evidence only. Subsequent review corrections and inspected
+> Golden changes are documented in [the review report](NETWORK-REVIEW-FIXES.md).
+> No historical pass count establishes fresh #25 validation.
 
 The starting workspace was an empty managed `/workspace`; a fresh clone was clean.
 Main was rechecked as `7e97225b73d17f3eaf695d0335b84cd16fc5bec4` (#21 merged).
@@ -24,9 +33,11 @@ B1.5 acceptance, models/views, shared harness, render/layout/export code, and
   `feat/network-layouts` → `feat/network-appearance` (stacked).
   Deterministic generic layered/force/circle/manual layouts, explicit coordinate
   intent, safe locks, transient preview/apply/cancel and manual/layout history.
-  Squash A first, then transplant B's independent tree delta onto the resulting
-  main, retarget B and verify the remaining diff. See the correction report for
-  preserving review-fix merge resolutions. Neither PR is automatically merged.
+  **Historical plan only:** squash A first, then transplant B's independent
+  tree delta, retarget B and verify it. This old plan was not completed as
+  written: #23 and #24 were merged into feature branches instead of main.
+  Do **not** retarget the closed PRs or follow this sequence. Use #25's
+  direct-to-main acceptance and post-merge content verification above.
   Verified code snapshots: A `eb28307`, B `6bb3527`; this report/handoff is
   recorded in a separate documentation commit.
 
