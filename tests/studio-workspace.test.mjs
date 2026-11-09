@@ -750,6 +750,11 @@ test('native badInput stays dirty even when the input value is empty', async () 
   const objects = viewControl(app, 'visualObject');
   objects.value = objects.children[1].value;
   await objects.dispatch('change');
+  // The shared DOM does not implicitly select the first <option>.
+  // Match the browser's default object scope before exercising the editor.
+  const scope = viewControl(app, 'visualScope');
+  scope.value = 'object';
+  await scope.dispatch('change');
   const size = viewControl(app, 'visual-size');
   assert.equal(size.value, '', 'no size override is initially authored');
 
@@ -812,10 +817,16 @@ test('invalid number tokens cannot remove an existing saved override', async () 
   const objects = viewControl(app, 'visualObject');
   objects.value = objects.children[1].value;
   await objects.dispatch('change');
+  // The shared DOM does not implicitly select the first <option>.
+  // Match the browser's default object scope before exercising the editor.
+  const scope = viewControl(app, 'visualScope');
+  scope.value = 'object';
+  await scope.dispatch('change');
   const size = viewControl(app, 'visual-size');
   size.value = '24';
   await size.dispatch('input');
   await size.dispatch('change');
+  assert.equal(size.value, '24', 'inspector resolves the committed object override');
   await viewControl(app, 'visualSave').click();
   assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
 
