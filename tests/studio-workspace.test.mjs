@@ -1270,5 +1270,18 @@ test('resetting an already-inherited invalid input clears its draft without addi
   assert.equal(width.max, '8');
   assert.equal(curve.min, '-160');
   assert.equal(curve.max, '160');
+  const weight = viewControl(app, 'visual-fontWeight');
+  const labelVisibility = viewControl(app, 'visual-showLabel');
+  assert.equal(weight.tagName, 'SELECT');
+  assert.deepEqual(
+    weight.children.map((option) => option.value),
+    ['', '400', '600'],
+    'edge weight options must match the shared core enum',
+  );
+  assert.deepEqual(
+    labelVisibility.children.map((option) => option.value),
+    ['', 'true', 'false'],
+    'boolean choices come from the shared core rule',
+  );
 });
 
