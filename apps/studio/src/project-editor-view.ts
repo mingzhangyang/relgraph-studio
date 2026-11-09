@@ -393,7 +393,6 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
           (input as HTMLInputElement).inputMode = 'decimal';
         } else if (rule?.type === 'color') {
           (input as HTMLInputElement).setAttribute('pattern', '#[0-9a-fA-F]{6}');
-          (input as HTMLInputElement).maxLength = 7;
         }
       } else {
         const empty = el('option', '继承');

@@ -1202,6 +1202,16 @@ test('color input and picker share validation, preserve bad hex, and commit one 
   assert.match(fill.attributes['pattern'], /0-9a-fA-F/);
   assert.match(picker.attributes['aria-label'], /填充色/);
   assert.equal(picker.disabled, false);
+  assert.equal(fill.maxLength, undefined, 'hex drafts must not be truncated before validation');
+
+  fill.value = '#33669900';
+  await fill.dispatch('input');
+  assert.equal(fill.attributes['aria-invalid'], 'true');
+  await fill.dispatch('change');
+  assert.equal(fill.value, '#33669900');
+  assert.equal(viewControl(app, 'visualUndo').disabled, true);
+  assert.equal(app.window.renderAt(85), true);
+  assert.equal(fill.value, '#33669900');
 
   fill.value = 'red';
   await fill.dispatch('input');

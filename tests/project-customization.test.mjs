@@ -114,6 +114,7 @@ test('appearance field parser separates inheritance, incomplete numeric input an
   assert.equal(parseAppearanceDraft('nodes', 'size', '1e999').ok, false);
   assert.equal(parseAppearanceDraft('nodes', 'size', ' ').ok, false);
   assert.equal(parseAppearanceDraft('nodes', 'fill', '#BAD').ok, false);
+  assert.equal(parseAppearanceDraft('nodes', 'fill', '#33669900').ok, false);
   assert.equal(parseAppearanceDraft('nodes', 'fill', '#Ab12EF').value, '#Ab12EF');
   assert.match(appearanceFieldHint('nodes', 'fill'), /#RRGGBB/);
   assert.equal(parseAppearanceDraft('nodes', 'fontWeight', '600').value, 600);

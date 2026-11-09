@@ -1648,6 +1648,17 @@ for (const theme of ['dark', 'light']) {
     assert.equal(await text(page, '#visual-size-error'), '');
     assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'false');
 
+    const fillInput = page.locator('#visual-fill');
+    assert.equal(await fillInput.getAttribute('maxlength'), null);
+    await fillInput.fill('');
+    await fillInput.pressSequentially('#33669900');
+    assert.equal(await fillInput.inputValue(), '#33669900', '8-digit hex input is not truncated');
+    await fillInput.evaluate((element) => element.blur());
+    assert.equal(await fillInput.getAttribute('aria-invalid'), 'true');
+    assert.equal(await fillInput.inputValue(), '#33669900');
+    await page.evaluate(() => window.renderAt(86));
+    assert.equal(await fillInput.inputValue(), '#33669900', 'bad hex draft survives redraw');
+
     await page.fill('#visual-fill', 'not-a-color');
     await page.locator('#visual-fill').evaluate((element) => element.blur());
     assert.equal(await page.getAttribute('#visual-fill', 'aria-invalid'), 'true');
