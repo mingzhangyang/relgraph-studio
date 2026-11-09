@@ -10,6 +10,7 @@ interface Actions {
   apply(): void;
   cancel(): void;
   lock(id: string, locked: boolean): void;
+  draftChanged?(): void;
 }
 export function createLayoutStrategyView(doc: Document, host: HTMLElement, actions: Actions) {
   const el = <K extends keyof HTMLElementTagNameMap>(
@@ -108,9 +109,24 @@ export function createLayoutStrategyView(doc: Document, host: HTMLElement, actio
   lock.addEventListener('change', () => {
     if (nodes.value) actions.lock(nodes.value, lock.checked);
   });
-  for (const input of [type, mode, seed, spacing, iterations])
-    input.addEventListener('change', actions.cancel);
+  for (const input of [type, mode, seed, spacing, iterations]) {
+    input.addEventListener('change', () => {
+      actions.cancel();
+      actions.draftChanged?.();
+    });
+    input.addEventListener('input', () => actions.draftChanged?.());
+  }
   return {
+    hasPendingDraft() {
+      return (
+        enabled &&
+        (type.value !== settings.type ||
+          mode.value !== settings.mode ||
+          seed.value !== String(settings.seed) ||
+          spacing.value !== String(settings.spacing) ||
+          iterations.value !== String(settings.iterations))
+      );
+    },
     render(
       frame: DirectorFrameState | null,
       next: LayoutSettings | undefined,
