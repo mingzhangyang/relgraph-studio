@@ -175,6 +175,9 @@ function applyProjectHistory({
   updateLayoutControls();
 }
 const strategyView = createLayoutStrategyView(document, $('layoutStrategyEditor'), {
+  draftChanged() {
+    refreshUnsavedState();
+  },
   preview(settings) {
     if (!graph || !currentLayout || loading) return;
     if (layoutEditing) stopLayoutEdit();
@@ -288,7 +291,12 @@ const projectEditor = createProjectEditor(document, $('appearanceEditor'), {
   },
   save() {
     if (!graph || !currentLayout || sourceDocument === null || loading) return;
-    if (dragging || projectEditor.hasPendingDraft() || projectEditor.isImageBusy()) {
+    if (
+      dragging ||
+      projectEditor.hasPendingDraft() ||
+      strategyView.hasPendingDraft() ||
+      projectEditor.isImageBusy()
+    ) {
       projectEditor.error('仍有未提交的输入、拖动或图片处理，请完成后再保存项目。');
       refreshUnsavedState();
       return;
@@ -362,11 +370,12 @@ function hasUnsavedChanges(): boolean {
     !loading &&
     graph &&
     currentLayout &&
-    (projectSavepoint.isDirty(projectHistory.value, currentLayout) ||
-      layoutPreview ||
+    (layoutPreview ||
       dragging ||
       projectEditor.isImageBusy() ||
-      projectEditor.hasPendingDraft()),
+      projectEditor.hasPendingDraft() ||
+      strategyView.hasPendingDraft() ||
+      projectSavepoint.isDirty(projectHistory.value, currentLayout)),
   );
 }
 function refreshUnsavedState(): void {
