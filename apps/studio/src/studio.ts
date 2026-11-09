@@ -7,7 +7,12 @@ import {
 } from './layout-history-model.js';
 import { computeLayout, DEFAULT_LAYOUT_SETTINGS, type LayoutSettings } from '@relgraph/core';
 import { createLayoutStrategyView } from './layout-strategy-view.js';
-import { createProject, projectSource, validateProjectConfig, type ProjectConfig } from '@relgraph/core';
+import {
+  createProject,
+  projectSource,
+  validateProjectConfig,
+  type ProjectConfig,
+} from '@relgraph/core';
 import { ProjectHistory } from './project-editor-model.js';
 import { ProjectSavepoint } from './unsaved-changes-model.js';
 import { createProjectEditor } from './project-editor-view.js';
