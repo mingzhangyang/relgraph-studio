@@ -223,19 +223,20 @@ const projectHistory = new ProjectHistory();
 const projectSavepoint = new ProjectSavepoint();
 const projectEditor = createProjectEditor(document, $('appearanceEditor'), {
   change(config) {
-    if (!graph || loading) return;
+    if (!graph || loading) return false;
     ++imageUploadSerial;
     projectEditor.imageBusy(false);
     const errors = validateProjectConfig(config, graph);
     if (errors.length) {
       projectEditor.error('配置无效：' + errors.join('；'));
-      return;
+      return false;
     }
     cancelLayoutPreview();
     projectEditor.error('');
     setPlaying(false);
     projectHistory.commit(config);
     applyProjectHistory();
+    return true;
   },
   undo() {
     ++imageUploadSerial;
@@ -364,27 +365,31 @@ let originalLayout: ReturnType<typeof layoutGraph> | null = null;
 let sourceDocument: unknown = null;
 let sourceFilename = 'relgraph.json';
 let selectedLayoutNode: string | null = null;
+// Coordinates are edited only on Apply; keep uncommitted X/Y per node even
+// when another node is selected or position-edit mode is temporarily hidden.
+const coordinateDrafts = new Map<string, { x: string; y: string }>();
 let layoutEditing = false;
 let editCamera: DirectorFrameState['cameraResolved'] | null = null;
 let dragging: PositionDrag | null = null;
 const DOCUMENT_TITLE = 'RelGraph Studio · 导演工作台';
 let lastDirtyStatus: boolean | null = null;
 
-// Draft coordinate values are not in history until the user presses Apply.
-// Compare numeric values so equivalent input notation is not treated as an edit.
+// Do not confuse numeric formatting with a meaningful coordinate change.
+function coordinateDraftMatches(
+  draft: { x: string; y: string },
+  point: { x: number; y: number },
+): boolean {
+  const parsed = parseCoordinateInputs(draft.x, draft.y);
+  return parsed !== null && parsed.x === point.x && parsed.y === point.y;
+}
 function hasPendingCoordinateDraft(): boolean {
-  if (
-    !layoutEditing ||
-    !currentLayout ||
-    !selectedLayoutNode ||
-    layoutX.disabled ||
-    layoutY.disabled
-  )
-    return false;
-  const point = currentLayout.get(selectedLayoutNode);
-  if (!point) return false;
-  const draft = parseCoordinateInputs(layoutX.value, layoutY.value);
-  return !draft || draft.x !== point.x || draft.y !== point.y;
+  // Prune drafts that now match an applied/undone position so they cannot
+  // reappear if later history operations move the node elsewhere.
+  for (const [id, draft] of coordinateDrafts) {
+    const point = currentLayout?.get(id);
+    if (point && coordinateDraftMatches(draft, point)) coordinateDrafts.delete(id);
+  }
+  return coordinateDrafts.size > 0;
 }
 
 function hasUnsavedChanges(): boolean {
@@ -493,6 +498,7 @@ function clearStudio(): void {
   graph = null;
   projectHistory.reset();
   projectSavepoint.clear();
+  coordinateDrafts.clear();
   projectEditor.clear();
   renderer = null;
   currentLayout = null;
@@ -735,10 +741,20 @@ function availableNodes(): VisualGraph['nodes'] {
     : [];
 }
 function updateLayoutFields(): void {
-  renderEditorFields(
-    layoutControls,
-    selectedLayoutNode ? currentLayout?.get(selectedLayoutNode) : undefined,
-  );
+  const point = selectedLayoutNode ? currentLayout?.get(selectedLayoutNode) : undefined;
+  // The position map stores only applied values; restore this node's draft
+  // after rendering the canonical values for selection or mode transitions.
+  renderEditorFields(layoutControls, point);
+  if (selectedLayoutNode && point) {
+    const draft = coordinateDrafts.get(selectedLayoutNode);
+    if (draft) {
+      if (coordinateDraftMatches(draft, point)) coordinateDrafts.delete(selectedLayoutNode);
+      else {
+        layoutX.value = draft.x;
+        layoutY.value = draft.y;
+      }
+    }
+  }
   refreshUnsavedState();
 }
 function updateLayoutEditor(): void {
@@ -749,8 +765,26 @@ function updateLayoutEditor(): void {
   renderEditorNodes(document, layoutControls, nodes, selectedLayoutNode);
   updateLayoutFields();
 }
-layoutX.addEventListener('input', refreshUnsavedState);
-layoutY.addEventListener('input', refreshUnsavedState);
+function trackCoordinateDraft(): void {
+  if (
+    !layoutEditing ||
+    !currentLayout ||
+    !selectedLayoutNode ||
+    layoutX.disabled ||
+    layoutY.disabled
+  )
+    return;
+  const point = currentLayout.get(selectedLayoutNode);
+  if (!point) return;
+  const draft = { x: layoutX.value, y: layoutY.value };
+  if (coordinateDraftMatches(draft, point)) coordinateDrafts.delete(selectedLayoutNode);
+  else coordinateDrafts.set(selectedLayoutNode, draft);
+  updateLayoutControls();
+}
+for (const input of [layoutX, layoutY]) {
+  input.addEventListener('input', trackCoordinateDraft);
+  input.addEventListener('change', trackCoordinateDraft);
+}
 layoutNode.addEventListener('change', () => {
   if (!availableNodes().some((node) => node.id === layoutNode.value)) return;
   selectedLayoutNode = layoutNode.value;
@@ -778,7 +812,9 @@ layoutApply.addEventListener('click', () => {
   projectSavepoint.positionsChanged();
   projectHistory.commit(configWithPositions(undefined, [selectedLayoutNode]));
   if (graph) graph.project = projectHistory.value;
+  coordinateDrafts.delete(selectedLayoutNode);
   setFrame(playback.frame, false);
+  updateLayoutFields();
   updateLayoutControls();
 });
 
@@ -787,7 +823,7 @@ layoutApply.addEventListener('click', () => {
 const layoutChanged = (): boolean =>
   Boolean(currentLayout && originalLayout && layoutHasChanges(currentLayout, originalLayout));
 function updateLayoutControls(): void {
-  renderEditorStatus(layoutControls, layoutEditing, layoutChanged());
+  renderEditorStatus(layoutControls, layoutEditing, layoutChanged() || hasPendingCoordinateDraft());
   refreshUnsavedState();
 }
 function rebuildRenderer(): void {
@@ -836,6 +872,8 @@ layoutReset.addEventListener('click', () => {
   cancelLayoutPreview();
   if (!currentLayout || !originalLayout) return;
   releaseLayoutPointer();
+  // Reset is an explicit discard of all pending coordinate inputs.
+  coordinateDrafts.clear();
   for (const [id, p] of originalLayout)
     if (!projectHistory.value.layout?.locked.includes(id)) currentLayout.set(id, { ...p });
   projectSavepoint.positionsChanged();

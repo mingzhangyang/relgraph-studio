@@ -548,6 +548,37 @@ test('pending numeric appearance drafts work in the shared source-VM harness', a
   assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
 });
 
+test('removing a scoped override accepts an inherited nonempty value without leaving a draft', async () => {
+  const app = makeStudio();
+  await app.ready;
+  assert.equal(app.window.renderAt(84), true);
+  const objects = viewControl(app, 'visualObject');
+  objects.value = objects.children[1].value;
+  await objects.dispatch('change');
+
+  const preset = viewControl(app, 'visualPreset');
+  preset.value = 'presentation';
+  await preset.dispatch('change');
+  const font = viewControl(app, 'visual-fontSize');
+  assert.equal(font.value, '18', 'presentation preset provides the inherited font size');
+
+  font.value = '22';
+  await font.dispatch('input');
+  await font.dispatch('change');
+  assert.equal(font.value, '22', 'object override was committed');
+
+  font.value = '';
+  await font.dispatch('input');
+  await font.dispatch('change');
+  assert.equal(font.value, '18', 'successful removal displays inherited value');
+  assert.equal(viewControl(app, 'visualError').textContent, '');
+
+  const count = app.downloads.length;
+  await viewControl(app, 'visualSave').click();
+  assert.equal(app.downloads.length, count + 1, 'accepted inherited value must not block export');
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
+});
+
 test('rejected property changes survive blur, redraw and selection changes until corrected', async () => {
   const app = makeStudio();
   await app.ready;
@@ -610,6 +641,91 @@ test('restoring original copy explicitly discards uncommitted text drafts', asyn
   assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
   await viewControl(app, 'visualRestoreText').click();
   assert.equal(label.value, original);
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
+});
+
+test('manual X/Y drafts persist per node, including when position mode is closed', async () => {
+  const app = makeStudio();
+  await app.ready;
+  assert.equal(app.window.renderAt(84), true);
+  await app.node('layoutToggle').click();
+  const chooser = app.node('layoutNode');
+  const ids = chooser.children.map((option) => option.value);
+  assert.ok(ids.length >= 2, 'two visible editable nodes are required');
+  const x = app.node('layoutX');
+  const y = app.node('layoutY');
+
+  chooser.value = ids[0];
+  await chooser.dispatch('change');
+  const originalAX = x.value;
+  const draftAX = String(Number(originalAX) + 19);
+  x.value = draftAX;
+  await x.dispatch('input');
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
+
+  chooser.value = ids[1];
+  await chooser.dispatch('change');
+  const originalBY = y.value;
+  const draftBY = String(Number(originalBY) + 11);
+  y.value = draftBY;
+  await y.dispatch('input');
+
+  chooser.value = ids[0];
+  await chooser.dispatch('change');
+  assert.equal(x.value, draftAX, 'node A draft survives switching to B');
+  await app.node('layoutToggle').click();
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true', 'hidden drafts stay dirty');
+  await app.node('layoutToggle').click();
+  assert.equal(x.value, draftAX, 'node A draft survives hiding the editor');
+
+  const before = app.downloads.length;
+  await viewControl(app, 'visualSave').click();
+  assert.equal(app.downloads.length, before, 'drafts on either node block export');
+
+  await app.node('layoutApply').click();
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
+  chooser.value = ids[1];
+  await chooser.dispatch('change');
+  assert.equal(y.value, draftBY, 'node B draft survives applying A');
+  await viewControl(app, 'visualSave').click();
+  assert.equal(app.downloads.length, before, 'unapplied draft on B still blocks export');
+  await app.node('layoutApply').click();
+  await viewControl(app, 'visualSave').click();
+  assert.equal(app.downloads.length, before + 1);
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
+});
+
+test('unapplied coordinates survive switching nodes until explicitly reset', async () => {
+  const app = makeStudio();
+  await app.ready;
+  assert.equal(app.window.renderAt(84), true);
+  await app.node('layoutToggle').click();
+  const chooser = app.node('layoutNode');
+  const ids = chooser.children.map((option) => option.value);
+  assert.ok(ids.length >= 2);
+  const x = app.node('layoutX');
+  chooser.value = ids[0];
+  await chooser.dispatch('change');
+  const original = x.value;
+  x.value = String(Number(original) + 9);
+  await x.dispatch('input');
+  chooser.value = ids[1];
+  await chooser.dispatch('change');
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
+
+  const originalSource = app.node('sourceName').textContent;
+  let prompts = 0;
+  app.window.confirm = () => {
+    ++prompts;
+    return false;
+  };
+  await app.node('exampleBiology').click();
+  assert.equal(prompts, 1);
+  assert.equal(app.node('sourceName').textContent, originalSource);
+  await app.node('layoutReset').click();
+  chooser.value = ids[0];
+  await chooser.dispatch('change');
+  assert.equal(x.value, original, 'explicit reset discards the earlier coordinate draft');
   assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
 });
 

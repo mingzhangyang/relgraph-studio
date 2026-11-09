@@ -22,7 +22,8 @@ import {
 } from './project-editor-model.js';
 
 interface Actions {
-  change(config: ProjectConfig): void;
+  /** True only when the coordinator accepted the proposed configuration. */
+  change(config: ProjectConfig): boolean;
   undo(): void;
   redo(): void;
   save(): void;
@@ -364,12 +365,12 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
               : key === 'showLabel'
                 ? raw === 'true'
                 : raw;
-        // The change callback validates and may reject the proposed config.
-        // Remove the buffered edit before its synchronous render, then retain
-        // it only if the committed configuration still differs.
+        // Clearing an override intentionally inherits a nonempty value.
+        // Use validation's outcome instead of comparing raw input against the
+        // inherited appearance, which would report a false pending draft.
         drafts.delete(draft);
-        update(key, val);
-        if (!matchesValue(raw, expectedAppearance(key), input.type)) {
+        const accepted = update(key, val);
+        if (!accepted && !matchesValue(raw, expectedAppearance(key), input.type)) {
           drafts.set(draft, raw);
           input.value = raw;
         }
@@ -493,8 +494,8 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
     });
     const draft = draftKey(field);
     drafts.delete(draft);
-    actions.change(next);
-    if (value !== expectedText(field)) {
+    const accepted = actions.change(next);
+    if (!accepted && value !== expectedText(field)) {
       drafts.set(draft, value);
       if (field === 'label') label.value = value;
       else description.value = value;

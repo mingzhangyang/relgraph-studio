@@ -1546,9 +1546,21 @@ for (const theme of ['dark', 'light']) {
 
     await page.click('#layoutToggle');
     assert.equal(await page.isDisabled('#layoutX'), false);
+    const chooserIds = await page.locator('#layoutNode option').evaluateAll((options) =>
+      options.map((option) => option.value),
+    );
+    assert.ok(chooserIds.length >= 2);
+    const firstNode = chooserIds[0];
+    const secondNode = chooserIds[1];
+    await page.selectOption('#layoutNode', firstNode);
     const originalX = await page.inputValue('#layoutX');
-    await page.fill('#layoutX', String(Number(originalX) + 13));
+    const draftX = String(Number(originalX) + 13);
+    await page.fill('#layoutX', draftX);
     assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'true');
+    await page.selectOption('#layoutNode', secondNode);
+    assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'true');
+    await page.selectOption('#layoutNode', firstNode);
+    assert.equal(await page.inputValue('#layoutX'), draftX);
     await page.click('#visualSave');
     assert.match(await text(page, '#visualError'), /未提交/);
     page.once('dialog', (dialog) => void dialog.dismiss());
