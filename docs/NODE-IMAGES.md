@@ -164,11 +164,18 @@ of its Copilot findings:
 - Fill the node outline beneath the image and stroke once above it, preserving
   reveal/dimming opacity. Zero-width borders also stay disabled in native Canvas.
 
+Publication encountered concurrent remote commits `6907f02` and `59c8762` for
+the same image findings. They were merged, preserving both regression suites
+and their object-inheritance helper. The exported dimension-reader API uses the
+same DOM-free parser as uploads, including all nested WebP dimension checks.
+Header fixtures include a complete IHDR and an extended-WebP frame chunk;
+malformed/truncated-file assertions remain. No remote history was overwritten.
+
 On the same Linux/Node/Chromium/Skia/FFmpeg versions and unchanged lockfile:
 `npm ci` installed **157** packages; typecheck, lint, format:check, check:types,
 package JS/declaration builds and production build passed. Final full Vitest
-passed **225/225 in 28 files** with `--maxWorkers=1`. The image file contains
-**16/16** tests, including new header/budget, pre/post-decode guard and
+passed **228/228 in 28 files** with `--maxWorkers=1`. The image file contains
+**19/19** tests, including new header/budget, pre/post-decode guard and
 reveal/dimming single-stroke cases. Existing pure, simulated-DOM, native and
 package integration tests remain distinct from browser checks.
 
@@ -186,13 +193,13 @@ exact direct-Skia/worker PNG checks, decoded-video frame comparisons and all
 eight custom image-project domain/theme/720p/1080p combinations. Preview↔Skia
 raster differences remain informational (mean **1.037%** pixels over 16/255),
 not exact cross-backend equality. Logs are retained locally in
-`output/review-fixes/logs/`; the final executable source snapshot is `ae5562c`.
+`output/review-fixes/logs/`; the final executable source snapshot is `8893531`.
 
 The first new stroke test incorrectly traversed a leaf-only helper and sampled
 the provisional example's fully visible initial nodes. It was corrected to
 inspect nested groups and the verified dataset's actual chapter reveal, keeping
-the assertions for both reveal and dimming. The targeted **16/16** run and the
-complete **225/225** run then passed. Source data/timing was not changed.
+the assertions for both reveal and dimming. The targeted **19/19** run and the
+complete **228/228** run then passed. Source data/timing was not changed.
 
 The six intentional Skia Golden changes and two committed before/after pairs
 are explained in the review report; **38/44** hashes remain unchanged from the
