@@ -5,76 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { runInNewContext } from 'node:vm';
 import { build } from 'vite';
-
-class Element {
-  constructor() {
-    this.children = [];
-    this.attributes = {};
-    this.listeners = {};
-    this._text = '';
-    this.value = '';
-    this.className = '';
-    this.classList = {
-      add: (...names) => {
-        this.className = [
-          ...new Set([...this.className.split(/\s+/).filter(Boolean), ...names]),
-        ].join(' ');
-      },
-      remove: (...names) => {
-        const removed = new Set(names);
-        this.className = this.className
-          .split(/\s+/)
-          .filter((name) => name && !removed.has(name))
-          .join(' ');
-      },
-      contains: (name) => this.className.split(/\s+/).includes(name),
-    };
-    this.relList = { supports: () => true };
-  }
-  append(...children) {
-    this.children.push(...children);
-  }
-  replaceChildren(...children) {
-    this.children = children;
-    this._text = '';
-  }
-  set textContent(value) {
-    this._text = String(value);
-    this.children = [];
-  }
-  get textContent() {
-    return this._text + this.children.map((child) => child.textContent ?? child).join('');
-  }
-  get lastElementChild() {
-    return this.children.at(-1);
-  }
-  setAttribute(name, value) {
-    this.attributes[name] = String(value);
-  }
-  removeAttribute(name) {
-    delete this.attributes[name];
-  }
-  addEventListener(name, callback) {
-    (this.listeners[name] ??= []).push(callback);
-  }
-  async click() {
-    for (const callback of this.listeners.click ?? []) await callback({ target: this });
-  }
-  getContext() {
-    const gradient = { addColorStop() {} };
-    return new Proxy(
-      {},
-      {
-        get(target, key) {
-          if (key === 'measureText') return (text) => ({ width: String(text).length * 8 });
-          if (key === 'createLinearGradient' || key === 'createRadialGradient')
-            return () => gradient;
-          return target[key] ?? (() => {});
-        },
-      },
-    );
-  }
-}
+import { createSimulatedStudioDom } from './helpers/studio-dom.mjs';
 
 test('production build includes both examples and the bundled workspace loads them', async () => {
   const output = await mkdtemp(join(tmpdir(), 'relgraph-build-'));
@@ -92,29 +23,43 @@ test('production build includes both examples and the bundled workspace loads th
       );
     }
 
-    const elements = new Map();
-    const document = {
-      documentElement: new Element(),
-      fonts: { ready: Promise.resolve(), load: async () => [{}] },
-      getElementById(id) {
-        if (!elements.has(id)) elements.set(id, new Element());
-        return elements.get(id);
+    const {
+      elements,
+      document,
+      window,
+      Element,
+      HTMLCanvasElement,
+      HTMLButtonElement,
+      HTMLInputElement,
+      HTMLLabelElement,
+      HTMLSelectElement,
+    } = createSimulatedStudioDom({
+      // Keep Vite's actual bundled modules; stub only Canvas rasterization.
+      canvasContext: () => {
+        const gradient = { addColorStop() {} };
+        return new Proxy(
+          {},
+          {
+            get(target, key) {
+              if (key === 'measureText') return (text) => ({ width: String(text).length * 8 });
+              if (key === 'createLinearGradient' || key === 'createRadialGradient')
+                return () => gradient;
+              return target[key] ?? (() => {});
+            },
+          },
+        );
       },
-      createElement() {
-        return new Element();
-      },
-    };
-    const window = { addEventListener() {} };
+    });
     const env = {
       document,
       window,
       Element,
       HTMLElement: Element,
-      HTMLCanvasElement: Element,
-      HTMLButtonElement: Element,
-      HTMLInputElement: Element,
-      HTMLLabelElement: Element,
-      HTMLSelectElement: Element,
+      HTMLCanvasElement,
+      HTMLButtonElement,
+      HTMLInputElement,
+      HTMLLabelElement,
+      HTMLSelectElement,
       structuredClone,
       requestAnimationFrame: () => 1,
       cancelAnimationFrame() {},

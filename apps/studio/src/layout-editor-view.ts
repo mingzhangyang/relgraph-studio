@@ -18,6 +18,17 @@ export interface EditorControls {
   note: HTMLElement;
 }
 
+/** Coordinator owns eligibility; this adapter only updates button state. */
+export function renderEditorAvailability(
+  controls: EditorControls,
+  exportButton: HTMLButtonElement,
+  available: boolean,
+): void {
+  controls.toggle.disabled = !available;
+  exportButton.disabled = !available;
+  if (!available) controls.reset.disabled = true;
+}
+
 export function renderEditorMode(controls: EditorControls, active: boolean): void {
   controls.editor.hidden = !active;
   controls.toggle.setAttribute('aria-pressed', String(active));

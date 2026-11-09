@@ -150,38 +150,53 @@ test('the vendored fonts cover both examples', () => {
   assert.deepEqual(uncoveredCharacters(['1⁄2', 'why‽', '‣ item']), ['‣', '‽', '⁄']);
 });
 
-test('a golden frame reproduces its committed hash (same skia-canvas and fonts)', async (context) => {
-  const { readFile } = await import('node:fs/promises');
-  const { join } = await import('node:path');
-  const { FILM_FONT_FACES } = await import('../packages/render/src/fonts.ts');
-  const { FILM_FONTS_DIR } = await import('../packages/render/src/backends/skia.ts');
-  const manifest = JSON.parse(
-    await readFile(new URL('../examples/golden-frames.json', import.meta.url), 'utf8'),
-  );
-  const fonts = createHash('sha256');
-  for (const face of FILM_FONT_FACES)
-    fonts.update(
-      `${face.name}|${face.weight}|${sha256(await readFile(join(FILM_FONTS_DIR, face.file)))}\n`,
-    );
-  // Like check:export, other versions are not a failure; the full check reports them.
-  if (
-    manifest.environment.skiaCanvas !== SKIA_CANVAS_VERSION ||
-    manifest.environment.fonts !== fonts.digest('hex')
-  )
-    return context.skip();
-  // The biology transition is deliberately altered by step 4 edge draw-on.
-  // Keep this fast smoke test on a stable transition until a real renderer
-  // regenerates and validates the biology golden hashes.
-  const entry = manifest.frames.find((f) => f.example === 'literature' && f.kind === 'transition');
-  const result = loadDocument(literature);
-  const renderer = createHeadlessRenderer(result.graph, layoutGraph(result.graph), {
-    detailAt: result.detailAt,
-    frameSpec: manifest.frameSpec,
-    theme: entry.theme,
-    locale: manifest.locale,
-  });
-  assert.equal(sha256(renderer.rgbaAt(entry.frame)), entry.sha256);
-});
+// Exercise every committed key frame so a stable transition cannot hide stale
+// label-placement hashes elsewhere in either domain or film theme.
+for (const [example, source] of [
+  ['literature', literature],
+  ['biology', biology],
+]) {
+  for (const theme of ['light', 'dark']) {
+    test(`${example}/${theme}: all committed golden frames match the native renderer`, async (context) => {
+      const { readFile } = await import('node:fs/promises');
+      const { join } = await import('node:path');
+      const { FILM_FONT_FACES } = await import('../packages/render/src/fonts.ts');
+      const { FILM_FONTS_DIR } = await import('../packages/render/src/backends/skia.ts');
+      const manifest = JSON.parse(
+        await readFile(new URL('../examples/golden-frames.json', import.meta.url), 'utf8'),
+      );
+      const fonts = createHash('sha256');
+      for (const face of FILM_FONT_FACES)
+        fonts.update(
+          `${face.name}|${face.weight}|${sha256(await readFile(join(FILM_FONTS_DIR, face.file)))}\n`,
+        );
+      // Keep the export check's environment contract; version changes must be
+      // reported as skipped comparisons rather than silently accepted pixels.
+      if (
+        manifest.environment.skiaCanvas !== SKIA_CANVAS_VERSION ||
+        manifest.environment.fonts !== fonts.digest('hex')
+      )
+        return context.skip('Golden comparison requires the recorded Skia version and fonts');
+      const entries = manifest.frames.filter(
+        (entry) => entry.example === example && entry.theme === theme,
+      );
+      assert.ok(entries.length > 0, `golden manifest covers ${example}/${theme}`);
+      const result = loadDocument(source);
+      const renderer = createHeadlessRenderer(result.graph, layoutGraph(result.graph), {
+        detailAt: result.detailAt,
+        frameSpec: manifest.frameSpec,
+        theme,
+        locale: manifest.locale,
+      });
+      for (const entry of entries)
+        assert.equal(
+          sha256(renderer.rgbaAt(entry.frame)),
+          entry.sha256,
+          `${example}/${theme}/${entry.kind}/frame ${entry.frame}`,
+        );
+    });
+  }
+}
 
 test('renderFilm rejects non-integer ranges and job counts before writing', async () => {
   const { renderFilm, RenderError } = await import('../packages/cli/src/render.ts');

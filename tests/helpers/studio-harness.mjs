@@ -1,4 +1,5 @@
 import { runInNewContext } from 'node:vm';
+import { createSimulatedStudioDom } from './studio-dom.mjs';
 import { parseDocument } from '../../packages/core/src/director/load.ts';
 import { layoutGraph } from '../../packages/core/src/director/layout.ts';
 import { applyGraphPositions } from '../../packages/core/src/director/position-writeback.ts';
@@ -36,164 +37,23 @@ export function makeStudio({
   // continuing to exercise studio.ts through this shared simulated DOM.
   transformFrameText,
 } = {}) {
-  const elements = new Map();
+  const {
+    elements,
+    document,
+    window,
+    downloads,
+    Element,
+    HTMLCanvasElement,
+    HTMLButtonElement,
+    HTMLInputElement,
+    HTMLLabelElement,
+    HTMLSelectElement,
+  } = createSimulatedStudioDom({ fonts, loadFont, missingId, wrongId });
   const jobs = new Map();
-  const windowListeners = new Map();
   const mediaListeners = [];
   const themes = [];
   const blobs = [];
-  const downloads = [];
   let nextJob = 0;
-  let document;
-
-  class Element {
-    constructor(tag = 'div') {
-      this.tagName = tag.toUpperCase();
-      this.children = [];
-      this.attributes = {};
-      this.listeners = {};
-      this.className = '';
-      this.value = '';
-      this.disabled = false;
-      this.hidden = false;
-      this._text = '';
-      this.textWrites = 0;
-      this.classList = {
-        add: (name) =>
-          (this.className = [...new Set([...this.className.split(' ').filter(Boolean), name])].join(
-            ' ',
-          )),
-        remove: (name) =>
-          (this.className = this.className
-            .split(' ')
-            .filter((part) => part !== name)
-            .join(' ')),
-      };
-    }
-    append(...nodes) {
-      this.children.push(...nodes);
-    }
-    replaceChildren(...nodes) {
-      this.children = [...nodes];
-      this._text = '';
-    }
-    set textContent(value) {
-      this.textWrites++;
-      this._text = String(value);
-      this.children = [];
-    }
-    get textContent() {
-      return this._text + this.children.map((item) => item.textContent ?? item).join('');
-    }
-    get lastElementChild() {
-      return this.children.at(-1) ?? null;
-    }
-    setAttribute(name, value) {
-      this.attributes[name] = String(value);
-    }
-    removeAttribute(name) {
-      delete this.attributes[name];
-    }
-    addEventListener(name, callback) {
-      (this.listeners[name] ??= []).push(callback);
-    }
-    closest(selector) {
-      return this.focusSelector && selector.includes(this.focusSelector) ? this : null;
-    }
-    contains(node) {
-      return this === node || this.children.some((child) => child?.contains?.(node));
-    }
-    blur() {
-      if (document.activeElement === this) document.activeElement = null;
-    }
-    focus() {
-      document.activeElement = this;
-    }
-    dispatch(name, event = {}) {
-      return Promise.all(
-        (this.listeners[name] ?? []).map((callback) =>
-          callback({ target: this, preventDefault() {}, ...event }),
-        ),
-      );
-    }
-    click() {
-      if (this.tagName === 'A') downloads.push({ href: this.href, filename: this.download });
-      if (this.disabled) return Promise.resolve([]);
-      this.focus();
-      return this.dispatch('click');
-    }
-    remove() {
-      if (document.body)
-        document.body.children = document.body.children.filter((child) => child !== this);
-    }
-    getBoundingClientRect() {
-      return { left: 0, top: 0, width: 1280, height: 720 };
-    }
-    setPointerCapture(id) {
-      this.pointerCaptured = id;
-    }
-    hasPointerCapture(id) {
-      return this.pointerCaptured === id;
-    }
-    releasePointerCapture() {
-      this.pointerCaptured = null;
-    }
-    getContext() {
-      return { fillRect() {}, fillText() {} };
-    }
-  }
-  class HTMLCanvasElement extends Element {}
-  class HTMLButtonElement extends Element {}
-  class HTMLInputElement extends Element {}
-  class HTMLLabelElement extends Element {}
-  class HTMLSelectElement extends Element {}
-  const constructors = {
-    stage: HTMLCanvasElement,
-    play: HTMLButtonElement,
-    restart: HTMLButtonElement,
-    scrubber: HTMLInputElement,
-    fileInput: HTMLInputElement,
-    exampleLiterature: HTMLButtonElement,
-    exampleBiology: HTMLButtonElement,
-    themeToggle: HTMLButtonElement,
-    layoutToggle: HTMLButtonElement,
-    layoutReset: HTMLButtonElement,
-    layoutExport: HTMLButtonElement,
-    layoutApply: HTMLButtonElement,
-    layoutNode: HTMLSelectElement,
-    layoutX: HTMLInputElement,
-    layoutY: HTMLInputElement,
-    dropzone: HTMLLabelElement,
-  };
-  document = {
-    activeElement: null,
-    documentElement: new Element('html'),
-    body: new Element('body'),
-    fonts: { ready: fonts, load: loadFont },
-    getElementById(id) {
-      if (id === missingId) return null;
-      if (!elements.has(id)) {
-        const element = new (id === wrongId ? Element : (constructors[id] ?? Element))();
-        if (id === 'stage') {
-          element.width = 1280;
-          element.height = 720;
-        }
-        elements.set(id, element);
-      }
-      return elements.get(id);
-    },
-    createElement(tag) {
-      return tag === 'button' ? new HTMLButtonElement(tag) : new Element(tag);
-    },
-  };
-  const window = {
-    addEventListener(name, callback) {
-      (windowListeners.get(name) ?? windowListeners.set(name, []).get(name)).push(callback);
-    },
-    dispatch(name, event) {
-      for (const callback of windowListeners.get(name) ?? []) callback(event);
-    },
-  };
   const media = {
     matches: light,
     addEventListener(_name, callback) {

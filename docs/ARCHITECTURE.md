@@ -35,6 +35,17 @@ The integrated workspace is `demo/index.html`, served over local HTTP, with beha
 
 Workspace models own position-edit and playback policy; the corresponding views, shot view, diagnostics view and transcript view own DOM presentation. `transcript-model.ts` compares snapshots of `DisplayList.a11y` semantics, so changes within a shot update the transcript while identical frames avoid DOM replacement and repeated live messages. The coordinator alone accepts asynchronous load results after checking `requestSerial`. No view reads unprojected domain data to decide what to reveal.
 
+The passive workspace shell (`apps/studio/src/workspace-shell-view.ts`)
+owns source metadata, domain-time labels, theme/dropzone presentation and the
+empty Canvas placeholder. Position availability updates belong in
+`layout-editor-view.ts`. The Studio coordinator still owns request/selection
+identity, spoiler-safe graph handling, all playback transitions, renderer
+lifecycle, layout/history and download decisions.
+
+Source-VM and real Vite bundle tests now share one simulated DOM implementation,
+`tests/helpers/studio-dom.mjs`. Simulated DOM is not real Chromium or native
+Skia; see [four-layer local verification](TESTING.md).
+
 ## Consequences and limits
 
 The graph projection cannot verify a source's scientific truth or turn unverified literary dates into facts. It cannot infer secrets in author-written labels, narration or summaries. Imported data and scripts require review before publishing; the Honglou fixture is explicitly provisional and the biology fixture synthetic. Large-scale layout, standards-based bio import, audio, 9:16 composition and an export UI remain future work.

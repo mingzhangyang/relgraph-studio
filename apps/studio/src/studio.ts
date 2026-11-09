@@ -33,6 +33,7 @@ import {
   type PositionDrag,
 } from './layout-editor-model.js';
 import {
+  renderEditorAvailability,
   renderEditorFields,
   renderEditorMessage,
   renderEditorMode,
@@ -60,6 +61,7 @@ import {
 import { createShotsView } from './shots-view.js';
 import { createDiagnosticsView } from './diagnostics-view.js';
 import { createTranscriptView } from './transcript-view.js';
+import { createWorkspaceShellView } from './workspace-shell-view.js';
 
 declare global {
   interface Window {
@@ -70,7 +72,6 @@ declare global {
 
 type Theme = 'dark' | 'light';
 type DetailAt = (id: string, at: number | null) => Bio | undefined;
-type ExampleId = 'exampleLiterature' | 'exampleBiology';
 
 // Fail immediately with the missing ID rather than producing a partial workspace.
 function requiredElement<T extends HTMLElement>(id: string, elementType: { new (): T }): T {
@@ -122,6 +123,17 @@ const transcriptView = createTranscriptView(document, {
   nodeCount: $('nodeCount'),
   edgeCount: $('edgeCount'),
 });
+const shellView = createWorkspaceShellView(document, {
+  canvas,
+  domainTime: $('domainTime'),
+  sceneCount: $('sceneCount'),
+  sourceName: $('sourceName'),
+  sourceNote: $('sourceNote'),
+  exampleLiterature,
+  exampleBiology,
+  themeToggle,
+  dropzone,
+});
 let layoutPreview: {
   settings: LayoutSettings;
   before: Map<string, { x: number; y: number }>;
@@ -144,9 +156,9 @@ function configWithPositions(
     editedIds,
   );
 }
-function applyProjectHistory(
-  { preserveLayoutDraft = false }: { preserveLayoutDraft?: boolean } = {},
-): void {
+function applyProjectHistory({
+  preserveLayoutDraft = false,
+}: { preserveLayoutDraft?: boolean } = {}): void {
   if (!graph || !currentLayout || !originalLayout) return;
   graph.project = projectHistory.value;
   restoreLayoutPositions(currentLayout, originalLayout);
@@ -320,14 +332,9 @@ let selectedLayoutNode: string | null = null;
 let layoutEditing = false;
 let editCamera: DirectorFrameState['cameraResolved'] | null = null;
 let dragging: PositionDrag | null = null;
-let emptyMessage = '';
 // Workspace and video share one theme. Without a saved choice it follows the OS.
 const THEME_KEY = 'relgraph-theme',
   lightQuery = globalThis.matchMedia?.('(prefers-color-scheme: light)');
-const EMPTY_STAGE = {
-  dark: { bg: '#101b2a', kicker: '#cfae84', text: '#c4d0d1' },
-  light: { bg: '#f6f1e8', kicker: '#a0672a', text: '#3f4c57' },
-};
 function savedTheme(): Theme | null {
   try {
     const value = globalThis.localStorage?.getItem(THEME_KEY);
@@ -388,28 +395,9 @@ function setFrame(next: number, updatePosition = true): DirectorFrameState | und
   renderPlaybackFrame(playbackControls, playbackDisplay(playback, p.index, p.totalSec));
   transcriptView.render(list.a11y);
   projectEditor.render(state, projectHistory.value, projectHistory.canUndo, projectHistory.canRedo);
-  $('domainTime').textContent =
-    p.domainAt === null
-      ? '领域时间：未指定'
-      : `领域时间：${state.view.timeline?.unit || '时点'} ${p.domainAt}`;
+  shellView.renderDomainTime(p.domainAt, state.view.timeline?.unit);
   shotsView.render(p.index, list.a11y.scene.title, p.progress);
   return state;
-}
-function paintEmptyStage(message: string): void {
-  const ctx = canvas.getContext('2d'),
-    colors = EMPTY_STAGE[theme];
-  emptyMessage = message;
-  if (!ctx) throw new Error('Canvas 2D context is unavailable');
-  ctx.fillStyle = colors.bg;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.textAlign = 'center';
-  ctx.fillStyle = colors.kicker;
-  ctx.font = '600 13px system-ui';
-  ctx.fillText('RELGRAPH  /  DIRECTOR STUDIO', 640, 330);
-  ctx.fillStyle = colors.text;
-  ctx.font = '22px system-ui';
-  ctx.fillText(message, 640, 372);
-  ctx.textAlign = 'left';
 }
 function clearStudio(): void {
   setPlaying(false);
@@ -427,9 +415,7 @@ function clearStudio(): void {
   dragging = null;
   editCamera = null;
   layoutEditing = false;
-  layoutToggle.disabled = true;
-  layoutReset.disabled = true;
-  layoutExport.disabled = true;
+  renderEditorAvailability(layoutControls, layoutExport, false);
   updateLayoutEditor();
   updateLayoutControls();
   currentFrameState = null;
@@ -439,19 +425,17 @@ function clearStudio(): void {
   shotsView.clear();
   diagnosticsView.clear();
   transcriptView.reset();
-  paintEmptyStage('请选择示例或导入有效的 JSON 数据');
-  $('domainTime').textContent = '领域时间：—';
-  $('sceneCount').textContent = '0';
-  $('sourceNote').textContent = '—';
+  shellView.paintEmptyStage('请选择示例或导入有效的 JSON 数据', theme);
+  shellView.resetMetadata();
 }
 function applyResult(result: LoadResult, name: string, sourceText?: string): void {
   loading = false;
   clearStudio();
   diagnosticsView.render(result);
-  $('sourceName').textContent = name;
+  shellView.renderSourceName(name);
   if (!result.valid) {
     setStatus('数据校验失败', 'error');
-    paintEmptyStage('数据校验失败 · 请查看右侧校验提示');
+    shellView.paintEmptyStage('数据校验失败 · 请查看右侧校验提示', theme);
     return;
   }
   graph = result.graph;
@@ -462,8 +446,7 @@ function applyResult(result: LoadResult, name: string, sourceText?: string): voi
   currentDetailAt = result.detailAt || (() => undefined);
   currentLayout = layoutGraph(graph);
   originalLayout = new Map([...currentLayout].map(([id, point]) => [id, { ...point }]));
-  layoutToggle.disabled = sourceDocument === null;
-  layoutExport.disabled = sourceDocument === null;
+  renderEditorAvailability(layoutControls, layoutExport, sourceDocument !== null);
   renderer = createCanvasRenderer(canvas, graph, currentLayout, {
     fps: FPS,
     detailAt: currentDetailAt,
@@ -472,9 +455,7 @@ function applyResult(result: LoadResult, name: string, sourceText?: string): voi
   playback = createPlaybackState(frameCount(graph, FPS), FPS);
   enablePlaybackView(playbackControls, playback.totalFrames);
   shotsView.build(shotMarkers(graph.scenes, playback.totalFrames, FPS), seekToShot);
-  $('sceneCount').textContent = String(graph.scenes.length);
-  $('sourceNote').textContent =
-    graph.meta.sourceNote || graph.meta.description || '此数据未提供来源说明。';
+  shellView.renderSourceSummary(graph.scenes.length, graph.meta.sourceNote, graph.meta.description);
   setStatus('就绪', 'ready');
   setFrame(0);
 }
@@ -488,9 +469,7 @@ function beginLoad(): number {
   strategyView.render(currentFrameState, projectHistory.value.layout, false, true);
   setPlaying(false);
   disablePlaybackView(playbackControls);
-  layoutToggle.disabled = true;
-  layoutReset.disabled = true;
-  layoutExport.disabled = true;
+  renderEditorAvailability(layoutControls, layoutExport, false);
   updateLayoutEditor();
   // Only the coordinator may commit a result after checking requestSerial.
   diagnosticsView.clear();
@@ -531,25 +510,21 @@ async function loadExample(path: string, name: string): Promise<void> {
     if (serial === requestSerial) applyResult(loadFailure('LOAD', error), name);
   }
 }
-const markSource = (id: ExampleId | null): void => {
-  exampleLiterature.setAttribute('aria-pressed', String(id === 'exampleLiterature'));
-  exampleBiology.setAttribute('aria-pressed', String(id === 'exampleBiology'));
-};
 exampleLiterature.addEventListener('click', () => {
-  markSource('exampleLiterature');
+  shellView.markSource('exampleLiterature');
   return loadExample(
     '../examples/honglou-provisional.relgraph.json',
     '红楼梦 · 未经原著核实的技术演示',
   );
 });
 exampleBiology.addEventListener('click', () => {
-  markSource('exampleBiology');
+  shellView.markSource('exampleBiology');
   return loadExample('../examples/biology-signaling-synthetic.json', '生物信号 · 虚构合成示例');
 });
 async function loadFile(file: File | undefined): Promise<void> {
   if (!file) return;
   const serial = beginLoad();
-  markSource(null);
+  shellView.markSource(null);
   try {
     const text = await file.text();
     if (serial === requestSerial) applyResult(parseDocument(text), file.name, text);
@@ -566,12 +541,12 @@ fileInput.addEventListener('change', () => {
 });
 dropzone.addEventListener('dragover', (event) => {
   event.preventDefault();
-  dropzone.className = 'dropzone dragging';
+  shellView.renderDropzoneDragging(true);
 });
-dropzone.addEventListener('dragleave', () => (dropzone.className = 'dropzone'));
+dropzone.addEventListener('dragleave', () => shellView.renderDropzoneDragging(false));
 dropzone.addEventListener('drop', (event) => {
   event.preventDefault();
-  dropzone.className = 'dropzone';
+  shellView.renderDropzoneDragging(false);
   void loadFile(event.dataTransfer?.files?.[0]);
 });
 play.addEventListener('click', () => {
@@ -643,12 +618,8 @@ function applyTheme(next: Theme, persist: boolean): void {
     } catch {
       // The in-memory choice remains pinned when storage is unavailable.
     }
-    document.documentElement?.setAttribute('data-theme', theme);
   }
-  const other = theme === 'light' ? '深色' : '浅色';
-  themeToggle.setAttribute('aria-label', `切换到${other}模式`);
-  if (themeToggle.lastElementChild)
-    themeToggle.lastElementChild.textContent = theme === 'light' ? '浅色' : '深色';
+  shellView.renderTheme(theme, persist);
   // The theme is a renderer input: rebuild it and redraw the same frame
   // without disturbing the fractional playback position.
   if (renderer && graph && currentLayout) {
@@ -658,7 +629,7 @@ function applyTheme(next: Theme, persist: boolean): void {
       theme,
     });
     setFrame(playback.frame, false);
-  } else paintEmptyStage(emptyMessage);
+  } else shellView.repaintEmptyStage(theme);
 }
 
 /**
@@ -925,7 +896,7 @@ await loadFilmFonts();
 // A film chosen while the fonts loaded was drawn with fallbacks; redraw it.
 if (renderer) setFrame(playback.frame, false);
 if (startupSerial === requestSerial) {
-  markSource('exampleLiterature');
+  shellView.markSource('exampleLiterature');
   await loadExample(
     '../examples/honglou-provisional.relgraph.json',
     '红楼梦 · 未经原著核实的技术演示',

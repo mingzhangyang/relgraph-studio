@@ -30,6 +30,7 @@ import {
   updateEditableNodePosition,
 } from '../../apps/studio/src/layout-editor-model.ts';
 import {
+  renderEditorAvailability,
   renderEditorFields,
   renderEditorMessage,
   renderEditorMode,
@@ -58,6 +59,7 @@ import {
 import { createShotsView } from '../../apps/studio/src/shots-view.ts';
 import { createDiagnosticsView } from '../../apps/studio/src/diagnostics-view.ts';
 import { createTranscriptView } from '../../apps/studio/src/transcript-view.ts';
+import { createWorkspaceShellView } from '../../apps/studio/src/workspace-shell-view.ts';
 
 // VM tests exercise the actual TypeScript workspace against a minimal simulated DOM.
 // The imported dependencies are supplied explicitly by each harness.
@@ -70,8 +72,8 @@ export function studioSource() {
     .replace(/^export \{\};?\n/gm, '');
 }
 
-// Pure helpers the workspace imports, supplied as-is to every VM harness so
-// harnesses only stub what touches the canvas, network or storage.
+// Workspace dependency functions and views are supplied to the source VM as-is;
+// only Canvas drawing, network, animation and browser storage are stubbed.
 export const studioImports = {
   normalizeNodeImage,
   setNodeImage,
@@ -95,6 +97,7 @@ export const studioImports = {
   restoreLayoutPositions,
   startPositionDrag,
   updateEditableNodePosition,
+  renderEditorAvailability,
   renderEditorFields,
   renderEditorMessage,
   renderEditorMode,
@@ -117,4 +120,5 @@ export const studioImports = {
   createShotsView,
   createDiagnosticsView,
   createTranscriptView,
+  createWorkspaceShellView,
 };
