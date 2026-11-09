@@ -70,7 +70,7 @@ export function renderEditorStatus(
     ? '拖动当前可见节点 · ' + (dirty ? '有坐标调整' : '尚未调整') + ' · 通过文档工具栏导出保存'
     : dirty
       ? '已有坐标调整 · 可保存完整项目或单独导出坐标'
-      : '调整模式关闭 · 修改仅保留在当前会话';
+      : '调整模式关闭 · 保存完整项目请使用上方工具栏';
 }
 
 export function renderEditorSelection(controls: EditorControls, selected: string): void {
