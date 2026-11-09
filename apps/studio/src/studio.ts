@@ -614,7 +614,8 @@ function setFrame(next: number, updatePosition = true): DirectorFrameState | und
   return state;
 }
 function clearStudio(): void {
-  setPlaying(false);
+  transitionStudio('navigate');
+  // Full document replacement also resets all authoritative mode owners.
   layoutPreview = null;
   strategyView.reset(undefined);
   strategyView.render(null, undefined, false, loading);
@@ -999,22 +1000,14 @@ function leavePositionEdit(): void {
   refreshSelectionFeedback();
 }
 layoutToggle.addEventListener('click', () => {
-  cancelLayoutPreview();
-  if (!renderer || !currentFrameState || !currentLayout) return;
-  if (layoutEditing) {
-    stopLayoutEdit();
+  if (!renderer || !currentFrameState || !currentLayout) {
+    transitionStudio('cancelPreview');
     return;
   }
-  setPlaying(false);
-  editCamera = { ...currentFrameState.cameraResolved };
-  layoutEditing = true;
-  rebuildRenderer();
-  updateLayoutEditor();
-  updateLayoutControls();
-  refreshSelectionFeedback();
+  transitionStudio(layoutEditing ? 'exitPositionEdit' : 'enterPositionEdit');
 });
 layoutReset.addEventListener('click', () => {
-  cancelLayoutPreview();
+  transitionStudio('cancelPreview');
   if (!currentLayout || !originalLayout) return;
   const restoredDragPreview = cancelActiveLayoutDrag();
   const changedPositions = layoutChanged();
@@ -1128,7 +1121,7 @@ function downloadJson(value: unknown, filename: string): void {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 function exportPositionedSource(): void {
-  cancelLayoutPreview();
+  transitionStudio('cancelPreview');
   if (!graph || !currentLayout || sourceDocument === null) return;
   try {
     const output = applyGraphPositions(sourceDocument, graph, currentLayout);
@@ -1162,9 +1155,7 @@ lightQuery?.addEventListener?.('change', (event) => {
 // Headless frame export and independent frame inspection; no recording or animation state.
 window.renderAt = (f) => {
   if (!renderer || !Number.isInteger(f) || f < 0 || f >= playback.totalFrames) return false;
-  cancelLayoutPreview();
-  if (layoutEditing) stopLayoutEdit();
-  setPlaying(false);
+  transitionStudio('navigate');
   setFrame(f);
   return true;
 };
