@@ -16,6 +16,8 @@ import {
   validateProjectConfig,
   nodeAppearance,
   appearanceOrigin,
+  APPEARANCE_FIELD_RULES,
+  validAppearanceField,
 } from '../packages/core/src/project.ts';
 import { loadDocument } from '../packages/core/src/director/load.ts';
 import { layoutGraph } from '../packages/core/src/director/layout.ts';
@@ -40,6 +42,7 @@ import { makeStudio } from './helpers/studio-harness.mjs';
 import { ProjectSavepoint, workspaceSnapshot } from '../apps/studio/src/unsaved-changes-model.ts';
 import { visibleObjectEntries } from '../apps/studio/src/project-editor-view.ts';
 import { projectSelectionOverlay } from '../apps/studio/src/selection-overlay-model.ts';
+import { appearanceFieldHint, parseAppearanceDraft } from '../apps/studio/src/field-validation-model.ts';
 
 const compose = (graph, frame = 0, spec = FRAME_SPECS['landscape-720p'], theme = 'light') => {
   const positions = layoutGraph(graph);
@@ -69,6 +72,59 @@ test('style inheritance, per-field origins and clearing do not clone every objec
   assert.equal(nodeAppearance(config, node).fill, undefined);
   assert.equal(Object.keys(config.nodes.objects).length, 1);
 });
+test('shared appearance constraints match project validation and documented bounds', () => {
+  const samples = [
+    ['nodes', 'size', 8, 7],
+    ['nodes', 'size', 48, 48.01],
+    ['nodes', 'borderWidth', 0, 8.01],
+    ['nodes', 'fontSize', 9, 8.99],
+    ['nodes', 'fontWeight', 600, 500],
+    ['nodes', 'fill', '#AABBcc', '#abc'],
+    ['nodes', 'shape', 'pill', 'trapezoid'],
+    ['edges', 'width', 0.5, 0.49],
+    ['edges', 'curve', -160, -161],
+    ['edges', 'fontSize', 32, 33],
+    ['edges', 'showLabel', false, 'false'],
+    ['edges', 'head', 'arrow', 'none-ish'],
+  ];
+  for (const [kind, key, valid, invalid] of samples) {
+    assert.equal(validAppearanceField(kind, key, valid), true, kind + '.' + key);
+    assert.equal(validAppearanceField(kind, key, invalid), false, kind + '.' + key);
+    const configFor = (value) => ({ [kind]: { defaults: { [key]: value } } });
+    assert.deepEqual(validateProjectConfig(configFor(valid)), [], kind + '.' + key);
+    assert.ok(validateProjectConfig(configFor(invalid)).length > 0, kind + '.' + key);
+  }
+  assert.deepEqual(APPEARANCE_FIELD_RULES.nodes.size, { type: 'number', min: 8, max: 48 });
+  assert.deepEqual(APPEARANCE_FIELD_RULES.edges.width, { type: 'number', min: 0.5, max: 8 });
+  assert.equal(validAppearanceField('nodes', 'unexpected', 3), false);
+});
+
+test('appearance field parser separates inheritance, incomplete numeric input and invalid values', () => {
+  assert.deepEqual(parseAppearanceDraft('nodes', 'size', ''), {
+    ok: true, value: undefined, message: '',
+  });
+  const badToken = parseAppearanceDraft('nodes', 'size', '', true);
+  assert.equal(badToken.ok, false);
+  assert.match(badToken.message, /数字输入/);
+  const tooLarge = parseAppearanceDraft('nodes', 'size', '999');
+  assert.equal(tooLarge.ok, false);
+  assert.match(tooLarge.message, /8–48/);
+  assert.match(appearanceFieldHint('nodes', 'size'), /8–48/);
+  assert.equal(parseAppearanceDraft('nodes', 'size', '12.5').value, 12.5);
+  assert.equal(parseAppearanceDraft('nodes', 'size', '1e999').ok, false);
+  assert.equal(parseAppearanceDraft('nodes', 'size', ' ').ok, false);
+  assert.equal(parseAppearanceDraft('nodes', 'fill', '#BAD').ok, false);
+  assert.equal(parseAppearanceDraft('nodes', 'fill', '#Ab12EF').value, '#Ab12EF');
+  assert.match(appearanceFieldHint('nodes', 'fill'), /#RRGGBB/);
+  assert.equal(parseAppearanceDraft('nodes', 'fontWeight', '600').value, 600);
+  assert.equal(parseAppearanceDraft('nodes', 'fontWeight', '450').ok, false);
+  assert.equal(parseAppearanceDraft('edges', 'showLabel', 'false').value, false);
+  assert.equal(parseAppearanceDraft('edges', 'showLabel', 'oops').ok, false);
+  assert.equal(parseAppearanceDraft('edges', 'curve', '-160').value, -160);
+  assert.equal(parseAppearanceDraft('edges', 'curve', '-161').ok, false);
+  assert.equal(parseAppearanceDraft('edges', 'unexpected', '1').ok, false);
+});
+
 test('invalid project fields, bounds, references and biological marker overrides diagnose cleanly', () => {
   for (const config of [
     { preset: 'bad' },
