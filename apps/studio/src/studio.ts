@@ -11,7 +11,6 @@ import {
   currentStudioMode,
   planStudioModeTransition,
   type StudioModeIntent,
-  type StudioModePlan,
 } from './studio-mode-model.js';
 import {
   createProject,
@@ -178,7 +177,7 @@ function discardLayoutPreview(): void {
  * The single coordinator for working-mode changes. Live state is derived from
  * existing owners, never duplicated in another mutable mode variable.
  */
-function transitionStudio(intent: StudioModeIntent): StudioModePlan {
+function transitionStudio(intent: StudioModeIntent): void {
   const plan = planStudioModeTransition(
     currentStudioMode({
       playing: playback.playing,
@@ -208,7 +207,6 @@ function transitionStudio(intent: StudioModeIntent): StudioModePlan {
     if (!playback.playing && playback.frame >= playback.totalFrames - 1) setFrame(0);
     setPlaying(true);
   }
-  return plan;
 }
 function configWithPositions(
   settings: LayoutSettings = projectHistory.value.layout ?? DEFAULT_LAYOUT_SETTINGS,
