@@ -166,6 +166,9 @@ export function createSimulatedStudioDom({
         }[tag] ?? Element;
       return new Constructor(tag);
     },
+    createElementNS(_namespace, tag) {
+      return new Element(tag);
+    },
   };
   const window = {
     // Native confirmations are an explicit user decision; override in tests.
