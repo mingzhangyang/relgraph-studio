@@ -13,6 +13,8 @@ import { createLayoutStrategyView } from '../../apps/studio/src/layout-strategy-
 import { ProjectHistory } from '../../apps/studio/src/project-editor-model.ts';
 import { ProjectSavepoint } from '../../apps/studio/src/unsaved-changes-model.ts';
 import { createProjectEditor } from '../../apps/studio/src/project-editor-view.ts';
+import { createDocumentToolbarView } from '../../apps/studio/src/document-toolbar-view.ts';
+import { documentCommandFromShortcut } from '../../apps/studio/src/document-command-model.ts';
 import {
   createProject,
   projectSource,
@@ -89,6 +91,8 @@ export const studioImports = {
   ProjectHistory,
   ProjectSavepoint,
   createProjectEditor,
+  createDocumentToolbarView,
+  documentCommandFromShortcut,
   createProject,
   projectSource,
   validateProjectConfig,
