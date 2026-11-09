@@ -167,6 +167,11 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
     imageFile = el('input'),
     imageStatus = el('p');
   imageStatus.id = 'visualImageStatus';
+  // Announce asynchronous image processing and completion without repeatedly
+  // announcing the same text on every playback-driven render.
+  imageStatus.setAttribute('role', 'status');
+  imageStatus.setAttribute('aria-live', 'polite');
+  imageStatus.setAttribute('aria-atomic', 'true');
   imageFile.id = 'visualImageFile';
   imageFile.type = 'file';
   imageFile.accept = 'image/png,image/jpeg,image/webp';
@@ -349,11 +354,12 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
     removeImage.disabled = !selected || !asset;
     inheritImage.disabled = !selected;
     imageFit.value = imageStyle.imageFit ?? 'cover';
-    imageStatus.textContent = imageBusy
+    const nextImageStatus = imageBusy
       ? '正在本地处理图片…'
       : asset
         ? `已设置图片 · ${asset.width} × ${asset.height} · ${appearanceOrigin(config.nodes, selected?.kind ?? '', selected?.id ?? '', 'image')}`
         : 'PNG / JPEG / WebP · 最长边保存为 256 像素 · 不上传服务器';
+    if (imageStatus.textContent !== nextImageStatus) imageStatus.textContent = nextImageStatus;
     for (const [key, c] of controls) {
       c.input.disabled = disabled || (key === 'head' && frame?.view.domain === 'biology');
       c.origin.textContent = inspectorOrigin(config, kind, selected, scope.value as Scope, key);

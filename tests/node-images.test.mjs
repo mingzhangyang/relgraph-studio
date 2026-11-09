@@ -28,6 +28,7 @@ import {
 } from '../apps/studio/src/project-editor-model.ts';
 import { normalizeNodeImage, readEncodedImageDimensions } from '../apps/studio/src/node-image.ts';
 import { measure } from './helpers/display-list.mjs';
+import { makeStudio } from './helpers/studio-harness.mjs';
 import { checkEncodedImageDimensions } from '../apps/studio/src/image-dimensions.ts';
 import {
   encodedSizeFixtures,
@@ -57,6 +58,30 @@ const at = (graph, frame, spec = FRAME_SPECS['landscape-720p']) => {
     style: domainStyle(graph.domain),
   });
 };
+test('image status announces changes politely without playback re-announcements', async () => {
+  const app = makeStudio();
+  await app.ready;
+  const find = (element, id) => {
+    if (element.id === id) return element;
+    for (const child of element.children) {
+      const match = find(child, id);
+      if (match) return match;
+    }
+    return null;
+  };
+  const imageStatus = find(app.node('appearanceEditor'), 'visualImageStatus');
+  assert.ok(imageStatus, 'the real property view creates the image status');
+  assert.equal(imageStatus.attributes.role, 'status');
+  assert.equal(imageStatus.attributes['aria-live'], 'polite');
+  assert.equal(imageStatus.attributes['aria-atomic'], 'true');
+  assert.match(imageStatus.textContent, /PNG \/ JPEG \/ WebP/);
+  const originalWrites = imageStatus.textWrites;
+  // The coordinator re-renders this same status on every frame, but a live
+  // region should not receive redundant text mutations and repeated speech.
+  for (const frame of [84, 85, 86, 84]) assert.equal(app.window.renderAt(frame), true);
+  assert.equal(imageStatus.textWrites, originalWrites);
+});
+
 test('encoded PNG, JPEG and all WebP dimension headers enforce the budget before decoding', () => {
   for (const [, bytes] of encodedSizeFixtures(4096, 4096))
     assert.doesNotThrow(() => checkEncodedImageDimensions(bytes));

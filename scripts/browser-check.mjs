@@ -901,6 +901,22 @@ for (const theme of ['light', 'dark']) {
         ctx.fillRect(64, 0, 64, 64);
         return c.toDataURL('image/png').split(',')[1];
       });
+      assert.deepEqual(
+        await page.locator('#visualImageStatus').evaluate((status) => [
+          status.getAttribute('role'),
+          status.getAttribute('aria-live'),
+          status.getAttribute('aria-atomic'),
+        ]),
+        ['status', 'polite', 'true'],
+      );
+      await page.evaluate(() => {
+        window.imageStatusChanges = [];
+        const status = document.getElementById('visualImageStatus');
+        const observer = new MutationObserver(() => {
+          window.imageStatusChanges.push(status.textContent);
+        });
+        observer.observe(status, { childList: true, characterData: true, subtree: true });
+      });
       await page.locator('#visualImageFile').setInputFiles({
         name: 'portrait.png',
         mimeType: 'image/png',
@@ -908,6 +924,24 @@ for (const theme of ['light', 'dark']) {
       });
       await page.waitForFunction(() =>
         document.getElementById('visualImageStatus').textContent.startsWith('已设置图片'),
+      );
+      const changesAtCompletion = await page.evaluate(() => {
+        // Flush pending live-region observer callbacks after the upload settles.
+        return Promise.resolve().then(() => window.imageStatusChanges.length);
+      });
+      assert.ok(changesAtCompletion >= 1, 'completed upload changes the live region');
+      await page.evaluate(() => {
+        window.renderAt(85);
+        window.renderAt(86);
+        window.renderAt(84);
+      });
+      const changesAfterPlayback = await page.evaluate(() =>
+        Promise.resolve().then(() => window.imageStatusChanges.length),
+      );
+      assert.equal(
+        changesAfterPlayback,
+        changesAtCompletion,
+        'unchanged image status is not rewritten during playback',
       );
       const cover = await canvasPng(page);
       assert.notDeepEqual(cover, original);

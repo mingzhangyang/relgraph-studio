@@ -119,9 +119,30 @@ Only then create further feature branches from the new `main`.
 The previews use a simple two-color raster fixture to make cropping visible; no
 literary portrait or biological identity is claimed. Rare glyphs, native screen
 readers, other engines/platforms and original-file archival remain outside this
-feature. Roll back this PR to remove uploads/image styles/resources; the earlier
-appearance/layout features remain. Existing image projects then require removing
-`assets`, `image` and `imageFit` before import by an older version.
+feature.
+
+### Rollback scope (combined PR #25 versus images only)
+
+- **Before #25 merges:** closing #25 leaves the existing `main` unchanged;
+  neither the restored #23 layout features nor #24 node images reach `main`.
+- **If #25 merges and the entire restoration must be undone:** revert the
+  combined #25 merge on `main` through a separately reviewed, direct-to-`main`
+  change. This removes **both** restored layout authoring (strategies, locks,
+  previews, history integration) **and** node-image support. Check any later
+  dependencies and saved projects before reverting; do not describe this as an
+  image-only rollback.
+- **If only images must be disabled while retaining layouts:** make a focused
+  independent change from the latest `main` removing image upload UI and
+  image-style/assets validation, image materialization/composition and their
+  export paths, while **preserving** layout strategy controls, authored
+  positions, locks and undo/redo. Review the scoped diff and rerun the affected
+  local, Chromium and native export tests. This is **not** accomplished by
+  reverting #25 wholesale.
+
+Image-bearing saved projects need an explicit compatibility or migration plan
+before loading them in an image-free version: remove or convert `assets`,
+`image` and `imageFit` fields as appropriate; never silently drop authored
+user content.
 
 ## Original image-delivery verification · 2026-11-09
 
