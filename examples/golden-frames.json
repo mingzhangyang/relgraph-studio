@@ -14,7 +14,7 @@
       "shot": 1,
       "kind": "mid",
       "frame": 84,
-      "sha256": "9a6f25dd6c3b1122b97b7d5740c39240ce5b26ef4761f981d8ca2ac2c7b6d27d"
+      "sha256": "5531ce5307fa8ab4af2477c06cb8c0b73029593ae418ec8a28168a85e0cf0902"
     },
     {
       "example": "literature",
@@ -22,7 +22,7 @@
       "shot": 2,
       "kind": "reveal",
       "frame": 176,
-      "sha256": "5c6f0ac4bfe5d5e450b0461d091951f50fcc68e297927af94cb87336a2dbacc5"
+      "sha256": "427df5e751ce3da9c3f42d023082f2d00976070895a01017e99284e54ea261f9"
     },
     {
       "example": "literature",
@@ -38,7 +38,7 @@
       "shot": 2,
       "kind": "mid",
       "frame": 264,
-      "sha256": "cc1a2eb3f548e9b6634d2967c4b20c92af8e69ea5abd094b13139f756677d06f"
+      "sha256": "481a4f72d47ec7b69de318a8851955bf73bc59fe0163746624ced2901c4e13b3"
     },
     {
       "example": "literature",
@@ -46,7 +46,7 @@
       "shot": 3,
       "kind": "reveal",
       "frame": 368,
-      "sha256": "eb09d4e33981a710426de80e6f9b26565295ad0f4714435e7414cb473308b0a4"
+      "sha256": "4875e4d4b1587c5038c7a6be9196b6ee032c5bbbeef7fa107e9ae018782be937"
     },
     {
       "example": "literature",
@@ -78,7 +78,7 @@
       "shot": 4,
       "kind": "transition",
       "frame": 591,
-      "sha256": "20b9f40d07a4a2d989f8fb60d74878a0d37d94fff6cbefca515c43ac21780bfb"
+      "sha256": "a3896c9d729f9f05af8804ef8faae81d4f93a7a0385248fc34fa8697ef74839d"
     },
     {
       "example": "literature",
@@ -86,7 +86,7 @@
       "shot": 4,
       "kind": "mid",
       "frame": 672,
-      "sha256": "6e54eeaec7cca028e2db389780a698cab598a8411858f0fee8a415054bb0025a"
+      "sha256": "b615477d70114c5f7ee58fe35ec95f71442e89cec73b9c59ad3fa28224db90c8"
     },
     {
       "example": "literature",
@@ -94,7 +94,7 @@
       "shot": 5,
       "kind": "reveal",
       "frame": 776,
-      "sha256": "e265858df7cadf581e455acccee0a8953d6f5f6b8381c214801a06c786df36fd"
+      "sha256": "f1d9fe8561b5e2b6d990a7648ef2946999317112466d53c377a0dbb73dbbfb8f"
     },
     {
       "example": "literature",
@@ -102,7 +102,7 @@
       "shot": 5,
       "kind": "transition",
       "frame": 783,
-      "sha256": "648889117aeb52ddda70d776336a01add8d9e6ffd808b5f9145417098bc0b1a3"
+      "sha256": "a52952f655263895fb8b0222564066c50182066ef07828aa16034a656f13afb9"
     },
     {
       "example": "literature",
@@ -110,7 +110,7 @@
       "shot": 5,
       "kind": "mid",
       "frame": 864,
-      "sha256": "0e5f73f936b2950845aa941f8f5e85bd0fb45b714c9502f3978968fdb9c8cb86"
+      "sha256": "0909eb830ababa90aeff51fa16509d8723bb4a0ca050fca491fac0a61c906a97"
     },
     {
       "example": "literature",
@@ -118,7 +118,7 @@
       "shot": 5,
       "kind": "last",
       "frame": 959,
-      "sha256": "22be5e0fd7a9d15b7bfe57c00ea59786ad70ddc2c0ad18082d4b0a0bb0b20ee5"
+      "sha256": "cd4dd2e1ed6226bd14fe9073831af46addc4606032000565557644923c163528"
     },
     {
       "example": "literature",
@@ -126,7 +126,7 @@
       "shot": 1,
       "kind": "mid",
       "frame": 84,
-      "sha256": "2f3efeb1c903496185caa1b6ce4333c8b75181c67e5b0a1f2b4f47277b58c550"
+      "sha256": "042187492e143ca5104ec0c16b1e5b9c9c78ef6b5b785e5473e21d5090bb853c"
     },
     {
       "example": "literature",
@@ -134,7 +134,7 @@
       "shot": 2,
       "kind": "reveal",
       "frame": 176,
-      "sha256": "cc7f66416f178aafb597ae668eaf6e6546db302410fe924ca063616ad183b337"
+      "sha256": "d6730d6d28411bd03623ea2d4572d1428da1cc1d92771f19dad3dd20593749a2"
     },
     {
       "example": "literature",
@@ -150,7 +150,7 @@
       "shot": 2,
       "kind": "mid",
       "frame": 264,
-      "sha256": "98d55be125df0881c197c05b71602469e71ddec34ace604004549cca7ae556ea"
+      "sha256": "baaf399281f85c18a78ace6dc871bdf493d8826bc89f6c4974b4c4b4bd855452"
     },
     {
       "example": "literature",
@@ -158,7 +158,7 @@
       "shot": 3,
       "kind": "reveal",
       "frame": 368,
-      "sha256": "f760b793587bd4972ab6d91b24c4b2ffcc663932c01d7c25dcb08064ce05b4ef"
+      "sha256": "f7841897057a074c8172aaa78b6fe6f54d4d8995e33f37844df554b5112da592"
     },
     {
       "example": "literature",
@@ -190,7 +190,7 @@
       "shot": 4,
       "kind": "transition",
       "frame": 591,
-      "sha256": "cf21257ebe43b2557f8f4d9781c719aa73707d888aca5eccb0e449601c16d4f8"
+      "sha256": "f98d0745dfdba9a5eeebe93afdb91e0130be7caf982aa2de4d64aa6fb9aff14b"
     },
     {
       "example": "literature",
@@ -198,7 +198,7 @@
       "shot": 4,
       "kind": "mid",
       "frame": 672,
-      "sha256": "42646a82b993c0c5d6478aff76255f1789ea978fbe327437c39a5bee0ab2ddc8"
+      "sha256": "47bd1aab3dfbe243faa4ea4a91c0e66d5a12cba33841609f8cdbb93e23557b61"
     },
     {
       "example": "literature",
@@ -206,7 +206,7 @@
       "shot": 5,
       "kind": "reveal",
       "frame": 776,
-      "sha256": "80d53c8ccb2324857b160dc6f320dd93ddea1fbbb9f4ffb3e48ad6fcecfab19a"
+      "sha256": "0f72d710c906376af5c5177852732bf0f2fba70e64417b75c890c92a37cdac26"
     },
     {
       "example": "literature",
@@ -214,7 +214,7 @@
       "shot": 5,
       "kind": "transition",
       "frame": 783,
-      "sha256": "4ed2857073ae769cb1bb8c43a054bb27245bd34c7a8d05390fcea4d3e863f297"
+      "sha256": "4d93924de7c6313c79fb50d07f071369d93390415b07b8b41d004e11450dbc8c"
     },
     {
       "example": "literature",
@@ -222,7 +222,7 @@
       "shot": 5,
       "kind": "mid",
       "frame": 864,
-      "sha256": "2e9afddc6955811138a276cf048d5761fcf1d75450b10757cacd1478678e1100"
+      "sha256": "e2a2b1a0d24642560992ff281d6293fa7a33364e094f9475a0a972b05a7682ba"
     },
     {
       "example": "literature",
@@ -230,7 +230,7 @@
       "shot": 5,
       "kind": "last",
       "frame": 959,
-      "sha256": "0a15c6ba8be17cdab62b8b59b3c1fcfaef1d9228f041eb60eee1fc4e8e52d54e"
+      "sha256": "26574efe723fd4c9c69c5288d20ee095001c7570d3870ec5ed6b6e7908b8c135"
     },
     {
       "example": "biology",
@@ -238,7 +238,7 @@
       "shot": 1,
       "kind": "mid",
       "frame": 48,
-      "sha256": "747c81e4fe6031d31e6e91f2336d9fec74d659caccd24fea266feac83a064aa9"
+      "sha256": "4eb9b9b8206b3f9ff9b4ce2d322e5b17b2f16ee0e0a40cff06003f572f43fe23"
     },
     {
       "example": "biology",
@@ -246,7 +246,7 @@
       "shot": 2,
       "kind": "reveal",
       "frame": 104,
-      "sha256": "c6d8478f502f0b9d34ecc6de6e9afc40b9d4f826090948e17cf9700cb45eb6b4"
+      "sha256": "b8fd78ffbc161f754298f4ed84ef12adb9d11003cce2361fec1db98642d16257"
     },
     {
       "example": "biology",
@@ -254,7 +254,7 @@
       "shot": 2,
       "kind": "transition",
       "frame": 111,
-      "sha256": "a204ac5c9b2feefb02cf57dbe1617d29211a6bf08fb06360dd67f66074c42d8f"
+      "sha256": "52257f8731e64e17dbf622d0a7b73a075dc230c990665d7e5640b77b6058e041"
     },
     {
       "example": "biology",
@@ -262,7 +262,7 @@
       "shot": 2,
       "kind": "mid",
       "frame": 156,
-      "sha256": "6e38ed622fa3d350b5ada85a0664b7a7920ddf334a973dbbb2b2cb8e16631bec"
+      "sha256": "01bc5761aea0cb1caa7e3039aba3125af85527724bd4ed0ce30f3adba4574700"
     },
     {
       "example": "biology",
@@ -270,7 +270,7 @@
       "shot": 3,
       "kind": "reveal",
       "frame": 224,
-      "sha256": "09f523fdaab6cfd9128b0510034c613cd3f830c76bcb5326e04236448bec2723"
+      "sha256": "94ff36c031202ff561091a0b73fa24eaa948798a934cbb2c4e8a62459cd16cd5"
     },
     {
       "example": "biology",
@@ -278,7 +278,7 @@
       "shot": 3,
       "kind": "transition",
       "frame": 231,
-      "sha256": "13d75a55fdf8f6d5b7f2cc7af0586beb37dad2714d35dd038d67148e07a2819a"
+      "sha256": "2e14a3f215e58ab26832f1bd52f6ec3e673d5e24a809007adc9d98ca0bb56780"
     },
     {
       "example": "biology",
@@ -286,7 +286,7 @@
       "shot": 3,
       "kind": "mid",
       "frame": 264,
-      "sha256": "d2c760cf0d4c45982498f9f6693ac40a431bd7349ae86455cbaa7a27a177afb4"
+      "sha256": "b79767f0cecb608183845ec469a2e268627542a897d04c20985f7d0fdcdb1a71"
     },
     {
       "example": "biology",
@@ -294,7 +294,7 @@
       "shot": 3,
       "kind": "last",
       "frame": 311,
-      "sha256": "7f76986a9d75bdcbb0b136c7a5501d996795504f9405c486b1d174a21c881255"
+      "sha256": "69e94650ccc86e609e895318a9dea0f100f1f47366f248a160fe65066a89ac19"
     },
     {
       "example": "biology",
@@ -302,7 +302,7 @@
       "shot": 1,
       "kind": "mid",
       "frame": 48,
-      "sha256": "bf08a29a9bb260b2d1947bdda712b15fdca07952e1ec01d528d188f44ad64924"
+      "sha256": "a48b0ae42e34e2681f42fcd1c6cbad65b0c89504e3accf0a466656199bf2405d"
     },
     {
       "example": "biology",
@@ -310,7 +310,7 @@
       "shot": 2,
       "kind": "reveal",
       "frame": 104,
-      "sha256": "016a2c1f1198a55edb2411c8b796c98c99b9b0e37f6d6637b90fc75f53ecc80b"
+      "sha256": "1c23c84b83d7a624cff1b0ddb54a8e3f1d8cbc56bec884aa57fe4dcdcb835ba2"
     },
     {
       "example": "biology",
@@ -318,7 +318,7 @@
       "shot": 2,
       "kind": "transition",
       "frame": 111,
-      "sha256": "51fbeadc31cc822e7a83bf544e26ff0d8ae265f312503c8ccd8dccf16decb085"
+      "sha256": "6d6080fb43e1645e1eae4805a22846c5a75cef1256d87811db77cef014451bbf"
     },
     {
       "example": "biology",
@@ -326,7 +326,7 @@
       "shot": 2,
       "kind": "mid",
       "frame": 156,
-      "sha256": "85e1f322f6a1d57a3af9dec452d9769d25ac2bf24b555aef622657596dde1a6c"
+      "sha256": "130dc7fe4160ab13b607df045b8f2a9c29c374bf5190397987a186a6b6f4a938"
     },
     {
       "example": "biology",
@@ -334,7 +334,7 @@
       "shot": 3,
       "kind": "reveal",
       "frame": 224,
-      "sha256": "f36cb7b357c68eefc20aebeaf2a06b2bc36ac02c84d966165ebb0de07d046e1d"
+      "sha256": "b6d8e6ceabc8899e1dcc05346677ee5bc4cdaed08130e885b4a9811f35b1ad34"
     },
     {
       "example": "biology",
@@ -342,7 +342,7 @@
       "shot": 3,
       "kind": "transition",
       "frame": 231,
-      "sha256": "33d2809e750111dbbbf55c5e00ad09d267c9a1260d4051b8a456e1a42ccb2918"
+      "sha256": "618779496a9ba0d39afabfa2bf18b64880906812168571b1624a7746731fed08"
     },
     {
       "example": "biology",
@@ -350,7 +350,7 @@
       "shot": 3,
       "kind": "mid",
       "frame": 264,
-      "sha256": "eb32aa2f69a78d58a9ccc5f99f7252816407cbf48db54c2f3afbc6ee18dfcc1c"
+      "sha256": "ad64f949315df10660db49fd3259538da5adce74172d1a794676e0c692309c2f"
     },
     {
       "example": "biology",
@@ -358,7 +358,7 @@
       "shot": 3,
       "kind": "last",
       "frame": 311,
-      "sha256": "3a9335c5973c1699ba89d31ae989f795c6544821d7b0d85570251f86a16ceccf"
+      "sha256": "2906db07bbf137a56ecf2a4922f356888e4a3afec73c7c6c527e787ae43ae451"
     }
   ]
 }
