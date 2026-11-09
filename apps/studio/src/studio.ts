@@ -8,6 +8,12 @@ import {
 import { computeLayout, DEFAULT_LAYOUT_SETTINGS, type LayoutSettings } from '@relgraph/core';
 import { createLayoutStrategyView } from './layout-strategy-view.js';
 import {
+  currentStudioMode,
+  planStudioModeTransition,
+  type StudioModeIntent,
+  type StudioModePlan,
+} from './studio-mode-model.js';
+import {
   createProject,
   projectSource,
   validateProjectConfig,
@@ -158,7 +164,7 @@ let layoutPreview: {
   before: Map<string, { x: number; y: number }>;
   serial: number;
 } | null = null;
-function cancelLayoutPreview(): void {
+function discardLayoutPreview(): void {
   if (!layoutPreview) return;
   if (currentLayout) {
     restoreLayoutPositions(currentLayout, layoutPreview.before);
@@ -167,6 +173,42 @@ function cancelLayoutPreview(): void {
   layoutPreview = null;
   rebuildRenderer();
   refreshUnsavedState();
+}
+/**
+ * The single coordinator for working-mode changes. Live state is derived from
+ * existing owners, never duplicated in another mutable mode variable.
+ */
+function transitionStudio(intent: StudioModeIntent): StudioModePlan {
+  const plan = planStudioModeTransition(
+    currentStudioMode({
+      playing: playback.playing,
+      editing: layoutEditing,
+      previewing: layoutPreview !== null,
+    }),
+    intent,
+  );
+  if (plan.discardPreview) discardLayoutPreview();
+  if (plan.exitPositionEdit) leavePositionEdit();
+  if (plan.pausePlayback) setPlaying(false);
+  if (plan.acceptPreview) {
+    // Keep the previewed coordinates; only application writes them to history.
+    layoutPreview = null;
+    refreshUnsavedState();
+  }
+  if (intent === 'enterPositionEdit' && renderer && currentFrameState && currentLayout) {
+    // Preview rollback may change the camera, so freeze it afterwards.
+    editCamera = { ...currentFrameState.cameraResolved };
+    layoutEditing = true;
+    rebuildRenderer();
+    updateLayoutEditor();
+    updateLayoutControls();
+    refreshSelectionFeedback();
+  }
+  if (intent === 'play') {
+    if (!playback.playing && playback.frame >= playback.totalFrames - 1) setFrame(0);
+    setPlaying(true);
+  }
+  return plan;
 }
 function configWithPositions(
   settings: LayoutSettings = projectHistory.value.layout ?? DEFAULT_LAYOUT_SETTINGS,
@@ -206,9 +248,7 @@ const strategyView = createLayoutStrategyView(document, $('layoutStrategyEditor'
   },
   preview(settings) {
     if (!graph || !currentLayout || loading) return;
-    if (layoutEditing) stopLayoutEdit();
-    setPlaying(false);
-    cancelLayoutPreview();
+    transitionStudio('beginPreview');
     try {
       const before = new Map([...currentLayout].map(([id, p]) => [id, { ...p }]));
       const next = computeLayout(graph, settings, currentLayout);
@@ -224,14 +264,16 @@ const strategyView = createLayoutStrategyView(document, $('layoutStrategyEditor'
   apply() {
     if (!graph || !layoutPreview || loading || layoutPreview.serial !== requestSerial) return;
     const next = configWithPositions(layoutPreview.settings);
-    layoutPreview = null;
+    transitionStudio('acceptPreview');
     projectHistory.commit(next);
     applyProjectHistory();
   },
-  cancel: cancelLayoutPreview,
+  cancel() {
+    transitionStudio('cancelPreview');
+  },
   lock(id, locked) {
     if (!graph || !currentFrameState?.view.nodes.some((n) => n.id === id) || loading) return;
-    cancelLayoutPreview();
+    transitionStudio('cancelPreview');
     const settings = projectHistory.value.layout ?? DEFAULT_LAYOUT_SETTINGS;
     const ids = new Set(settings.locked);
     if (locked) ids.add(id);
@@ -260,9 +302,8 @@ const projectActions: Parameters<typeof createProjectEditor>[2] & {
       projectEditor.error('配置无效：' + errors.join('；'));
       return false;
     }
-    cancelLayoutPreview();
+    transitionStudio('commitEdit');
     projectEditor.error('');
-    setPlaying(false);
     projectHistory.commit(config);
     applyProjectHistory();
     return true;
@@ -271,7 +312,7 @@ const projectActions: Parameters<typeof createProjectEditor>[2] & {
     ++imageUploadSerial;
     projectEditor.imageBusy(false);
     if (graph) {
-      cancelLayoutPreview();
+      transitionStudio('cancelPreview');
       projectHistory.undo();
       applyProjectHistory();
     }
@@ -280,13 +321,13 @@ const projectActions: Parameters<typeof createProjectEditor>[2] & {
     ++imageUploadSerial;
     projectEditor.imageBusy(false);
     if (graph) {
-      cancelLayoutPreview();
+      transitionStudio('cancelPreview');
       projectHistory.redo();
       applyProjectHistory();
     }
   },
   pause() {
-    setPlaying(false);
+    transitionStudio('pause');
   },
   draftChanged() {
     refreshUnsavedState();
@@ -297,7 +338,7 @@ const projectActions: Parameters<typeof createProjectEditor>[2] & {
       documentSerial = requestSerial,
       selectionRevision = projectEditor.selectionRevision(),
       owner = graph;
-    setPlaying(false);
+    transitionStudio('pause');
     projectEditor.error('');
     projectEditor.imageBusy(true);
     const current = () =>
@@ -315,7 +356,7 @@ const projectActions: Parameters<typeof createProjectEditor>[2] & {
       const config = setNodeImage(projectHistory.value, node, id, asset),
         errors = validateProjectConfig(config, owner);
       if (errors.length) throw new Error('图片配置超出容量或包含无效字段：' + errors.join('；'));
-      cancelLayoutPreview();
+      transitionStudio('cancelPreview');
       projectHistory.commit(config);
       applyProjectHistory();
     } catch (error) {
@@ -963,7 +1004,7 @@ function cancelActiveLayoutDrag(): boolean {
   releaseLayoutPointer();
   return restored;
 }
-function stopLayoutEdit(): void {
+function leavePositionEdit(): void {
   if (!layoutEditing) return;
   cancelActiveLayoutDrag();
   layoutEditing = false;
