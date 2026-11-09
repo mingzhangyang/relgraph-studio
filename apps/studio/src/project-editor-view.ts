@@ -461,6 +461,7 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
         if (accepted) {
           input.value = expectedAppearance(key);
           showFieldError('');
+          error.textContent = '';
           if (picker && /^#[0-9a-f]{6}$/i.test(input.value)) picker.value = input.value;
         } else if (!matchesValue(raw, expectedAppearance(key), input.type)) {
           // Core still validates the complete project, including cross-field
@@ -476,12 +477,18 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
       reset.setAttribute('aria-label', '恢复继承：' + title);
       reset.title = '恢复继承';
       reset.addEventListener('click', () => {
-        drafts.delete(draftKey(key));
+        const draft = draftKey(key);
+        const previousDraft = drafts.get(draft);
         const accepted = !hasAuthoredOverride(key) || update(key, undefined);
         if (accepted) {
+          drafts.delete(draft);
           input.value = expectedAppearance(key);
           showFieldError('');
+          error.textContent = '';
           if (picker && /^#[0-9a-f]{6}$/i.test(input.value)) picker.value = input.value;
+        } else {
+          if (previousDraft) drafts.set(draft, previousDraft);
+          showFieldError('恢复继承失败，请检查项目错误提示。');
         }
         actions.draftChanged?.();
       });
