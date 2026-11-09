@@ -401,3 +401,142 @@ test('pending and stale loads cannot expose outdated diagnostics', async () => {
   assert.equal(app.node('errors').textContent, '');
   assert.equal(app.node('warnings').textContent, '未发现校验问题。');
 });
+
+function viewControl(app, id) {
+  const stack = [app.node('appearanceEditor'), app.node('layoutStrategyEditor')];
+  while (stack.length) {
+    const element = stack.pop();
+    if (element.id === id) return element;
+    stack.push(...(element.children ?? []));
+  }
+  throw new Error('Missing generated view control: ' + id);
+}
+
+test('project savepoint follows edits, full exports, undo/redo and beforeunload', async () => {
+  const app = makeStudio();
+  await app.ready;
+  const status = app.node('saveState');
+  assert.equal(status.attributes['data-dirty'], 'false');
+  let prevented = false;
+  app.window.dispatch('beforeunload', {
+    preventDefault() {
+      prevented = true;
+    },
+    returnValue: 'unchanged',
+  });
+  assert.equal(prevented, false, 'clean startup is free to leave');
+
+  const preset = viewControl(app, 'visualPreset');
+  preset.value = 'presentation';
+  await preset.dispatch('change');
+  assert.equal(status.attributes['data-dirty'], 'true');
+  assert.match(status.textContent, /未保存/);
+  assert.match(app.document.title, /^● /);
+  const exit = {
+    prevented: false,
+    preventDefault() {
+      this.prevented = true;
+    },
+    returnValue: 'unchanged',
+  };
+  app.window.dispatch('beforeunload', exit);
+  assert.equal(exit.prevented, true);
+  assert.equal(exit.returnValue, '');
+
+  await app.node('layoutExport').click();
+  assert.equal(status.attributes['data-dirty'], 'true', 'source-only export is not project save');
+  assert.match(app.downloads.at(-1).filename, /\.positioned\.json$/);
+
+  await viewControl(app, 'visualSave').click();
+  assert.match(app.downloads.at(-1).filename, /\.studio\.json$/);
+  assert.equal(status.attributes['data-dirty'], 'false', 'full export establishes a savepoint');
+  assert.match(viewControl(app, 'visualError').textContent, /请确认/);
+  app.window.dispatch('beforeunload', {
+    preventDefault() {
+      prevented = true;
+    },
+    returnValue: 'unchanged',
+  });
+  assert.equal(status.attributes['data-dirty'], 'false');
+
+  await viewControl(app, 'visualUndo').click();
+  assert.equal(status.attributes['data-dirty'], 'true', 'undo past export is an unsaved state');
+  await viewControl(app, 'visualRedo').click();
+  assert.equal(status.attributes['data-dirty'], 'false', 'redo back to export is clean');
+});
+
+test('cancelled source replacements preserve the edited document and history', async () => {
+  const app = makeStudio();
+  await app.ready;
+  const sourceName = app.node('sourceName').textContent;
+  const preset = viewControl(app, 'visualPreset');
+  preset.value = 'quiet';
+  await preset.dispatch('change');
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
+
+  let confirmations = 0;
+  app.window.confirm = () => {
+    confirmations++;
+    return false;
+  };
+  await app.node('exampleBiology').click();
+  assert.equal(app.node('sourceName').textContent, sourceName);
+  assert.equal(app.node('exampleLiterature').attributes['aria-pressed'], 'true');
+
+  const input = app.node('fileInput');
+  input.files = [readFile('replacement.json', JSON.stringify(biology))];
+  await input.dispatch('change');
+  await flush();
+  assert.equal(input.value, '', 'reselecting the same file remains possible');
+  assert.equal(app.node('sourceName').textContent, sourceName);
+
+  await app.node('dropzone').dispatch('drop', {
+    dataTransfer: { files: [readFile('dropped.json', JSON.stringify(biology))] },
+  });
+  await flush();
+  assert.equal(confirmations, 3);
+  assert.equal(app.node('sourceName').textContent, sourceName);
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
+  assert.equal(viewControl(app, 'visualUndo').disabled, false);
+
+  app.window.confirm = () => true;
+  await app.node('exampleBiology').click();
+  assert.match(app.node('sourceName').textContent, /生物信号/);
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
+  assert.equal(viewControl(app, 'visualUndo').disabled, true);
+});
+
+test('unsent copy drafts are protected and cannot be mistaken for a saved project', async () => {
+  const app = makeStudio();
+  await app.ready;
+  assert.equal(app.window.renderAt(84), true);
+  const objects = viewControl(app, 'visualObject');
+  assert.ok(objects.children.length > 1);
+  objects.value = objects.children[1].value;
+  await objects.dispatch('change');
+  const label = viewControl(app, 'visualLabel');
+  label.value += ' · 草稿';
+  await label.dispatch('input');
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
+
+  const count = app.downloads.length;
+  await viewControl(app, 'visualSave').click();
+  assert.equal(app.downloads.length, count);
+  assert.match(viewControl(app, 'visualError').textContent, /未提交/);
+  await label.dispatch('change');
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
+  await viewControl(app, 'visualSave').click();
+  assert.equal(app.downloads.length, count + 1);
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
+});
+
+test('a temporary layout preview is dirty only until cancelled', async () => {
+  const app = makeStudio();
+  await app.ready;
+  viewControl(app, 'strategyType').value = 'circle';
+  viewControl(app, 'strategyMode').value = 'rearrange';
+  await viewControl(app, 'strategyPreview').click();
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
+  await viewControl(app, 'strategyCancel').click();
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
+});
