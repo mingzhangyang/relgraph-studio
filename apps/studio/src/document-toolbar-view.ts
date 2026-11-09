@@ -5,6 +5,7 @@ export interface DocumentToolbarControls {
   redo: HTMLButtonElement;
   save: HTMLButtonElement;
   exportSource: HTMLButtonElement;
+  message: HTMLElement;
 }
 export interface DocumentToolbarActions {
   undo(): void;
@@ -54,6 +55,10 @@ export function createDocumentToolbarView(
     run,
     enabled(command: DocumentCommand): boolean {
       return !buttons[command].disabled;
+    },
+    message(value: string, failed = false): void {
+      if (controls.message.textContent !== value) controls.message.textContent = value;
+      controls.message.setAttribute('data-error', String(failed));
     },
   };
 }
