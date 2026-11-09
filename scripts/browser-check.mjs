@@ -861,6 +861,90 @@ for (const theme of ['light', 'dark'])
     await context.close();
   }
 
+{
+  const { context, page, problems } = await openStudio();
+  await check(
+    'review: sparse locks, preview export, no-op redo and Escape cancellation',
+    async () => {
+      const source = structuredClone(documents.literature);
+      for (const node of source.characters) delete node.position;
+      await page
+        .locator('#fileInput')
+        .setInputFiles({
+          name: 'missing-review.json',
+          mimeType: 'application/json',
+          buffer: Buffer.from(JSON.stringify(source)),
+        });
+      await page.waitForFunction(
+        () => document.getElementById('sourceName').textContent === 'missing-review.json',
+      );
+      await waitReady(page);
+      await page.locator('#layoutStrategies').evaluate((e) => (e.open = true));
+      const id = await page.inputValue('#strategyNode'),
+        baseline = await canvasPng(page);
+      await page.check('#strategyLock');
+      await page.selectOption('#strategyType', 'force');
+      await page.selectOption('#strategyMode', 'missing');
+      await page.click('#strategyPreview');
+      assert.notDeepEqual(
+        await canvasPng(page),
+        baseline,
+        'locking one fallback does not author every other point',
+      );
+      await page.click('#strategyCancel');
+      const exportPositions = async () => {
+        const promise = page.waitForEvent('download');
+        await page.click('#layoutExport');
+        const download = await promise;
+        return JSON.parse(await readFile(await download.path(), 'utf8'));
+      };
+      const expected = await exportPositions();
+      await page.selectOption('#strategyType', 'circle');
+      await page.selectOption('#strategyMode', 'rearrange');
+      await page.click('#strategyPreview');
+      assert.notDeepEqual(await canvasPng(page), baseline);
+      assert.deepEqual(await exportPositions(), expected);
+      assert.equal(await page.locator('#strategyApply').isDisabled(), true);
+      await page.uncheck('#strategyLock');
+      await page.click('#strategyPreview');
+      await page.click('#strategyApply');
+      await page.click('#visualUndo');
+      assert.equal(await page.locator('#visualRedo').isDisabled(), false);
+      await page.click('#layoutToggle');
+      await page.selectOption('#layoutNode', id);
+      const before = { x: await page.inputValue('#layoutX'), y: await page.inputValue('#layoutY') };
+      await page.locator('#stage').scrollIntoViewIfNeeded();
+      const point = await page.evaluate(({ x, y }) => {
+        const s = window.studioFrame(),
+          r = document.getElementById('stage').getBoundingClientRect();
+        return {
+          x:
+            r.left +
+            ((640 + (Number(x) - s.cameraResolved.x) * s.cameraResolved.scale) * r.width) / 1280,
+          y:
+            r.top +
+            ((330 + (Number(y) - s.cameraResolved.y) * s.cameraResolved.scale) * r.height) / 720,
+        };
+      }, before);
+      await page.mouse.click(point.x, point.y);
+      assert.equal(await page.locator('#visualRedo').isDisabled(), false);
+      await page.mouse.move(point.x, point.y);
+      await page.mouse.down();
+      await page.mouse.move(point.x + 30, point.y + 20);
+      assert.notEqual(await page.inputValue('#layoutX'), before.x);
+      await page.keyboard.press('Escape');
+      await page.mouse.up();
+      await page.click('#layoutToggle');
+      await page.selectOption('#layoutNode', id);
+      assert.equal(await page.inputValue('#layoutX'), before.x);
+      assert.equal(await page.inputValue('#layoutY'), before.y);
+      assert.equal(await page.locator('#visualRedo').isDisabled(), false);
+      assert.deepEqual(problems, []);
+    },
+  );
+  await context.close();
+}
+
 // Property authoring uses the production projection and both render backends read saved config.
 for (const theme of ['light', 'dark']) {
   const { context, page, problems } = await openStudio({ colorScheme: theme });

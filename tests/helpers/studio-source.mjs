@@ -1,4 +1,9 @@
 import {
+  configWithLayoutPositions,
+  dragHasChanges,
+  cancelPositionDrag,
+} from '../../apps/studio/src/layout-history-model.ts';
+import {
   computeLayout,
   DEFAULT_LAYOUT_SETTINGS,
 } from '../../packages/core/src/director/layout-strategies.ts';
@@ -66,6 +71,9 @@ export function studioSource() {
 // Pure helpers the workspace imports, supplied as-is to every VM harness so
 // harnesses only stub what touches the canvas, network or storage.
 export const studioImports = {
+  configWithLayoutPositions,
+  dragHasChanges,
+  cancelPositionDrag,
   computeLayout,
   DEFAULT_LAYOUT_SETTINGS,
   createLayoutStrategyView,
