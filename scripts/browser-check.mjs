@@ -1498,6 +1498,35 @@ for (const theme of ['dark', 'light']) {
   await context.close();
 }
 
+// Unsaved project protection must work with real browser dialogs and downloads.
+{
+  const { context, page, problems } = await openStudio();
+  await check('unsaved project confirmation and complete-project export in Chromium', async () => {
+    const initialSource = await text(page, '#sourceName');
+    assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'false');
+    await page.selectOption('#visualPreset', 'presentation');
+    assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'true');
+
+    page.once('dialog', (dialog) => void dialog.dismiss());
+    await page.click('#exampleBiology');
+    assert.equal(await text(page, '#sourceName'), initialSource, 'cancel keeps the original source');
+    assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'true');
+
+    const download = page.waitForEvent('download');
+    await page.click('#visualSave');
+    assert.match((await download).suggestedFilename(), /\\.studio\\.json$/);
+    assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'false');
+
+    await page.selectOption('#visualPreset', 'quiet');
+    assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'true');
+    page.once('dialog', (dialog) => void dialog.accept());
+    await loadExample(page, EXAMPLES[1]);
+    assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'false');
+    assert.deepEqual(problems, []);
+  });
+  await context.close();
+}
+
 // Added or removed shots change the frame inventory; both need an explicit
 // baseline refresh instead of passing on the frames that remain.
 if (reference)
