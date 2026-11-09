@@ -1,6 +1,11 @@
 import { walkDisplayItems } from '../packages/render/src/display-list.ts';
 import { hitDisplayList } from '../packages/render/src/selection.ts';
-import { rectsIntersect } from '../packages/render/src/node-geometry.ts';
+import {
+  rectsIntersect,
+  nodeGlyphContainsPoint,
+  nodeGlyphRayDistance,
+  nodeLabelObstacleBounds,
+} from '../packages/render/src/node-geometry.ts';
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import literature from '../examples/honglou-provisional.relgraph.json' with { type: 'json' };
@@ -17,7 +22,7 @@ import { layoutGraph } from '../packages/core/src/director/layout.ts';
 import { directorFrameAt } from '../packages/core/src/director/state.ts';
 import { domainStyle } from '../packages/core/src/style.ts';
 import { composeFrame } from '../packages/render/src/compose.ts';
-import { FRAME_SPECS, cameraFitFor } from '../packages/render/src/frame-spec.ts';
+import { FRAME_SPECS, cameraFitFor, projectCameraPoint } from '../packages/render/src/frame-spec.ts';
 import { VIDEO_THEMES } from '../packages/render/src/theme.ts';
 import { texts, measure } from './helpers/display-list.mjs';
 import {
@@ -28,6 +33,7 @@ import {
   clearAppearance,
 } from '../apps/studio/src/project-editor-model.ts';
 import { makeStudio } from './helpers/studio-harness.mjs';
+import { visibleObjectEntries } from '../apps/studio/src/project-editor-view.ts';
 
 const compose = (graph, frame = 0, spec = FRAME_SPECS['landscape-720p'], theme = 'light') => {
   const positions = layoutGraph(graph);
@@ -305,4 +311,134 @@ test('label obstacles include thick authored glyph borders at both output sizes'
       );
     }
   }
+});
+
+test('stroked glyph ray intersection agrees with shared hit geometry for all shape directions', () => {
+  for (const shape of ['circle', 'pill', 'diamond'])
+    for (const spec of Object.values(FRAME_SPECS))
+      for (const borderWidth of [0, 2, 8]) {
+        const node = { id: 'n', kind: 'person', label: 'N', importance: 1 };
+        const config = { nodes: { objects: { n: { shape, size: 23, borderWidth } } } };
+        const style = domainStyle('neutral');
+        for (const angle of [0, 0.12, Math.PI / 6, Math.PI / 4, Math.PI / 2, (3 * Math.PI) / 4]) {
+          const direction = { x: Math.cos(angle), y: Math.sin(angle) };
+          const radius = nodeGlyphRayDistance(node, direction, 1, spec, style, config);
+          const before = { x: direction.x * (radius - 0.01), y: direction.y * (radius - 0.01) };
+          const after = { x: direction.x * (radius + 0.01), y: direction.y * (radius + 0.01) };
+          assert.equal(nodeGlyphContainsPoint(node, { x: 0, y: 0 }, before, 1, spec, style, 1, config), true,
+            `${shape} ${spec.name} ${borderWidth} at ${angle}: interior`);
+          assert.equal(nodeGlyphContainsPoint(node, { x: 0, y: 0 }, after, 1, spec, style, 1, config), false,
+            `${shape} ${spec.name} ${borderWidth} at ${angle}: exterior`);
+        }
+      }
+});
+
+test('directed role bars attach beyond the authored stroked glyph at both endpoints', () => {
+  for (const shape of ['circle', 'pill', 'diamond'])
+    for (const spec of Object.values(FRAME_SPECS)) {
+      const nodes = [
+        { id: 'from', kind: 'protein', label: 'From', position: { x: -120, y: 0 } },
+        { id: 'to', kind: 'protein', label: 'To', position: { x: 120, y: 0 } },
+      ];
+      const graph = {
+        domain: 'biology',
+        meta: { title: 'inhibition' },
+        nodes,
+        edges: [{ id: 'inhibit', kind: 'inhibition', source: 'from', target: 'to', directed: true }],
+        groups: [],
+        scenes: [{ id: 's', title: 'inhibition', durationSec: 5 }],
+        project: { nodes: { objects: {
+          from: { shape, size: 23, borderWidth: 8 },
+          to: { shape, size: 23, borderWidth: 8 },
+        } } },
+      };
+      const positions = layoutGraph(graph);
+      const state = directorFrameAt(graph, positions, 0, 24, { fit: cameraFitFor(spec) });
+      state.cameraResolved = { x: 0, y: 0, scale: 1 };
+      state.reveal.nodes = { from: 1, to: 1 };
+      state.reveal.edges = { inhibit: 1 };
+      const style = domainStyle('biology');
+      const list = composeFrame(state, {
+        graph, positions, frame: 0, fps: 24, measure, frameSpec: spec, style,
+      });
+      const points = list.selection.find((entry) => entry.kind === 'edge' && entry.id === 'inhibit')?.points;
+      assert.ok(points && points.length > 2, `${shape} ${spec.name}: edge is selectable`);
+      const from = projectCameraPoint(nodes[0].position, state.cameraResolved, spec);
+      const to = projectCameraPoint(nodes[1].position, state.cameraResolved, spec);
+      const first = points[0];
+      const last = points.at(-1);
+      const sourceDistance = nodeGlyphRayDistance(nodes[0], { x: 1, y: 0 }, 1, spec, style, graph.project);
+      const targetDistance = nodeGlyphRayDistance(nodes[1], { x: -1, y: 0 }, 1, spec, style, graph.project);
+      assert.ok(first.x >= from.x + sourceDistance - 1e-7, `${shape} source clears border`);
+      assert.ok(last.x <= to.x - targetDistance - 5 * spec.typeScale + 1e-7, `${shape} role marker clears target border`);
+      assert.equal(
+        nodeGlyphContainsPoint(nodes[1], to, last, 1, spec, style, 1, graph.project),
+        false,
+      );
+    }
+});
+
+test('authored top labels use the full stroked obstacle, not the unadorned radius', () => {
+  const graph = {
+    domain: 'neutral',
+    meta: { title: 'top label' },
+    nodes: [{ id: 'n', kind: 'person', label: 'ABCDEFGHIJKLMNOPQRSTUVWXABCDEFGH', position: { x: 0, y: 0 } }],
+    edges: [],
+    groups: [],
+    scenes: [{ id: 's', title: 'top label', durationSec: 5 }],
+    project: { nodes: { objects: { n: { shape: 'circle', size: 23, borderWidth: 8, textPosition: 'top' } } } },
+  };
+  for (const spec of Object.values(FRAME_SPECS)) {
+    const positions = layoutGraph(graph);
+    const state = directorFrameAt(graph, positions, 0, 24, { fit: cameraFitFor(spec) });
+    state.cameraResolved = { x: 0, y: 0, scale: 1 };
+    state.reveal.nodes = { n: 1 };
+    const list = composeFrame(state, {
+      graph, positions, frame: 0, fps: 24, measure, frameSpec: spec, style: domainStyle('neutral'),
+    });
+    const lines = [...walkDisplayItems(list.items)].filter(
+      (item) => item.type === 'text' && graph.nodes[0].label.includes(item.text) && item.text.length > 0,
+    );
+    assert.equal(lines.length, 2, `${spec.name}: both label lines shown`);
+    const obstacle = nodeLabelObstacleBounds(graph.nodes[0],
+      projectCameraPoint(graph.nodes[0].position, state.cameraResolved, spec),
+      1, spec, domainStyle('neutral'), graph.project);
+    const bottom = Math.max(...lines.map((line) => line.y + line.font.size * 1.3));
+    assert.ok(bottom <= obstacle.y - 0.001, `${spec.name}: requested top position clears the stroke`);
+    const nodeCenter = projectCameraPoint(graph.nodes[0].position, state.cameraResolved, spec);
+    const firstLine = lines[0];
+    assert.ok(Math.abs((firstLine.x + measure(firstLine.text, firstLine.font) / 2) - nodeCenter.x) < 20 * spec.typeScale,
+      `${spec.name}: text is above its own node, not beside it`);
+  }
+});
+
+test('relationship options use only projected endpoint names and uniquely identify parallel edges', () => {
+  const visible = {
+    view: {
+      nodes: [
+        { id: 'a', kind: 'person', label: 'Alice' },
+        { id: 'b', kind: 'person', label: 'Bob' },
+        { id: 'c', kind: 'person', label: 'Carol' },
+      ],
+      edges: [
+        { id: 'e1', source: 'a', target: 'b', kind: 'parent', label: '母女', directed: true },
+        { id: 'e2', source: 'a', target: 'c', kind: 'parent', label: '母女', directed: true },
+        { id: 'e3', source: 'a', target: 'b', kind: 'parent', label: '母女', directed: true },
+      ],
+    },
+  };
+  const config = { text: { nodes: { b: { label: 'B Visible' }, c: { label: 'Future Secret' } } } };
+  const options = visibleObjectEntries(visible, config, 'edge');
+  assert.equal(options.length, 3);
+  assert.equal(new Set(options.map((entry) => entry.label)).size, 3);
+  assert.match(options[0].label, /Alice → B Visible/);
+  assert.match(options[0].label, /ID: e1/);
+  assert.match(options[1].label, /Alice → Future Secret/);
+  assert.match(options[2].label, /ID: e3/);
+  const projected = { view: { ...visible.view, nodes: visible.view.nodes.slice(0, 2) } };
+  const safeOptions = visibleObjectEntries(projected, config, 'edge');
+  assert.ok(safeOptions[1].label.includes('端点未显示'));
+  assert.ok(!safeOptions[1].label.includes('Future Secret'));
+  assert.ok(!safeOptions[1].label.includes('Carol'));
+  assert.deepEqual(visibleObjectEntries(null, config, 'edge'), []);
 });

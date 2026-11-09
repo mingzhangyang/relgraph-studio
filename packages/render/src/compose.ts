@@ -34,6 +34,8 @@ import {
   glyphGeometry,
   nodeOutline,
   nodeGlyphBounds,
+  nodeGlyphRayDistance,
+  nodeLabelObstacleBounds,
 } from './node-geometry.js';
 import { RENDER_MESSAGES } from './locale.js';
 import { edgePaint, VIDEO_THEMES, type VideoTheme } from './theme.js';
@@ -383,9 +385,29 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
       len = Math.hypot(dx, dy);
     if (len < u(1)) continue;
     const ux = dx / len,
-      uy = dy / len,
-      ra = radius(source) + u(4),
-      rb = radius(target) + u(5);
+      uy = dy / len;
+    const sourceBoundary = nodeGlyphRayDistance(
+      source,
+      { x: ux, y: uy },
+      cam.scale,
+      spec,
+      style,
+      config,
+    );
+    const targetBoundary = nodeGlyphRayDistance(
+      target,
+      { x: -ux, y: -uy },
+      cam.scale,
+      spec,
+      style,
+      config,
+    );
+    const originalTarget = radius(target) + u(5);
+    // Keep historical attachment positions when they already clear the glyph.
+    // Authored outlines that cover the old endpoint need additional room for
+    // the role marker (bar, arrow or hollow circle), not just for its centre.
+    const ra = Math.max(radius(source) + u(4), sourceBoundary);
+    const rb = targetBoundary > originalTarget ? targetBoundary + u(5) : originalTarget;
     const start = { x: a.x + ux * ra, y: a.y + uy * ra },
       end = { x: b.x - ux * rb, y: b.y - uy * rb };
     const key = [edge.source, edge.target].sort().join('\0');
@@ -500,6 +522,7 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
   }
 
   const occupied: Rect[] = [];
+  const nodeLabelBounds = new Map<string, Rect>();
   for (const node of view.nodes) {
     const custom = nodeAppearance(config, node);
     const visibility = nodeProgress(node.id);
@@ -520,18 +543,9 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
         box: nodeGlyphBounds(node, p, cam.scale, spec, style, visibility, config),
       });
     if (visibility > 0.5) {
-      // Reserve the full authored glyph, including its shape and stroke, while
-      // retaining the former minimum gutter for smaller/default outlines.
-      // Full-size obstacles also prevent labels hopping during a node reveal.
-      const glyphBox = nodeGlyphBounds(node, p, cam.scale, spec, style, 1, config);
-      const halfWidth = Math.max(r + u(4), glyphBox.w / 2);
-      const halfHeight = Math.max(r + u(4), glyphBox.h / 2);
-      occupied.push({
-        x: p.x - halfWidth,
-        y: p.y - halfHeight,
-        w: 2 * halfWidth,
-        h: 2 * halfHeight,
-      });
+      const obstacle = nodeLabelObstacleBounds(node, p, cam.scale, spec, style, config);
+      nodeLabelBounds.set(node.id, obstacle);
+      occupied.push(obstacle);
     }
     const outline = nodeOutline(p, glyphGeometry(node, cam.scale, spec, style, 1, config));
     if (visibility > 0) {
@@ -584,6 +598,8 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
     const p = pointFor(node.id),
       r = radius(node),
       active = attention(node);
+    const obstacle = nodeLabelBounds.get(node.id);
+    if (!obstacle) continue;
     const custom = nodeAppearance(config, node);
     const font = sans(
       custom.fontSize ?? ((node.importance ?? 0) >= 5 ? 19 : 16),
@@ -592,15 +608,28 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
     const lines = wrapText(measure, nodeLabel(node), font, u(170), 2);
     const width = Math.max(0, ...lines.map((line) => measure(line, font))),
       height = lines.length * font.size * 1.3;
+    const rightX = Math.max(p.x + r + u(9), obstacle.x + obstacle.w + u(5));
+    const leftX = Math.min(p.x - r - u(9) - width, obstacle.x - width - u(5));
+    const topY = Math.min(
+      p.y - r - Math.max(u(25), height + u(4)),
+      obstacle.y - height - u(4),
+    );
+    const bottomY = Math.max(p.y + r + u(6), obstacle.y + obstacle.h + u(2));
+    const nearRightX = Math.max(p.x + r + u(5), obstacle.x + obstacle.w + u(1));
+    const nearLeftX = Math.min(p.x - r - u(5) - width, obstacle.x - width - u(1));
+    const upperY = Math.min(
+      p.y - r - Math.max(u(24), height + u(4)),
+      obstacle.y - height - u(1),
+    );
     const candidates = [
-      { x: p.x + r + u(9), y: p.y - u(10) },
-      { x: p.x - r - u(9) - width, y: p.y - u(10) },
-      { x: p.x - width / 2, y: p.y - r - Math.max(u(25), height + u(4)) },
-      { x: p.x - width / 2, y: p.y + r + u(6) },
-      { x: p.x + r + u(5), y: p.y - r - Math.max(u(24), height + u(4)) },
-      { x: p.x - r - u(5) - width, y: p.y - r - Math.max(u(24), height + u(4)) },
-      { x: p.x + r + u(5), y: p.y + r + u(6) },
-      { x: p.x - r - u(5) - width, y: p.y + r + u(6) },
+      { x: rightX, y: p.y - u(10) },
+      { x: leftX, y: p.y - u(10) },
+      { x: p.x - width / 2, y: topY },
+      { x: p.x - width / 2, y: bottomY },
+      { x: nearRightX, y: upperY },
+      { x: nearLeftX, y: upperY },
+      { x: nearRightX, y: bottomY },
+      { x: nearLeftX, y: bottomY },
     ].map((c) => ({ ...c, w: width, h: height }));
     const preferred = { auto: 0, right: 0, left: 1, top: 2, bottom: 3 }[
       custom.textPosition ?? 'right'
