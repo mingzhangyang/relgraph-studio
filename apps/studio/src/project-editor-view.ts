@@ -37,24 +37,25 @@ interface Actions {
   draftChanged?(): void;
   selectionChanged?(): void;
 }
-const nodeFields: [string, string, string | readonly string[]][] = [
-  ['shape', '形状', ['circle', 'pill', 'diamond']],
+type ControlKind = 'number' | 'color' | 'choice';
+const nodeFields: [string, string, ControlKind][] = [
+  ['shape', '形状', 'choice'],
   ['size', '半径 · px', 'number'],
   ['fill', '填充色', 'color'],
   ['border', '边框色', 'color'],
   ['borderWidth', '边框宽度', 'number'],
   ['fontSize', '字号', 'number'],
-  ['fontWeight', '字重', ['400', '600']],
+  ['fontWeight', '字重', 'choice'],
   ['textColor', '文字色', 'color'],
-  ['textPosition', '文字位置', ['auto', 'top', 'bottom', 'left', 'right']],
+  ['textPosition', '文字位置', 'choice'],
 ];
-const edgeFields: [string, string, string | readonly string[]][] = [
+const edgeFields: [string, string, ControlKind][] = [
   ['color', '线条颜色', 'color'],
   ['width', '线宽', 'number'],
-  ['dash', '虚实', ['solid', 'dashed', 'dotted']],
-  ['head', '端点', ['arrow', 'bar', 'hollow-circle', 'none']],
+  ['dash', '虚实', 'choice'],
+  ['head', '端点', 'choice'],
   ['curve', '曲率 · 0 为直线', 'number'],
-  ['showLabel', '显示标签', ['true', 'false']],
+  ['showLabel', '显示标签', 'choice'],
   ['fontSize', '标签字号', 'number'],
   ['fontWeight', '标签字重', ['400', '600']],
   ['textColor', '标签文字色', 'color'],
@@ -365,7 +366,7 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
       const row = el('div'),
         heading = el('label', title),
         fieldControls = el('div'),
-        input = typeof type === 'string' ? el('input') : el('select'),
+        input = type === 'choice' ? el('select') : el('input'),
         origin = el('small'),
         hint = el('small', appearanceFieldHint(appearanceKind(), key)),
         feedback = el('small'),
@@ -383,7 +384,7 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
       heading.setAttribute('for', input.id);
       input.setAttribute('aria-describedby', hint.id + ' ' + feedback.id + ' ' + origin.id);
       const rule = APPEARANCE_FIELD_RULES[appearanceKind()][key];
-      if (typeof type === 'string') {
+      if (type !== 'choice') {
         (input as HTMLInputElement).type = type === 'color' ? 'text' : type;
         (input as HTMLInputElement).placeholder =
           type === 'color' ? '#RRGGBB · 留空继承' : '留空继承';
@@ -400,9 +401,15 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
         const empty = el('option', '继承');
         empty.value = '';
         input.append(empty);
-        for (const value of type) {
-          const option = el('option', value);
-          option.value = value;
+        const values =
+          rule?.type === 'enum'
+            ? rule.values
+            : rule?.type === 'boolean'
+              ? [true, false]
+              : [];
+        for (const value of values) {
+          const option = el('option', String(value));
+          option.value = String(value);
           input.append(option);
         }
       }
