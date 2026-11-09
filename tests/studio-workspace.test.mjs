@@ -1377,7 +1377,9 @@ test('document toolbar owns undo, redo, full save, coordinate export and dirty s
   assert.equal(state.attributes['data-dirty'], 'false');
 });
 
-test('document shortcuts use the toolbar history; input undo stays native, save checks drafts', async () => {
+test(
+  'document shortcuts use the toolbar history; input undo stays native, save checks drafts',
+  async () => {
   const app = makeStudio();
   await app.ready;
   const preset = viewControl(app, 'visualPreset');
@@ -1425,12 +1427,17 @@ test('document shortcuts use the toolbar history; input undo stays native, save 
   assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
 
   await label.dispatch('change');
-  assert.equal(key('s', { repeat: true }), true, 'held shortcut is consumed without another download');
+  assert.equal(
+    key('s', { repeat: true }),
+    true,
+    'held shortcut is consumed without another download',
+  );
   assert.equal(key('s'), true);
   assert.equal(app.downloads.length, previous + 1);
   assert.match(app.downloads.at(-1).filename, /\.studio\.json$/);
   assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
-});
+  },
+);
 
 test('document toolbar disables commands while a replacement source is loading', async () => {
   const pending = deferred();
