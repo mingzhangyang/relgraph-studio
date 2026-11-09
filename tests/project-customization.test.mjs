@@ -442,3 +442,44 @@ test('relationship options use only projected endpoint names and uniquely identi
   assert.ok(!safeOptions[1].label.includes('Carol'));
   assert.deepEqual(visibleObjectEntries(null, config, 'edge'), []);
 });
+test('authored curved edge role marks clear the node outline at every supported marker style', () => {
+  for (const shape of ['circle', 'pill', 'diamond'])
+    for (const head of ['bar', 'hollow-circle', 'arrow', 'none'])
+      for (const spec of Object.values(FRAME_SPECS))
+        for (const curve of [-160, 0, 160]) {
+          const graph = {
+            domain: 'neutral',
+            meta: { title: 'stroked endpoints' },
+            nodes: [
+              { id: 'a', kind: 'person', label: 'A', position: { x: -150, y: 0 } },
+              { id: 'b', kind: 'person', label: 'B', position: { x: 150, y: 0 } },
+            ],
+            edges: [{ id: 'edge', kind: 'link', source: 'a', target: 'b', directed: true }],
+            groups: [],
+            scenes: [{ id: 's', title: 'stroked endpoints', durationSec: 5 }],
+            project: {
+              nodes: { objects: { b: { shape, size: 23, borderWidth: 8 } } },
+              edges: { objects: { edge: { head, curve, width: 8 } } },
+            },
+          };
+          const positions = layoutGraph(graph);
+          const state = directorFrameAt(graph, positions, 0, 24, { fit: cameraFitFor(spec) });
+          state.cameraResolved = { x: 0, y: 0, scale: 1 };
+          state.reveal.nodes = { a: 1, b: 1 };
+          state.reveal.edges = { edge: 1 };
+          const style = domainStyle('neutral');
+          const list = composeFrame(state, {
+            graph, positions, frame: 0, fps: 24, measure, frameSpec: spec, style,
+          });
+          const drawnEnd = list.selection.find((entry) => entry.id === 'edge' && entry.kind === 'edge')?.points.at(-1);
+          assert.ok(drawnEnd, `${shape} ${head} ${curve} ${spec.name}`);
+          const center = projectCameraPoint(graph.nodes[1].position, state.cameraResolved, spec);
+          const boundary = nodeGlyphRayDistance(graph.nodes[1], { x: -1, y: 0 }, 1, spec, style, graph.project);
+          const width = 8 * spec.typeScale;
+          const reach = head === 'hollow-circle' ? 4 * spec.typeScale + width / 2
+            : head === 'bar' ? 5 * spec.typeScale + width / 2
+            : head === 'arrow' ? 8 * spec.typeScale : width / 2;
+          assert.ok(center.x - drawnEnd.x >= boundary + reach + spec.typeScale - 1e-7,
+            `${shape} ${head} curve=${curve} at ${spec.name}: role mark within stroked node`);
+        }
+});

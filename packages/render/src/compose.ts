@@ -386,6 +386,12 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
     if (len < u(1)) continue;
     const ux = dx / len,
       uy = dy / len;
+    const edgeStyle = edgeStyleFor(style, edge.kind),
+      highlighted = highlight.edgeIds.includes(edge.id),
+      active = attention(edge),
+      stroke = custom.color ?? (highlighted ? P.edge.highlight : edgePaint(P, edgeStyle.stroke)),
+      width = u(custom.width ?? (highlighted ? 2.6 : 1.4));
+    const head = view.domain === 'biology' ? edgeStyle.head : (custom.head ?? edgeStyle.head);
     const sourceBoundary = nodeGlyphRayDistance(
       source,
       { x: ux, y: uy },
@@ -403,11 +409,34 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
       config,
     );
     const originalTarget = radius(target) + u(5);
-    // Keep historical attachment positions when they already clear the glyph.
-    // Authored outlines that cover the old endpoint need additional room for
-    // the role marker (bar, arrow or hollow circle), not just for its centre.
-    const ra = Math.max(radius(source) + u(4), sourceBoundary);
-    const rb = targetBoundary > originalTarget ? targetBoundary + u(5) : originalTarget;
+    const targetAppearance = nodeAppearance(config, target);
+    // Preserve the existing film attachment where no geometry is authored.
+    // Otherwise reserve the full role-marker footprint beyond the stroked
+    // shape, not just the centre of the endpoint. This includes curved bars
+    // whose tangent is rotated and outlined circles with custom line widths.
+    const editedGeometry =
+      targetBoundary > originalTarget ||
+      targetAppearance.size !== undefined ||
+      targetAppearance.shape !== undefined ||
+      targetAppearance.borderWidth !== undefined ||
+      custom.width !== undefined ||
+      custom.head !== undefined;
+    const markerReach = edge.directed
+      ? head === 'hollow-circle'
+        ? u(4) + width / 2
+        : head === 'bar'
+          ? u(5) + width / 2
+          : head === 'arrow'
+            ? u(8)
+            : width / 2
+      : width / 2;
+    const ra = Math.max(
+      radius(source) + u(4),
+      sourceBoundary + (editedGeometry ? width / 2 : 0),
+    );
+    const rb = editedGeometry
+      ? Math.max(originalTarget, targetBoundary + markerReach + u(1))
+      : originalTarget;
     const start = { x: a.x + ux * ra, y: a.y + uy * ra },
       end = { x: b.x - ux * rb, y: b.y - uy * rb };
     const key = [edge.source, edge.target].sort().join('\0');
@@ -441,11 +470,6 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
         edgeObstacles.push({ x: x - u(4), y: y - u(4), w: u(8), h: u(8) });
       }
     }
-    const edgeStyle = edgeStyleFor(style, edge.kind),
-      highlighted = highlight.edgeIds.includes(edge.id),
-      active = attention(edge),
-      stroke = custom.color ?? (highlighted ? P.edge.highlight : edgePaint(P, edgeStyle.stroke)),
-      width = u(custom.width ?? (highlighted ? 2.6 : 1.4));
     const dash =
       custom.dash === undefined
         ? edgeStyle.dash
@@ -454,7 +478,6 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
           : custom.dash === 'dotted'
             ? [2, 4]
             : [];
-    const head = view.domain === 'biology' ? edgeStyle.head : (custom.head ?? edgeStyle.head);
     const parts: DisplayItem[] = [
       {
         type: 'path',
