@@ -868,13 +868,11 @@ for (const theme of ['light', 'dark'])
     async () => {
       const source = structuredClone(documents.literature);
       for (const node of source.characters) delete node.position;
-      await page
-        .locator('#fileInput')
-        .setInputFiles({
-          name: 'missing-review.json',
-          mimeType: 'application/json',
-          buffer: Buffer.from(JSON.stringify(source)),
-        });
+      await page.locator('#fileInput').setInputFiles({
+        name: 'missing-review.json',
+        mimeType: 'application/json',
+        buffer: Buffer.from(JSON.stringify(source)),
+      });
       await page.waitForFunction(
         () => document.getElementById('sourceName').textContent === 'missing-review.json',
       );
