@@ -36,6 +36,8 @@ export function makeStudio({
   // Test-only way to provide a frame with incremental a11y semantics while
   // continuing to exercise studio.ts through this shared simulated DOM.
   transformFrameText,
+  // Observe recomposed frames without pretending the simulated DOM rasterizes Canvas.
+  onRenderFrame,
   normalizeImage,
 } = {}) {
   const {
@@ -114,6 +116,7 @@ export function makeStudio({
           detailAt: options.detailAt,
         });
         if (transformFrameText) list.a11y = transformFrameText(list.a11y, frame, graph);
+        onRenderFrame?.({ frame, state, list });
         return { state, list };
       };
       return {

@@ -952,13 +952,16 @@ function releaseLayoutPointer(): void {
   dragging = null;
 }
 /** One cancellation path for history transitions, pointercancel and edit teardown. */
-function cancelActiveLayoutDrag(): void {
-  if (!dragging) return;
+/** Returns whether cancelling this drag changed the coordinates being shown. */
+function cancelActiveLayoutDrag(): boolean {
+  if (!dragging) return false;
+  const restored = Boolean(currentLayout && dragHasChanges(dragging, currentLayout));
   if (currentLayout) {
     cancelPositionDrag(currentLayout, dragging);
     projectSavepoint.positionsChanged();
   }
   releaseLayoutPointer();
+  return restored;
 }
 function stopLayoutEdit(): void {
   if (!layoutEditing) return;
@@ -988,12 +991,16 @@ layoutToggle.addEventListener('click', () => {
 layoutReset.addEventListener('click', () => {
   cancelLayoutPreview();
   if (!currentLayout || !originalLayout) return;
-  cancelActiveLayoutDrag();
+  const restoredDragPreview = cancelActiveLayoutDrag();
   const changedPositions = layoutChanged();
   // Reset is an explicit discard of all pending coordinate inputs, not a
   // new authored layout commit when only unsubmitted drafts existed.
   coordinateDrafts.clear();
   if (!changedPositions) {
+    // Cancelling the first, uncommitted drag can restore the saved positions
+    // without creating a history change. The renderer still holds the pixels
+    // from the last pointermove, so repaint before leaving this no-op branch.
+    if (restoredDragPreview) setFrame(playback.frame, false);
     updateLayoutFields();
     updateLayoutControls();
     return;

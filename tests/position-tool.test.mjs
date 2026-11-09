@@ -337,6 +337,57 @@ test('pointercancel rolls back only the interrupted drag and preserves earlier e
   assert.equal(app.node('layoutReset').disabled, true, 'cancelled first drag stays clean');
 });
 
+test('Reset during a first live drag repaints the original frame and keeps history clean', async () => {
+  const painted = [];
+  const app = makeStudio({
+    // The shared VM harness composes DisplayLists but does not rasterize Canvas.
+    onRenderFrame: ({ list }) => painted.push(JSON.stringify(list.items)),
+  });
+  await app.ready;
+  assert.equal(app.window.renderAt(48), true);
+  const frame = app.window.studioFrame();
+  const node = frame.view.nodes.find((item) => frame.reveal.nodes[item.id] > 0.5);
+  assert.ok(node);
+  const original = literature.characters.find((item) => item.id === node.id)?.position;
+  assert.ok(original);
+  await app.node('layoutToggle').click();
+  const initialFrame = painted.at(-1);
+  const stage = app.node('stage');
+  const screen = screenPosition(original, frame.cameraResolved, DEFAULT_FRAME_SPEC);
+  const pointer = (clientX, clientY) => ({
+    pointerId: 65,
+    isPrimary: true,
+    pointerType: 'mouse',
+    button: 0,
+    clientX,
+    clientY,
+  });
+  await stage.dispatch('pointerdown', pointer(screen.x, screen.y));
+  await stage.dispatch('pointermove', pointer(screen.x + 42, screen.y + 16));
+  assert.notEqual(painted.at(-1), initialFrame, 'the drag preview changes rendered items');
+  assert.equal(app.node('layoutReset').disabled, false);
+  assert.equal(stage.hasPointerCapture(65), true);
+  const renderedBeforeReset = painted.length;
+
+  await app.node('layoutReset').click();
+  assert.equal(stage.hasPointerCapture(65), false, 'Reset ends pointer capture');
+  assert.equal(painted.length, renderedBeforeReset + 1, 'Reset recomposes the Canvas frame');
+  assert.equal(painted.at(-1), initialFrame, 'Canvas frame matches the original coordinates');
+  assert.deepEqual(
+    { x: Number(app.node('layoutX').value), y: Number(app.node('layoutY').value) },
+    original,
+  );
+  assert.equal(app.node('layoutReset').disabled, true);
+  assert.equal(app.node('visualUndo').disabled, true, 'a cancelled draft adds no history entry');
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
+
+  await stage.dispatch('pointerup', pointer(screen.x + 42, screen.y + 16));
+  assert.equal(painted.length, renderedBeforeReset + 1, 'late pointerup cannot redraw old drag');
+  await app.node('layoutExport').click();
+  const saved = JSON.parse(await app.blobs.at(-1).text());
+  assert.deepEqual(saved.characters.find((item) => item.id === node.id).position, original);
+});
+
 test('history replay cancels live drags before undo/redo and ignores late pointerup', async () => {
   const app = makeStudio();
   await app.ready;
