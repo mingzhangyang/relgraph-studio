@@ -69,7 +69,9 @@ The accepted B1.5 scope is deterministic data → adapter → graph → pure tim
 ## Network authoring before B2-2
 
 - [x] Batch A: coordinated visual presets, inherited node/edge styles, independent display copy, projection-safe stable property panel, local project import/export and history. See [configuration](NETWORK-AUTHORING.md).
-- [ ] Batch B: deterministic layout strategies, locks, explicit preview/apply and layout history.
+- [x] Batch B: deterministic force/circle/generic layered/manual strategies; preserve/missing/rearrange, locks, explicit preview/apply/cancel and unified layout/manual history. Saved coordinates drive playback, without runtime simulation.
+
+Implementation and local acceptance are complete in Draft [#22](https://github.com/mingzhangyang/relgraph-studio/pull/22) (A) and stacked [#23](https://github.com/mingzhangyang/relgraph-studio/pull/23) (B); merge remains pending. The original delivery passed **201/201 tests**, **47/47 Chromium**, **44/44 Golden frames** and **13/13 export checks**. All eleven Copilot findings have subsequent fixes and targeted regressions; see [review corrections, visual comparison and updated validation](NETWORK-REVIEW-FIXES.md), alongside [original acceptance and remaining limits](NETWORK-AUTHORING-ACCEPTANCE.md). Squash A before B, transplant each independent layer onto new main and verify its diff before merging. B2-2 starts from the reviewed resulting main.
 
 ## B2 — Source-verified film
 
