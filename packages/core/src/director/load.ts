@@ -1,3 +1,4 @@
+import { validateProjectConfig, type ProjectConfig } from '../project.js';
 import { adaptLiteratureDocument, literaryDetailsAt } from '../domains/literature.js';
 import { inspectRelGraph } from '../relgraph.js';
 import { adaptBiologyDocument, validateBiologyDocument } from '../domains/biology.js';
@@ -91,6 +92,33 @@ function withOwner(doc: unknown, entry: Diagnostic): Diagnostic {
 /** One entry point for built-in examples and untrusted local JSON files. */
 export function loadDocument(doc: unknown): LoadResult {
   try {
+    if (object(doc) && doc.format === 'relgraph.studio/1') {
+      const errors = validateProjectConfig(doc.config);
+      if (Object.keys(doc).some((k) => !['format', 'source', 'config'].includes(k)))
+        errors.push('project: unknown field');
+      if (object(doc.source) && doc.source.format === 'relgraph.studio/1')
+        errors.push('project: nested project');
+      if (errors.length)
+        return {
+          valid: false,
+          errors: errors.map((path) =>
+            issue('PROJECT_CONFIG', path, '项目配置无效。', '修正该配置字段或移除覆盖。'),
+          ),
+          warnings: [],
+        };
+      const result = loadDocument(doc.source);
+      if (!result.valid) return result;
+      const checked = validateProjectConfig(doc.config, result.graph);
+      if (checked.length)
+        return {
+          valid: false,
+          errors: checked.map((path) =>
+            issue('PROJECT_CONFIG', path, '项目配置无效。', '检查对象引用与样式范围。'),
+          ),
+          warnings: [],
+        };
+      return { ...result, graph: { ...result.graph, project: doc.config as ProjectConfig } };
+    }
     let adapted;
     let detailAt: DetailAt = () => undefined;
     if (object(doc) && Object.hasOwn(doc, 'schemaVersion')) {

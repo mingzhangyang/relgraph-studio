@@ -441,6 +441,88 @@ if (!args.has('--no-browser') && !update) {
   );
 }
 
+// Saved custom projects must survive worker/CLI export in both film sizes/themes.
+for (const example of examples)
+  for (const theme of THEMES)
+    for (const size of ['landscape-720p', 'landscape-1080p']) {
+      await check(`custom project ${example.key}/${theme}/${size}`, async () => {
+        const source = JSON.parse(await readFile(join(root, example.file), 'utf8'));
+        const node = example.result.graph.nodes[0];
+        const config = {
+          nodes: {
+            defaults: { fontSize: 18, borderWidth: 3 },
+            objects: { [node.id]: { size: 23, fill: '#334455' } },
+          },
+          edges: { defaults: { width: 2.4, dash: 'dotted', curve: 28, showLabel: true } },
+          text: { nodes: { [node.id]: { label: '显示文案' } } },
+        };
+        const project = { format: 'relgraph.studio/1', source, config };
+        const file = join(outputDir, `custom-${example.key}.studio.json`);
+        await writeFile(file, JSON.stringify(project));
+        const loaded = loadDocument(project);
+        assert.equal(loaded.valid, true);
+        const renderer = createHeadlessRenderer(loaded.graph, layoutGraph(loaded.graph), {
+          theme,
+          frameSpec: size,
+          detailAt: loaded.detailAt,
+        });
+        const expected = renderer.rgbaAt(100);
+        assert.deepEqual(renderer.rgbaAt(24), renderer.rgbaAt(24));
+        assert.deepEqual(renderer.rgbaAt(100), expected);
+        const stem = `custom-${example.key}-${theme}-${size}`,
+          pattern = join(outputDir, stem + '-%05d.png'),
+          out = join(outputDir, stem + '.mp4');
+        await run(process.execPath, [
+          relgraph,
+          'render',
+          file,
+          '--frames',
+          pattern,
+          '--from',
+          '100',
+          '--to',
+          '100',
+          '--theme',
+          theme,
+          '--frame-spec',
+          size,
+          '--jobs',
+          '1',
+        ]);
+        const png = await decodePng(await readFile(pattern.replace('%05d', '00100')));
+        assert.deepEqual(png.data, expected);
+        await run(process.execPath, [
+          relgraph,
+          'render',
+          file,
+          '--out',
+          out,
+          '--from',
+          '100',
+          '--to',
+          '103',
+          '--theme',
+          theme,
+          '--frame-spec',
+          size,
+          '--jobs',
+          '1',
+        ]);
+        const probe = await ffprobe(
+          out,
+          'stream=width,height,nb_read_frames,codec_name,pix_fmt,color_space',
+        );
+        const stream = probe.streams[0],
+          spec = frameSpecFor(size);
+        assert.equal(stream.width, spec.width);
+        assert.equal(stream.height, spec.height);
+        assert.equal(Number(stream.nb_read_frames), 4);
+        assert.equal(stream.codec_name, 'h264');
+        assert.equal(stream.pix_fmt, 'yuv420p');
+        assert.equal(stream.color_space, 'bt709');
+      });
+    }
+
 // ------------------------------------------------------------------- update
 
 const failed = results.filter((result) => !result.ok);

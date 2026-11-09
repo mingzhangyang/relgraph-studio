@@ -54,6 +54,7 @@ export interface VisualScene {
   openDetailNodeId?: NodeId;
 }
 export interface VisualGraph {
+  project?: import('../src/project.js').ProjectConfig;
   domain: string;
   meta: { title: string; description?: string; sourceNote?: string };
   timeline?: { unit: string; total?: number };

@@ -1,3 +1,6 @@
+import { createProject, projectSource, validateProjectConfig } from '@relgraph/core';
+import { ProjectHistory } from './project-editor-model.js';
+import { createProjectEditor } from './project-editor-view.js';
 import { parseDocument, applyGraphPositions, type LoadResult } from '@relgraph/core';
 import { layoutGraph } from '@relgraph/core';
 import { frameCount } from '@relgraph/core';
@@ -110,6 +113,64 @@ const transcriptView = createTranscriptView(document, {
   nodeCount: $('nodeCount'),
   edgeCount: $('edgeCount'),
 });
+const projectHistory = new ProjectHistory();
+const projectEditor = createProjectEditor(document, $('appearanceEditor'), {
+  change(config) {
+    if (!graph || loading) return;
+    const errors = validateProjectConfig(config, graph);
+    if (errors.length) {
+      projectEditor.error('配置无效：' + errors.join('；'));
+      return;
+    }
+    projectEditor.error('');
+    setPlaying(false);
+    projectHistory.commit(config);
+    graph.project = projectHistory.value;
+    rebuildRenderer();
+  },
+  undo() {
+    if (graph) {
+      projectHistory.undo();
+      graph.project = projectHistory.value;
+      rebuildRenderer();
+    }
+  },
+  redo() {
+    if (graph) {
+      projectHistory.redo();
+      graph.project = projectHistory.value;
+      rebuildRenderer();
+    }
+  },
+  pause() {
+    setPlaying(false);
+  },
+  save() {
+    if (!graph || !currentLayout || sourceDocument === null || loading) return;
+    const config = {
+      ...projectHistory.value,
+      layout: {
+        type: 'manual' as const,
+        mode: 'preserve' as const,
+        seed: 0,
+        spacing: 160,
+        iterations: 160,
+        locked: [],
+        ...projectHistory.value.layout,
+        positions: Object.fromEntries(currentLayout),
+      },
+    };
+    const errors = validateProjectConfig(config, graph);
+    if (errors.length) {
+      projectEditor.error('保存失败：' + errors.join('；'));
+      return;
+    }
+    downloadJson(
+      createProject(sourceDocument, config),
+      sourceFilename.replace(/\.json$/i, '') + '.studio.json',
+    );
+  },
+});
 const layoutControls = {
   canvas,
   toggle: layoutToggle,
@@ -196,6 +257,7 @@ function setFrame(next: number, updatePosition = true): DirectorFrameState | und
   currentFrameState = state;
   renderPlaybackFrame(playbackControls, playbackDisplay(playback, p.index, p.totalSec));
   transcriptView.render(list.a11y);
+  projectEditor.render(state, projectHistory.value, projectHistory.canUndo, projectHistory.canRedo);
   $('domainTime').textContent =
     p.domainAt === null
       ? '领域时间：未指定'
@@ -222,6 +284,8 @@ function paintEmptyStage(message: string): void {
 function clearStudio(): void {
   setPlaying(false);
   graph = null;
+  projectHistory.reset();
+  projectEditor.clear();
   renderer = null;
   currentLayout = null;
   originalLayout = null;
@@ -258,7 +322,8 @@ function applyResult(result: LoadResult, name: string, sourceText?: string): voi
     return;
   }
   graph = result.graph;
-  sourceDocument = sourceText ? JSON.parse(sourceText) : null;
+  sourceDocument = sourceText ? projectSource(JSON.parse(sourceText)) : null;
+  projectHistory.reset(graph.project ?? {});
   sourceFilename = /\.json$/i.test(name) ? name : 'relgraph.json';
   currentDetailAt = result.detailAt || (() => undefined);
   currentLayout = layoutGraph(graph);
@@ -557,6 +622,10 @@ layoutReset.addEventListener('click', () => {
 const pointerLocation = (event: PointerEvent): { x: number; y: number } | null =>
   canvasPoint({ x: event.clientX, y: event.clientY }, canvas.getBoundingClientRect(), canvas);
 canvas.addEventListener('pointerdown', (event) => {
+  if (!layoutEditing && !loading && renderer && currentFrameState) {
+    const point = pointerLocation(event);
+    if (point) projectEditor.pick(renderer.displayListAt(playback.frame), point);
+  }
   if (!layoutEditing || !renderer || !currentLayout || !currentFrameState || dragging) return;
   if (event.isPrimary === false || (event.pointerType === 'mouse' && event.button !== 0)) return;
   const point = pointerLocation(event);
@@ -570,6 +639,7 @@ canvas.addEventListener('pointerdown', (event) => {
     point,
     radius,
     event.pointerId,
+    graph?.project,
   );
   if (!nextDrag) return;
   dragging = nextDrag;
@@ -617,6 +687,18 @@ canvas.addEventListener('pointercancel', (event) => {
   updateLayoutFields();
   updateLayoutControls();
 });
+function downloadJson(value: unknown, filename: string): void {
+  const url = URL.createObjectURL(
+    new Blob([JSON.stringify(value, null, 2) + '\n'], { type: 'application/json;charset=utf-8' }),
+  );
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 layoutExport.addEventListener('click', () => {
   if (!graph || !currentLayout || sourceDocument === null) return;
   try {

@@ -87,6 +87,13 @@ export interface FrameText {
 }
 
 export interface DisplayList {
+  selectionClip?: { x: number; y: number; w: number; h: number };
+  selection?: {
+    kind: 'node' | 'edge';
+    id: string;
+    box?: { x: number; y: number; w: number; h: number };
+    points?: { x: number; y: number }[];
+  }[];
   width: number;
   height: number;
   items: DisplayItem[];

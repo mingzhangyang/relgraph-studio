@@ -641,3 +641,28 @@ test('miter-joined diamond tip remains selectable when just inside stage clip', 
     null,
   );
 });
+
+test('custom size, shape and border share actual clipped geometry with drag picking', () => {
+  const spec = DEFAULT_FRAME_SPEC,
+    camera = { x: 0, y: 0, scale: 1 },
+    style = domainStyle('literature');
+  const node = { id: 'custom', kind: 'person', label: 'Custom' },
+    center = { x: spec.stage.x - 45, y: 330 },
+    click = { x: spec.stage.x + 1, y: 330 };
+  const positions = new Map([[node.id, graphPosition(center, camera, spec)]]),
+    reveal = { nodes: { custom: 1 }, edges: {} };
+  for (const shape of ['circle', 'pill', 'diamond']) {
+    const config = { nodes: { objects: { custom: { size: 48, shape, borderWidth: 8 } } } };
+    assert.equal(nodeGlyphIntersectsStage(node, center, 1, spec, style), false);
+    assert.equal(nodeGlyphIntersectsStage(node, center, 1, spec, style, 1, config), true);
+    assert.equal(
+      hitVisibleNode([node], positions, reveal, camera, spec, click, 24, style, config),
+      node.id,
+    );
+    assert.ok(
+      nodeGlyphBounds(node, center, 1, spec, style, 1, config).x +
+        nodeGlyphBounds(node, center, 1, spec, style, 1, config).w >
+        click.x,
+    );
+  }
+});

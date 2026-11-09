@@ -598,3 +598,22 @@ footer span { color: var(--gold); }
   .shot-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .sectionline h1, .sectionline h2 { font-size: 15px; }
 }
+
+/* Property controls remain mounted while the film plays. */
+.appearance-editor { display: grid; gap: 10px; }
+.appearance-editor label { display: grid; gap: 5px; font-size: 12px; }
+.appearance-editor input,.appearance-editor select,.appearance-editor textarea { width: 100%; min-width: 0; padding: 7px; border: 1px solid var(--line, #87929b); border-radius: 5px; background: var(--panel, transparent); color: inherit; font: inherit; }
+.appearance-editor option { color: #202b35; }
+.appearance-editor button { padding: 7px 10px; }
+.appearance-editor .property-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding-top: 12px; }
+.appearance-editor small { opacity: .7; }
+.appearance-editor details summary { cursor: pointer; font-size: 13px; }
+/* A tall inspector must scroll with the document, keeping source controls reachable. */
+.rightbar { position: static; }
+.appearance-editor p { margin: 0; line-height: 1.65; }
+.appearance-editor button { border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--surface-2); color: var(--text); font: 500 12px var(--sans); cursor: pointer; }
+.appearance-editor button:hover:not(:disabled) { border-color: var(--gold); background: var(--surface-hover); }
+.appearance-editor button:disabled { opacity: .4; cursor: default; }
+.appearance-editor input,.appearance-editor select,.appearance-editor textarea { background: var(--bg-raised); }
+.appearance-editor .property-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+#visualSave { border-color: var(--gold-line); color: var(--gold-strong); }

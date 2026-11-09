@@ -7,3 +7,5 @@ export * from './node-geometry.js';
 export * from './locale.js';
 export * from './theme.js';
 export * from './backends/canvas2d.js';
+
+export * from './selection.js';

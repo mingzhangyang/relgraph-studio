@@ -104,12 +104,12 @@ async function loadExample(page, example) {
 
 /** SHA-256 of the canvas pixels, so equal hashes mean identical frames. */
 async function canvasHash(page) {
-  const bytes = await page.evaluate(() => {
+  return page.evaluate(async () => {
     const canvas = document.getElementById('stage');
     const data = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
-    return Array.from(new Uint8Array(data.buffer, 0, data.length));
+    const hash = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(hash), (b) => b.toString(16).padStart(2, '0')).join('');
   });
-  return createHash('sha256').update(Uint8Array.from(bytes)).digest('hex');
 }
 
 async function canvasPixel(page, x, y) {
@@ -779,6 +779,161 @@ const captured = [];
 // Every frame this run is expected to produce, captured or not.
 const expectedFiles = [];
 const baselineFiles = new Set(reference?.frames.map((frame) => frame.file) ?? []);
+{
+  const { context, page, problems } = await openStudio();
+  await check(
+    'review: global values, pending edits on Canvas selection, and invalid project save',
+    async () => {
+      await page.locator('#appearanceEditor details').evaluate((e) => (e.open = true));
+      await page.selectOption('#visualScope', 'global');
+      await page.fill('#visual-fontSize', '23');
+      await page.locator('#visual-fontSize').dispatchEvent('change');
+      await page.focus('#visualPreset');
+      await page.evaluate(() => window.renderAt(1));
+      assert.equal(await page.inputValue('#visual-fontSize'), '23');
+      await page.selectOption('#visualScope', 'object');
+      const ids = await page
+        .locator('#visualObject option')
+        .evaluateAll((options) => options.map((o) => o.value).filter(Boolean));
+      const [a, b] = ids;
+      const pointFor = async (id) => {
+        await page.locator('#stage').scrollIntoViewIfNeeded();
+        return page.evaluate((id) => {
+          const state = window.studioFrame(),
+            node = state.view.nodes.find((n) => n.id === id),
+            r = document.getElementById('stage').getBoundingClientRect();
+          return {
+            x:
+              r.left +
+              ((640 + (node.position.x - state.cameraResolved.x) * state.cameraResolved.scale) *
+                r.width) /
+                1280,
+            y:
+              r.top +
+              ((330 + (node.position.y - state.cameraResolved.y) * state.cameraResolved.scale) *
+                r.height) /
+                720,
+          };
+        }, id);
+      };
+      await page.selectOption('#visualObject', a);
+      await page.fill('#visualLabel', 'Pending A');
+      let point = await pointFor(b);
+      await page.mouse.click(point.x, point.y);
+      assert.equal(await page.inputValue('#visualObject'), b);
+      assert.notEqual(await page.inputValue('#visualLabel'), 'Pending A');
+      await page.selectOption('#visualObject', a);
+      assert.equal(await page.inputValue('#visualLabel'), 'Pending A');
+      await page.locator('#appearanceEditor details').evaluate((e) => (e.open = true));
+      await page.fill('#visual-fontSize', '27');
+      point = await pointFor(b);
+      await page.mouse.click(point.x, point.y);
+      assert.equal(await page.inputValue('#visualObject'), b);
+      assert.equal(await page.inputValue('#visual-fontSize'), '23');
+      await page.selectOption('#visualObject', a);
+      assert.equal(await page.inputValue('#visual-fontSize'), '27');
+      await page.click('#layoutToggle');
+      await page.selectOption('#layoutNode', a);
+      await page.fill('#layoutX', '10000001');
+      await page.fill('#layoutY', '0');
+      await page.click('#layoutApply');
+      let downloads = 0;
+      page.on('download', () => downloads++);
+      await page.click('#visualSave');
+      assert.ok((await page.locator('#visualError').textContent()).includes('保存失败'));
+      assert.equal(downloads, 0);
+      assert.deepEqual(problems, []);
+    },
+  );
+  await context.close();
+}
+
+// Property authoring uses the production projection and both render backends read saved config.
+for (const theme of ['light', 'dark']) {
+  const { context, page, problems } = await openStudio({ colorScheme: theme });
+  await check(`project styles, text, history, focus and round trip (${theme})`, async () => {
+    const options = await page.locator('#visualObject option').allTextContents();
+    assert.ok(options.length > 1);
+    await page.selectOption('#visualObject', { index: 1 });
+    const selected = await page.inputValue('#visualObject');
+    await page.locator('#appearanceEditor details').evaluate((e) => (e.open = true));
+    await page.fill('#visual-fontSize', '23');
+    await page.locator('#visual-fontSize').dispatchEvent('change');
+    assert.equal(await page.inputValue('#visual-fontSize'), '23');
+    await page.click('#visualUndo');
+    assert.notEqual(await page.inputValue('#visual-fontSize'), '23');
+    await page.click('#visualRedo');
+    assert.equal(await page.inputValue('#visual-fontSize'), '23');
+    await page.fill('#visualLabel', '显示文案测试');
+    await page.locator('#visualLabel').dispatchEvent('change');
+    assert.ok((await page.locator('#transcript').textContent()).includes('显示文案测试'));
+    await page.focus('#visualLabel');
+    await page.evaluate(() => window.renderAt(1));
+    assert.equal(await page.evaluate(() => document.activeElement.id), 'visualLabel');
+    const expected = await canvasPng(page);
+    const downloadPromise = page.waitForEvent('download');
+    await page.click('#visualSave');
+    const download = await downloadPromise,
+      data = JSON.parse(await readFile(await download.path(), 'utf8'));
+    assert.equal(data.format, 'relgraph.studio/1');
+    assert.equal(data.config.text.nodes[selected].label, '显示文案测试');
+    assert.deepEqual(data.source, documents.literature);
+    await page.locator('#fileInput').setInputFiles({
+      name: 'roundtrip.studio.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(JSON.stringify(data)),
+    });
+    await page.waitForFunction(
+      () => document.getElementById('sourceName').textContent === 'roundtrip.studio.json',
+    );
+    await waitReady(page);
+    await page.evaluate(() => window.renderAt(1));
+    assert.deepEqual(await canvasPng(page), expected);
+    await page.selectOption('#visualObject', selected);
+    await page.click('#visualRestoreText');
+    assert.ok(!(await page.locator('#transcript').textContent()).includes('显示文案测试'));
+    assert.deepEqual(problems, []);
+  });
+  await context.close();
+}
+{
+  const { context, page } = await openStudio();
+  await check(
+    'property controls withdraw custom hidden text on rewind and document switch',
+    async () => {
+      const source = JSON.parse(
+        await readFile(join(root, 'datasets/honglou-chengjia-opening/graph.relgraph.json'), 'utf8'),
+      );
+      const id = source.characters[0].id;
+      const project = {
+        format: 'relgraph.studio/1',
+        source,
+        config: { text: { nodes: { [id]: { label: '保密显示文案' } } } },
+      };
+      await page.locator('#fileInput').setInputFiles({
+        name: 'safe-project.json',
+        mimeType: 'application/json',
+        buffer: Buffer.from(JSON.stringify(project)),
+      });
+      await page.waitForFunction(
+        () => document.getElementById('sourceName').textContent === 'safe-project.json',
+      );
+      await waitReady(page);
+      assert.ok(!(await page.locator('body').textContent()).includes('保密显示文案'));
+      await page.evaluate(() => window.renderAt(48));
+      await page.selectOption('#visualObject', id);
+      await page.focus('#visualLabel');
+      assert.equal(await page.inputValue('#visualLabel'), '保密显示文案');
+      await page.evaluate(() => window.renderAt(0));
+      assert.equal(await page.inputValue('#visualLabel'), '');
+      assert.ok(!(await page.locator('#appearanceEditor').textContent()).includes('保密显示文案'));
+      await loadExample(page, EXAMPLES[1]);
+      assert.equal(await page.inputValue('#visualObject'), '');
+    },
+  );
+  await context.close();
+}
+
 // Start empty so frames left by an earlier run cannot pass for this run's.
 await rm(join(outputDir, 'frames'), { recursive: true, force: true });
 await mkdir(join(outputDir, 'frames'), { recursive: true });
