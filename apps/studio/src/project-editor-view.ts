@@ -116,12 +116,13 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
   const descWrap = el('label', '显示说明');
   descWrap.append(description);
   host.append(descWrap);
+  let buttonHost = host;
   const button = (text: string, id: string, fn: () => void) => {
     const b = el('button', text);
     b.type = 'button';
     b.id = id;
     b.addEventListener('click', fn);
-    host.append(b);
+    buttonHost.append(b);
     return b;
   };
   button('恢复原文', 'visualRestoreText', () => {
@@ -164,7 +165,9 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
         reset = el('button', '↺');
       input.id = 'visual-' + key;
       if (typeof type === 'string') {
-        (input as HTMLInputElement).type = type;
+        (input as HTMLInputElement).type = type === 'color' ? 'text' : type;
+        (input as HTMLInputElement).placeholder =
+          type === 'color' ? '#RRGGBB · 留空继承' : '留空继承';
         (input as HTMLInputElement).step = 'any';
       } else {
         const empty = el('option', '继承');
@@ -260,9 +263,7 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
         key as never,
       );
       if (doc.activeElement !== c.input)
-        c.input.value = String(
-          (resolved as Record<string, unknown>)[key] ?? (c.input.type === 'color' ? '#808080' : ''),
-        );
+        c.input.value = String((resolved as Record<string, unknown>)[key] ?? '');
     }
   };
   preset.addEventListener('change', () =>
@@ -298,6 +299,9 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
   };
   label.addEventListener('change', () => changeText('label', label.value));
   description.addEventListener('change', () => changeText('description', description.value));
+  buttonHost = el('div');
+  buttonHost.className = 'property-actions';
+  host.append(buttonHost);
   button('清除当前范围样式', 'visualClear', () =>
     actions.change(clearAppearance(config, kind, item(), scope.value as Scope)),
   );

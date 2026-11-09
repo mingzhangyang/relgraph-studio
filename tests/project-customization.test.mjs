@@ -114,6 +114,7 @@ test('display copy and evidence stay separate; project serialization reproduces 
     assert.equal(result.graph.nodes[0].label, node.label);
     const list = compose(result.graph, source === verified ? 48 : 0);
     assert.ok(list.a11y.nodes.includes('自定义文案'));
+    assert.ok(list.a11y.relations.some((label) => label.includes('显示标签')));
     assert.ok(texts(list).includes('自定义文案'));
   }
 });

@@ -610,3 +610,10 @@ footer span { color: var(--gold); }
 .appearance-editor details summary { cursor: pointer; font-size: 13px; }
 /* A tall inspector must scroll with the document, keeping source controls reachable. */
 .rightbar { position: static; }
+.appearance-editor p { margin: 0; line-height: 1.65; }
+.appearance-editor button { border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--surface-2); color: var(--text); font: 500 12px var(--sans); cursor: pointer; }
+.appearance-editor button:hover:not(:disabled) { border-color: var(--gold); background: var(--surface-hover); }
+.appearance-editor button:disabled { opacity: .4; cursor: default; }
+.appearance-editor input,.appearance-editor select,.appearance-editor textarea { background: var(--bg-raised); }
+.appearance-editor .property-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+#visualSave { border-color: var(--gold-line); color: var(--gold-strong); }

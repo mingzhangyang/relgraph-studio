@@ -634,7 +634,8 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
     const edgeFont = label.font;
     const text = fitText(measure, label.text, edgeFont, u(150)),
       w = measure(text, edgeFont) + u(10),
-      box = { x: label.x - w / 2, y: label.y - u(18), w, h: u(17) };
+      h = Math.max(u(17), edgeFont.size * 1.4),
+      box = { x: label.x - w / 2, y: label.y - h - u(1), w, h };
     if (!inBounds(box) || occupied.some((o) => rectsIntersect(box, o))) continue;
     occupied.push(box);
     graphItems.push(
@@ -648,7 +649,7 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
         type: 'text',
         text,
         x: box.x + u(5),
-        y: box.y + u(9),
+        y: box.y + h / 2 + u(0.5),
         font: edgeFont,
         fill: label.color,
         baseline: 'middle',
@@ -823,7 +824,7 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
         labels.get(edge.target) ?? edge.target,
         Boolean(edge.directed),
         caption
-          ? captionWithLabel(localize(caption, locale), edge.label)
+          ? captionWithLabel(localize(caption, locale), edgeLabel(edge))
           : edgeLabel(edge) || edge.kind,
       );
     }),
