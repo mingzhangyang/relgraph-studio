@@ -1093,7 +1093,10 @@ test('studio SVG feedback follows the safe inspector selection and scope without
   const scope = viewControl(app, 'visualScope');
   scope.value = 'global';
   await scope.dispatch('change');
-  assert.equal(note.attributes['data-affected'], String(app.window.studioFrame().view.nodes.length));
+  assert.equal(
+    note.attributes['data-affected'],
+    String(app.window.studioFrame().view.nodes.length),
+  );
   assert.ok(Number(note.attributes['data-outlined']) >= 1);
   assert.match(note.textContent, /当前投影/);
   assert.ok(stage.children[1].children.every((shape) =>
