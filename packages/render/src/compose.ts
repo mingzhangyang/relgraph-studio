@@ -829,5 +829,5 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
       );
     }),
   };
-  return { width: W, height: H, items, a11y, selection };
+  return { width: W, height: H, items, a11y, selection, selectionClip: { ...stage } };
 }

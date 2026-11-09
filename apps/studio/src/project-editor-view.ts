@@ -9,7 +9,7 @@ import {
   type VisualNode,
   type VisualEdge,
 } from '@relgraph/core';
-import type { DisplayList } from '@relgraph/render';
+import { hitDisplayList, type DisplayList } from '@relgraph/render';
 import {
   editAppearance,
   clearAppearance,
@@ -333,17 +333,7 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
       error.textContent = message;
     },
     pick(list: DisplayList, point: { x: number; y: number }) {
-      const stage = list.selection ?? [];
-      const hit = [...stage]
-        .reverse()
-        .find((h) =>
-          h.box
-            ? point.x >= h.box.x &&
-              point.x <= h.box.x + h.box.w &&
-              point.y >= h.box.y &&
-              point.y <= h.box.y + h.box.h
-            : h.points?.some((p) => Math.hypot(p.x - point.x, p.y - point.y) < 9),
-        );
+      const hit = hitDisplayList(list, point);
       if (hit) {
         actions.pause();
         selection = { kind: hit.kind, id: hit.id };

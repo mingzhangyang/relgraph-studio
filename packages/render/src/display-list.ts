@@ -87,6 +87,7 @@ export interface FrameText {
 }
 
 export interface DisplayList {
+  selectionClip?: { x: number; y: number; w: number; h: number };
   selection?: {
     kind: 'node' | 'edge';
     id: string;

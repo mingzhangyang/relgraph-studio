@@ -1,3 +1,4 @@
+import { hitDisplayList } from '../packages/render/src/selection.ts';
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import literature from '../examples/honglou-provisional.relgraph.json' with { type: 'json' };
@@ -160,4 +161,25 @@ test('shared workspace harness mounts the real property view and retains control
   await studio.ready;
   // Existing workspace harness also exercises all newly imported model/view code.
   assert.ok(studio.elements.get('appearanceEditor').children.length > 0);
+});
+
+test('continuous safe display-list hit testing respects graph clipping and node priority', () => {
+  const list = {
+    selectionClip: { x: 0, y: 0, w: 1000, h: 500 },
+    selection: [
+      {
+        kind: 'edge',
+        id: 'edge',
+        points: [
+          { x: 0, y: 100 },
+          { x: 1000, y: 100 },
+        ],
+      },
+      { kind: 'node', id: 'node', box: { x: 90, y: 90, w: 20, h: 20 } },
+    ],
+  };
+  assert.deepEqual(hitDisplayList(list, { x: 500, y: 103 }), { kind: 'edge', id: 'edge' });
+  assert.deepEqual(hitDisplayList(list, { x: 100, y: 100 }), { kind: 'node', id: 'node' });
+  assert.equal(hitDisplayList(list, { x: 1001, y: 100 }), null);
+  assert.equal(hitDisplayList(list, { x: NaN, y: 0 }), null);
 });
