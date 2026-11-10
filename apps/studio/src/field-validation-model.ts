@@ -1,15 +1,10 @@
-import {
-  APPEARANCE_FIELD_RULES,
-  validAppearanceField,
-  type AppearanceKind,
-} from '@relgraph/core';
+import { APPEARANCE_FIELD_RULES, validAppearanceField, type AppearanceKind } from '@relgraph/core';
 
 export type AppearanceDraftResult =
   | { ok: true; value: string | number | boolean | undefined; message: '' }
   | { ok: false; message: string };
 
-const valuesFor = (kind: AppearanceKind, field: string) =>
-  APPEARANCE_FIELD_RULES[kind][field];
+const valuesFor = (kind: AppearanceKind, field: string) => APPEARANCE_FIELD_RULES[kind][field];
 
 export function appearanceFieldHint(kind: AppearanceKind, field: string): string {
   const rule = valuesFor(kind, field);
@@ -65,8 +60,7 @@ export function parseAppearanceDraft(
         return { ok: false, message: '请选择有效选项。' };
       break;
     case 'boolean':
-      if (raw !== 'true' && raw !== 'false')
-        return { ok: false, message: '请选择有效选项。' };
+      if (raw !== 'true' && raw !== 'false') return { ok: false, message: '请选择有效选项。' };
       value = raw === 'true';
       break;
     case 'image':

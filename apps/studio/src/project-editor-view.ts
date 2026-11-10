@@ -159,9 +159,7 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
   const labelWrap = el('label', '显示名称 / 关系标签');
   labelWrap.append(label);
   host.append(labelWrap);
-  label.addEventListener('input', () =>
-    rememberDraft('label', label.value, expectedText('label')),
-  );
+  label.addEventListener('input', () => rememberDraft('label', label.value, expectedText('label')));
   const description = el('textarea');
   description.id = 'visualDescription';
   description.maxLength = 2000;
@@ -396,11 +394,7 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
         empty.value = '';
         input.append(empty);
         const values =
-          rule?.type === 'enum'
-            ? rule.values
-            : rule?.type === 'boolean'
-              ? [true, false]
-              : [];
+          rule?.type === 'enum' ? rule.values : rule?.type === 'boolean' ? [true, false] : [];
         for (const value of values) {
           const option = el('option', String(value));
           option.value = String(value);
@@ -539,9 +533,7 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
     // Only preserve focus within the same object/scope; switching context
     // must show that context's own pending draft (if any), not the old input.
     if (!selected || contextChanged || doc.activeElement !== label)
-      label.value = selected
-        ? displayedValue('label', text?.label ?? selected.label ?? '')
-        : '';
+      label.value = selected ? displayedValue('label', text?.label ?? selected.label ?? '') : '';
     if (!selected || contextChanged || doc.activeElement !== description)
       description.value = selected
         ? displayedValue(
@@ -671,15 +663,17 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
       if (drafts.size > 0) return true;
       const selected = item();
       if (selected) {
-        const copy = kind === 'node'
-          ? displayNodeText(config, selected.id)
-          : displayEdgeText(config, selected.id);
+        const copy =
+          kind === 'node'
+            ? displayNodeText(config, selected.id)
+            : displayEdgeText(config, selected.id);
         if (!label.disabled && label.value !== (copy?.label ?? selected.label ?? '')) return true;
         if (
           kind === 'node' &&
           !description.disabled &&
           description.value !== (displayNodeText(config, selected.id)?.description ?? '')
-        ) return true;
+        )
+          return true;
       }
       const resolved = inspectorAppearance(config, kind, selected, scope.value as Scope);
       for (const [key, control] of controls) {

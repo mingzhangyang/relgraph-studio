@@ -70,10 +70,7 @@ export type AppearanceFieldRule =
   | { type: 'boolean' }
   | { type: 'image' };
 export type AppearanceKind = 'nodes' | 'edges';
-export const APPEARANCE_FIELD_RULES: Record<
-  AppearanceKind,
-  Record<string, AppearanceFieldRule>
-> = {
+export const APPEARANCE_FIELD_RULES: Record<AppearanceKind, Record<string, AppearanceFieldRule>> = {
   nodes: {
     image: { type: 'image' },
     imageFit: { type: 'enum', values: ['cover', 'contain'] },
@@ -101,11 +98,7 @@ export const APPEARANCE_FIELD_RULES: Record<
 };
 
 /** Evaluate a field using the same constraints as full-project validation. */
-export function validAppearanceField(
-  kind: AppearanceKind,
-  key: string,
-  value: unknown,
-): boolean {
+export function validAppearanceField(kind: AppearanceKind, key: string, value: unknown): boolean {
   const rule = APPEARANCE_FIELD_RULES[kind][key];
   if (!rule) return false;
   switch (rule.type) {
@@ -118,10 +111,7 @@ export function validAppearanceField(
     case 'boolean':
       return typeof value === 'boolean';
     case 'image':
-      return (
-        value === null ||
-        (typeof value === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(value))
-      );
+      return value === null || (typeof value === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(value));
   }
 }
 const nodeKeys = Object.keys(APPEARANCE_FIELD_RULES.nodes);
@@ -174,8 +164,7 @@ export function validateProjectConfig(value: unknown, graph?: VisualGraph): stri
       )
         fail('config.nodes.image: missing asset');
       for (const [k, x] of Object.entries(v))
-        if (!allowed.includes(k) || !validAppearanceField(kind, k, x))
-          fail(`config.${kind}.${k}`);
+        if (!allowed.includes(k) || !validAppearanceField(kind, k, x)) fail(`config.${kind}.${k}`);
     };
     if (layer.defaults !== undefined) check(layer.defaults);
     for (const scope of ['categories', 'objects']) {

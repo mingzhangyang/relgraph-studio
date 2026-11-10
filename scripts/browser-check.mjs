@@ -1579,9 +1579,9 @@ for (const theme of ['dark', 'light']) {
 
     await page.click('#layoutToggle');
     assert.equal(await page.isDisabled('#layoutX'), false);
-    const chooserIds = await page.locator('#layoutNode option').evaluateAll((options) =>
-      options.map((option) => option.value),
-    );
+    const chooserIds = await page
+      .locator('#layoutNode option')
+      .evaluateAll((options) => options.map((option) => option.value));
     assert.ok(chooserIds.length >= 2);
     const firstNode = chooserIds[0];
     const secondNode = chooserIds[1];
@@ -1902,7 +1902,10 @@ for (const theme of ['dark', 'light']) {
         return {
           stageRect: { x: stageRect.x, y: stageRect.y, w: stageRect.width, h: stageRect.height },
           overlayRect: {
-            x: overlayRect.x, y: overlayRect.y, w: overlayRect.width, h: overlayRect.height,
+            x: overlayRect.x,
+            y: overlayRect.y,
+            w: overlayRect.width,
+            h: overlayRect.height,
           },
           firstTop,
           afterTop: canvas.getBoundingClientRect().top,
