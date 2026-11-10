@@ -1,3 +1,4 @@
+import { uiText } from './i18n.js';
 import type { PlaybackDisplay, PlaybackState } from './playback-model.js';
 
 /**
@@ -20,7 +21,7 @@ export function renderPlaybackStatus(
   text: string,
   state: WorkspaceStatus,
 ): void {
-  controls.status.textContent = text;
+  controls.status.textContent = uiText(text);
   controls.status.setAttribute('data-state', state);
 }
 
@@ -31,7 +32,7 @@ export function renderPlaybackControls(
   loading: boolean,
 ): void {
   controls.play.textContent = playback.playing ? '❚❚' : '▶';
-  controls.play.setAttribute('aria-label', playback.playing ? '暂停' : '播放');
+  controls.play.setAttribute('aria-label', uiText(playback.playing ? '暂停' : '播放'));
   controls.play.className = 'icon-button play' + (playback.playing ? ' is-playing' : '');
   if (playback.playing) renderPlaybackStatus(controls, '播放中', 'playing');
   else if (available && !loading) renderPlaybackStatus(controls, '就绪', 'ready');
@@ -41,7 +42,7 @@ export function renderPlaybackControls(
 export function renderPlaybackFrame(controls: PlaybackControls, display: PlaybackDisplay): void {
   controls.scrubber.value = display.frameValue;
   controls.scrubber.setAttribute('style', '--fill:' + display.fillPercent + '%');
-  controls.scrubber.setAttribute('aria-valuetext', display.ariaValueText);
+  controls.scrubber.setAttribute('aria-valuetext', display.ariaValueText.replace('，分镜 ', uiText('，分镜 ')));
   controls.frameNumber.textContent = display.frameLabel;
   controls.time.textContent = display.timeLabel;
 }

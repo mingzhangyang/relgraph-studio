@@ -1639,3 +1639,260 @@ test('playback discards in-flight pointer drags without late commits', async () 
   assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
   assert.equal(app.node('status').attributes['data-state'], 'playing');
 });
+test('language switching preserves frame, unsaved position drafts and project data', async () => {
+  const values = new Map();
+  const storage = {
+    getItem: (key) => values.get(key) ?? null,
+    setItem: (key, value) => values.set(key, value),
+  };
+  const app = makeStudio({ storage });
+  await app.ready;
+  await app.node('layoutToggle').click();
+  const initialFrame = JSON.stringify(app.window.studioFrame());
+  const clock = app.node('time').textContent;
+  const before = Number(app.node('layoutX').value);
+  app.node('layoutX').value = String(before + 10);
+  await app.node('layoutX').dispatch('input');
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
+  const select = app.node('languageSelect');
+  select.value = 'en';
+  await select.dispatch('change');
+  assert.equal(app.document.documentElement.attributes.lang, 'en');
+  assert.equal(values.get('relgraph-studio-language'), 'en');
+  assert.equal(app.node('status').textContent, 'Ready');
+  assert.equal(app.node('saveState').textContent, 'Unsaved changes');
+  assert.match(app.node('sourceName').textContent, /Dream of the Red Chamber/);
+  assert.equal(app.node('layoutX').value, String(before + 10));
+  assert.equal(app.node('time').textContent, clock);
+  assert.equal(JSON.stringify(app.window.studioFrame()), initialFrame);
+  assert.equal(app.downloads.length, 0, 'language changes never export or commit a project');
+  select.value = 'zh-CN';
+  await select.dispatch('change');
+  assert.equal(app.document.documentElement.attributes.lang, 'zh-CN');
+  assert.equal(values.get('relgraph-studio-language'), 'zh-CN');
+  assert.equal(app.node('saveState').textContent, '未保存修改');
+  assert.equal(app.node('layoutX').value, String(before + 10));
+  assert.equal(JSON.stringify(app.window.studioFrame()), initialFrame);
+});
+
+test('stored English language restores on launch and survives storage errors', async () => {
+  const app = makeStudio({
+    storage: {
+      getItem: () => 'en',
+      setItem: () => { throw new Error('storage denied'); },
+    },
+  });
+  await app.ready;
+  assert.equal(app.node('languageSelect').value, 'en');
+  assert.equal(app.document.documentElement.attributes.lang, 'en');
+  assert.equal(app.node('status').textContent, 'Ready');
+  assert.equal(
+    app.node('sourceName').textContent,
+    'Dream of the Red Chamber · Unverified technical demo',
+  );
+  app.node('languageSelect').value = 'zh-CN';
+  await app.node('languageSelect').dispatch('change');
+  assert.equal(app.node('status').textContent, '就绪');
+});
+
+test('image-upload failures and invalid-field summaries change language without losing drafts', async () => {
+  const app = makeStudio({
+    normalizeImage: async () => {
+      throw new Error('请选择不超过 8 MB 的 PNG、JPEG 或 WebP 图片。');
+    },
+  });
+  await app.ready;
+  assert.equal(app.window.renderAt(84), true);
+  const objects = viewControl(app, 'visualObject');
+  objects.value = objects.children[1].value;
+  await objects.dispatch('change');
+
+  const picker = viewControl(app, 'visualImageFile');
+  picker.files = [{ name: 'too-large.png', type: 'image/png' }];
+  await picker.dispatch('change');
+  await flush();
+  const summary = viewControl(app, 'visualError');
+  assert.match(summary.textContent, /不超过 8 MB/);
+
+  const language = app.node('languageSelect');
+  language.value = 'en';
+  await language.dispatch('change');
+  assert.match(summary.textContent, /no larger than 8 MB/);
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
+
+  const fill = viewControl(app, 'visual-fill');
+  fill.value = 'not-a-color';
+  await fill.dispatch('input');
+  await fill.dispatch('change');
+  assert.match(summary.textContent, /Invalid configuration/);
+  assert.match(summary.textContent, /six-digit hex color/);
+  assert.match(viewControl(app, 'visual-fill-error').textContent, /six-digit hex color/);
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
+
+  language.value = 'zh-CN';
+  await language.dispatch('change');
+  assert.match(summary.textContent, /配置无效/);
+  assert.match(summary.textContent, /六位十六进制颜色/);
+  assert.equal(fill.value, 'not-a-color');
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
+
+  language.value = 'en';
+  await language.dispatch('change');
+  assert.match(summary.textContent, /Invalid configuration/);
+  assert.equal(fill.value, 'not-a-color');
+  fill.value = '#336699';
+  await fill.dispatch('input');
+  await fill.dispatch('change');
+  assert.equal(summary.textContent, '', 'correcting a field clears its local summary');
+});
+
+test('locale changes update paused scrubber accessibility text without seeking or repainting', async () => {
+  let rendered = 0;
+  const app = makeStudio({ onRenderFrame: () => rendered++ });
+  await app.ready;
+  assert.equal(app.window.renderAt(84), true);
+  const scrubber = app.node('scrubber');
+  const frameBefore = JSON.stringify(app.window.studioFrame());
+  const positionBefore = scrubber.value;
+  const timeBefore = app.node('time').textContent;
+  const renderCount = rendered;
+  assert.match(scrubber.attributes['aria-valuetext'], /分镜/);
+  assert.equal(app.node('play').attributes['aria-label'], '播放');
+
+  const language = app.node('languageSelect');
+  language.value = 'en';
+  await language.dispatch('change');
+  assert.match(scrubber.attributes['aria-valuetext'], /shot/);
+  assert.doesNotMatch(scrubber.attributes['aria-valuetext'], /分镜/);
+  assert.equal(app.node('play').attributes['aria-label'], 'Play');
+  assert.equal(scrubber.value, positionBefore);
+  assert.equal(app.node('time').textContent, timeBefore);
+  assert.equal(JSON.stringify(app.window.studioFrame()), frameBefore);
+  assert.equal(rendered, renderCount, 'language changes must not repaint the movie');
+
+  language.value = 'zh-CN';
+  await language.dispatch('change');
+  assert.match(scrubber.attributes['aria-valuetext'], /分镜/);
+  assert.equal(scrubber.value, positionBefore);
+  assert.equal(rendered, renderCount);
+});
+
+test('selection announcements follow locale but ignore geometry-only frame changes', async () => {
+  const app = makeStudio();
+  await app.ready;
+  assert.equal(app.window.renderAt(84), true);
+  const objects = viewControl(app, 'visualObject');
+  objects.value = objects.children[1].value;
+  await objects.dispatch('change');
+
+  const note = app.node('selectionFeedback');
+  const svg = app.node('stageSelection');
+  assert.match(note.textContent, /已选中节点/);
+  const geometry = svg.children[1];
+
+  const language = app.node('languageSelect');
+  language.value = 'en';
+  await language.dispatch('change');
+  assert.match(note.textContent, /Selected node/);
+  assert.equal(svg.children[1], geometry, 'locale-only updates keep SVG geometry');
+  const writes = note.textWrites;
+
+  assert.equal(app.window.renderAt(85), true);
+  assert.equal(app.window.renderAt(86), true);
+  assert.equal(note.textWrites, writes, 'unchanged translated text must not be reannounced');
+
+  language.value = 'zh-CN';
+  await language.dispatch('change');
+  assert.match(note.textContent, /已选中节点/);
+  assert.equal(note.textWrites, writes + 1);
+});
+
+test('strategy validation feedback survives locale and frame-only rerenders until input changes', async () => {
+  const app = makeStudio();
+  await app.ready;
+  const strategy = app.node('layoutStrategyEditor');
+  const note = strategy.children.find((child) => child.tagName === 'P');
+  assert.ok(note);
+  const spacing = viewControl(app, 'strategySpacing');
+  const original = spacing.value;
+  spacing.value = '';
+  await spacing.dispatch('input');
+  await viewControl(app, 'strategyPreview').click();
+  assert.equal(note.textContent, '参数不能为空。');
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
+
+  const language = app.node('languageSelect');
+  language.value = 'en';
+  await language.dispatch('change');
+  assert.equal(note.textContent, 'Parameters cannot be empty.');
+  assert.equal(spacing.value, '');
+  assert.equal(app.window.renderAt(84), true);
+  assert.equal(note.textContent, 'Parameters cannot be empty.');
+
+  language.value = 'zh-CN';
+  await language.dispatch('change');
+  assert.equal(note.textContent, '参数不能为空。');
+  spacing.value = original;
+  await spacing.dispatch('input');
+  assert.match(note.textContent, /静态确定性布局/);
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
+});
+
+test('invalid data retains the empty domain-time label in both interface languages', async () => {
+  const app = makeStudio();
+  await app.ready;
+  const input = app.node('fileInput');
+  input.files = [readFile('broken.json', '{"broken":true}')];
+  await input.dispatch('change');
+  assert.equal(app.node('status').attributes['data-state'], 'error');
+  assert.equal(app.node('domainTime').textContent, '领域时间：—');
+
+  const language = app.node('languageSelect');
+  language.value = 'en';
+  await language.dispatch('change');
+  assert.equal(app.node('status').attributes['data-state'], 'error');
+  assert.equal(app.node('domainTime').textContent, 'Domain time: —');
+  assert.equal(app.node('sourceName').textContent, 'broken.json');
+
+  language.value = 'zh-CN';
+  await language.dispatch('change');
+  assert.equal(app.node('domainTime').textContent, '领域时间：—');
+});
+
+test('coordinate validation remains visible in either locale until corrected or reset', async () => {
+  const app = makeStudio();
+  await app.ready;
+  assert.equal(app.window.renderAt(84), true);
+  await app.node('layoutToggle').click();
+  const x = app.node('layoutX');
+  const original = x.value;
+  x.value = '';
+  await x.dispatch('input');
+  await app.node('layoutApply').click();
+  const note = app.node('layoutNote');
+  assert.equal(note.textContent, '坐标必须是有限数字，请检查 X 和 Y');
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
+
+  const language = app.node('languageSelect');
+  language.value = 'en';
+  await language.dispatch('change');
+  assert.equal(note.textContent, 'Coordinates must be finite numbers. Check X and Y.');
+  assert.equal(x.value, '');
+  assert.equal(app.window.renderAt(85), true);
+  assert.equal(note.textContent, 'Coordinates must be finite numbers. Check X and Y.');
+
+  language.value = 'zh-CN';
+  await language.dispatch('change');
+  assert.equal(note.textContent, '坐标必须是有限数字，请检查 X 和 Y');
+  x.value = original;
+  await x.dispatch('input');
+  assert.notEqual(note.textContent, '坐标必须是有限数字，请检查 X 和 Y');
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
+
+  x.value = '';
+  await x.dispatch('input');
+  await app.node('layoutApply').click();
+  assert.equal(note.textContent, '坐标必须是有限数字，请检查 X 和 Y');
+  await app.node('layoutReset').click();
+  assert.notEqual(note.textContent, '坐标必须是有限数字，请检查 X 和 Y');
+});

@@ -1,3 +1,4 @@
+import { uiStatus } from './i18n.js';
 import type { DocumentCommand } from './document-command-model.js';
 
 export interface DocumentToolbarControls {
@@ -27,6 +28,7 @@ export function createDocumentToolbarView(
   controls: DocumentToolbarControls,
   actions: DocumentToolbarActions,
 ) {
+  let lastMessage: { value: string; failed: boolean } | null = null;
   const buttons = {
     undo: controls.undo,
     redo: controls.redo,
@@ -57,8 +59,17 @@ export function createDocumentToolbarView(
       return !buttons[command].disabled;
     },
     message(value: string, failed = false): void {
-      if (controls.message.textContent !== value) controls.message.textContent = value;
+      lastMessage = { value, failed };
+      const localized = uiStatus(value);
+      if (controls.message.textContent !== localized) controls.message.textContent = localized;
       controls.message.setAttribute('data-error', String(failed));
+    },
+    refreshLanguage(): void {
+      if (lastMessage) {
+        const localized = uiStatus(lastMessage.value);
+        if (controls.message.textContent !== localized) controls.message.textContent = localized;
+        controls.message.setAttribute('data-error', String(lastMessage.failed));
+      }
     },
   };
 }

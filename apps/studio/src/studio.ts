@@ -1,3 +1,12 @@
+import {
+  captureStaticStudioUi,
+  initializeStudioLanguage,
+  refreshStudioUi,
+  setStudioLanguage,
+  studioLanguage,
+  uiText,
+  type StudioLanguage,
+} from './i18n.js';
 import { normalizeNodeImage } from './node-image.js';
 import { setNodeImage } from './project-editor-model.js';
 import {
@@ -98,6 +107,15 @@ function requiredElement<T extends HTMLElement>(id: string, elementType: { new (
 }
 
 const FPS = 24;
+let languageStorage: Storage | undefined;
+try {
+  languageStorage = globalThis.localStorage;
+} catch {
+  // Browser storage can be unavailable under privacy restrictions.
+}
+initializeStudioLanguage(languageStorage);
+captureStaticStudioUi(document);
+refreshStudioUi(document);
 const $ = (id: string): HTMLElement => requiredElement(id, HTMLElement);
 const canvas = requiredElement('stage', HTMLCanvasElement),
   play = requiredElement('play', HTMLButtonElement),
@@ -107,6 +125,7 @@ const canvas = requiredElement('stage', HTMLCanvasElement),
   exampleLiterature = requiredElement('exampleLiterature', HTMLButtonElement),
   exampleBiology = requiredElement('exampleBiology', HTMLButtonElement),
   themeToggle = requiredElement('themeToggle', HTMLButtonElement),
+  languageSelect = requiredElement('languageSelect', HTMLSelectElement),
   layoutToggle = requiredElement('layoutToggle', HTMLButtonElement),
   layoutReset = requiredElement('layoutReset', HTMLButtonElement),
   layoutExport = requiredElement('layoutExport', HTMLButtonElement),
@@ -119,6 +138,7 @@ const canvas = requiredElement('stage', HTMLCanvasElement),
   saveState = $('saveState'),
   shots = $('shots'),
   strip = $('sceneStrip');
+languageSelect.value = studioLanguage();
 const selectionSvg = document.getElementById('stageSelection');
 if (!selectionSvg) throw new Error('Missing workspace element: #stageSelection');
 const selectionOverlayView = createSelectionOverlayView(
@@ -452,12 +472,22 @@ let requestSerial = 0,
   loading = false;
 let animationId: number | null = null;
 let currentFrameState: DirectorFrameState | null = null;
+let currentDiagnostics: Pick<LoadResult, 'errors' | 'warnings'> | null = null;
 let currentDetailAt: DetailAt = () => undefined;
 let currentLayout: ReturnType<typeof layoutGraph> | null = null;
 let originalLayout: ReturnType<typeof layoutGraph> | null = null;
 let sourceDocument: unknown = null;
 let sourceFilename = 'relgraph.json';
+let activeSourceName = '尚未加载';
+let activeSourceNameIsExample = false;
+const displaySourceName = (): string =>
+  activeSourceNameIsExample || activeSourceName === '尚未加载'
+    ? uiText(activeSourceName)
+    : activeSourceName;
 let selectedLayoutNode: string | null = null;
+// Coordinate errors belong to the coordinate editor, not the project model.
+// Preserve their raw wording across locale-only renders and normal redraws.
+let coordinateValidationMessage: string | null = null;
 // Coordinates are edited only on Apply; keep uncommitted X/Y per node even
 // when another node is selected or position-edit mode is temporarily hidden.
 const coordinateDrafts = new Map<string, { x: string; y: string }>();
@@ -518,14 +548,14 @@ function refreshUnsavedState(): void {
   const dirty = hasUnsavedChanges();
   if (lastDirtyStatus === dirty) return;
   lastDirtyStatus = dirty;
-  saveState.textContent = dirty ? '未保存修改' : '无未保存修改';
+  saveState.textContent = uiText(dirty ? '未保存修改' : '无未保存修改');
   saveState.setAttribute('data-dirty', String(dirty));
-  document.title = dirty ? `● ${DOCUMENT_TITLE}` : DOCUMENT_TITLE;
+  document.title = dirty ? `● ${uiText(DOCUMENT_TITLE)}` : uiText(DOCUMENT_TITLE);
 }
 function confirmSourceReplacement(): boolean {
   return (
     !hasUnsavedChanges() ||
-    window.confirm('当前项目有未保存的修改。继续加载其他数据将丢弃这些修改，是否继续？')
+    window.confirm(uiText('当前项目有未保存的修改。继续加载其他数据将丢弃这些修改，是否继续？'))
   );
 }
 window.addEventListener('beforeunload', (event) => {
@@ -624,6 +654,7 @@ function clearStudio(): void {
   projectHistory.reset();
   projectSavepoint.clear();
   coordinateDrafts.clear();
+  coordinateValidationMessage = null;
   projectEditor.clear();
   renderer = null;
   lastDisplayList = null;
@@ -651,11 +682,19 @@ function clearStudio(): void {
   refreshSelectionFeedback();
   refreshUnsavedState();
 }
-function applyResult(result: LoadResult, name: string, sourceText?: string): void {
+function applyResult(
+  result: LoadResult,
+  name: string,
+  sourceText?: string,
+  example = false,
+): void {
   loading = false;
   clearStudio();
+  currentDiagnostics = result;
+  activeSourceName = name;
+  activeSourceNameIsExample = example;
   diagnosticsView.render(result);
-  shellView.renderSourceName(name);
+  shellView.renderSourceName(displaySourceName());
   if (!result.valid) {
     setStatus('数据校验失败', 'error');
     shellView.paintEmptyStage('数据校验失败 · 请查看右侧校验提示', theme);
@@ -697,6 +736,7 @@ function beginLoad(): number {
   renderEditorAvailability(layoutControls, false);
   updateLayoutEditor();
   // Only the coordinator may commit a result after checking requestSerial.
+  currentDiagnostics = null;
   diagnosticsView.clear();
   setStatus('正在加载…', 'loading');
   return serial;
@@ -730,9 +770,9 @@ async function loadExample(path: string, name: string): Promise<void> {
     const response = await fetch(path);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const text = await response.text();
-    if (serial === requestSerial) applyResult(parseDocument(text), name, text);
+    if (serial === requestSerial) applyResult(parseDocument(text), name, text, true);
   } catch (error) {
-    if (serial === requestSerial) applyResult(loadFailure('LOAD', error), name);
+    if (serial === requestSerial) applyResult(loadFailure('LOAD', error), name, undefined, true);
   }
 }
 exampleLiterature.addEventListener('click', () => {
@@ -912,6 +952,7 @@ function trackCoordinateDraft(): void {
   const point = committedCoordinate(selectedLayoutNode);
   if (!point) return;
   const draft = { x: layoutX.value, y: layoutY.value };
+  coordinateValidationMessage = null;
   if (coordinateDraftMatches(draft, point)) coordinateDrafts.delete(selectedLayoutNode);
   else coordinateDrafts.set(selectedLayoutNode, draft);
   updateLayoutControls();
@@ -923,6 +964,7 @@ for (const input of [layoutX, layoutY]) {
 layoutNode.addEventListener('change', () => {
   if (!availableNodes().some((node) => node.id === layoutNode.value)) return;
   selectedLayoutNode = layoutNode.value;
+  coordinateValidationMessage = null;
   updateLayoutFields();
   refreshSelectionFeedback();
 });
@@ -937,7 +979,8 @@ layoutApply.addEventListener('click', () => {
     return;
   const point = parseCoordinateInputs(layoutX.value, layoutY.value);
   if (!point) {
-    renderEditorMessage(layoutControls, '坐标必须是有限数字，请检查 X 和 Y');
+    coordinateValidationMessage = '坐标必须是有限数字，请检查 X 和 Y';
+    renderEditorMessage(layoutControls, coordinateValidationMessage);
     return;
   }
   if (
@@ -945,6 +988,7 @@ layoutApply.addEventListener('click', () => {
     !updateEditableNodePosition(currentLayout, currentFrameState, selectedLayoutNode, point)
   )
     return;
+  coordinateValidationMessage = null;
   projectSavepoint.positionsChanged();
   projectHistory.commit(configWithPositions(undefined, [selectedLayoutNode]));
   if (graph) graph.project = projectHistory.value;
@@ -960,7 +1004,12 @@ layoutApply.addEventListener('click', () => {
 const layoutChanged = (): boolean =>
   Boolean(currentLayout && originalLayout && layoutHasChanges(currentLayout, originalLayout));
 function updateLayoutControls(): void {
-  renderEditorStatus(layoutControls, layoutEditing, layoutChanged() || hasPendingCoordinateDraft());
+  renderEditorStatus(
+    layoutControls,
+    layoutEditing,
+    layoutChanged() || hasPendingCoordinateDraft(),
+    coordinateValidationMessage,
+  );
   refreshUnsavedState();
 }
 function rebuildRenderer(): void {
@@ -992,6 +1041,7 @@ function cancelActiveLayoutDrag(): boolean {
 }
 function leavePositionEdit(): void {
   if (!layoutEditing) return;
+  coordinateValidationMessage = null;
   cancelActiveLayoutDrag();
   layoutEditing = false;
   editCamera = null;
@@ -1015,6 +1065,7 @@ layoutReset.addEventListener('click', () => {
   // Reset is an explicit discard of all pending coordinate inputs, not a
   // new authored layout commit when only unsubmitted drafts existed.
   coordinateDrafts.clear();
+  coordinateValidationMessage = null;
   if (!changedPositions) {
     // Cancelling the first, uncommitted drag can restore the saved positions
     // without creating a history change. The renderer still holds the pixels
@@ -1149,6 +1200,71 @@ function exportPositionedSource(): void {
   }
 }
 
+function applyLanguage(next: StudioLanguage): void {
+  if (next === studioLanguage()) return;
+  setStudioLanguage(next, languageStorage);
+  languageSelect.value = next;
+  refreshStudioUi(document);
+  shellView.renderTheme(theme, false);
+  shellView.renderSourceName(displaySourceName());
+  if (graph)
+    shellView.renderSourceSummary(
+      graph.scenes.length,
+      graph.meta.sourceNote,
+      graph.meta.description,
+    );
+  if (currentFrameState && lastDisplayList) {
+    const frame = currentFrameState.playback;
+    strategyView.render(
+      currentFrameState,
+      projectHistory.value.layout,
+      Boolean(layoutPreview),
+      loading,
+      projectHistory.value,
+    );
+    projectEditor.render(currentFrameState, projectHistory.value);
+    transcriptView.render(lastDisplayList.a11y);
+    shotsView.refreshLanguage();
+    shotsView.render(frame.index, lastDisplayList.a11y.scene.title, frame.progress);
+    shellView.renderDomainTime(frame.domainAt, currentFrameState.view.timeline?.unit);
+    // Refresh the scrubber's localized aria-valuetext from the existing
+    // playback model, without seeking or repainting the movie.
+    renderPlaybackFrame(playbackControls, playbackDisplay(playback, frame.index, frame.totalSec));
+  } else {
+    strategyView.render(
+      currentFrameState,
+      projectHistory.value.layout,
+      Boolean(layoutPreview),
+      loading,
+      projectHistory.value,
+    );
+    shellView.repaintEmptyStage(theme);
+    if (!graph) {
+      transcriptView.reset();
+      shellView.renderEmptyDomainTime();
+    }
+  }
+  refreshSelectionFeedback();
+  if (currentDiagnostics) diagnosticsView.render(currentDiagnostics);
+  updateLayoutControls();
+  projectEditor.refreshLanguage();
+  documentToolbarView.refreshLanguage();
+  // Language is presentation state, never a project edit or history event.
+  lastDirtyStatus = null;
+  refreshUnsavedState();
+  if (loading) setStatus('正在加载…', 'loading');
+  else if (renderer) syncPlaybackControls();
+  else if (currentDiagnostics?.errors.length) setStatus('数据校验失败', 'error');
+  else setStatus('就绪', 'ready');
+}
+languageSelect.addEventListener('change', () => {
+  const next = languageSelect.value;
+  if (next !== 'zh-CN' && next !== 'en') {
+    languageSelect.value = studioLanguage();
+    return;
+  }
+  applyLanguage(next);
+});
 themeToggle.addEventListener('click', () => applyTheme(theme === 'light' ? 'dark' : 'light', true));
 lightQuery?.addEventListener?.('change', (event) => {
   if (!pinnedTheme) applyTheme(event.matches ? 'light' : 'dark', false);

@@ -186,6 +186,17 @@ button { cursor: pointer; }
   background: var(--gold-soft);
   color: var(--gold-strong);
 }
+.language-picker { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.language-picker select {
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  padding: 5px 10px;
+  background: var(--surface);
+  color: var(--text-2);
+  font: inherit;
+  min-height: 30px;
+}
+.language-picker select:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 .theme-toggle {
   display: inline-flex;
   align-items: center;
@@ -712,7 +723,7 @@ footer span { color: var(--gold); }
   .rightbar { display: flex; }
   .topbar { position: static; flex-wrap: wrap; }
   .top-meta { flex-wrap: wrap; justify-content: flex-end; gap: 8px; max-width: 100%; }
-  .top-note, .brand small, .hint-note, .pill { display: none; }
+  .top-note, .brand small, .hint-note, .pill, .language-picker span { display: none; }
   .brand b { font-size: 15px; }
   .transport { flex-wrap: wrap; gap: 10px; padding: 10px; }
   .scrub { order: 3; flex-basis: 100%; }

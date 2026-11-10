@@ -1,3 +1,11 @@
+import {
+  captureStaticStudioUi,
+  initializeStudioLanguage,
+  refreshStudioUi,
+  setStudioLanguage,
+  studioLanguage,
+  uiText,
+} from '../../apps/studio/src/i18n.ts';
 import { normalizeNodeImage } from '../../apps/studio/src/node-image.ts';
 import { setNodeImage } from '../../apps/studio/src/project-editor-model.ts';
 import {
@@ -84,6 +92,12 @@ export function studioSource() {
 // Workspace dependency functions and views are supplied to the source VM as-is;
 // only Canvas drawing, network, animation and browser storage are stubbed.
 export const studioImports = {
+  captureStaticStudioUi,
+  initializeStudioLanguage,
+  refreshStudioUi,
+  setStudioLanguage,
+  studioLanguage,
+  uiText,
   normalizeNodeImage,
   setNodeImage,
   configWithLayoutPositions,

@@ -1,3 +1,4 @@
+import { uiElement, uiStatus } from './i18n.js';
 import {
   DEFAULT_LAYOUT_SETTINGS,
   displayNodeText,
@@ -17,9 +18,7 @@ export function createLayoutStrategyView(doc: Document, host: HTMLElement, actio
     tag: K,
     text = '',
   ): HTMLElementTagNameMap[K] => {
-    const e = doc.createElement(tag);
-    if (text) e.textContent = text;
-    return e;
+    return uiElement(doc, tag, text);
   };
   const title = el('h2', '布局 · 预览后应用');
   title.className = 'card-title';
@@ -84,12 +83,28 @@ export function createLayoutStrategyView(doc: Document, host: HTMLElement, actio
   let settings: LayoutSettings = DEFAULT_LAYOUT_SETTINGS,
     signature = '',
     enabled = false;
+  // A locale-only render must not erase a failed preview/validation message.
+  // Store the source message, never the translated label.
+  let validationMessage: string | null = null;
+  let hintMessage = '静态确定性布局 · 保留 = 不移动；填补 = 仅缺失；重排 = 移动未锁定节点。分层不推断家谱。';
+  const refreshNote = () => {
+    const message = uiStatus(validationMessage ?? hintMessage);
+    if (note.textContent !== message) note.textContent = message;
+  };
+  const clearValidation = () => {
+    if (validationMessage !== null) {
+      validationMessage = null;
+      refreshNote();
+    }
+  };
   const preview = button('strategyPreview', '预览布局', () => {
     if (!enabled) return;
     if ([seed, spacing, iterations].some((input) => !input.value.trim())) {
-      note.textContent = '参数不能为空。';
+      validationMessage = '参数不能为空。';
+      refreshNote();
       return;
     }
+    clearValidation();
     actions.preview({
       ...settings,
       type: type.value as LayoutSettings['type'],
@@ -111,10 +126,14 @@ export function createLayoutStrategyView(doc: Document, host: HTMLElement, actio
   });
   for (const input of [type, mode, seed, spacing, iterations]) {
     input.addEventListener('change', () => {
+      clearValidation();
       actions.cancel();
       actions.draftChanged?.();
     });
-    input.addEventListener('input', () => actions.draftChanged?.());
+    input.addEventListener('input', () => {
+      clearValidation();
+      actions.draftChanged?.();
+    });
   }
   return {
     hasPendingDraft() {
@@ -145,7 +164,8 @@ export function createLayoutStrategyView(doc: Document, host: HTMLElement, actio
         signature = sig;
         nodes.replaceChildren(
           ...safe.map((n) => {
-            const o = el('option', displayNodeText(config, n.id)?.label ?? n.label);
+            const o = doc.createElement('option');
+            o.textContent = displayNodeText(config, n.id)?.label ?? n.label;
             o.value = n.id;
             return o;
           }),
@@ -157,21 +177,24 @@ export function createLayoutStrategyView(doc: Document, host: HTMLElement, actio
       preview.disabled = !enabled;
       apply.disabled = !enabled || !pending;
       cancel.disabled = !enabled || !pending;
-      if (pending) note.textContent = '临时预览 · 尚未保存。请应用或取消；可撤销已应用布局。';
-      else
-        note.textContent =
-          '静态确定性布局 · 保留 = 不移动；填补 = 仅缺失；重排 = 移动未锁定节点。分层不推断家谱。';
+      hintMessage = pending
+        ? '临时预览 · 尚未保存。请应用或取消；可撤销已应用布局。'
+        : '静态确定性布局 · 保留 = 不移动；填补 = 仅缺失；重排 = 移动未锁定节点。分层不推断家谱。';
+      refreshNote();
     },
     reset(next: LayoutSettings | undefined) {
+      validationMessage = null;
       settings = next ?? DEFAULT_LAYOUT_SETTINGS;
       type.value = settings.type;
       mode.value = settings.mode;
       seed.value = String(settings.seed);
       spacing.value = String(settings.spacing);
       iterations.value = String(settings.iterations);
+      refreshNote();
     },
     error(message: string) {
-      note.textContent = message;
+      validationMessage = message;
+      refreshNote();
     },
   };
 }

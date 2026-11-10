@@ -19,6 +19,8 @@ export function createSimulatedStudioDom({
     constructor(tag = 'div') {
       this.tagName = tag.toUpperCase();
       this.children = [];
+      this.parentElement = null;
+      this._textNode = null;
       this.attributes = {};
       this.listeners = {};
       this.className = '';
@@ -43,26 +45,83 @@ export function createSimulatedStudioDom({
       };
       this.relList = { supports: () => true };
     }
+    get isConnected() {
+      return (
+        this === document.body ||
+        this === document.documentElement ||
+        Boolean(this.parentElement?.isConnected)
+      );
+    }
+    get firstChild() {
+      return this._textNode ?? this.children[0] ?? null;
+    }
     append(...nodes) {
+      for (const node of nodes) {
+        if (node instanceof Element) node.parentElement = this;
+      }
       this.children.push(...nodes);
     }
     replaceChildren(...nodes) {
-      this.children = [...nodes];
+      for (const old of this.children) {
+        if (old instanceof Element) old.parentElement = null;
+      }
+      this.children = [];
       this._text = '';
+      this._textNode = null;
+      this.append(...nodes);
     }
     set textContent(value) {
       this.textWrites++;
-      this._text = String(value);
+      for (const child of this.children) {
+        if (child instanceof Element) child.parentElement = null;
+      }
       this.children = [];
+      this._text = String(value);
+      if (this._text) {
+        const parent = this;
+        this._textNode = {
+          nodeType: 3,
+          parentElement: parent,
+          get isConnected() {
+            return parent.isConnected;
+          },
+          get textContent() {
+            return parent._text;
+          },
+          set textContent(next) {
+            parent._text = String(next);
+          },
+        };
+      } else {
+        this._textNode = null;
+      }
     }
     get textContent() {
       return this._text + this.children.map((item) => item.textContent ?? item).join('');
     }
     get lastElementChild() {
-      return this.children.at(-1) ?? null;
+      return [...this.children].reverse().find((child) => child instanceof Element) ?? null;
     }
     setAttribute(name, value) {
       this.attributes[name] = String(value);
+    }
+    getAttribute(name) {
+      return this.attributes[name] ?? null;
+    }
+    querySelectorAll(selector) {
+      const found = [];
+      const visit = (parent) => {
+        for (const child of parent.children) {
+          if (!(child instanceof Element)) continue;
+          const matches =
+            selector === '*' ||
+            (selector === '[data-ui-key]' && child.getAttribute('data-ui-key') !== null);
+          if (matches) found.push(child);
+          visit(child);
+        }
+      };
+      visit(this);
+      return found;
     }
     removeAttribute(name) {
       delete this.attributes[name];
@@ -71,7 +130,13 @@ export function createSimulatedStudioDom({
       (this.listeners[name] ??= []).push(callback);
     }
     closest(selector) {
-      return this.focusSelector && selector.includes(this.focusSelector) ? this : null;
+      if (this.focusSelector && selector.includes(this.focusSelector)) return this;
+      if (selector === 'script,style') {
+        for (let current = this; current; current = current.parentElement) {
+          if (current.tagName === 'SCRIPT' || current.tagName === 'STYLE') return current;
+        }
+      }
+      return null;
     }
     contains(node) {
       return this === node || this.children.some((child) => child?.contains?.(node));
@@ -151,6 +216,7 @@ export function createSimulatedStudioDom({
     exampleLiterature: HTMLButtonElement,
     exampleBiology: HTMLButtonElement,
     themeToggle: HTMLButtonElement,
+    languageSelect: HTMLSelectElement,
     layoutToggle: HTMLButtonElement,
     layoutReset: HTMLButtonElement,
     layoutExport: HTMLButtonElement,
@@ -193,6 +259,23 @@ export function createSimulatedStudioDom({
     },
     createElementNS(_namespace, tag) {
       return new Element(tag);
+    },
+    createTreeWalker(root, whatToShow) {
+      // Support real text-node traversal for localization tests, not only
+      // synthetic labels. Existing DOM stubs still do not emulate a browser.
+      const texts = [];
+      const visit = (parent) => {
+        if (parent._textNode) texts.push(parent._textNode);
+        for (const child of parent.children) {
+          if (child instanceof Element) visit(child);
+        }
+      };
+      if (whatToShow === 4) visit(root);
+      let index = 0;
+      return { nextNode: () => texts[index++] ?? null };
+    },
+    querySelectorAll(selector) {
+      return this.body.querySelectorAll(selector);
     },
   };
   const window = {

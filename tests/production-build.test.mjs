@@ -12,6 +12,10 @@ test('production build includes both examples and the bundled workspace loads th
   try {
     await build({ logLevel: 'silent', build: { outDir: output, emptyOutDir: true } });
     const html = await readFile(join(output, 'demo/index.html'), 'utf8');
+    // This fixture mirrors static text and nested controls in the built HTML;
+    // the shared DOM simulation now implements text traversal and selectors.
+    assert.match(html, /<h1 id="previewHeading">导演预览<\/h1>/);
+    assert.match(html, /id="appearanceEditor"/);
     const asset = html.match(/<script[^>]+src="([^"]+)"/);
     assert.ok(asset, 'built HTML references a JavaScript bundle');
     const script = await readFile(join(output, 'demo', asset[1]), 'utf8');
@@ -50,6 +54,17 @@ test('production build includes both examples and the bundled workspace loads th
         );
       },
     });
+    // Mount static HTML before the bundle initializes its language bindings.
+    const staticHeading = document.createElement('h1');
+    staticHeading.textContent = '导演预览';
+    document.body.append(staticHeading);
+    const staticToolbar = document.createElement('div');
+    staticToolbar.setAttribute('aria-label', '文档操作');
+    document.body.append(staticToolbar);
+    const inspector = document.getElementById('appearanceEditor');
+    const strategy = document.getElementById('layoutStrategyEditor');
+    document.body.append(inspector, strategy);
+
     const env = {
       document,
       window,
@@ -85,6 +100,46 @@ test('production build includes both examples and the bundled workspace loads th
     assert.equal(window.renderAt(0), true);
     assert.equal(window.renderAt(48), true);
     assert.deepEqual(window.studioFrame(), frame);
+
+    // Generated labels must translate without replacing their nested inputs.
+    const generated = (host, key) =>
+      host
+        .querySelectorAll('[data-ui-key]')
+        .find((item) => item.getAttribute('data-ui-key') === key);
+    const scopeLabel = generated(inspector, '样式作用范围');
+    const spacingLabel = generated(strategy, '间距');
+    assert.ok(scopeLabel && spacingLabel, 'generated labels must be connected');
+    const scopeInput = scopeLabel.lastElementChild;
+    const spacingInput = spacingLabel.lastElementChild;
+    spacingInput.value = '184';
+    await spacingInput.dispatch('input');
+    assert.equal(staticHeading.textContent, '导演预览');
+    assert.equal(scopeLabel.textContent.startsWith('样式作用范围'), true);
+
+    const beforeLanguageSwitch = JSON.stringify(window.studioFrame());
+    elements.get('languageSelect').value = 'en';
+    await elements.get('languageSelect').dispatch('change');
+    assert.equal(document.documentElement.attributes.lang, 'en');
+    assert.equal(elements.get('status').textContent, 'Ready');
+    assert.equal(staticHeading.textContent, 'Director preview');
+    assert.equal(staticToolbar.getAttribute('aria-label'), 'Document actions');
+    assert.match(scopeLabel.textContent, /Style scope/);
+    assert.match(spacingLabel.textContent, /Spacing/);
+    assert.equal(scopeLabel.lastElementChild, scopeInput);
+    assert.equal(spacingLabel.lastElementChild, spacingInput);
+    assert.equal(spacingInput.value, '184');
+    assert.equal(JSON.stringify(window.studioFrame()), beforeLanguageSwitch);
+    elements.get('languageSelect').value = 'zh-CN';
+    await elements.get('languageSelect').dispatch('change');
+    assert.equal(elements.get('status').textContent, '就绪');
+    assert.equal(staticHeading.textContent, '导演预览');
+    assert.equal(staticToolbar.getAttribute('aria-label'), '文档操作');
+    assert.match(scopeLabel.textContent, /样式作用范围/);
+    assert.match(spacingLabel.textContent, /间距/);
+    assert.equal(scopeLabel.lastElementChild, scopeInput);
+    assert.equal(spacingLabel.lastElementChild, spacingInput);
+    assert.equal(spacingInput.value, '184');
+    assert.equal(JSON.stringify(window.studioFrame()), beforeLanguageSwitch);
 
     await elements.get('exampleBiology').click();
     assert.equal(elements.get('status').attributes['data-state'], 'ready');
