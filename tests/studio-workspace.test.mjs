@@ -1694,3 +1694,115 @@ test('stored English language restores on launch and survives storage errors', a
   await app.node('languageSelect').dispatch('change');
   assert.equal(app.node('status').textContent, '就绪');
 });
+
+test('image-upload failures and invalid-field summaries change language without losing drafts', async () => {
+  const app = makeStudio({
+    normalizeImage: async () => {
+      throw new Error('请选择不超过 8 MB 的 PNG、JPEG 或 WebP 图片。');
+    },
+  });
+  await app.ready;
+  assert.equal(app.window.renderAt(84), true);
+  const objects = viewControl(app, 'visualObject');
+  objects.value = objects.children[1].value;
+  await objects.dispatch('change');
+
+  const picker = viewControl(app, 'visualImageFile');
+  picker.files = [{ name: 'too-large.png', type: 'image/png' }];
+  await picker.dispatch('change');
+  await flush();
+  const summary = viewControl(app, 'visualError');
+  assert.match(summary.textContent, /不超过 8 MB/);
+
+  const language = app.node('languageSelect');
+  language.value = 'en';
+  await language.dispatch('change');
+  assert.match(summary.textContent, /no larger than 8 MB/);
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
+
+  const fill = viewControl(app, 'visual-fill');
+  fill.value = 'not-a-color';
+  await fill.dispatch('input');
+  await fill.dispatch('change');
+  assert.match(summary.textContent, /Invalid configuration/);
+  assert.match(summary.textContent, /six-digit hex color/);
+  assert.match(viewControl(app, 'visual-fill-error').textContent, /six-digit hex color/);
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
+
+  language.value = 'zh-CN';
+  await language.dispatch('change');
+  assert.match(summary.textContent, /配置无效/);
+  assert.match(summary.textContent, /六位十六进制颜色/);
+  assert.equal(fill.value, 'not-a-color');
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
+
+  language.value = 'en';
+  await language.dispatch('change');
+  assert.match(summary.textContent, /Invalid configuration/);
+  assert.equal(fill.value, 'not-a-color');
+  fill.value = '#336699';
+  await fill.dispatch('input');
+  await fill.dispatch('change');
+  assert.equal(summary.textContent, '', 'correcting a field clears its local summary');
+});
+
+test('locale changes update paused scrubber accessibility text without seeking or repainting', async () => {
+  let rendered = 0;
+  const app = makeStudio({ onRenderFrame: () => rendered++ });
+  await app.ready;
+  assert.equal(app.window.renderAt(84), true);
+  const scrubber = app.node('scrubber');
+  const frameBefore = JSON.stringify(app.window.studioFrame());
+  const positionBefore = scrubber.value;
+  const timeBefore = app.node('time').textContent;
+  const renderCount = rendered;
+  assert.match(scrubber.attributes['aria-valuetext'], /分镜/);
+  assert.equal(app.node('play').attributes['aria-label'], '播放');
+
+  const language = app.node('languageSelect');
+  language.value = 'en';
+  await language.dispatch('change');
+  assert.match(scrubber.attributes['aria-valuetext'], /shot/);
+  assert.doesNotMatch(scrubber.attributes['aria-valuetext'], /分镜/);
+  assert.equal(app.node('play').attributes['aria-label'], 'Play');
+  assert.equal(scrubber.value, positionBefore);
+  assert.equal(app.node('time').textContent, timeBefore);
+  assert.equal(JSON.stringify(app.window.studioFrame()), frameBefore);
+  assert.equal(rendered, renderCount, 'language changes must not repaint the movie');
+
+  language.value = 'zh-CN';
+  await language.dispatch('change');
+  assert.match(scrubber.attributes['aria-valuetext'], /分镜/);
+  assert.equal(scrubber.value, positionBefore);
+  assert.equal(rendered, renderCount);
+});
+
+test('selection announcements follow locale but ignore geometry-only frame changes', async () => {
+  const app = makeStudio();
+  await app.ready;
+  assert.equal(app.window.renderAt(84), true);
+  const objects = viewControl(app, 'visualObject');
+  objects.value = objects.children[1].value;
+  await objects.dispatch('change');
+
+  const note = app.node('selectionFeedback');
+  const svg = app.node('stageSelection');
+  assert.match(note.textContent, /已选中节点/);
+  const geometry = svg.children[1];
+
+  const language = app.node('languageSelect');
+  language.value = 'en';
+  await language.dispatch('change');
+  assert.match(note.textContent, /Selected node/);
+  assert.equal(svg.children[1], geometry, 'locale-only updates keep SVG geometry');
+  const writes = note.textWrites;
+
+  assert.equal(app.window.renderAt(85), true);
+  assert.equal(app.window.renderAt(86), true);
+  assert.equal(note.textWrites, writes, 'unchanged translated text must not be reannounced');
+
+  language.value = 'zh-CN';
+  await language.dispatch('change');
+  assert.match(note.textContent, /已选中节点/);
+  assert.equal(note.textWrites, writes + 1);
+});
