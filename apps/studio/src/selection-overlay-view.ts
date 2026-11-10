@@ -1,4 +1,4 @@
-import { studioLanguage, uiMessage } from './i18n.js';
+import { uiMessage } from './i18n.js';
 import type { OverlayProjection } from './selection-overlay-model.js';
 
 const NS = 'http://www.w3.org/2000/svg';
@@ -12,7 +12,11 @@ export function createSelectionOverlayView(doc: Document, svg: SVGSVGElement, no
   const element = (name: string) => doc.createElementNS(NS, name);
 
   function render(projection: OverlayProjection): void {
-    const signature = JSON.stringify([studioLanguage(), projection]);
+    // Live-region wording is a localized projection, independent of SVG
+    // geometry. Avoid repeated announcements for unchanged translated text.
+    const message = uiMessage(projection.message);
+    if (note.textContent !== message) note.textContent = message;
+    const signature = JSON.stringify(projection);
     if (previous === signature) return;
     previous = signature;
     svg.setAttribute('viewBox', `0 0 ${projection.width} ${projection.height}`);
@@ -47,7 +51,6 @@ export function createSelectionOverlayView(doc: Document, svg: SVGSVGElement, no
       group.append(shape);
     }
     svg.replaceChildren(defs, group);
-    if (note.textContent !== projection.message) note.textContent = uiMessage(projection.message);
     note.setAttribute('data-affected', String(projection.affectedCount));
     note.setAttribute('data-outlined', String(projection.targets.length));
   }
