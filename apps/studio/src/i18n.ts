@@ -229,6 +229,17 @@ const english: Record<string, string> = {
   '保存失败：': 'Save failed: ',
   '已发起完整项目 JSON 下载，请确认浏览器已将文件保存到本机。':
     'Full project JSON download started. Confirm the file was saved on your device.',
+  // Image upload errors originate in the DOM-free image preflight and decoder.
+  '请选择不超过 8 MB 的 PNG、JPEG 或 WebP 图片。':
+    'Choose a PNG, JPEG, or WebP image no larger than 8 MB.',
+  '图片无法解码，请更换文件。': 'This image could not be decoded. Choose another file.',
+  '图片尺寸过大，请先缩小到 1600 万像素以内。':
+    'Image dimensions are too large. Reduce the image to 16 million pixels or fewer.',
+  '无法准备图片画布。': 'Unable to prepare a canvas for this image.',
+  '图片格式或尺寸信息无效或不完整，请更换 PNG、JPEG 或 WebP 文件。':
+    'Invalid or incomplete image format or dimensions. Choose another PNG, JPEG, or WebP file.',
+  '仅支持 PNG、JPEG、WebP 静态图片。':
+    'Only static PNG, JPEG, and WebP images are supported.',
   '当前没有可保存的完整项目，请先加载有效数据。': 'No complete project is available to save. Load valid data first.',
   '坐标必须是有限数字，请检查 X 和 Y': 'Coordinates must be finite numbers. Check X and Y.',
   '导出的 JSON 没有通过数据校验': 'Exported JSON failed validation',
