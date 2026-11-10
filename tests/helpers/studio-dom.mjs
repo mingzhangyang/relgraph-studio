@@ -46,21 +46,25 @@ export function createSimulatedStudioDom({
       this.relList = { supports: () => true };
     }
     get isConnected() {
-      return this === document.body ||
+      return (
+        this === document.body ||
         this === document.documentElement ||
-        Boolean(this.parentElement?.isConnected);
+        Boolean(this.parentElement?.isConnected)
+      );
     }
     get firstChild() {
       return this._textNode ?? this.children[0] ?? null;
     }
     append(...nodes) {
-      for (const node of nodes)
+      for (const node of nodes) {
         if (node instanceof Element) node.parentElement = this;
+      }
       this.children.push(...nodes);
     }
     replaceChildren(...nodes) {
-      for (const old of this.children)
+      for (const old of this.children) {
         if (old instanceof Element) old.parentElement = null;
+      }
       this.children = [];
       this._text = '';
       this._textNode = null;
@@ -68,8 +72,9 @@ export function createSimulatedStudioDom({
     }
     set textContent(value) {
       this.textWrites++;
-      for (const child of this.children)
+      for (const child of this.children) {
         if (child instanceof Element) child.parentElement = null;
+      }
       this.children = [];
       this._text = String(value);
       if (this._text) {
@@ -77,11 +82,19 @@ export function createSimulatedStudioDom({
         this._textNode = {
           nodeType: 3,
           parentElement: parent,
-          get isConnected() { return parent.isConnected; },
-          get textContent() { return parent._text; },
-          set textContent(next) { parent._text = String(next); },
+          get isConnected() {
+            return parent.isConnected;
+          },
+          get textContent() {
+            return parent._text;
+          },
+          set textContent(next) {
+            parent._text = String(next);
+          },
         };
-      } else this._textNode = null;
+      } else {
+        this._textNode = null;
+      }
     }
     get textContent() {
       return this._text + this.children.map((item) => item.textContent ?? item).join('');
@@ -100,9 +113,10 @@ export function createSimulatedStudioDom({
       const visit = (parent) => {
         for (const child of parent.children) {
           if (!(child instanceof Element)) continue;
-          if (selector === '*' ||
-              (selector === '[data-ui-key]' && child.getAttribute('data-ui-key') !== null))
-            found.push(child);
+          const matches =
+            selector === '*' ||
+            (selector === '[data-ui-key]' && child.getAttribute('data-ui-key') !== null);
+          if (matches) found.push(child);
           visit(child);
         }
       };
@@ -118,8 +132,9 @@ export function createSimulatedStudioDom({
     closest(selector) {
       if (this.focusSelector && selector.includes(this.focusSelector)) return this;
       if (selector === 'script,style') {
-        for (let current = this; current; current = current.parentElement)
+        for (let current = this; current; current = current.parentElement) {
           if (current.tagName === 'SCRIPT' || current.tagName === 'STYLE') return current;
+        }
       }
       return null;
     }
@@ -251,8 +266,9 @@ export function createSimulatedStudioDom({
       const texts = [];
       const visit = (parent) => {
         if (parent._textNode) texts.push(parent._textNode);
-        for (const child of parent.children)
+        for (const child of parent.children) {
           if (child instanceof Element) visit(child);
+        }
       };
       if (whatToShow === 4) visit(root);
       let index = 0;
