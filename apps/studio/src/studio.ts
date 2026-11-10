@@ -1208,7 +1208,11 @@ function applyLanguage(next: StudioLanguage): void {
   shellView.renderTheme(theme, false);
   shellView.renderSourceName(displaySourceName());
   if (graph)
-    shellView.renderSourceSummary(graph.scenes.length, graph.meta.sourceNote, graph.meta.description);
+    shellView.renderSourceSummary(
+      graph.scenes.length,
+      graph.meta.sourceNote,
+      graph.meta.description,
+    );
   if (currentFrameState && lastDisplayList) {
     const frame = currentFrameState.playback;
     strategyView.render(
