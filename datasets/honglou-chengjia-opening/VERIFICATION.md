@@ -6,7 +6,7 @@
 
 本批限定第二、三回的 **6 人、9 条关系**：8 条原文直证、1 条亲缘支系推导。
 它与 `examples/honglou-provisional.relgraph.json` 分开保存，不替换技术演示。
-核实日期：2026-11-08。状态是本次对原文的证据核对结果，尚待 PR 审查，
+核实日期：2026-11-08；2026-11-10 经编辑审校补核 P62 并修订推导边标签（见文末修订记录）。状态是本次对原文的证据核对结果，尚待 PR 审查，
 不等于全书考据或跨版本校勘已经完成。
 
 ## 版本与来源
@@ -28,8 +28,8 @@
   `18d5e5b6380faa64319d11e1a106a072f2a3b57c769af81d1d83c256509915ba`。
 - 第一至三回阅读窗口的 **39 个底层 Page 修订**，含修订号、时间、固定链接、
   原始 wikitext SHA-256、PDF 页码和网站校对等级。
-- **15 条短原文证据**；逐条记录回目、上下文、来源页、核实状态及核实日期。
-- 原扫描 PDF 第 **58、61、63、65、68、69、70、75、76** 页的相关证据段
+- **16 条短原文证据**；逐条记录回目、上下文、来源页、核实状态及核实日期。
+- 原扫描 PDF 第 **58、61、62、63、65、68、69、70、75、76** 页的相关证据段
   已人工视觉核对。未对全部 39 页宣称完成独立扫描校对。
 
 PDF 页码从 1 开始，是文件页序，不是印本叶码。第二回转录部分在网站仍为
@@ -51,12 +51,12 @@ PDF 页码从 1 开始，是文件页序，不是印本叶码。第二回转录�
 | `min-daiyu` 贾敏—黛玉母女 | 第二回 [P58](https://zh.wikisource.org/w/index.php?oldid=2441196)、[P65](https://zh.wikisource.org/w/index.php?oldid=2441203)：`lin-daughter`、`min-identity` | 直证，高可信；2 |
 | `mu-zheng` 贾母—贾政母子 | 第二回 [P61](https://zh.wikisource.org/w/index.php?oldid=2441199)、[P65](https://zh.wikisource.org/w/index.php?oldid=2441203)：`shi-sons`、`shi-living`、`shi-alias` | 直证，高可信；2 |
 | `zheng-min` 贾政—贾敏兄妹 | 第二回 [P65](https://zh.wikisource.org/w/index.php?oldid=2441203)：`min-identity` 明言“赦政二公之胞妹” | 直证，高可信；2 |
-| `zheng-baoyu` 贾政—宝玉父子 | 第二回 [P63](https://zh.wikisource.org/w/index.php?oldid=2441201)、[P65](https://zh.wikisource.org/w/index.php?oldid=2441203)：`baoyu-name`、`baoyu-father` | 直证，高可信；2 |
+| `zheng-baoyu` 贾政—宝玉父子 | 第二回 [P63](https://zh.wikisource.org/w/index.php?oldid=2441201)、[P65](https://zh.wikisource.org/w/index.php?oldid=2441203)：`baoyu-jade-birth`、`baoyu-name`、`baoyu-father` | 直证，高可信；2 |
 | `mu-min` 贾母—贾敏母女 | 第三回 [P70](https://zh.wikisource.org/w/index.php?oldid=2441208)：`mu-min`；第二回锁定黛玉之母身份 | 直证，高可信；3 |
 | `mu-daiyu` 贾母—黛玉外祖母与外孙女 | 第三回 [P70](https://zh.wikisource.org/w/index.php?oldid=2441208)：`grandmother`，叙述者在拜见段直接确认 | 直证，高可信；3 |
-| `baoyu-daiyu` 宝玉—黛玉姑表兄妹 | 第三回 [P75](https://zh.wikisource.org/w/index.php?oldid=2441213)：`cousin` 直称“表兄”；姑表支系另由第二回三条直证亲缘推出 | **推导**，高可信但不标为直证；3 |
+| `baoyu-daiyu` 宝玉—黛玉姑舅表兄妹 | 第三回 [P75](https://zh.wikisource.org/w/index.php?oldid=2441213)：`cousin` 直称“表兄”；姑表支系另由第二回三条直证亲缘推出 | **推导**，高可信但不标为直证；3 |
 
-“姑表”推导依赖 `zheng-min`、`min-daiyu`、`zheng-baoyu`。
+“姑舅表”推导依赖 `zheng-min`、`min-daiyu`、`zheng-baoyu`。
 关系标签本身含“亲缘推导”，转录及画面也会保留这个限定。
 `evidenceConfirmedAt` 是本批选用的明确证据节点，不宣称是读者最早能推知关系的时刻；
 例如第二回已能推知一些外亲，第三回的外祖母明确称谓仍取 3 作为保守揭示阈值。
@@ -153,3 +153,24 @@ npm run check:honglou-sources -- --scan-file /path/to/original.pdf
 
 回滚：撤销本批数据、台账、核查脚本、测试及文档即可，不涉及 Schema、
 持久化数据迁移或图谱内核回滚；provisional 示例始终保留。
+
+## 2026-11-10 编辑审校修订记录
+
+应 B2-2 前编辑审校（审校结论：通过，附两项修改建议；MZ 于 2026-11-10 拍板执行）：
+
+1. **推导边标签**：`baoyu-daiyu` 由「姑表兄妹（亲缘推导）」改为「姑舅表兄妹（亲缘推导）」。
+   「姑表」只命名宝玉一侧（贾敏为其姑母）；黛玉一侧贾政为其舅父，合称「姑舅表」才双向严密。
+   推导依赖与揭示阈值不变。
+2. **补核 P62、新增证据 `baoyu-jade-birth`**：冷子兴原述政公夫人王氏次年所生公子衔玉而生
+   （P62，承 P61 诸子之序），列为 `zheng-baoyu` 的首要证据，`jia-baoyu` 与 `baoyu-daiyu`
+   的证据链同步加入。须更正审校建议的原表述：程甲本此段**没有**「取名叫作宝玉」一句，
+   该句是通行本文字；程甲本中宝玉之名由同回雨村回指（`baoyu-name`）确立，本次补入的是
+   「衔玉而生」的原述本身，父子关系自此由原述直证、回指负责定名，分工更准确。
+   引文止于「玉」：转录将该句扫描底本的「來」简作「来」，截断引文以保证逐字保真；
+   P62 的 `scanReview` 据此改为 `evidence-passages-checked`。
+3. **日期与测试不变量**：台账 `verifiedAt` 更新为 2026-11-10；原 15 条证据的 `checkedAt`
+   保持 2026-11-08 不变。`tests/honglou-dataset.test.mjs` 相应把逐条
+   `checkedAt == verifiedAt` 改为 `checkedAt <= verifiedAt`（不得晚于台账核实日期）。
+4. 上文「复现与质量检查」中的运行结果（15/15 引文等）为 2026-11-08 的历史记录，未改写；
+   合并本修订后须重跑 `npm run check:honglou-sources`（应为 39/39 修订、16/16 引文）
+   与数据集测试，再作为 B2-2 正式制作输入。

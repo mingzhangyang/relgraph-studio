@@ -76,7 +76,7 @@ test('every excerpt has a pinned primary page, scan locator, verification state 
     assert.ok(source, entry.id);
     assert.equal(source.scanReview, 'evidence-passages-checked');
     assert.equal(entry.verification, 'transcription-and-scan-checked');
-    assert.equal(entry.checkedAt, ledger.verifiedAt);
+    assert.ok(entry.checkedAt <= ledger.verifiedAt, `${entry.id} checked after the ledger verification date`);
     assert.ok(entry.text.length > 0 && Array.from(entry.text).length < 100);
     assert.ok(entry.context.length > 0);
     const window = ledger.readingWindow.find((part) => part.chapter === entry.at);

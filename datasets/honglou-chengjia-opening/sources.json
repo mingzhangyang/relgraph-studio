@@ -1,7 +1,7 @@
 {
   "datasetId": "honglou-chengjia-opening-v1",
   "reviewedThrough": 3,
-  "verifiedAt": "2026-11-08",
+  "verifiedAt": "2026-11-10",
   "edition": {
     "id": "chengjia-1791",
     "work": "红楼梦",
@@ -277,7 +277,7 @@
       "pdfPage": 62,
       "scanUrl": "https://upload.wikimedia.org/wikipedia/commons/0/09/NLC892-003290079-43280_%E7%B4%85%E6%A8%93%E5%A4%A2_%E7%AC%AC1%E5%86%8A.pdf#page=62",
       "siteProofreadLevel": 1,
-      "scanReview": "not-independently-checked"
+      "scanReview": "evidence-passages-checked"
     },
     {
       "id": "page-63",
@@ -553,6 +553,15 @@
       "context": "承接史侯小姐及两个儿子的同一段人物指称。",
       "verification": "transcription-and-scan-checked",
       "checkedAt": "2026-11-08"
+    },
+    {
+      "id": "baoyu-jade-birth",
+      "sourceId": "page-62",
+      "at": 2,
+      "text": "不想次年又生了一位公子，說來更竒，一落胞胎，嘴裡便啣下一塊五彩晶瑩的玉",
+      "context": "冷子兴原述：承 P61「這政老爺的夫人王氏」诸子之序，次年所生公子衔玉而生；程甲本此段无「取名」句（该句为通行本文字），定名靠同回雨村回指。引文止于「玉」，避开转录将扫描底本「來」简作「来」的一字。",
+      "verification": "transcription-and-scan-checked",
+      "checkedAt": "2026-11-10"
     },
     {
       "id": "baoyu-name",
