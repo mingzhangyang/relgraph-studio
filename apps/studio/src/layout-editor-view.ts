@@ -62,15 +62,19 @@ export function renderEditorStatus(
   controls: EditorControls,
   active: boolean,
   dirty: boolean,
+  validationMessage: string | null = null,
 ): void {
   controls.reset.disabled = !dirty;
-  controls.note.textContent = active
-    ? uiText('拖动当前可见节点 · ') +
-      uiText(dirty ? '有坐标调整' : '尚未调整') +
-      uiText(' · 通过文档工具栏导出保存')
-    : dirty
-      ? uiText('已有坐标调整 · 可保存完整项目或单独导出坐标')
-      : uiText('调整模式关闭 · 保存完整项目请使用上方工具栏');
+  const text = validationMessage
+    ? uiStatus(validationMessage)
+    : active
+      ? uiText('拖动当前可见节点 · ') +
+        uiText(dirty ? '有坐标调整' : '尚未调整') +
+        uiText(' · 通过文档工具栏导出保存')
+      : dirty
+        ? uiText('已有坐标调整 · 可保存完整项目或单独导出坐标')
+        : uiText('调整模式关闭 · 保存完整项目请使用上方工具栏');
+  if (controls.note.textContent !== text) controls.note.textContent = text;
 }
 
 export function renderEditorSelection(controls: EditorControls, selected: string): void {
@@ -78,5 +82,6 @@ export function renderEditorSelection(controls: EditorControls, selected: string
 }
 
 export function renderEditorMessage(controls: EditorControls, message: string): void {
-  controls.note.textContent = uiStatus(message);
+  const localized = uiStatus(message);
+  if (controls.note.textContent !== localized) controls.note.textContent = localized;
 }
