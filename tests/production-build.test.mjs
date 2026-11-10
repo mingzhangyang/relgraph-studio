@@ -103,7 +103,9 @@ test('production build includes both examples and the bundled workspace loads th
 
     // Generated labels must translate without replacing their nested inputs.
     const generated = (host, key) =>
-      host.querySelectorAll('[data-ui-key]').find((item) => item.getAttribute('data-ui-key') === key);
+      host
+        .querySelectorAll('[data-ui-key]')
+        .find((item) => item.getAttribute('data-ui-key') === key);
     const scopeLabel = generated(inspector, '样式作用范围');
     const spacingLabel = generated(strategy, '间距');
     assert.ok(scopeLabel && spacingLabel, 'generated labels must be connected');
