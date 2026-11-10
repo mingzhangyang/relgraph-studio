@@ -109,3 +109,35 @@ test('locale only translates registered workspace labels and known diagnostic te
   assert.equal(label.textContent, '  导演预览  ');
   assert.equal(header['aria-label'], '播放');
 });
+
+test('every built-in image upload rejection has an English message', async () => {
+  const { initializeStudioLanguage, setStudioLanguage, uiStatus } = await import(
+    '../apps/studio/src/i18n.ts'
+  );
+  const sources = ['node-image.ts', 'image-dimensions.ts'].map((name) =>
+    readFileSync(new URL('../apps/studio/src/' + name, import.meta.url), 'utf8'),
+  );
+  const messages = [
+    ...new Set(
+      sources.flatMap((source) =>
+        source
+          .split("new Error('")
+          .slice(1)
+          .map((part) => part.split("')")[0])
+          .filter((message) => /[\u3400-\u9fff]/.test(message)),
+      ),
+    ),
+  ];
+  assert.ok(messages.length >= 6, 'exercise the actual preflight and decode error strings');
+  initializeStudioLanguage(null);
+  try {
+    setStudioLanguage('en');
+    for (const message of messages) {
+      const localized = uiStatus(message);
+      assert.notEqual(localized, message, 'missing English catalog entry for: ' + message);
+      assert.doesNotMatch(localized, /[\u3400-\u9fff]/);
+    }
+  } finally {
+    setStudioLanguage('zh-CN');
+  }
+});
