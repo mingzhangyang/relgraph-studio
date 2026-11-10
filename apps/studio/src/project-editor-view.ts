@@ -260,6 +260,14 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
   host.append(advanced);
   const error = el('p');
   let lastExternalError: string | null = null;
+  // Keep the raw failed draft, not a previously localized error message.
+  // Locale changes can then re-validate without committing or discarding input.
+  let lastLocalValidation: {
+    appearance: AppearanceKind;
+    field: string;
+    raw: string;
+    badInput: boolean;
+  } | null = null;
   error.id = 'visualError';
   error.setAttribute('role', 'status');
   host.append(error);
@@ -439,6 +447,7 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
           drafts.set(draft, { value: raw, badInput });
           showFieldError(parsed.message);
           lastExternalError = null;
+          lastLocalValidation = { appearance: appearanceKind(), field: key, raw, badInput };
           error.textContent = badInput ? parsed.message : uiText('配置无效：') + parsed.message;
           actions.draftChanged?.();
           return;
@@ -454,6 +463,7 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
           input.value = expectedAppearance(key);
           showFieldError('');
           lastExternalError = null;
+          lastLocalValidation = null;
           error.textContent = '';
           if (picker && /^#[0-9a-f]{6}$/i.test(input.value)) picker.value = input.value;
         } else if (!matchesValue(raw, expectedAppearance(key), input.type)) {
@@ -478,6 +488,7 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
           input.value = expectedAppearance(key);
           showFieldError('');
           lastExternalError = null;
+          lastLocalValidation = null;
           error.textContent = '';
           if (picker && /^#[0-9a-f]{6}$/i.test(input.value)) picker.value = input.value;
         } else {
@@ -730,6 +741,7 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
       imageBusy = false;
       drafts.clear();
       lastExternalError = null;
+      lastLocalValidation = null;
       renderedContext = '';
       setSelection(null);
       signature = '';
@@ -739,10 +751,18 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
     },
     error(message: string) {
       lastExternalError = message;
+      lastLocalValidation = null;
       error.textContent = uiStatus(message);
     },
     refreshLanguage() {
-      if (lastExternalError !== null) error.textContent = uiStatus(lastExternalError);
+      if (lastExternalError !== null) {
+        error.textContent = uiStatus(lastExternalError);
+      } else if (lastLocalValidation) {
+        const { appearance, field, raw, badInput } = lastLocalValidation;
+        const result = parseAppearanceDraft(appearance, field, raw, badInput);
+        if (!result.ok)
+          error.textContent = badInput ? result.message : uiText('配置无效：') + result.message;
+      }
     },
     pick(list: DisplayList, point: { x: number; y: number }) {
       const hit = hitDisplayList(list, point);
