@@ -1208,6 +1208,9 @@ function applyLanguage(next: StudioLanguage): void {
     shotsView.refreshLanguage();
     shotsView.render(frame.index, lastDisplayList.a11y.scene.title, frame.progress);
     shellView.renderDomainTime(frame.domainAt, currentFrameState.view.timeline?.unit);
+    // Refresh the scrubber's localized aria-valuetext from the existing
+    // playback model, without seeking or repainting the movie.
+    renderPlaybackFrame(playbackControls, playbackDisplay(playback, frame.index, frame.totalSec));
   } else {
     strategyView.render(
       currentFrameState,
