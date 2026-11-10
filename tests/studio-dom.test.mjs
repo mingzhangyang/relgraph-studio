@@ -141,3 +141,54 @@ test('every built-in image upload rejection has an English message', async () =>
     setStudioLanguage('zh-CN');
   }
 });
+
+test('shared simulated DOM updates static and generated text without remounting nested controls', async () => {
+  const {
+    captureStaticStudioUi,
+    initializeStudioLanguage,
+    refreshStudioUi,
+    setStudioLanguage,
+    uiElement,
+  } = await import('../apps/studio/src/i18n.ts');
+  initializeStudioLanguage(null);
+  const { document } = createSimulatedStudioDom();
+  const heading = document.createElement('h1');
+  heading.textContent = '导演预览';
+  const toolbar = document.createElement('button');
+  toolbar.setAttribute('aria-label', '文档操作');
+  const sourceName = document.createElement('p');
+  sourceName.textContent = '林黛玉';
+  document.body.append(heading, toolbar, sourceName);
+  captureStaticStudioUi(document);
+
+  // Generated controls appear after the initial static HTML is captured.
+  const label = uiElement(document, 'label', '样式作用范围');
+  const input = document.createElement('input');
+  input.value = '175';
+  label.append(input);
+  document.body.append(label);
+  assert.equal(label.firstChild.nodeType, 3);
+  assert.equal(label.lastElementChild, input);
+  assert.equal(document.querySelectorAll('[data-ui-key]').includes(label), true);
+
+  try {
+    setStudioLanguage('en');
+    refreshStudioUi(document);
+    assert.equal(heading.textContent, 'Director preview');
+    assert.equal(toolbar.getAttribute('aria-label'), 'Document actions');
+    assert.equal(label.firstChild.textContent, 'Style scope');
+    assert.equal(label.lastElementChild, input);
+    assert.equal(input.value, '175');
+    assert.equal(sourceName.textContent, '林黛玉');
+
+    setStudioLanguage('zh-CN');
+    refreshStudioUi(document);
+    assert.equal(heading.textContent, '导演预览');
+    assert.equal(toolbar.getAttribute('aria-label'), '文档操作');
+    assert.equal(label.firstChild.textContent, '样式作用范围');
+    assert.equal(label.lastElementChild, input);
+    assert.equal(input.value, '175');
+  } finally {
+    setStudioLanguage('zh-CN');
+  }
+});
