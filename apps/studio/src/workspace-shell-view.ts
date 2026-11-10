@@ -40,9 +40,14 @@ export function createWorkspaceShellView(
     ctx.textAlign = 'left';
   }
   return {
+    renderEmptyDomainTime(): void {
+      const label = uiText('领域时间：—');
+      if (elements.domainTime.textContent !== label) elements.domainTime.textContent = label;
+    },
     resetMetadata(): void {
       // Preserve prior source name until a new result is accepted.
-      elements.domainTime.textContent = uiText('领域时间：—');
+      const label = uiText('领域时间：—');
+      if (elements.domainTime.textContent !== label) elements.domainTime.textContent = label;
       elements.sceneCount.textContent = '0';
       elements.sourceNote.textContent = '—';
     },
