@@ -485,6 +485,9 @@ const displaySourceName = (): string =>
     ? uiText(activeSourceName)
     : activeSourceName;
 let selectedLayoutNode: string | null = null;
+// Coordinate errors belong to the coordinate editor, not the project model.
+// Preserve their raw wording across locale-only renders and normal redraws.
+let coordinateValidationMessage: string | null = null;
 // Coordinates are edited only on Apply; keep uncommitted X/Y per node even
 // when another node is selected or position-edit mode is temporarily hidden.
 const coordinateDrafts = new Map<string, { x: string; y: string }>();
@@ -651,6 +654,7 @@ function clearStudio(): void {
   projectHistory.reset();
   projectSavepoint.clear();
   coordinateDrafts.clear();
+  coordinateValidationMessage = null;
   projectEditor.clear();
   renderer = null;
   lastDisplayList = null;
@@ -948,6 +952,7 @@ function trackCoordinateDraft(): void {
   const point = committedCoordinate(selectedLayoutNode);
   if (!point) return;
   const draft = { x: layoutX.value, y: layoutY.value };
+  coordinateValidationMessage = null;
   if (coordinateDraftMatches(draft, point)) coordinateDrafts.delete(selectedLayoutNode);
   else coordinateDrafts.set(selectedLayoutNode, draft);
   updateLayoutControls();
@@ -959,6 +964,7 @@ for (const input of [layoutX, layoutY]) {
 layoutNode.addEventListener('change', () => {
   if (!availableNodes().some((node) => node.id === layoutNode.value)) return;
   selectedLayoutNode = layoutNode.value;
+  coordinateValidationMessage = null;
   updateLayoutFields();
   refreshSelectionFeedback();
 });
@@ -973,7 +979,8 @@ layoutApply.addEventListener('click', () => {
     return;
   const point = parseCoordinateInputs(layoutX.value, layoutY.value);
   if (!point) {
-    renderEditorMessage(layoutControls, '坐标必须是有限数字，请检查 X 和 Y');
+    coordinateValidationMessage = '坐标必须是有限数字，请检查 X 和 Y';
+    renderEditorMessage(layoutControls, coordinateValidationMessage);
     return;
   }
   if (
@@ -981,6 +988,7 @@ layoutApply.addEventListener('click', () => {
     !updateEditableNodePosition(currentLayout, currentFrameState, selectedLayoutNode, point)
   )
     return;
+  coordinateValidationMessage = null;
   projectSavepoint.positionsChanged();
   projectHistory.commit(configWithPositions(undefined, [selectedLayoutNode]));
   if (graph) graph.project = projectHistory.value;
@@ -997,6 +1005,7 @@ const layoutChanged = (): boolean =>
   Boolean(currentLayout && originalLayout && layoutHasChanges(currentLayout, originalLayout));
 function updateLayoutControls(): void {
   renderEditorStatus(layoutControls, layoutEditing, layoutChanged() || hasPendingCoordinateDraft());
+  if (coordinateValidationMessage) renderEditorMessage(layoutControls, coordinateValidationMessage);
   refreshUnsavedState();
 }
 function rebuildRenderer(): void {
@@ -1028,6 +1037,7 @@ function cancelActiveLayoutDrag(): boolean {
 }
 function leavePositionEdit(): void {
   if (!layoutEditing) return;
+  coordinateValidationMessage = null;
   cancelActiveLayoutDrag();
   layoutEditing = false;
   editCamera = null;
@@ -1051,6 +1061,7 @@ layoutReset.addEventListener('click', () => {
   // Reset is an explicit discard of all pending coordinate inputs, not a
   // new authored layout commit when only unsubmitted drafts existed.
   coordinateDrafts.clear();
+  coordinateValidationMessage = null;
   if (!changedPositions) {
     // Cancelling the first, uncommitted drag can restore the saved positions
     // without creating a history change. The renderer still holds the pixels
@@ -1220,7 +1231,10 @@ function applyLanguage(next: StudioLanguage): void {
       projectHistory.value,
     );
     shellView.repaintEmptyStage(theme);
-    if (!graph) transcriptView.reset();
+    if (!graph) {
+      transcriptView.reset();
+      shellView.renderEmptyDomainTime();
+    }
   }
   refreshSelectionFeedback();
   if (currentDiagnostics) diagnosticsView.render(currentDiagnostics);
