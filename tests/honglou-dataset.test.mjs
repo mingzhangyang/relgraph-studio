@@ -203,7 +203,7 @@ test('production projection and a11y reveal only chapter-safe data and withdraw 
         .join(' ');
     if (frame === 0)
       for (const character of graphDocument.characters) assert.ok(!text.includes(character.name));
-    if (frame === 24) assert.doesNotMatch(text, /外祖母|外孙女|姑表/);
+    if (frame === 24) assert.doesNotMatch(text, /外祖母|外孙女|姑舅表兄妹/);
   }
   const timeline = compileTimeline(graph);
   assert.equal(timeline.shots[0].view.nodes.length, 0);
