@@ -1806,3 +1806,93 @@ test('selection announcements follow locale but ignore geometry-only frame chang
   assert.match(note.textContent, /已选中节点/);
   assert.equal(note.textWrites, writes + 1);
 });
+
+test('strategy validation feedback survives locale and frame-only rerenders until input changes', async () => {
+  const app = makeStudio();
+  await app.ready;
+  const strategy = app.node('layoutStrategyEditor');
+  const note = strategy.children.find((child) => child.tagName === 'P');
+  assert.ok(note);
+  const spacing = viewControl(app, 'strategySpacing');
+  const original = spacing.value;
+  spacing.value = '';
+  await spacing.dispatch('input');
+  await viewControl(app, 'strategyPreview').click();
+  assert.equal(note.textContent, '参数不能为空。');
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
+
+  const language = app.node('languageSelect');
+  language.value = 'en';
+  await language.dispatch('change');
+  assert.equal(note.textContent, 'Parameters cannot be empty.');
+  assert.equal(spacing.value, '');
+  assert.equal(app.window.renderAt(84), true);
+  assert.equal(note.textContent, 'Parameters cannot be empty.');
+
+  language.value = 'zh-CN';
+  await language.dispatch('change');
+  assert.equal(note.textContent, '参数不能为空。');
+  spacing.value = original;
+  await spacing.dispatch('input');
+  assert.match(note.textContent, /静态确定性布局/);
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
+});
+
+test('invalid data retains the empty domain-time label in both interface languages', async () => {
+  const app = makeStudio();
+  await app.ready;
+  const input = app.node('fileInput');
+  input.files = [readFile('broken.json', '{"broken":true}')];
+  await input.dispatch('change');
+  assert.equal(app.node('status').attributes['data-state'], 'error');
+  assert.equal(app.node('domainTime').textContent, '领域时间：—');
+
+  const language = app.node('languageSelect');
+  language.value = 'en';
+  await language.dispatch('change');
+  assert.equal(app.node('status').attributes['data-state'], 'error');
+  assert.equal(app.node('domainTime').textContent, 'Domain time: —');
+  assert.equal(app.node('sourceName').textContent, 'broken.json');
+
+  language.value = 'zh-CN';
+  await language.dispatch('change');
+  assert.equal(app.node('domainTime').textContent, '领域时间：—');
+});
+
+test('coordinate validation remains visible in either locale until corrected or reset', async () => {
+  const app = makeStudio();
+  await app.ready;
+  assert.equal(app.window.renderAt(84), true);
+  await app.node('layoutToggle').click();
+  const x = app.node('layoutX');
+  const original = x.value;
+  x.value = '';
+  await x.dispatch('input');
+  await app.node('layoutApply').click();
+  const note = app.node('layoutNote');
+  assert.equal(note.textContent, '坐标必须是有限数字，请检查 X 和 Y');
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
+
+  const language = app.node('languageSelect');
+  language.value = 'en';
+  await language.dispatch('change');
+  assert.equal(note.textContent, 'Coordinates must be finite numbers. Check X and Y.');
+  assert.equal(x.value, '');
+  assert.equal(app.window.renderAt(85), true);
+  assert.equal(note.textContent, 'Coordinates must be finite numbers. Check X and Y.');
+
+  language.value = 'zh-CN';
+  await language.dispatch('change');
+  assert.equal(note.textContent, '坐标必须是有限数字，请检查 X 和 Y');
+  x.value = original;
+  await x.dispatch('input');
+  assert.notEqual(note.textContent, '坐标必须是有限数字，请检查 X 和 Y');
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
+
+  x.value = '';
+  await x.dispatch('input');
+  await app.node('layoutApply').click();
+  assert.equal(note.textContent, '坐标必须是有限数字，请检查 X 和 Y');
+  await app.node('layoutReset').click();
+  assert.notEqual(note.textContent, '坐标必须是有限数字，请检查 X 和 Y');
+});
