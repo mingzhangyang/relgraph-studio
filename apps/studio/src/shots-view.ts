@@ -1,3 +1,4 @@
+import { uiText } from './i18n.js';
 import { formatPlaybackTime } from './playback-model.js';
 
 /**
@@ -18,6 +19,7 @@ export interface ShotElements {
 
 export interface ShotsView {
   clear(): void;
+  refreshLanguage(): void;
   build(markers: readonly ShotMarker[], onSeek: (targetFrame: number) => void): void;
   render(activeIndex: number, activeTitle: string, progress: number): void;
 }
@@ -45,13 +47,20 @@ export function createShotsView(
 
   return {
     clear,
+    refreshLanguage() {
+      lastIndex = -1;
+      lastTitle = '';
+      lastProgress = Number.NaN;
+      for (const [index, button] of buttons.entries())
+        button.setAttribute('aria-label', uiText('跳转至分镜 ') + (index + 1));
+    },
     build(markers, onSeek) {
       clear();
       for (const [index, marker] of markers.entries()) {
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'shot';
-        button.setAttribute('aria-label', '跳转至分镜 ' + (index + 1));
+        button.setAttribute('aria-label', uiText('跳转至分镜 ') + (index + 1));
 
         const top = document.createElement('small');
         const number = document.createElement('span');
@@ -68,7 +77,7 @@ export function createShotsView(
         progress.setAttribute('style', 'transform:scaleX(0)');
 
         const title = document.createElement('strong');
-        title.textContent = '分镜 ' + (index + 1);
+        title.textContent = uiText('分镜 ') + (index + 1);
         button.append(progress, top, title);
         button.addEventListener('click', () => onSeek(marker.targetFrame));
         elements.shots.append(button);
@@ -88,7 +97,7 @@ export function createShotsView(
           button.className = 'shot' + (active ? ' active' : '');
           if (active) button.setAttribute('aria-current', 'step');
           else button.removeAttribute('aria-current');
-          const safeTitle = active ? activeTitle : '分镜 ' + (index + 1);
+          const safeTitle = active ? activeTitle : uiText('分镜 ') + (index + 1);
           if (button.lastElementChild && button.lastElementChild.textContent !== safeTitle)
             button.lastElementChild.textContent = safeTitle;
         }

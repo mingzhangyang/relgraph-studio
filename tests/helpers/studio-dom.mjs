@@ -151,6 +151,7 @@ export function createSimulatedStudioDom({
     exampleLiterature: HTMLButtonElement,
     exampleBiology: HTMLButtonElement,
     themeToggle: HTMLButtonElement,
+    languageSelect: HTMLSelectElement,
     layoutToggle: HTMLButtonElement,
     layoutReset: HTMLButtonElement,
     layoutExport: HTMLButtonElement,

@@ -1,5 +1,5 @@
+import { uiDiagnostic, uiText } from './i18n.js';
 import {
-  diagnosticHeading,
   diagnosticText,
   NO_DIAGNOSTICS_TEXT,
   type Diagnostic,
@@ -42,21 +42,21 @@ export function createDiagnosticsView(
   ): void {
     if (!entries.length) return;
     const heading = document.createElement('h3');
-    heading.textContent = diagnosticHeading(kind, entries.length);
+    heading.textContent = uiText(kind === 'errors' ? '错误' : '警告') + ' · ' + entries.length;
     container.append(heading);
     for (const entry of entries) {
       const text = diagnosticText(entry);
       const item = document.createElement('div');
       item.className = 'diagnostic-item ' + (kind === 'warnings' ? 'warning' : 'error');
       const title = document.createElement('strong');
-      title.textContent = text.title;
+      title.textContent = text.title.replace(/^提示(?= ·|$)/, uiText('提示'));
       const path = document.createElement('code');
       path.textContent = text.path;
       const message = document.createElement('p');
-      message.textContent = text.message;
+      message.textContent = uiDiagnostic(text.message);
       const fix = document.createElement('p');
       fix.className = 'fix';
-      fix.textContent = text.fix;
+      fix.textContent = uiDiagnostic(text.fix);
       item.append(title, path, message, fix);
       container.append(item);
     }
@@ -74,7 +74,7 @@ export function createDiagnosticsView(
       elements.count.textContent = String(total);
       elements.count.setAttribute('data-level', errorCount ? 'error' : 'warning');
       if (total === 0) {
-        elements.warnings.textContent = NO_DIAGNOSTICS_TEXT;
+        elements.warnings.textContent = uiText(NO_DIAGNOSTICS_TEXT);
         elements.warnings.className = 'ok';
       }
     },

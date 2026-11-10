@@ -1639,3 +1639,58 @@ test('playback discards in-flight pointer drags without late commits', async () 
   assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
   assert.equal(app.node('status').attributes['data-state'], 'playing');
 });
+test('language switching preserves frame, unsaved position drafts and project data', async () => {
+  const values = new Map();
+  const storage = {
+    getItem: (key) => values.get(key) ?? null,
+    setItem: (key, value) => values.set(key, value),
+  };
+  const app = makeStudio({ storage });
+  await app.ready;
+  await app.node('layoutToggle').click();
+  const initialFrame = JSON.stringify(app.window.studioFrame());
+  const clock = app.node('time').textContent;
+  const before = Number(app.node('layoutX').value);
+  app.node('layoutX').value = String(before + 10);
+  await app.node('layoutX').dispatch('input');
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'true');
+  const select = app.node('languageSelect');
+  select.value = 'en';
+  await select.dispatch('change');
+  assert.equal(app.document.documentElement.attributes.lang, 'en');
+  assert.equal(values.get('relgraph-studio-language'), 'en');
+  assert.equal(app.node('status').textContent, 'Ready');
+  assert.equal(app.node('saveState').textContent, 'Unsaved changes');
+  assert.match(app.node('sourceName').textContent, /Dream of the Red Chamber/);
+  assert.equal(app.node('layoutX').value, String(before + 10));
+  assert.equal(app.node('time').textContent, clock);
+  assert.equal(JSON.stringify(app.window.studioFrame()), initialFrame);
+  assert.equal(app.downloads.length, 0, 'language changes never export or commit a project');
+  select.value = 'zh-CN';
+  await select.dispatch('change');
+  assert.equal(app.document.documentElement.attributes.lang, 'zh-CN');
+  assert.equal(values.get('relgraph-studio-language'), 'zh-CN');
+  assert.equal(app.node('saveState').textContent, '未保存修改');
+  assert.equal(app.node('layoutX').value, String(before + 10));
+  assert.equal(JSON.stringify(app.window.studioFrame()), initialFrame);
+});
+
+test('stored English language restores on launch and survives storage errors', async () => {
+  const app = makeStudio({
+    storage: {
+      getItem: () => 'en',
+      setItem: () => { throw new Error('storage denied'); },
+    },
+  });
+  await app.ready;
+  assert.equal(app.node('languageSelect').value, 'en');
+  assert.equal(app.document.documentElement.attributes.lang, 'en');
+  assert.equal(app.node('status').textContent, 'Ready');
+  assert.equal(
+    app.node('sourceName').textContent,
+    'Dream of the Red Chamber · Unverified technical demo',
+  );
+  app.node('languageSelect').value = 'zh-CN';
+  await app.node('languageSelect').dispatch('change');
+  assert.equal(app.node('status').textContent, '就绪');
+});

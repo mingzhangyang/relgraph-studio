@@ -1,3 +1,5 @@
+import { uiText } from './i18n.js';
+
 /** Passive workspace presentation: no graph source, request identity or playback rules. */
 type Theme = 'dark' | 'light';
 type ExampleId = 'exampleLiterature' | 'exampleBiology';
@@ -34,19 +36,21 @@ export function createWorkspaceShellView(
     ctx.fillText('RELGRAPH  /  DIRECTOR STUDIO', 640, 330);
     ctx.fillStyle = colors.text;
     ctx.font = '22px system-ui';
-    ctx.fillText(message, 640, 372);
+    ctx.fillText(uiText(message), 640, 372);
     ctx.textAlign = 'left';
   }
   return {
     resetMetadata(): void {
       // Preserve prior source name until a new result is accepted.
-      elements.domainTime.textContent = '领域时间：—';
+      elements.domainTime.textContent = uiText('领域时间：—');
       elements.sceneCount.textContent = '0';
       elements.sourceNote.textContent = '—';
     },
     renderDomainTime(domainAt: number | null, unit: string | undefined): void {
       const text =
-        domainAt === null ? '领域时间：未指定' : `领域时间：${unit || '时点'} ${domainAt}`;
+        domainAt === null
+          ? uiText('领域时间：未指定')
+          : `${uiText('领域时间：')}${unit || uiText('时点')} ${domainAt}`;
       if (elements.domainTime.textContent !== text) elements.domainTime.textContent = text;
     },
     renderSourceName(name: string): void {
@@ -54,7 +58,7 @@ export function createWorkspaceShellView(
     },
     renderSourceSummary(count: number, note?: string, description?: string): void {
       elements.sceneCount.textContent = String(count);
-      elements.sourceNote.textContent = note || description || '此数据未提供来源说明。';
+      elements.sourceNote.textContent = note || description || uiText('此数据未提供来源说明。');
     },
     markSource(id: ExampleId | null): void {
       elements.exampleLiterature.setAttribute('aria-pressed', String(id === 'exampleLiterature'));
@@ -62,10 +66,13 @@ export function createWorkspaceShellView(
     },
     renderTheme(theme: Theme, persist: boolean): void {
       if (persist) document.documentElement?.setAttribute('data-theme', theme);
-      const other = theme === 'light' ? '深色' : '浅色';
-      elements.themeToggle.setAttribute('aria-label', `切换到${other}模式`);
+      elements.themeToggle.setAttribute(
+        'aria-label',
+        theme === 'light' ? uiText('切换到深色模式') : uiText('切换到浅色模式'),
+      );
       if (elements.themeToggle.lastElementChild)
-        elements.themeToggle.lastElementChild.textContent = theme === 'light' ? '浅色' : '深色';
+        elements.themeToggle.lastElementChild.textContent =
+          theme === 'light' ? uiText('浅色') : uiText('深色');
     },
     renderDropzoneDragging(dragging: boolean): void {
       elements.dropzone.className = dragging ? 'dropzone dragging' : 'dropzone';

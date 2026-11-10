@@ -86,6 +86,17 @@ test('production build includes both examples and the bundled workspace loads th
     assert.equal(window.renderAt(48), true);
     assert.deepEqual(window.studioFrame(), frame);
 
+    const beforeLanguageSwitch = JSON.stringify(window.studioFrame());
+    elements.get('languageSelect').value = 'en';
+    await elements.get('languageSelect').dispatch('change');
+    assert.equal(document.documentElement.attributes.lang, 'en');
+    assert.equal(elements.get('status').textContent, 'Ready');
+    assert.equal(JSON.stringify(window.studioFrame()), beforeLanguageSwitch);
+    elements.get('languageSelect').value = 'zh-CN';
+    await elements.get('languageSelect').dispatch('change');
+    assert.equal(elements.get('status').textContent, '就绪');
+    assert.equal(JSON.stringify(window.studioFrame()), beforeLanguageSwitch);
+
     await elements.get('exampleBiology').click();
     assert.equal(elements.get('status').attributes['data-state'], 'ready');
     assert.ok(window.studioFrame().view.nodes.some((node) => node.id === 'kinase-k'));

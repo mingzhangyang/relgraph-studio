@@ -1,3 +1,4 @@
+import { uiStatus, uiText } from './i18n.js';
 import type { VisualNode } from '@relgraph/core';
 import type { Point } from './position-tool.js';
 
@@ -64,10 +65,12 @@ export function renderEditorStatus(
 ): void {
   controls.reset.disabled = !dirty;
   controls.note.textContent = active
-    ? '拖动当前可见节点 · ' + (dirty ? '有坐标调整' : '尚未调整') + ' · 通过文档工具栏导出保存'
+    ? uiText('拖动当前可见节点 · ') +
+      uiText(dirty ? '有坐标调整' : '尚未调整') +
+      uiText(' · 通过文档工具栏导出保存')
     : dirty
-      ? '已有坐标调整 · 可保存完整项目或单独导出坐标'
-      : '调整模式关闭 · 保存完整项目请使用上方工具栏';
+      ? uiText('已有坐标调整 · 可保存完整项目或单独导出坐标')
+      : uiText('调整模式关闭 · 保存完整项目请使用上方工具栏');
 }
 
 export function renderEditorSelection(controls: EditorControls, selected: string): void {
@@ -75,5 +78,5 @@ export function renderEditorSelection(controls: EditorControls, selected: string
 }
 
 export function renderEditorMessage(controls: EditorControls, message: string): void {
-  controls.note.textContent = message;
+  controls.note.textContent = uiStatus(message);
 }

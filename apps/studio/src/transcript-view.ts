@@ -1,3 +1,4 @@
+import { studioLanguage, uiText } from './i18n.js';
 import type { FrameText } from '@relgraph/render';
 import {
   liveFrameDescription,
@@ -29,6 +30,7 @@ export function createTranscriptView(
   elements: TranscriptElements,
 ): TranscriptView {
   let previous: TranscriptSnapshot | null = null;
+  let renderedLanguage = studioLanguage();
   let lastLiveText: string | null = null;
   let lastLiveScene: number | null = null;
 
@@ -54,7 +56,7 @@ export function createTranscriptView(
       lastLiveText = null;
       lastLiveScene = null;
       elements.transcript.replaceChildren();
-      setText(elements.description, '没有已加载的有效数据。');
+      setText(elements.description, uiText('没有已加载的有效数据。'));
       setText(elements.currentShot, '—');
       setText(elements.nodeCount, '0');
       setText(elements.edgeCount, '0');
@@ -65,24 +67,31 @@ export function createTranscriptView(
       setText(elements.nodeCount, String(a11y.nodes.length));
       setText(elements.edgeCount, String(a11y.relations.length));
 
-      if (!sameTranscriptSemantics(previous, a11y)) {
+      const language = studioLanguage();
+      if (language !== renderedLanguage || !sameTranscriptSemantics(previous, a11y)) {
         elements.transcript.replaceChildren();
         const intro = document.createElement('p');
-        intro.textContent = scene.title + '。' + scene.narration;
+        intro.textContent = scene.title + (language === 'en' ? '. ' : '。') + scene.narration;
         elements.transcript.append(intro);
         if (a11y.detail) {
           const heading = document.createElement('strong');
-          heading.textContent = '当前人物简介';
+          heading.textContent = uiText('当前人物简介');
           const summary = document.createElement('p');
           summary.textContent = a11y.detail.label + '：' + a11y.detail.summary;
           elements.transcript.append(heading, summary);
         }
-        addList('当前可见节点', a11y.nodes);
-        addList('当前可见关系', a11y.relations);
+        addList(uiText('当前可见节点'), a11y.nodes);
+        addList(uiText('当前可见关系'), a11y.relations);
         previous = snapshotTranscriptSemantics(a11y);
+        renderedLanguage = language;
       }
 
-      const liveText = liveFrameDescription(a11y);
+      const liveText =
+        language === 'en'
+          ? scene.title + '. ' + scene.narration +
+            ` Currently: ${a11y.nodes.length} nodes, ${a11y.relations.length} relationships. ` +
+            (a11y.detail ? a11y.detail.label + ': ' + a11y.detail.summary : '')
+          : liveFrameDescription(a11y);
       if (liveText !== lastLiveText || scene.index !== lastLiveScene) {
         // Setting textContent on role=status triggers a screen-reader
         // announcement, so never write again for an unchanged frame.

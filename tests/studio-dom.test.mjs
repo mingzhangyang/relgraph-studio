@@ -66,3 +66,46 @@ test('production and source harnesses use the single DOM implementation without 
   assert.match(production, /const script = await readFile\(/);
   assert.match(production, /runInNewContext\(/);
 });
+test('locale only translates registered workspace labels and known diagnostic templates', async () => {
+  const {
+    captureStaticStudioUi,
+    initializeStudioLanguage,
+    refreshStudioUi,
+    setStudioLanguage,
+    uiText,
+    uiMessage,
+    uiDiagnostic,
+  } = await import('../apps/studio/src/i18n.ts');
+  initializeStudioLanguage(null);
+  const label = { textContent: '  导演预览  ', isConnected: true, parentElement: { closest: () => null } };
+  const untouched = { textContent: '林黛玉', isConnected: true, parentElement: { closest: () => null } };
+  const nodes = [label, untouched];
+  const header = {
+    isConnected: true,
+    value: '播放',
+    setAttribute(name, value) { this[name] = value; },
+    getAttribute(name) { return name === 'aria-label' ? this['aria-label'] ?? '播放' : null; },
+  };
+  const doc = {
+    body: { querySelectorAll: () => [header] },
+    createTreeWalker: () => ({
+      nextNode: () => nodes.shift() ?? null,
+    }),
+    documentElement: { setAttribute(name, value) { this[name] = value; } },
+    querySelectorAll: () => [],
+  };
+  captureStaticStudioUi(doc);
+  setStudioLanguage('en');
+  refreshStudioUi(doc);
+  assert.equal(label.textContent, '  Director preview  ');
+  assert.equal(untouched.textContent, '林黛玉', 'source text is never altered');
+  assert.equal(header['aria-label'], 'Play');
+  assert.equal(doc.documentElement.lang, 'en');
+  assert.equal(uiText('布局策略'), 'Layout strategy');
+  assert.match(uiMessage('全局节点样式 · 当前投影 2 个，已描边 1 个'), /2 visible, 1 outlined/);
+  assert.equal(uiDiagnostic('建议：修正字段类型。'), 'Suggestion: Correct the field type.');
+  setStudioLanguage('zh-CN');
+  refreshStudioUi(doc);
+  assert.equal(label.textContent, '  导演预览  ');
+  assert.equal(header['aria-label'], '播放');
+});

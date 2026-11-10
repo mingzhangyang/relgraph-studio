@@ -1,3 +1,4 @@
+import { uiElement, uiStatus, uiText } from './i18n.js';
 import {
   nodeAppearance,
   appearanceOrigin,
@@ -81,7 +82,7 @@ export function visibleObjectEntries(
     const to = names.get(edge.target);
     const endpoints =
       from === undefined || to === undefined
-        ? '端点未显示'
+        ? uiText('端点未显示')
         : `${from} ${edge.directed ? '→' : '—'} ${to}`;
     const label = displayEdgeText(config, edge.id)?.label ?? edge.label ?? edge.kind;
     return { id: edge.id, label: `${label} · ${endpoints} · ID: ${edge.id}` };
@@ -107,9 +108,7 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
     tag: K,
     text = '',
   ): HTMLElementTagNameMap[K] => {
-    const e = doc.createElement(tag);
-    if (text) e.textContent = text;
-    return e;
+    return uiElement(doc, tag, text);
   };
   const heading = el('h2', '画面与属性');
   heading.className = 'card-title';
@@ -260,6 +259,7 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
   advanced.append(summary, fields);
   host.append(advanced);
   const error = el('p');
+  let lastExternalError: string | null = null;
   error.id = 'visualError';
   error.setAttribute('role', 'status');
   host.append(error);
@@ -271,6 +271,9 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
       origin: HTMLElement;
       feedback: HTMLElement;
       row: HTMLElement;
+      title: string;
+      hint: HTMLElement;
+      reset: HTMLButtonElement;
     }
   >();
   const appearanceKind = (): AppearanceKind => (kind === 'node' ? 'nodes' : 'edges');
@@ -380,7 +383,7 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
       if (type !== 'choice') {
         (input as HTMLInputElement).type = type === 'color' ? 'text' : type;
         (input as HTMLInputElement).placeholder =
-          type === 'color' ? '#RRGGBB · 留空继承' : '留空继承';
+          uiText(type === 'color' ? '#RRGGBB · 留空继承' : '留空继承');
         if (rule?.type === 'number') {
           (input as HTMLInputElement).min = String(rule.min);
           (input as HTMLInputElement).max = String(rule.max);
@@ -407,8 +410,8 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
         picker.type = 'color';
         picker.id = input.id + '-picker';
         picker.className = 'property-color-picker';
-        picker.setAttribute('aria-label', '选择' + title);
-        picker.title = '选择' + title;
+        picker.setAttribute('aria-label', uiText('选择') + uiText(title));
+        picker.title = uiText('选择') + uiText(title);
       }
       const showFieldError = (message: string): void => {
         feedback.textContent = message;
@@ -435,7 +438,8 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
         if (!parsed.ok) {
           drafts.set(draft, { value: raw, badInput });
           showFieldError(parsed.message);
-          error.textContent = badInput ? parsed.message : '配置无效：' + parsed.message;
+          lastExternalError = null;
+          error.textContent = badInput ? parsed.message : uiText('配置无效：') + parsed.message;
           actions.draftChanged?.();
           return;
         }
@@ -449,6 +453,7 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
         if (accepted) {
           input.value = expectedAppearance(key);
           showFieldError('');
+          lastExternalError = null;
           error.textContent = '';
           if (picker && /^#[0-9a-f]{6}$/i.test(input.value)) picker.value = input.value;
         } else if (!matchesValue(raw, expectedAppearance(key), input.type)) {
@@ -456,14 +461,14 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
           // and domain restrictions. Never lose a rejected edit or its context.
           drafts.set(draft, { value: raw, badInput: false });
           input.value = raw;
-          showFieldError('此值未能应用，请检查项目错误提示。');
+          showFieldError(uiText('此值未能应用，请检查项目错误提示。'));
         }
         actions.draftChanged?.();
       };
       reset.type = 'button';
       reset.id = 'visual-' + key + '-reset';
-      reset.setAttribute('aria-label', '恢复继承：' + title);
-      reset.title = '恢复继承';
+      reset.setAttribute('aria-label', uiText('恢复继承：') + uiText(title));
+      reset.title = uiText('恢复继承');
       reset.addEventListener('click', () => {
         const draft = draftKey(key);
         const previousDraft = drafts.get(draft);
@@ -472,11 +477,12 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
           drafts.delete(draft);
           input.value = expectedAppearance(key);
           showFieldError('');
+          lastExternalError = null;
           error.textContent = '';
           if (picker && /^#[0-9a-f]{6}$/i.test(input.value)) picker.value = input.value;
         } else {
           if (previousDraft) drafts.set(draft, previousDraft);
-          showFieldError('恢复继承失败，请检查项目错误提示。');
+          showFieldError(uiText('恢复继承失败，请检查项目错误提示。'));
         }
         actions.draftChanged?.();
       });
@@ -497,7 +503,7 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
       fieldControls.append(reset);
       row.append(heading, fieldControls, origin, hint, feedback);
       fields.append(row);
-      controls.set(key, { input, picker, origin, feedback, row });
+      controls.set(key, { input, picker, origin, feedback, row, title, hint, reset });
     }
   };
   const render = () => {
@@ -513,7 +519,8 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
       objects.replaceChildren(
         blank,
         ...entries.map((n) => {
-          const o = el('option', n.label);
+          const o = doc.createElement('option');
+          o.textContent = n.label;
           o.value = n.id;
           return o;
         }),
@@ -545,11 +552,13 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
     description.disabled = !selected || kind !== 'node';
     descWrap.hidden = kind !== 'node';
     provenance.textContent = selected
-      ? `类别：${selected.kind}` +
+      ? `${uiText('类别：')}${selected.kind}` +
         (kind === 'edge'
-          ? ` · ${'directed' in selected && selected.directed ? '有向' : '无向'} · ${entries.find((entry) => entry.id === selected.id)?.label ?? '端点未显示'} · 关系事实保持原样`
+          ? ` · ${uiText('directed' in selected && selected.directed ? '有向' : '无向')} · ${
+              entries.find((entry) => entry.id === selected.id)?.label ?? uiText('端点未显示')
+            }${uiText(' · 关系事实保持原样')}`
           : '')
-      : '全局样式可作用于未来对象，列表只显示当前投影。';
+      : uiText('全局样式可作用于未来对象，列表只显示当前投影。');
     const resolved = inspectorAppearance(config, kind, selected, scope.value as Scope);
     imageSection.hidden = kind !== 'node';
     const imageStyle =
@@ -561,15 +570,26 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
     inheritImage.disabled = !selected;
     imageFit.value = imageStyle.imageFit ?? 'cover';
     const nextImageStatus = imageBusy
-      ? '正在本地处理图片…'
+      ? uiText('正在本地处理图片…')
       : asset
-        ? `已设置图片 · ${asset.width} × ${asset.height} · ${appearanceOrigin(config.nodes, selected?.kind ?? '', selected?.id ?? '', 'image')}`
-        : 'PNG / JPEG / WebP · 最长边保存为 256 像素 · 不上传服务器';
+        ? `${uiText('已设置图片 · ')}${asset.width} × ${asset.height} · ${uiText(
+            appearanceOrigin(config.nodes, selected?.kind ?? '', selected?.id ?? '', 'image'),
+          )}`
+        : uiText('PNG / JPEG / WebP · 最长边保存为 256 像素 · 不上传服务器');
     if (imageStatus.textContent !== nextImageStatus) imageStatus.textContent = nextImageStatus;
     for (const [key, c] of controls) {
+      c.hint.textContent = appearanceFieldHint(appearanceKind(), key);
+      if ('placeholder' in c.input && (c.input.type === 'number' || c.input.type === 'text'))
+        c.input.placeholder = uiText(c.input.type === 'text' ? '#RRGGBB · 留空继承' : '留空继承');
+      c.reset.setAttribute('aria-label', uiText('恢复继承：') + uiText(c.title));
+      c.reset.title = uiText('恢复继承');
+      if (c.picker) {
+        c.picker.setAttribute('aria-label', uiText('选择') + uiText(c.title));
+        c.picker.title = uiText('选择') + uiText(c.title);
+      }
       c.input.disabled = disabled || (key === 'head' && frame?.view.domain === 'biology');
       if (c.picker) c.picker.disabled = c.input.disabled;
-      c.origin.textContent = inspectorOrigin(config, kind, selected, scope.value as Scope, key);
+      c.origin.textContent = uiText(inspectorOrigin(config, kind, selected, scope.value as Scope, key));
       const inherited = String((resolved as Record<string, unknown>)[key] ?? '');
       if (contextChanged || doc.activeElement !== c.input)
         c.input.value = displayedValue(key, inherited, c.input.type);
@@ -709,6 +729,7 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
     clear() {
       imageBusy = false;
       drafts.clear();
+      lastExternalError = null;
       renderedContext = '';
       setSelection(null);
       signature = '';
@@ -717,7 +738,11 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
       render();
     },
     error(message: string) {
-      error.textContent = message;
+      lastExternalError = message;
+      error.textContent = uiStatus(message);
+    },
+    refreshLanguage() {
+      if (lastExternalError !== null) error.textContent = uiStatus(lastExternalError);
     },
     pick(list: DisplayList, point: { x: number; y: number }) {
       const hit = hitDisplayList(list, point);
