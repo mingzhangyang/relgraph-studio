@@ -6,11 +6,7 @@ const NS = 'http://www.w3.org/2000/svg';
  * Only draws on the transparent, pointer-inert workspace overlay. The film
  * Canvas, its DisplayList and native export code never receive these elements.
  */
-export function createSelectionOverlayView(
-  doc: Document,
-  svg: SVGSVGElement,
-  note: HTMLElement,
-) {
+export function createSelectionOverlayView(doc: Document, svg: SVGSVGElement, note: HTMLElement) {
   let previous = '';
   const element = (name: string) => doc.createElementNS(NS, name);
 

@@ -3,7 +3,10 @@ import assert from 'node:assert/strict';
 import literature from '../examples/honglou-provisional.relgraph.json' with { type: 'json' };
 import biology from '../examples/biology-signaling-synthetic.json' with { type: 'json' };
 import { deferred, flush, makeStudio } from './helpers/studio-harness.mjs';
-import { currentStudioMode, planStudioModeTransition } from '../apps/studio/src/studio-mode-model.ts';
+import {
+  currentStudioMode,
+  planStudioModeTransition,
+} from '../apps/studio/src/studio-mode-model.ts';
 import { documentCommandFromShortcut } from '../apps/studio/src/document-command-model.ts';
 
 const readFile = (name, value) => ({ name, text: () => Promise.resolve(value) });
@@ -889,8 +892,7 @@ test('cancelled drags must preserve coordinate drafts matching transient positio
       candidate = { id, x, y, screen, camera };
       break;
     }
-    if (stage.pointerCaptured === 11)
-      await stage.dispatch('pointercancel', { pointerId: 11 });
+    if (stage.pointerCaptured === 11) await stage.dispatch('pointercancel', { pointerId: 11 });
   }
   assert.ok(candidate, 'the shared DOM hit test should find a movable visible node');
   // Release the probe drag. The draft must exist BEFORE the real drag begins.
@@ -1104,9 +1106,12 @@ test('studio SVG feedback follows the safe inspector selection and scope without
   );
   assert.ok(Number(note.attributes['data-outlined']) >= 1);
   assert.match(note.textContent, /当前投影/);
-  assert.ok(stage.children[1].children.every((shape) =>
-    shape.attributes.class.includes('affected') || shape.attributes.class.includes('selected'),
-  ));
+  assert.ok(
+    stage.children[1].children.every(
+      (shape) =>
+        shape.attributes.class.includes('affected') || shape.attributes.class.includes('selected'),
+    ),
+  );
   assert.equal(app.node('saveState').attributes['data-dirty'], 'false', 'selection is not an edit');
 
   await app.node('exampleBiology').click();

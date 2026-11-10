@@ -19,10 +19,7 @@ export interface EditorControls {
 }
 
 /** Coordinator owns eligibility; this adapter only updates button state. */
-export function renderEditorAvailability(
-  controls: EditorControls,
-  available: boolean,
-): void {
+export function renderEditorAvailability(controls: EditorControls, available: boolean): void {
   controls.toggle.disabled = !available;
   if (!available) controls.reset.disabled = true;
 }

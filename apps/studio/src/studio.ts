@@ -523,7 +523,10 @@ function refreshUnsavedState(): void {
   document.title = dirty ? `● ${DOCUMENT_TITLE}` : DOCUMENT_TITLE;
 }
 function confirmSourceReplacement(): boolean {
-  return !hasUnsavedChanges() || window.confirm('当前项目有未保存的修改。继续加载其他数据将丢弃这些修改，是否继续？');
+  return (
+    !hasUnsavedChanges() ||
+    window.confirm('当前项目有未保存的修改。继续加载其他数据将丢弃这些修改，是否继续？')
+  );
 }
 window.addEventListener('beforeunload', (event) => {
   if (!hasUnsavedChanges()) return;

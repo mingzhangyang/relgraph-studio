@@ -9,7 +9,8 @@ export interface InspectorFocus {
 }
 
 type HitTarget = NonNullable<DisplayList['selection']>[number];
-type VisibleObject = DirectorFrameState['view']['nodes'][number] | DirectorFrameState['view']['edges'][number];
+type VisibleObject =
+  DirectorFrameState['view']['nodes'][number] | DirectorFrameState['view']['edges'][number];
 
 export interface OverlayProjection {
   width: number;
@@ -24,9 +25,7 @@ const finite = (value: number): boolean => Number.isFinite(value);
 const drawable = (hit: HitTarget): boolean => {
   if (hit.box)
     return (
-      [hit.box.x, hit.box.y, hit.box.w, hit.box.h].every(finite) &&
-      hit.box.w > 0 &&
-      hit.box.h > 0
+      [hit.box.x, hit.box.y, hit.box.w, hit.box.h].every(finite) && hit.box.w > 0 && hit.box.h > 0
     );
   return (
     hit.points !== undefined &&
@@ -35,9 +34,11 @@ const drawable = (hit: HitTarget): boolean => {
   );
 };
 
-function intersectsClip(hit: HitTarget, clip: { x: number; y: number; w: number; h: number }): boolean {
-  if (![clip.x, clip.y, clip.w, clip.h].every(finite) || clip.w <= 0 || clip.h <= 0)
-    return false;
+function intersectsClip(
+  hit: HitTarget,
+  clip: { x: number; y: number; w: number; h: number },
+): boolean {
+  if (![clip.x, clip.y, clip.w, clip.h].every(finite) || clip.w <= 0 || clip.h <= 0) return false;
   const right = clip.x + clip.w;
   const bottom = clip.y + clip.h;
   if (!finite(right) || !finite(bottom)) return false;
@@ -105,9 +106,10 @@ export function projectSelectionOverlay(
   const visible: readonly VisibleObject[] = frame
     ? frame.view[focus.kind === 'node' ? 'nodes' : 'edges']
     : [];
-  const selected = focus.selection?.kind === focus.kind
-    ? visible.find((item) => item.id === focus.selection?.id)
-    : undefined;
+  const selected =
+    focus.selection?.kind === focus.kind
+      ? visible.find((item) => item.id === focus.selection?.id)
+      : undefined;
 
   let affected: readonly VisibleObject[] = selected && focus.scope === 'object' ? [selected] : [];
   if (focus.scope === 'global') affected = visible;
@@ -124,16 +126,15 @@ export function projectSelectionOverlay(
     )
     .map((hit) => ({ hit, selected: selected?.id === hit.id }));
 
-  const message =
-    !frame
-      ? '请选择数据后，可在画面上查看选中对象和影响范围。'
-      : focus.scope === 'global'
-        ? `全局${noun}样式 · 当前投影 ${affected.length} 个，已描边 ${targets.length} 个`
-        : !selected
-          ? `请选择一个${noun}，查看其${focus.scope === 'category' ? '类别' : '位置'}。`
-          : focus.scope === 'category'
-            ? `当前类别 · 当前投影 ${affected.length} 个${noun}，已描边 ${targets.length} 个`
-            : `已选中${noun} · ${targets.length ? '画面已描边' : '尚未绘制到当前画面'}`;
+  const message = !frame
+    ? '请选择数据后，可在画面上查看选中对象和影响范围。'
+    : focus.scope === 'global'
+      ? `全局${noun}样式 · 当前投影 ${affected.length} 个，已描边 ${targets.length} 个`
+      : !selected
+        ? `请选择一个${noun}，查看其${focus.scope === 'category' ? '类别' : '位置'}。`
+        : focus.scope === 'category'
+          ? `当前类别 · 当前投影 ${affected.length} 个${noun}，已描边 ${targets.length} 个`
+          : `已选中${noun} · ${targets.length ? '画面已描边' : '尚未绘制到当前画面'}`;
 
   return { width, height, clip, targets, affectedCount: affected.length, message };
 }
