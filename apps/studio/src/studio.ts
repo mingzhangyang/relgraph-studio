@@ -1004,8 +1004,12 @@ layoutApply.addEventListener('click', () => {
 const layoutChanged = (): boolean =>
   Boolean(currentLayout && originalLayout && layoutHasChanges(currentLayout, originalLayout));
 function updateLayoutControls(): void {
-  renderEditorStatus(layoutControls, layoutEditing, layoutChanged() || hasPendingCoordinateDraft());
-  if (coordinateValidationMessage) renderEditorMessage(layoutControls, coordinateValidationMessage);
+  renderEditorStatus(
+    layoutControls,
+    layoutEditing,
+    layoutChanged() || hasPendingCoordinateDraft(),
+    coordinateValidationMessage,
+  );
   refreshUnsavedState();
 }
 function rebuildRenderer(): void {
