@@ -42,11 +42,17 @@ export function parseAppearanceDraft(
   switch (rule.type) {
     case 'number':
       if (!raw.trim() || !Number.isFinite(Number(raw))) {
-        return { ok: false, message: `${uiText('请输入 ')}${rule.min}–${rule.max}${uiText(' 范围内的数字。')}` };
+        return {
+          ok: false,
+          message: `${uiText('请输入 ')}${rule.min}–${rule.max}${uiText(' 范围内的数字。')}`,
+        };
       }
       value = Number(raw);
       if (!validAppearanceField(kind, field, value))
-        return { ok: false, message: `${uiText('数值必须在 ')}${rule.min}–${rule.max}${uiText(' 之间。')}` };
+        return {
+          ok: false,
+          message: `${uiText('数值必须在 ')}${rule.min}–${rule.max}${uiText(' 之间。')}`,
+        };
       break;
     case 'color':
       if (!validAppearanceField(kind, field, value))
@@ -61,7 +67,8 @@ export function parseAppearanceDraft(
         return { ok: false, message: uiText('请选择有效选项。') };
       break;
     case 'boolean':
-      if (raw !== 'true' && raw !== 'false') return { ok: false, message: uiText('请选择有效选项。') };
+      if (raw !== 'true' && raw !== 'false')
+        return { ok: false, message: uiText('请选择有效选项。') };
       value = raw === 'true';
       break;
     case 'image':
