@@ -1679,7 +1679,9 @@ test('stored English language restores on launch and survives storage errors', a
   const app = makeStudio({
     storage: {
       getItem: () => 'en',
-      setItem: () => { throw new Error('storage denied'); },
+      setItem: () => {
+        throw new Error('storage denied');
+      },
     },
   });
   await app.ready;
@@ -1844,6 +1846,7 @@ test('invalid data retains the empty domain-time label in both interface languag
   const input = app.node('fileInput');
   input.files = [readFile('broken.json', '{"broken":true}')];
   await input.dispatch('change');
+  await flush();
   assert.equal(app.node('status').attributes['data-state'], 'error');
   assert.equal(app.node('domainTime').textContent, '领域时间：—');
 
@@ -1884,6 +1887,7 @@ test('coordinate validation remains visible in either locale until corrected or 
   language.value = 'zh-CN';
   await language.dispatch('change');
   assert.equal(note.textContent, '坐标必须是有限数字，请检查 X 和 Y');
+  await app.node('layoutToggle').click();
   x.value = original;
   await x.dispatch('input');
   assert.notEqual(note.textContent, '坐标必须是有限数字，请检查 X 和 Y');

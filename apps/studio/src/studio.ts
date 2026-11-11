@@ -682,12 +682,7 @@ function clearStudio(): void {
   refreshSelectionFeedback();
   refreshUnsavedState();
 }
-function applyResult(
-  result: LoadResult,
-  name: string,
-  sourceText?: string,
-  example = false,
-): void {
+function applyResult(result: LoadResult, name: string, sourceText?: string, example = false): void {
   loading = false;
   clearStudio();
   currentDiagnostics = result;
@@ -1041,7 +1036,6 @@ function cancelActiveLayoutDrag(): boolean {
 }
 function leavePositionEdit(): void {
   if (!layoutEditing) return;
-  coordinateValidationMessage = null;
   cancelActiveLayoutDrag();
   layoutEditing = false;
   editCamera = null;
