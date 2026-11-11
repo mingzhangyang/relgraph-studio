@@ -76,7 +76,10 @@ test('every excerpt has a pinned primary page, scan locator, verification state 
     assert.ok(source, entry.id);
     assert.equal(source.scanReview, 'evidence-passages-checked');
     assert.equal(entry.verification, 'transcription-and-scan-checked');
-    assert.ok(entry.checkedAt <= ledger.verifiedAt, `${entry.id} checked after the ledger verification date`);
+    assert.ok(
+      entry.checkedAt <= ledger.verifiedAt,
+      `${entry.id} checked after the ledger verification date`,
+    );
     assert.ok(entry.text.length > 0 && Array.from(entry.text).length < 100);
     assert.ok(entry.context.length > 0);
     const window = ledger.readingWindow.find((part) => part.chapter === entry.at);
@@ -203,7 +206,7 @@ test('production projection and a11y reveal only chapter-safe data and withdraw 
         .join(' ');
     if (frame === 0)
       for (const character of graphDocument.characters) assert.ok(!text.includes(character.name));
-    if (frame === 24) assert.doesNotMatch(text, /外祖母|外孙女|姑舅表兄妹/);
+    if (frame === 24) assert.doesNotMatch(text, /外祖母|外孙女|姑舅/);
   }
   const timeline = compileTimeline(graph);
   assert.equal(timeline.shots[0].view.nodes.length, 0);

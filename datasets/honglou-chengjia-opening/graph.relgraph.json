@@ -729,7 +729,14 @@
         "provenance": {
           "status": "inferred",
           "confidence": "high-confidence-kinship-inference",
-          "evidenceIds": ["min-identity", "lin-daughter", "baoyu-jade-birth", "baoyu-name", "baoyu-father", "cousin"],
+          "evidenceIds": [
+            "min-identity",
+            "lin-daughter",
+            "baoyu-jade-birth",
+            "baoyu-name",
+            "baoyu-father",
+            "cousin"
+          ],
           "safeRevealAt": 3,
           "reviewedThrough": 3,
           "disputedInSelectedPassages": false,

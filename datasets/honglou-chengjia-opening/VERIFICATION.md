@@ -51,7 +51,7 @@ PDF 页码从 1 开始，是文件页序，不是印本叶码。第二回转录�
 | `min-daiyu` 贾敏—黛玉母女 | 第二回 [P58](https://zh.wikisource.org/w/index.php?oldid=2441196)、[P65](https://zh.wikisource.org/w/index.php?oldid=2441203)：`lin-daughter`、`min-identity` | 直证，高可信；2 |
 | `mu-zheng` 贾母—贾政母子 | 第二回 [P61](https://zh.wikisource.org/w/index.php?oldid=2441199)、[P65](https://zh.wikisource.org/w/index.php?oldid=2441203)：`shi-sons`、`shi-living`、`shi-alias` | 直证，高可信；2 |
 | `zheng-min` 贾政—贾敏兄妹 | 第二回 [P65](https://zh.wikisource.org/w/index.php?oldid=2441203)：`min-identity` 明言“赦政二公之胞妹” | 直证，高可信；2 |
-| `zheng-baoyu` 贾政—宝玉父子 | 第二回 [P63](https://zh.wikisource.org/w/index.php?oldid=2441201)、[P65](https://zh.wikisource.org/w/index.php?oldid=2441203)：`baoyu-jade-birth`、`baoyu-name`、`baoyu-father` | 直证，高可信；2 |
+| `zheng-baoyu` 贾政—宝玉父子 | 第二回 [P62](https://zh.wikisource.org/w/index.php?oldid=2441200)、[P63](https://zh.wikisource.org/w/index.php?oldid=2441201)、[P65](https://zh.wikisource.org/w/index.php?oldid=2441203)：`baoyu-jade-birth`、`baoyu-name`、`baoyu-father` | 直证，高可信；2 |
 | `mu-min` 贾母—贾敏母女 | 第三回 [P70](https://zh.wikisource.org/w/index.php?oldid=2441208)：`mu-min`；第二回锁定黛玉之母身份 | 直证，高可信；3 |
 | `mu-daiyu` 贾母—黛玉外祖母与外孙女 | 第三回 [P70](https://zh.wikisource.org/w/index.php?oldid=2441208)：`grandmother`，叙述者在拜见段直接确认 | 直证，高可信；3 |
 | `baoyu-daiyu` 宝玉—黛玉姑舅表兄妹 | 第三回 [P75](https://zh.wikisource.org/w/index.php?oldid=2441213)：`cousin` 直称“表兄”；姑舅支系另由第二回三条直证亲缘推出 | **推导**，高可信但不标为直证；3 |
