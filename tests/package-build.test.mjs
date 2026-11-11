@@ -161,9 +161,9 @@ test('separately built packages work as packed Node and TypeScript dependencies'
     // No ancestor of the consumer can resolve the builder or source workspace.
     await rm(builder, { recursive: true, force: true });
     await writeFile(join(consumer, 'package.json'), '{"private":true,"type":"module"}\n');
-    // The consumer install is intentionally offline. Seed only the native
-    // runtime and type packages from the repository install so this test does
-    // not depend on whether npm cached registry packuments for skia-canvas.
+    // The consumer install is intentionally offline. Seed the native runtime,
+    // Node types, and their transitive type dependencies from the root install.
+    // An isolated cache exposes missing dependencies even on warmed machines.
     // The packed RelGraph packages are still installed exactly as a consumer
     // would install them.
     const packageCache = join(temp, 'npm-cache');
@@ -173,6 +173,7 @@ test('separately built packages work as packed Node and TypeScript dependencies'
       packLocalDependency(join(root, 'node_modules/skia-canvas'), packs, packEnv),
       packLocalDependency(nativePackage, packs, packEnv),
       packLocalDependency(join(root, 'node_modules/@types/node'), packs, packEnv),
+      packLocalDependency(join(root, 'node_modules/undici-types'), packs, packEnv),
     ]);
     await mkdir(join(consumer, 'node_modules'), { recursive: true });
     // npm can resolve skia-canvas' small runtime dependency tree from these
@@ -195,7 +196,7 @@ test('separately built packages work as packed Node and TypeScript dependencies'
         ...tarballs,
         ...externalTarballs,
       ],
-      { cwd: consumer, env },
+      { cwd: consumer, env: packEnv },
     );
     for (const name of ['honglou-provisional.relgraph.json', 'biology-signaling-synthetic.json']) {
       await cp(join(root, 'examples', name), join(consumer, name));
