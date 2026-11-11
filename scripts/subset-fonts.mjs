@@ -85,6 +85,7 @@ export const FACES = [
 export const TEXT_SOURCES = [
   'examples/honglou-provisional.relgraph.json',
   'examples/biology-signaling-synthetic.json',
+  'examples/biology-egfr-mapk.json',
   'packages/core/src/domains/biology.style.ts',
   'packages/core/src/domains/literature.style.ts',
   'packages/render/src/locale.ts',

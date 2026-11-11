@@ -1,0 +1,637 @@
+{
+  "format": "relgraph.bio/0.1-draft",
+  "meta": {
+    "title": "EGFR–RAS–RAF–MEK–ERK（MAPK）信号通路",
+    "description": "简化的经典 EGFR 信号网络：受体激活、衔接蛋白募集、RAS 的 GDP/GTP 状态切换、激酶级联、核内响应与负反馈。",
+    "sourceNote": "简化教学网络，依据 Reactome R-HSA-177929.5（Signaling by EGFR）和 NCBI Bookshelf NBK482459（Biochemistry, EGFR）。出处为通路级标注；这不是定量模型，也不覆盖完整物种差异。"
+  },
+  "timeline": {
+    "unit": "阶段",
+    "total": 6
+  },
+  "compartments": [
+    {
+      "id": "extracellular",
+      "name": "细胞外空间",
+      "color": "#c98b5f"
+    },
+    {
+      "id": "membrane",
+      "name": "质膜",
+      "color": "#4f9faf"
+    },
+    {
+      "id": "cytoplasm",
+      "name": "细胞质",
+      "color": "#5d86c4"
+    },
+    {
+      "id": "nucleus",
+      "name": "细胞核",
+      "color": "#9874b8"
+    }
+  ],
+  "entities": [
+    {
+      "id": "egf",
+      "name": "EGF",
+      "kind": "small-molecule",
+      "compartmentId": "extracellular",
+      "position": {
+        "x": 120,
+        "y": 120
+      },
+      "importance": 3
+    },
+    {
+      "id": "egfr",
+      "name": "EGFR",
+      "kind": "protein",
+      "compartmentId": "membrane",
+      "position": {
+        "x": 310,
+        "y": 210
+      },
+      "importance": 5
+    },
+    {
+      "id": "egfr-active",
+      "name": "EGFR-P / 激活态",
+      "kind": "protein-state",
+      "compartmentId": "membrane",
+      "position": {
+        "x": 500,
+        "y": 210
+      },
+      "visibleFrom": 2,
+      "importance": 5
+    },
+    {
+      "id": "grb2",
+      "name": "GRB2",
+      "kind": "protein",
+      "compartmentId": "cytoplasm",
+      "position": {
+        "x": 600,
+        "y": 300
+      },
+      "visibleFrom": 2,
+      "importance": 3
+    },
+    {
+      "id": "sos1",
+      "name": "SOS1",
+      "kind": "protein",
+      "compartmentId": "cytoplasm",
+      "position": {
+        "x": 730,
+        "y": 360
+      },
+      "visibleFrom": 2,
+      "importance": 3
+    },
+    {
+      "id": "ras-gdp",
+      "name": "RAS–GDP",
+      "kind": "protein-state",
+      "compartmentId": "cytoplasm",
+      "position": {
+        "x": 820,
+        "y": 470
+      },
+      "visibleFrom": 2,
+      "visibleTo": 3,
+      "importance": 3
+    },
+    {
+      "id": "ras-gtp",
+      "name": "RAS–GTP",
+      "kind": "protein-state",
+      "compartmentId": "cytoplasm",
+      "position": {
+        "x": 940,
+        "y": 470
+      },
+      "visibleFrom": 3,
+      "importance": 5
+    },
+    {
+      "id": "raf",
+      "name": "RAF",
+      "kind": "protein",
+      "compartmentId": "cytoplasm",
+      "position": {
+        "x": 1050,
+        "y": 300
+      },
+      "visibleFrom": 3,
+      "importance": 4
+    },
+    {
+      "id": "mek",
+      "name": "MEK",
+      "kind": "protein",
+      "compartmentId": "cytoplasm",
+      "position": {
+        "x": 1160,
+        "y": 450
+      },
+      "visibleFrom": 3,
+      "visibleTo": 4,
+      "importance": 4
+    },
+    {
+      "id": "mek-p",
+      "name": "MEK-P",
+      "kind": "protein-state",
+      "compartmentId": "cytoplasm",
+      "position": {
+        "x": 1270,
+        "y": 450
+      },
+      "visibleFrom": 4,
+      "importance": 4
+    },
+    {
+      "id": "erk",
+      "name": "ERK",
+      "kind": "protein",
+      "compartmentId": "cytoplasm",
+      "position": {
+        "x": 1370,
+        "y": 540
+      },
+      "visibleFrom": 4,
+      "visibleTo": 5,
+      "importance": 3
+    },
+    {
+      "id": "erk-p",
+      "name": "ERK-P",
+      "kind": "protein-state",
+      "compartmentId": "cytoplasm",
+      "position": {
+        "x": 1480,
+        "y": 540
+      },
+      "visibleFrom": 5,
+      "importance": 5
+    },
+    {
+      "id": "elk1",
+      "name": "ELK1",
+      "kind": "protein",
+      "compartmentId": "nucleus",
+      "position": {
+        "x": 1570,
+        "y": 260
+      },
+      "visibleFrom": 5,
+      "importance": 3
+    },
+    {
+      "id": "c-fos",
+      "name": "c-FOS",
+      "kind": "gene",
+      "compartmentId": "nucleus",
+      "position": {
+        "x": 1700,
+        "y": 150
+      },
+      "visibleFrom": 6,
+      "importance": 3
+    },
+    {
+      "id": "dusp1",
+      "name": "DUSP1",
+      "kind": "gene",
+      "compartmentId": "nucleus",
+      "position": {
+        "x": 1700,
+        "y": 380
+      },
+      "visibleFrom": 6,
+      "importance": 3
+    }
+  ],
+  "interactions": [
+    {
+      "id": "egf-binds-egfr",
+      "source": "egf",
+      "target": "egfr",
+      "kind": "physical-association",
+      "label": "配体结合",
+      "evidenceStatus": "curated",
+      "evidence": [
+        {
+          "source": "Reactome",
+          "recordId": "R-HSA-177929.5"
+        },
+        {
+          "source": "NCBI Bookshelf",
+          "recordId": "NBK482459"
+        }
+      ]
+    },
+    {
+      "id": "egfr-grb2-recruitment",
+      "source": "egfr-active",
+      "target": "grb2",
+      "kind": "physical-association",
+      "label": "衔接蛋白募集",
+      "visibleFrom": 2,
+      "evidenceStatus": "curated",
+      "evidence": [
+        {
+          "source": "Reactome",
+          "recordId": "R-HSA-177929.5"
+        },
+        {
+          "source": "NCBI Bookshelf",
+          "recordId": "NBK482459"
+        }
+      ]
+    },
+    {
+      "id": "grb2-sos1-recruitment",
+      "source": "grb2",
+      "target": "sos1",
+      "kind": "physical-association",
+      "label": "GRB2–SOS1 复合物",
+      "visibleFrom": 2,
+      "evidenceStatus": "curated",
+      "evidence": [
+        {
+          "source": "Reactome",
+          "recordId": "R-HSA-177929.5"
+        },
+        {
+          "source": "NCBI Bookshelf",
+          "recordId": "NBK482459"
+        }
+      ]
+    },
+    {
+      "id": "ras-raf-activation",
+      "source": "ras-gtp",
+      "target": "raf",
+      "kind": "activation",
+      "label": "RAS 激活 RAF",
+      "visibleFrom": 3,
+      "evidenceStatus": "curated",
+      "evidence": [
+        {
+          "source": "Reactome",
+          "recordId": "R-HSA-5673001"
+        },
+        {
+          "source": "NCBI Bookshelf",
+          "recordId": "NBK9870"
+        }
+      ]
+    },
+    {
+      "id": "erk-dusp1-activation",
+      "source": "erk-p",
+      "target": "dusp1",
+      "kind": "activation",
+      "label": "反馈基因表达",
+      "visibleFrom": 6,
+      "evidenceStatus": "curated",
+      "evidence": [
+        {
+          "source": "Reactome",
+          "recordId": "R-HSA-177929.5"
+        },
+        {
+          "source": "NCBI Bookshelf",
+          "recordId": "NBK12569"
+        }
+      ]
+    },
+    {
+      "id": "dusp1-deactivates-erk",
+      "source": "dusp1",
+      "target": "erk-p",
+      "kind": "inhibition",
+      "label": "抑制 ERK",
+      "visibleFrom": 6,
+      "evidenceStatus": "curated",
+      "evidence": [
+        {
+          "source": "Reactome",
+          "recordId": "R-HSA-177929.5"
+        },
+        {
+          "source": "NCBI Bookshelf",
+          "recordId": "NBK12569"
+        }
+      ]
+    }
+  ],
+  "processes": [
+    {
+      "id": "egfr-activation",
+      "kind": "association",
+      "label": "EGFR 激活",
+      "compartmentId": "membrane",
+      "position": {
+        "x": 405,
+        "y": 120
+      },
+      "reactants": [
+        {
+          "entityId": "egf"
+        },
+        {
+          "entityId": "egfr"
+        }
+      ],
+      "products": [
+        {
+          "entityId": "egfr-active"
+        }
+      ],
+      "visibleFrom": 2,
+      "visibleTo": 2,
+      "evidenceStatus": "curated",
+      "evidence": [
+        {
+          "source": "Reactome",
+          "recordId": "R-HSA-177929.5"
+        },
+        {
+          "source": "NCBI Bookshelf",
+          "recordId": "NBK482459"
+        }
+      ]
+    },
+    {
+      "id": "ras-activation",
+      "kind": "biochemical-reaction",
+      "label": "GDP → GTP 交换",
+      "compartmentId": "cytoplasm",
+      "position": {
+        "x": 875,
+        "y": 350
+      },
+      "reactants": [
+        {
+          "entityId": "ras-gdp"
+        }
+      ],
+      "products": [
+        {
+          "entityId": "ras-gtp"
+        }
+      ],
+      "modifiers": [
+        {
+          "entityId": "sos1",
+          "role": "activator"
+        }
+      ],
+      "visibleFrom": 3,
+      "visibleTo": 3,
+      "evidenceStatus": "curated",
+      "evidence": [
+        {
+          "source": "Reactome",
+          "recordId": "R-HSA-177929.5"
+        },
+        {
+          "source": "NCBI Bookshelf",
+          "recordId": "NBK482459"
+        }
+      ]
+    },
+    {
+      "id": "mek-phosphorylation",
+      "kind": "phosphorylation",
+      "label": "MEK 磷酸化",
+      "compartmentId": "cytoplasm",
+      "position": {
+        "x": 1215,
+        "y": 350
+      },
+      "reactants": [
+        {
+          "entityId": "mek"
+        }
+      ],
+      "products": [
+        {
+          "entityId": "mek-p"
+        }
+      ],
+      "modifiers": [
+        {
+          "entityId": "raf",
+          "role": "catalyst"
+        }
+      ],
+      "visibleFrom": 4,
+      "visibleTo": 4,
+      "evidenceStatus": "curated",
+      "evidence": [
+        {
+          "source": "Reactome",
+          "recordId": "R-HSA-5673001"
+        },
+        {
+          "source": "NCBI Bookshelf",
+          "recordId": "NBK9870"
+        }
+      ]
+    },
+    {
+      "id": "erk-phosphorylation",
+      "kind": "phosphorylation",
+      "label": "ERK 磷酸化",
+      "compartmentId": "cytoplasm",
+      "position": {
+        "x": 1425,
+        "y": 435
+      },
+      "reactants": [
+        {
+          "entityId": "erk"
+        }
+      ],
+      "products": [
+        {
+          "entityId": "erk-p"
+        }
+      ],
+      "modifiers": [
+        {
+          "entityId": "mek-p",
+          "role": "catalyst"
+        }
+      ],
+      "visibleFrom": 5,
+      "visibleTo": 5,
+      "evidenceStatus": "curated",
+      "evidence": [
+        {
+          "source": "Reactome",
+          "recordId": "R-HSA-5673001"
+        },
+        {
+          "source": "NCBI Bookshelf",
+          "recordId": "NBK9870"
+        }
+      ]
+    },
+    {
+      "id": "transcriptional-response",
+      "kind": "biochemical-reaction",
+      "label": "转录响应",
+      "compartmentId": "nucleus",
+      "position": {
+        "x": 1640,
+        "y": 290
+      },
+      "reactants": [
+        {
+          "entityId": "elk1"
+        }
+      ],
+      "products": [
+        {
+          "entityId": "c-fos"
+        }
+      ],
+      "modifiers": [
+        {
+          "entityId": "erk-p",
+          "role": "activator"
+        }
+      ],
+      "visibleFrom": 6,
+      "visibleTo": 6,
+      "evidenceStatus": "curated",
+      "evidence": [
+        {
+          "source": "Reactome",
+          "recordId": "R-HSA-177929.5"
+        },
+        {
+          "source": "NCBI Bookshelf",
+          "recordId": "NBK482459"
+        }
+      ]
+    }
+  ],
+  "presentation": [
+    {
+      "id": "ligand-binding",
+      "title": "配体结合激活 EGFR",
+      "durationSec": 4,
+      "domainAt": 1,
+      "camera": {
+        "focusNodeId": "egfr"
+      },
+      "narration": "EGF 在细胞表面结合受体，为信号传递做好准备。",
+      "highlight": {
+        "nodeIds": ["egf", "egfr"],
+        "edgeIds": ["egf-binds-egfr"]
+      }
+    },
+    {
+      "id": "receptor-recruitment",
+      "title": "激活的受体募集衔接蛋白",
+      "durationSec": 5,
+      "domainAt": 2,
+      "camera": {
+        "focusNodeId": "bio:process:egfr-activation"
+      },
+      "narration": "激活的 EGFR 募集 GRB2 和 SOS1，组装 GDP/GTP 交换复合物。",
+      "highlight": {
+        "nodeIds": ["egfr-active", "grb2", "sos1", "bio:process:egfr-activation"],
+        "edgeIds": [
+          "bio:arc:input:egfr-activation:egf",
+          "bio:arc:input:egfr-activation:egfr",
+          "bio:arc:output:egfr-activation:egfr-active",
+          "egfr-grb2-recruitment",
+          "grb2-sos1-recruitment"
+        ]
+      }
+    },
+    {
+      "id": "ras-switch",
+      "title": "SOS1 将 RAS 切换为 GTP 结合态",
+      "durationSec": 5,
+      "domainAt": 3,
+      "camera": {
+        "focusNodeId": "bio:process:ras-activation"
+      },
+      "narration": "SOS1 催化 GDP 到 GTP 的交换，将 RAS 切换为活跃的信号中继。",
+      "highlight": {
+        "nodeIds": ["sos1", "ras-gdp", "ras-gtp", "bio:process:ras-activation", "raf"],
+        "edgeIds": [
+          "bio:arc:input:ras-activation:ras-gdp",
+          "bio:arc:output:ras-activation:ras-gtp",
+          "bio:arc:modifier:ras-activation:sos1",
+          "ras-raf-activation"
+        ]
+      }
+    },
+    {
+      "id": "mek-cascade",
+      "title": "RAF 传递激酶级联",
+      "durationSec": 5,
+      "domainAt": 4,
+      "camera": {
+        "focusNodeId": "bio:process:mek-phosphorylation"
+      },
+      "narration": "活化的 RAF 磷酸化 MEK，使信号沿 MAPK 级联继续传递。",
+      "highlight": {
+        "nodeIds": ["raf", "mek", "mek-p", "bio:process:mek-phosphorylation"],
+        "edgeIds": [
+          "bio:arc:input:mek-phosphorylation:mek",
+          "bio:arc:output:mek-phosphorylation:mek-p",
+          "bio:arc:modifier:mek-phosphorylation:raf"
+        ]
+      }
+    },
+    {
+      "id": "erk-activation",
+      "title": "MEK 激活 ERK",
+      "durationSec": 5,
+      "domainAt": 5,
+      "camera": {
+        "focusNodeId": "bio:process:erk-phosphorylation"
+      },
+      "narration": "MEK 磷酸化 ERK，生成能够进入细胞核的活化激酶。",
+      "highlight": {
+        "nodeIds": ["mek-p", "erk", "erk-p", "elk1", "bio:process:erk-phosphorylation"],
+        "edgeIds": [
+          "bio:arc:input:erk-phosphorylation:erk",
+          "bio:arc:output:erk-phosphorylation:erk-p",
+          "bio:arc:modifier:erk-phosphorylation:mek-p"
+        ]
+      }
+    },
+    {
+      "id": "nuclear-response",
+      "title": "核内响应与负反馈",
+      "durationSec": 6,
+      "domainAt": 6,
+      "camera": {
+        "fitIds": ["erk-p", "elk1", "bio:process:transcriptional-response", "c-fos", "dusp1"]
+      },
+      "narration": "ERK 驱动核内转录响应，同时 DUSP1 通过反馈抑制 ERK 活性。",
+      "highlight": {
+        "nodeIds": ["erk-p", "elk1", "bio:process:transcriptional-response", "c-fos", "dusp1"],
+        "edgeIds": [
+          "bio:arc:input:transcriptional-response:elk1",
+          "bio:arc:output:transcriptional-response:c-fos",
+          "bio:arc:modifier:transcriptional-response:erk-p",
+          "erk-dusp1-activation",
+          "dusp1-deactivates-erk"
+        ]
+      }
+    }
+  ]
+}

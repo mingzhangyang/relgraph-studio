@@ -46,7 +46,7 @@ const CHANNEL_TOLERANCE = 16;
 
 const EXAMPLES = [
   { key: 'literature', file: 'examples/honglou-provisional.relgraph.json' },
-  { key: 'biology', file: 'examples/biology-signaling-synthetic.json' },
+  { key: 'biology', file: 'examples/biology-egfr-mapk.json' },
 ];
 
 const results = [];

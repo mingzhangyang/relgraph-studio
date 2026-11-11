@@ -198,7 +198,7 @@ test('separately built packages work as packed Node and TypeScript dependencies'
       ],
       { cwd: consumer, env: packEnv },
     );
-    for (const name of ['honglou-provisional.relgraph.json', 'biology-signaling-synthetic.json']) {
+    for (const name of ['honglou-provisional.relgraph.json', 'biology-egfr-mapk.json']) {
       await cp(join(root, 'examples', name), join(consumer, name));
     }
     await writeFile(join(consumer, 'source-schema.json'), JSON.stringify(originalSchema));
@@ -223,7 +223,7 @@ const ctx = new Proxy({}, { get(target, key) {
   if (key === 'createLinearGradient' || key === 'createRadialGradient') return () => gradient;
   return target[key] ?? (() => {});
 }});
-for (const [filename, domain] of [['honglou-provisional.relgraph.json', 'literature'], ['biology-signaling-synthetic.json', 'biology']]) {
+for (const [filename, domain] of [['honglou-provisional.relgraph.json', 'literature'], ['biology-egfr-mapk.json', 'biology']]) {
   const doc = await read('./' + filename);
   const result = loadDocument(doc);
   assert.equal(result.valid, true, filename);
@@ -278,11 +278,10 @@ await new Promise((resolveExit, rejectExit) => {
     // The installed `relgraph` binary validates like the workspace and renders
     // frames headlessly from the packed fonts and worker.
     const relgraph = join(consumer, 'node_modules/@relgraph/cli/dist/bin.js');
-    const valid = await run(
-      process.execPath,
-      [relgraph, 'validate', 'biology-signaling-synthetic.json'],
-      { cwd: consumer, env },
-    );
+    const valid = await run(process.execPath, [relgraph, 'validate', 'biology-egfr-mapk.json'], {
+      cwd: consumer,
+      env,
+    });
     assert.equal(valid.stdout, '未发现校验问题。\n');
     const broken = JSON.parse(await readFile(join(consumer, 'honglou-provisional.relgraph.json')));
     broken.relations[0].target = 'missing-character';
@@ -305,7 +304,7 @@ await new Promise((resolveExit, rejectExit) => {
       assert.match(linked?.stdout ?? '', /^relgraph 0\.0\.0 \(skia-canvas 4\.0\.0\)/);
     await run(
       process.execPath,
-      [relgraph, 'render', 'biology-signaling-synthetic.json'].concat([
+      [relgraph, 'render', 'biology-egfr-mapk.json'].concat([
         '--frames',
         'frames/%03d/frame.png',
         '--frame-spec',
@@ -338,7 +337,7 @@ await new Promise((resolveExit, rejectExit) => {
       for (const jobs of [8, 2, 8]) {
         const crashed = await run(
           process.execPath,
-          [relgraph, 'render', 'biology-signaling-synthetic.json'].concat(
+          [relgraph, 'render', 'biology-egfr-mapk.json'].concat(
             ['--out', 'crash.mp4', '--ffmpeg', 'fake-ffmpeg', '--frame-spec', 'landscape-720p'],
             ['--to', '23', '--jobs', String(jobs)],
           ),
