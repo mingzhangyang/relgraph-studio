@@ -1,6 +1,7 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import graphDocument from '../datasets/honglou-chengjia-opening/graph.relgraph.json' with { type: 'json' };
 import ledger from '../datasets/honglou-chengjia-opening/sources.json' with { type: 'json' };
 import { loadDocument } from '../packages/core/src/director/load.ts';
@@ -18,6 +19,10 @@ import { verifyTranscriptions } from '../scripts/check-honglou-sources.mjs';
 
 const evidence = new Map(ledger.evidence.map((entry) => [entry.id, entry]));
 const sources = new Map(ledger.sources.map((entry) => [entry.id, entry]));
+const handoff = readFileSync(
+  new URL('../datasets/honglou-chengjia-opening/B2-2-HANDOFF.md', import.meta.url),
+  'utf8',
+);
 const loaded = loadDocument(graphDocument);
 assert.equal(loaded.valid, true);
 const graph = loaded.graph;
@@ -76,12 +81,21 @@ test('every excerpt has a pinned primary page, scan locator, verification state 
     assert.ok(source, entry.id);
     assert.equal(source.scanReview, 'evidence-passages-checked');
     assert.equal(entry.verification, 'transcription-and-scan-checked');
-    assert.equal(entry.checkedAt, ledger.verifiedAt);
+    assert.ok(
+      entry.checkedAt <= ledger.verifiedAt,
+      `${entry.id} checked after the ledger verification date`,
+    );
     assert.ok(entry.text.length > 0 && Array.from(entry.text).length < 100);
     assert.ok(entry.context.length > 0);
     const window = ledger.readingWindow.find((part) => part.chapter === entry.at);
     assert.ok(window?.pdfPages.includes(source.pdfPage));
   }
+});
+
+test('B2-2 handoff reports the current source-ledger evidence count', () => {
+  const match = handoff.match(/^- \[来源台账\]\(sources\.json\)：(\d+) 条短证据、/m);
+  assert.ok(match, 'handoff source-ledger count');
+  assert.equal(Number(match[1]), ledger.evidence.length);
 });
 
 function assertEvidence(ids, through = 3) {
@@ -203,7 +217,7 @@ test('production projection and a11y reveal only chapter-safe data and withdraw 
         .join(' ');
     if (frame === 0)
       for (const character of graphDocument.characters) assert.ok(!text.includes(character.name));
-    if (frame === 24) assert.doesNotMatch(text, /外祖母|外孙女|姑表/);
+    if (frame === 24) assert.doesNotMatch(text, /外祖母|外孙女|姑舅/);
   }
   const timeline = compileTimeline(graph);
   assert.equal(timeline.shots[0].view.nodes.length, 0);

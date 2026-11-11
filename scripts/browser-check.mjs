@@ -734,7 +734,7 @@ for (const theme of ['light', 'dark']) {
       assert.equal(await text(page, '#edgeCount'), String(edges));
       const markup = await page.locator('body').innerHTML();
       if (frame === 0) for (const name of names) assert.ok(!markup.includes(name));
-      if (frame === 24) assert.doesNotMatch(markup, /外祖母与外孙女|姑表兄妹/);
+      if (frame === 24) assert.doesNotMatch(markup, /外祖母与外孙女|姑舅/);
       if (frame === 48) assert.match(await page.locator('#transcript').textContent(), /亲缘推导/);
     }
     await page.evaluate(() => window.renderAt(48));

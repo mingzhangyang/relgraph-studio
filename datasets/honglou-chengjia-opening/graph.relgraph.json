@@ -314,6 +314,11 @@
         "summary": "第二回冷子兴所述贾政的衔玉之子。",
         "quotes": [
           {
+            "text": "不想次年又生了一位公子，說來更竒，一落胞胎，嘴裡便啣下一塊五彩晶瑩的玉",
+            "at": 2,
+            "context": "baoyu-jade-birth · 冷子兴原述（承 P61 政老爷夫人王氏诸子之序）：次年所生公子衔玉而生；与同回回指共同定名宝玉。 https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F62&oldid=2441200"
+          },
+          {
             "text": "所以方纔你一說這寳玉",
             "at": 2,
             "context": "baoyu-name · 雨村对冷子兴所述衔玉公子的回指；指人物，不是第一回的通灵宝玉物件。 https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F63&oldid=2441201"
@@ -339,14 +344,14 @@
         "provenance": {
           "status": "verified-direct",
           "confidence": "high-within-selected-edition",
-          "evidenceIds": ["baoyu-name", "baoyu-father", "baoyu-alias"],
+          "evidenceIds": ["baoyu-jade-birth", "baoyu-name", "baoyu-father", "baoyu-alias"],
           "safeRevealAt": 2,
           "reviewedThrough": 3,
           "firstMention": {
             "at": 2,
             "kind": "identified-as-jia-zhengs-jade-born-son-before-naming",
             "note": "按正文首次明确指称计，不计回目、神话对应或同名物件；不是首次登台。",
-            "evidenceIds": ["baoyu-name", "baoyu-father"]
+            "evidenceIds": ["baoyu-jade-birth", "baoyu-name", "baoyu-father"]
           },
           "aliasEvidence": [
             {
@@ -359,7 +364,7 @@
             "status": "not-systematically-audited",
             "note": "本批核实的是首次明确提及回目；不把第一回神话人物等同于后文人物初登场。"
           },
-          "summaryEvidenceIds": ["baoyu-name", "baoyu-father"],
+          "summaryEvidenceIds": ["baoyu-jade-birth", "baoyu-name", "baoyu-father"],
           "nameNormalization": "第二回以政公衔玉之子及宝玉明确指称；显示名补其明确父系贾姓，不将通灵宝玉物件当作同一人物的首次提及。"
         }
       }
@@ -565,11 +570,16 @@
       "directed": false,
       "strength": 2,
       "polarity": "neutral",
-      "description": "同回回指将宝玉与政公的衔玉之子对应。",
+      "description": "冷子兴原述政公夫人王氏次年所生公子衔玉而生；同回回指将该子定名宝玉并对应为政公之子。",
       "chapters": {
         "from": 2
       },
       "evidence": [
+        {
+          "text": "不想次年又生了一位公子，說來更竒，一落胞胎，嘴裡便啣下一塊五彩晶瑩的玉",
+          "at": 2,
+          "context": "baoyu-jade-birth · 冷子兴原述（承 P61 政老爷夫人王氏诸子之序）：次年所生公子衔玉而生；与同回回指共同定名宝玉。 https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F62&oldid=2441200"
+        },
         {
           "text": "所以方纔你一說這寳玉",
           "at": 2,
@@ -585,7 +595,7 @@
         "provenance": {
           "status": "verified-direct",
           "confidence": "high-within-selected-edition",
-          "evidenceIds": ["baoyu-name", "baoyu-father"],
+          "evidenceIds": ["baoyu-jade-birth", "baoyu-name", "baoyu-father"],
           "safeRevealAt": 2,
           "reviewedThrough": 3,
           "disputedInSelectedPassages": false,
@@ -675,11 +685,11 @@
       "source": "jia-baoyu",
       "target": "lin-daiyu",
       "type": "family",
-      "label": "姑表兄妹（亲缘推导）",
+      "label": "姑舅表兄妹（亲缘推导）",
       "directed": false,
       "strength": 2,
       "polarity": "neutral",
-      "description": "原文直接称表兄；姑表支系由贾政—贾敏兄妹及双方父母子女关系推导，不能把推导标为逐字直证。",
+      "description": "原文直接称表兄；姑舅支系由贾政—贾敏兄妹及双方父母子女关系推导（贾敏为宝玉之姑母，贾政为黛玉之舅父），不能把推导标为逐字直证。",
       "chapters": {
         "from": 3
       },
@@ -695,6 +705,11 @@
           "context": "lin-daughter · 林如海家世段；父女、母女与嫡妻身份同段明确。 https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F58&oldid=2441196"
         },
         {
+          "text": "不想次年又生了一位公子，說來更竒，一落胞胎，嘴裡便啣下一塊五彩晶瑩的玉",
+          "at": 2,
+          "context": "baoyu-jade-birth · 冷子兴原述（承 P61 政老爷夫人王氏诸子之序）：次年所生公子衔玉而生；与同回回指共同定名宝玉。 https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F62&oldid=2441200"
+        },
+        {
           "text": "所以方纔你一說這寳玉",
           "at": 2,
           "context": "baoyu-name · 雨村对冷子兴所述衔玉公子的回指；指人物，不是第一回的通灵宝玉物件。 https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F63&oldid=2441201"
@@ -707,14 +722,21 @@
         {
           "text": "舅母所說的，可是啣玉而生的這位表兄",
           "at": 3,
-          "context": "cousin · 黛玉向王夫人核问宝玉；原文直接称表兄，姑表支系由亲缘链推导。 https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F75&oldid=2441213"
+          "context": "cousin · 黛玉向王夫人核问宝玉；原文直接称表兄，姑舅支系由亲缘链推导。 https://zh.wikisource.org/w/index.php?title=Page%3ANLC892-003290079-43280%20%E7%B4%85%E6%A8%93%E5%A4%A2%20%E7%AC%AC1%E5%86%8A.pdf%2F75&oldid=2441213"
         }
       ],
       "extra": {
         "provenance": {
           "status": "inferred",
           "confidence": "high-confidence-kinship-inference",
-          "evidenceIds": ["min-identity", "lin-daughter", "baoyu-name", "baoyu-father", "cousin"],
+          "evidenceIds": [
+            "min-identity",
+            "lin-daughter",
+            "baoyu-jade-birth",
+            "baoyu-name",
+            "baoyu-father",
+            "cousin"
+          ],
           "safeRevealAt": 3,
           "reviewedThrough": 3,
           "disputedInSelectedPassages": false,
