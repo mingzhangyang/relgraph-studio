@@ -4,7 +4,7 @@
 
 - [x] Draft literary schema, structural/semantic validator and spoiler-aware projections
 - [x] Neutral graph and deterministic frame-state contract with domain adapters
-- [x] Synthetic biology example, reaction participant roles and provenance fields
+- [x] Canonical EGFR–MAPK biology example, reaction participant roles and provenance fields
 - [x] Original standalone visual prototype and local Node regression tests
 - [ ] Source verification and standards-based biological import/export
 

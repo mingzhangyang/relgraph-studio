@@ -1478,7 +1478,7 @@ test('document toolbar disables commands while a replacement source is loading',
   await loading;
   assert.equal(download.disabled, false);
   assert.equal(coords.disabled, false);
-  assert.equal(app.node('sourceName').textContent, '生物信号 · 虚构合成示例');
+  assert.equal(app.node('sourceName').textContent, '生物信号 · EGFR–MAPK 经典通路');
 });
 
 test('pure workspace mode policy derives from authoritative owners without a second clock', () => {

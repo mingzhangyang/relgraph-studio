@@ -17,7 +17,7 @@ Literature and molecular biology share graph layout, camera, animation, visibili
 ## Non-goals of this increment
 
 - The original offline legacy demo retains its embedded fixture. The integrated HTTP-served workspace at `demo/index.html` now uses these adapters and one shared Canvas renderer.
-- No scientific assertions are made by the intentionally synthetic biology example.
+- The bundled EGFR–MAPK biology example is a simplified, pathway-level teaching network with provenance, not a quantitative or species-complete scientific model.
 - No direct PSI-MI, SBGN, SBML or BioPAX import/export yet. Future adapters should use those standards rather than claim this draft replaces them.
 - No audio, 4K output, browser editing or interactive biological viewer.
 

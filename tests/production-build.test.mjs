@@ -19,7 +19,7 @@ test('production build includes both examples and the bundled workspace loads th
     const asset = html.match(/<script[^>]+src="([^"]+)"/);
     assert.ok(asset, 'built HTML references a JavaScript bundle');
     const script = await readFile(join(output, 'demo', asset[1]), 'utf8');
-    const exampleNames = ['honglou-provisional.relgraph.json', 'biology-signaling-synthetic.json'];
+    const exampleNames = ['honglou-provisional.relgraph.json', 'biology-egfr-mapk.json'];
     for (const name of exampleNames) {
       assert.deepEqual(
         await readFile(join(output, 'examples', name)),
@@ -143,7 +143,7 @@ test('production build includes both examples and the bundled workspace loads th
 
     await elements.get('exampleBiology').click();
     assert.equal(elements.get('status').attributes['data-state'], 'ready');
-    assert.ok(window.studioFrame().view.nodes.some((node) => node.id === 'kinase-k'));
+    assert.ok(window.studioFrame().view.nodes.some((node) => node.id === 'egfr'));
     assert.equal(window.renderAt(48), true);
   } finally {
     await rm(output, { recursive: true, force: true });
