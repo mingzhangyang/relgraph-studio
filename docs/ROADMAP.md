@@ -42,7 +42,7 @@
   - `@relgraph/render/skia` draws through the shared composition and Canvas 2D backend on skia-canvas 4.0.0 (CPU); `@relgraph/cli` provides `relgraph validate` and `relgraph render` (parallel worker threads, FFmpeg/libx264, `yuv420p`, BT.709)
   - Both examples export as complete 1080p MP4s with `frameCount(graph, fps)` frames; any frame re-renders identically on its own
   - Vendored OFL subsets of Noto Sans / Serif / Sans Mono CJK SC, registered by both the workspace and the exporter, with a reproducible subsetting script
-  - 44 golden frame hashes and `npm run check:export` (ffprobe, MP4 ↔ PNG round trip; informational preview ↔ export difference measured at 1.028% of pixels on Chromium 153/Linux x64 at 720p)
+  - 62 golden frame hashes and `npm run check:export` (ffprobe, MP4 ↔ PNG round trip; informational preview ↔ export difference measured at 1.028% of pixels on Chromium 153/Linux x64 at 720p)
   - Follow-ups: confirm golden hashes on a second platform (macOS, arm64); fonts for characters outside the subset (rare hanzi in future sources) instead of a fallback warning; audio and caption tracks in the MP4 (B2); 9:16 and square presets (B3); an SVG still backend
 - [x] ADR 003 step 4: track/keyframe timeline, default reveals and caption timing
   - [x] Implement pure `compileTimeline` of camera, highlight, step-domain-time, reveals and captions after safe projection
@@ -50,7 +50,7 @@
   - [x] Use `DisplayList.a11y` for the workspace transcript and live region; both drawing backends unchanged
   - [x] Add targeted compiler/projection/frame-boundary/geometry/random-access regression tests
   - [x] Measured against `main`: 16/16 browser mid-shot frames and 28/32 golden frames byte-identical; the 4 changed are biology mid-draw frames
-  - [x] 44 golden frames including 12 mid-reveal samples; both MP4s re-exported and validated by `check:export`
+  - [x] 62 golden frames including 18 mid-reveal samples; both MP4s re-exported and validated by `check:export`
 
 ADR 003 step 5 is split into two reviewable batches:
 - [x] **Step 5a:** seeded deterministic `relgraph layout` for missing coordinates, with opt-in validated source write-back and regression tests (merged PR #13).
@@ -61,8 +61,8 @@ Workspace architecture follow-up (after step 5b, in separate reviewable PRs):
 - [x] **Workspace Views:** keep playback and timing rules in the pure model, and put DOM presentation behind focused adapters. Both batches merged; locally verified together with the final acceptance fixes on 2026-11-08.
   - [x] **Batch 1 — Playback & Shot Views:** merged PR #17; stable shot buttons, safe titles and derived playback labels.
   - [x] **Batch 2 — Diagnostics & Transcript Views:** merged PR #18. Dedicated diagnostic DOM adapter; `DisplayList.a11y`-only transcript and live region; pure semantic snapshots detect within-shot reveals and backward seeks without repeated announcements. Verified through pure tests, the shared VM harness and real Chromium.
-  - [x] **Final acceptance on main / B2 gate:** #19 and #20 merged. Latest main `a051d019d68ce2482de9e0ce4605fbb4f1862743` has exactly the verified worker-correction tree; #20 has no unresolved review threads. The data branch was rebased onto that main and passes static checks, 181 tests, 39 Chromium checks, 44 golden frames and all 5 export checks. The confirmed native worker teardown defect is fixed by the independently merged #20; see [worker regression](ENCODER-WORKER-SHUTDOWN.md). No runtime correction is mixed into the dataset PR.
-  - **Actual local results:** 174/174 Vitest tests (24 files), 37/37 Chromium checks, 16/16 browser PNGs byte-identical to unmodified main, 44/44 unchanged headless golden frames, 5/5 full export checks, and 8/8 short MP4 matrix checks. Typecheck, lint, formatting, generated types, package builds and studio build pass. See [final acceptance report](B1.5-FINAL-ACCEPTANCE.md) for failures, fixes, commands and limitations.
+  - [x] **Historical final acceptance on main / B2 gate:** #19 and #20 merged. Latest main `a051d019d68ce2482de9e0ce4605fbb4f1862743` has exactly the verified worker-correction tree; #20 has no unresolved review threads. The data branch was rebased onto that main and passes static checks, 181 tests, 39 Chromium checks, 44 golden frames and all 5 export checks. The confirmed native worker teardown defect is fixed by the independently merged #20; see [worker regression](ENCODER-WORKER-SHUTDOWN.md). No runtime correction is mixed into the dataset PR.
+  - **Historical actual local results:** 174/174 Vitest tests (24 files), 37/37 Chromium checks, 16/16 browser PNGs byte-identical to unmodified main, 44/44 unchanged headless golden frames, 5/5 full export checks, and 8/8 short MP4 matrix checks. Typecheck, lint, formatting, generated types, package builds and studio build pass. See [final acceptance report](B1.5-FINAL-ACCEPTANCE.md) for failures, fixes, commands and limitations.
 
 The accepted B1.5 scope is deterministic data → adapter → graph → pure timeline → DisplayList → Canvas/Skia → MP4, plus the separated workspace models and views. Native screen-reader listening, additional platforms and production typography QA are not implied by automated acceptance. With #19/#20 merged and verified, the architecture gate is satisfied; B2-1 data is delivered for independent editorial review below.
 
