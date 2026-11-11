@@ -79,6 +79,10 @@ export function makeStudio({
     HTMLInputElement,
     HTMLLabelElement,
     HTMLSelectElement,
+    // Injected callbacks are created outside the VM. Sharing the constructor
+    // keeps ordinary cross-boundary `Error` instances recognizable to the
+    // workspace code, as they are in the browser's single realm.
+    Error,
     structuredClone,
     parseDocument,
     layoutGraph,

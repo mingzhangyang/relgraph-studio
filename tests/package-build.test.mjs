@@ -2,14 +2,13 @@ import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { realpathSync } from 'node:fs';
-import { cp, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, delimiter, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 
 const run = promisify(execFile);
-const rootPackage = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const executablePath = process.env.PATH ?? process.env.Path ?? '';
 const env = {
@@ -50,6 +49,37 @@ function runNpm(args, options, cli = npmCliPath()) {
 async function copySource(from, to) {
   const dist = join(from, 'dist');
   await cp(from, to, { recursive: true, filter: (path) => path !== dist });
+}
+
+function packageTarballName(packageJson) {
+  return `${packageJson.name.replace(/^@/, '').replace('/', '-')}-${packageJson.version}.tgz`;
+}
+
+async function packLocalDependency(from, destination, packEnv) {
+  const packageJson = JSON.parse(await readFile(join(from, 'package.json'), 'utf8'));
+  await runNpm(['pack', '--ignore-scripts', '--pack-destination', destination], {
+    cwd: from,
+    env: packEnv,
+  });
+  const tarball = join(destination, packageTarballName(packageJson));
+  await readFile(tarball);
+  return tarball;
+}
+
+async function installedSkiaNativePackage() {
+  const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+  const nativeRoot = join(root, 'node_modules/@skia-canvas');
+  const names = await readdir(nativeRoot);
+  const prefix = `${process.platform}-${process.arch}`;
+  const candidates = names.filter((name) => name.startsWith(prefix));
+  if (process.platform === 'linux') {
+    const libc = process.report?.getReport().header.glibcVersionRuntime ? 'glibc' : 'musl';
+    const preferred = candidates.find((name) => name === `${prefix}-${libc}`);
+    if (preferred) return join(nativeRoot, preferred);
+  }
+  const [fallback] = candidates;
+  if (!fallback) throw new Error(`No installed skia-canvas native package for ${prefix}`);
+  return join(nativeRoot, fallback);
 }
 
 test('npm CLI paths with spaces preserve literal arguments', async () => {
@@ -131,6 +161,30 @@ test('separately built packages work as packed Node and TypeScript dependencies'
     // No ancestor of the consumer can resolve the builder or source workspace.
     await rm(builder, { recursive: true, force: true });
     await writeFile(join(consumer, 'package.json'), '{"private":true,"type":"module"}\n');
+    // The consumer install is intentionally offline. Seed the native runtime,
+    // Node types, and their transitive type dependencies from the root install.
+    // An isolated cache exposes missing dependencies even on warmed machines.
+    // The packed RelGraph packages are still installed exactly as a consumer
+    // would install them.
+    const packageCache = join(temp, 'npm-cache');
+    const packEnv = { ...env, npm_config_cache: packageCache };
+    const nativePackage = await installedSkiaNativePackage();
+    const externalTarballs = await Promise.all([
+      packLocalDependency(join(root, 'node_modules/skia-canvas'), packs, packEnv),
+      packLocalDependency(nativePackage, packs, packEnv),
+      packLocalDependency(join(root, 'node_modules/@types/node'), packs, packEnv),
+      packLocalDependency(join(root, 'node_modules/undici-types'), packs, packEnv),
+    ]);
+    await mkdir(join(consumer, 'node_modules'), { recursive: true });
+    // npm can resolve skia-canvas' small runtime dependency tree from these
+    // existing packages without touching a registry. Their symlink targets
+    // retain the same native install used by the repository under test.
+    for (const name of ['detect-libc', 'follow-redirects', 'https-proxy-agent'])
+      await symlink(
+        join(root, 'node_modules', name),
+        join(consumer, 'node_modules', name),
+        'junction',
+      );
     await runNpm(
       [
         'install',
@@ -140,10 +194,9 @@ test('separately built packages work as packed Node and TypeScript dependencies'
         '--no-fund',
         '--package-lock=false',
         ...tarballs,
-        // Resolved from the npm cache that installing the repository filled.
-        '@types/node@' + rootPackage.devDependencies['@types/node'],
+        ...externalTarballs,
       ],
-      { cwd: consumer, env },
+      { cwd: consumer, env: packEnv },
     );
     for (const name of ['honglou-provisional.relgraph.json', 'biology-signaling-synthetic.json']) {
       await cp(join(root, 'examples', name), join(consumer, name));
