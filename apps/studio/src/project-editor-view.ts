@@ -390,8 +390,9 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
       const rule = APPEARANCE_FIELD_RULES[appearanceKind()][key];
       if (type !== 'choice') {
         (input as HTMLInputElement).type = type === 'color' ? 'text' : type;
-        (input as HTMLInputElement).placeholder =
-          uiText(type === 'color' ? '#RRGGBB · 留空继承' : '留空继承');
+        (input as HTMLInputElement).placeholder = uiText(
+          type === 'color' ? '#RRGGBB · 留空继承' : '留空继承',
+        );
         if (rule?.type === 'number') {
           (input as HTMLInputElement).min = String(rule.min);
           (input as HTMLInputElement).max = String(rule.max);
@@ -600,7 +601,9 @@ export function createProjectEditor(doc: Document, host: HTMLElement, actions: A
       }
       c.input.disabled = disabled || (key === 'head' && frame?.view.domain === 'biology');
       if (c.picker) c.picker.disabled = c.input.disabled;
-      c.origin.textContent = uiText(inspectorOrigin(config, kind, selected, scope.value as Scope, key));
+      c.origin.textContent = uiText(
+        inspectorOrigin(config, kind, selected, scope.value as Scope, key),
+      );
       const inherited = String((resolved as Record<string, unknown>)[key] ?? '');
       if (contextChanged || doc.activeElement !== c.input)
         c.input.value = displayedValue(key, inherited, c.input.type);

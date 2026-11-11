@@ -77,21 +77,37 @@ test('locale only translates registered workspace labels and known diagnostic te
     uiDiagnostic,
   } = await import('../apps/studio/src/i18n.ts');
   initializeStudioLanguage(null);
-  const label = { textContent: '  导演预览  ', isConnected: true, parentElement: { closest: () => null } };
-  const untouched = { textContent: '林黛玉', isConnected: true, parentElement: { closest: () => null } };
+  const label = {
+    textContent: '  导演预览  ',
+    isConnected: true,
+    parentElement: { closest: () => null },
+  };
+  const untouched = {
+    textContent: '林黛玉',
+    isConnected: true,
+    parentElement: { closest: () => null },
+  };
   const nodes = [label, untouched];
   const header = {
     isConnected: true,
     value: '播放',
-    setAttribute(name, value) { this[name] = value; },
-    getAttribute(name) { return name === 'aria-label' ? this['aria-label'] ?? '播放' : null; },
+    setAttribute(name, value) {
+      this[name] = value;
+    },
+    getAttribute(name) {
+      return name === 'aria-label' ? (this['aria-label'] ?? '播放') : null;
+    },
   };
   const doc = {
     body: { querySelectorAll: () => [header] },
     createTreeWalker: () => ({
       nextNode: () => nodes.shift() ?? null,
     }),
-    documentElement: { setAttribute(name, value) { this[name] = value; } },
+    documentElement: {
+      setAttribute(name, value) {
+        this[name] = value;
+      },
+    },
     querySelectorAll: () => [],
   };
   captureStaticStudioUi(doc);
@@ -111,9 +127,8 @@ test('locale only translates registered workspace labels and known diagnostic te
 });
 
 test('every built-in image upload rejection has an English message', async () => {
-  const { initializeStudioLanguage, setStudioLanguage, uiStatus } = await import(
-    '../apps/studio/src/i18n.ts'
-  );
+  const { initializeStudioLanguage, setStudioLanguage, uiStatus } =
+    await import('../apps/studio/src/i18n.ts');
   const sources = ['node-image.ts', 'image-dimensions.ts'].map((name) =>
     readFileSync(new URL('../apps/studio/src/' + name, import.meta.url), 'utf8'),
   );

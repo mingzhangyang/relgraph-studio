@@ -86,7 +86,8 @@ export function createLayoutStrategyView(doc: Document, host: HTMLElement, actio
   // A locale-only render must not erase a failed preview/validation message.
   // Store the source message, never the translated label.
   let validationMessage: string | null = null;
-  let hintMessage = '静态确定性布局 · 保留 = 不移动；填补 = 仅缺失；重排 = 移动未锁定节点。分层不推断家谱。';
+  let hintMessage =
+    '静态确定性布局 · 保留 = 不移动；填补 = 仅缺失；重排 = 移动未锁定节点。分层不推断家谱。';
   const refreshNote = () => {
     const message = uiStatus(validationMessage ?? hintMessage);
     if (note.textContent !== message) note.textContent = message;

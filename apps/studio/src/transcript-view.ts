@@ -88,7 +88,9 @@ export function createTranscriptView(
 
       const liveText =
         language === 'en'
-          ? scene.title + '. ' + scene.narration +
+          ? scene.title +
+            '. ' +
+            scene.narration +
             ` Currently: ${a11y.nodes.length} nodes, ${a11y.relations.length} relationships. ` +
             (a11y.detail ? a11y.detail.label + ': ' + a11y.detail.summary : '')
           : liveFrameDescription(a11y);
