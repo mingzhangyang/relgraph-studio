@@ -29,7 +29,7 @@ The repository rules in [AGENTS.md](../AGENTS.md) apply to every step:
 
 | PR | Scope | Items | Golden frames | Status |
 | --- | --- | --- | --- | --- |
-| 1 | Behaviour fixes | F1–F5 | Tree example changes (F5); others identical | ☐ not started |
+| 1 | Behaviour fixes | F1–F5 | Tree example changes (F5); others identical | ◐ implemented on `claude/awesome-dijkstra-8c428q`, awaiting PR and review |
 | 2 | Per-frame cost and limits | P1–P3 | Must stay identical | ☐ not started |
 | 3 | Core structure | S1–S3 | Must stay identical | ☐ not started |
 | 4 | Render structure | S4–S6 | Must stay identical | ☐ not started |
@@ -50,7 +50,9 @@ not pass `--update` to the golden or browser baselines.
 ## Decisions needed before coding
 
 These are choices for the owner. Each has a recommendation; the plan assumes
-the recommendation until it is changed here.
+the recommendation until it is changed here. PR 1 implements the
+recommendations of D1, D2 and D4; the boxes stay open until the owner
+confirms them.
 
 | Id | Question | Recommendation | Decided |
 | --- | --- | --- | --- |
@@ -236,6 +238,33 @@ frames in both themes.
 - [ ] **V4 · Legend size.** At 12 px it is the smallest text in the frame
   (about 9 px in the workspace preview).
 
+### PR 1 · as implemented
+
+- **F1** · `packages/core/src/director/time-anchor.ts`: `timeAnchor` (a
+  timeline diagram under `manual`, `auto` or `timeline` is anchored),
+  `anchoredPoint` (a dated node's x is its time) and `anchorToTime` (pin every
+  dated node; first-fit lanes for dated nodes without coordinates).
+  `layoutGraph`, the studio's history replay, reset, drag and numeric X/Y use
+  them. The legend miniature of a span is a point when the drawing has no
+  axis. Tests: `tests/layout-behaviour.test.mjs` (F1), the updated case in
+  `tests/diagrams.test.mjs`, and the real-browser check "timeline: dragging a
+  bar sideways keeps it in time; down changes lane".
+- **F2 / F4** · `planLayout` returns the positions with the engine that ran,
+  the reason (`kept`, `diagram`, `structure`, `size`, `untimed`) and the
+  number of nodes moved; `computeLayout` is its positions. The panel refuses a
+  preview that moves nothing and names the engine of a pending preview.
+  Tests: `tests/layout-behaviour.test.mjs` (F2, F4) and the simulated-DOM case
+  in `tests/studio-workspace.test.mjs`; the generic-example browser check now
+  expects `auto` and `flow` to be refused (they reproduce the loaded drawing).
+- **F3** · `LAYOUT_DEFAULTS` (150 / 300) in `layout-engines.ts` feeds
+  `structuralLayout`, `autoLayout`, `DEFAULT_LAYOUT_SETTINGS`, the panel
+  inputs and project save. Auto + rearrange on every coordinate-free example
+  now moves no node (before: bookshop 15, tree 22, flowchart 8, dynasties 10,
+  mind map 18).
+- **F5** · a derived unfolding sets `timeline.ordinal`; the composer and the
+  studio show no domain time for it. The 58 tree golden hashes are
+  regenerated; the other 178 are unchanged.
+
 ## Review evidence
 
 Ran locally on linux-x64, Node 22.23.4, at `73af432`: `npm run typecheck`,
@@ -251,3 +280,5 @@ rerun.
 | Date | Item | PR | Commit on `main` | Note |
 | --- | --- | --- | --- | --- |
 | 2026-11-12 | Plan | — | — | Review completed; plan written |
+| 2026-11-12 | F1–F4 | PR 1 (not yet opened) | — (branch `94a97d3`) | Golden frames unchanged |
+| 2026-11-12 | F5 | PR 1 (not yet opened) | — (branch `6034b30`) | 58 tree golden hashes regenerated |
