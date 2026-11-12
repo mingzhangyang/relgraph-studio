@@ -381,6 +381,22 @@ function parse(doc: unknown, errors: GenericDiagnostic[], warnings: GenericDiagn
     if (start !== undefined && end !== undefined && start > end)
       fail('INTERVAL', path, raw, '时间跨度无效。', '确保 start 不大于 end。');
     const shown = visibility(record, path, raw);
+    // Without visibleFrom the node first appears at its start, so the start
+    // is one end of the interval the kernel will be given.
+    if (
+      start !== undefined &&
+      shown !== undefined &&
+      shown.from === undefined &&
+      shown.to !== undefined &&
+      start > shown.to
+    )
+      fail(
+        'INTERVAL',
+        path,
+        raw,
+        '可见区间无效。',
+        '确保 start 不大于 visibleTo，或用 visibleFrom 指定首次出现的时间。',
+      );
     nodes.push({
       id,
       label: text(record.label, path + '.label', raw) ?? raw,
@@ -520,9 +536,22 @@ function parse(doc: unknown, errors: GenericDiagnostic[], warnings: GenericDiagn
 
   // Authored storyboard. References use author ids and are mapped here.
   const scenes: VisualScene[] = [];
-  const sceneIds = internalIds(
-    rawScenes.map((s, i) => (object(s) ? (rawId(s.id) ?? `scene-${i + 1}`) : `scene-${i + 1}`)),
-  );
+  // A shot without an id is named after its place in the film. The name
+  // steps aside when the author already used it for another shot.
+  const authoredScenes = new Set<string>();
+  for (const s of rawScenes) {
+    const id = object(s) ? rawId(s.id) : null;
+    if (id !== null) authoredScenes.add(id);
+  }
+  const sceneNames = rawScenes.map((s, i) => {
+    const id = object(s) ? rawId(s.id) : null;
+    if (id !== null) return id;
+    let name = `scene-${i + 1}`;
+    for (let n = 2; authoredScenes.has(name); n++) name = `scene-${i + 1}-${n}`;
+    return name;
+  });
+  const sceneIds = internalIds(sceneNames),
+    sceneSeen = new Set<string>();
   const edgeLookup = new Map<string, string>([...explicitEdgeIds]);
   for (const edge of edges) if (!edgeLookup.has(edge.id)) edgeLookup.set(edge.id, edge.id);
   rawScenes.forEach((s, i) => {
@@ -531,7 +560,12 @@ function parse(doc: unknown, errors: GenericDiagnostic[], warnings: GenericDiagn
       fail('TYPE', path, '', '分镜必须是对象。', '使用 { "title": …, "durationSec": … }。');
       return;
     }
-    const raw = rawId(s.id) ?? `scene-${i + 1}`;
+    const raw = sceneNames[i];
+    if (sceneSeen.has(raw)) {
+      fail('DUPLICATE_ID', path + '.id', raw, '分镜 id 重复。', '每个分镜使用唯一 id，或省略 id。');
+      return;
+    }
+    sceneSeen.add(raw);
     const refs = (
       value: unknown,
       table: Map<string, string>,
@@ -570,19 +604,37 @@ function parse(doc: unknown, errors: GenericDiagnostic[], warnings: GenericDiagn
     if (!finite(duration) || duration <= 0 || duration > 600)
       fail('DURATION', path + '.durationSec', raw, '时长无效。', '使用 0 到 600 之间的秒数。');
     const zoom = number(camera?.zoom, path + '.camera.zoom', raw);
+    if (zoom !== undefined && zoom <= 0)
+      fail(
+        'CAMERA_ZOOM',
+        path + '.camera.zoom',
+        raw,
+        '镜头缩放无效。',
+        '使用大于 0 的数值，或删除 zoom。',
+      );
+    const transition = number(s.transitionMs, path + '.transitionMs', raw);
+    if (transition !== undefined && transition < 0)
+      fail('TRANSITION', path + '.transitionMs', raw, '转场时长无效。', '使用不小于 0 的毫秒数。');
+    const focus = camera ? ref(camera.focusNodeId, nodeIds, 'camera.focusNodeId') : undefined,
+      fit = camera ? refs(camera.fitIds, nodeIds, 'camera.fitIds') : undefined;
+    // One shot looks at one thing: a node, or the frame around several.
+    if (focus !== undefined && fit?.length)
+      fail(
+        'CAMERA_CONFLICT',
+        path + '.camera',
+        raw,
+        '镜头目标冲突。',
+        'focusNodeId 与 fitIds 只保留一个。',
+      );
     scenes.push({
       id: sceneIds.get(raw)!,
       title: text(s.title, path + '.title', raw) ?? `${i + 1}`,
       narration: text(s.narration, path + '.narration', raw),
       durationSec: finite(duration) ? duration : 4,
-      transitionMs: number(s.transitionMs, path + '.transitionMs', raw),
+      transitionMs: transition,
       domainAt: number(s.domainAt, path + '.domainAt', raw),
       camera: camera
-        ? {
-            focusNodeId: ref(camera.focusNodeId, nodeIds, 'camera.focusNodeId'),
-            fitIds: refs(camera.fitIds, nodeIds, 'camera.fitIds'),
-            ...(zoom === undefined ? {} : { zoom }),
-          }
+        ? { focusNodeId: focus, fitIds: fit, ...(zoom === undefined ? {} : { zoom }) }
         : undefined,
       highlight: highlight
         ? {

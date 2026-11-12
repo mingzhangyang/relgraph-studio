@@ -6,7 +6,11 @@ import { loadDocument } from '../packages/core/src/director/load.ts';
 import { layoutGraph } from '../packages/core/src/director/layout.ts';
 import { directorFrameAt, frameCount } from '../packages/core/src/director/state.ts';
 import { applyGraphPositions } from '../packages/core/src/director/position-writeback.ts';
-import { autoStoryboard, internalIds } from '../packages/core/src/domains/generic.ts';
+import {
+  autoStoryboard,
+  internalIds,
+  validateGenericDocument,
+} from '../packages/core/src/domains/generic.ts';
 import {
   deriveGraphStyle,
   domainStyle,
@@ -173,6 +177,77 @@ test('diagnostics name the field, the record and a repair', () => {
   // Unknown formats still explain every accepted one.
   const unknown = loadDocument({ nodes: [] });
   assert.match(unknown.errors[0].fix, /relgraph\.graph\/1/);
+});
+
+test('what the source validator accepts, the kernel accepts: no error leaves the author’s terms', () => {
+  const nodes = [{ id: 'a' }, { id: 'b' }];
+  const rejected = (doc, code, path) => {
+    const source = validateGenericDocument({ format: FORMAT, ...doc });
+    const found = source.errors.find((e) => e.code === code);
+    assert.ok(found, `${code} in ${JSON.stringify(source.errors.map((e) => e.code))}`);
+    assert.equal(found.path, path);
+    assert.equal(found.layer, 'graph-source');
+    // The kernel is never the first to speak: its paths are not the author's.
+    const loaded = loadDocument({ format: FORMAT, ...doc });
+    assert.equal(loaded.valid, false);
+    assert.deepEqual(
+      loaded.errors.filter((e) => e.layer !== 'graph-source'),
+      [],
+    );
+  };
+  // A node that first appears at its start cannot leave before it.
+  rejected({ nodes: [{ id: 'a', start: 10, visibleTo: 5 }] }, 'INTERVAL', 'nodes[0]');
+  rejected(
+    { nodes, presentation: [{ camera: { zoom: 0 } }] },
+    'CAMERA_ZOOM',
+    'presentation[0].camera.zoom',
+  );
+  rejected(
+    { nodes, presentation: [{ camera: { zoom: -2 } }] },
+    'CAMERA_ZOOM',
+    'presentation[0].camera.zoom',
+  );
+  rejected(
+    { nodes, presentation: [{ camera: { focusNodeId: 'a', fitIds: ['a', 'b'] } }] },
+    'CAMERA_CONFLICT',
+    'presentation[0].camera',
+  );
+  rejected(
+    { nodes, presentation: [{ transitionMs: -1 }] },
+    'TRANSITION',
+    'presentation[0].transitionMs',
+  );
+  rejected(
+    { nodes, presentation: [{ id: 's' }, { id: 's' }] },
+    'DUPLICATE_ID',
+    'presentation[1].id',
+  );
+  // An explicit first appearance settles it, and an empty frame list is no target.
+  load({
+    format: FORMAT,
+    nodes: [{ id: 'a', start: 10, visibleFrom: 1, visibleTo: 5 }, { id: 'b' }],
+    presentation: [{ domainAt: 1 }],
+  });
+  load({ format: FORMAT, nodes, presentation: [{ camera: { focusNodeId: 'a', fitIds: [] } }] });
+  // A shot without an id never takes the name the author gave another shot.
+  for (const presentation of [
+    [{ id: 'scene-2' }, {}],
+    [{}, { id: 'scene-1' }],
+    [{ id: 'scene-2' }, {}, { id: 'scene-2-2' }],
+  ]) {
+    const ids = load({ format: FORMAT, nodes, presentation }).graph.scenes.map((s) => s.id);
+    assert.equal(new Set(ids).size, presentation.length, JSON.stringify(ids));
+    presentation.forEach((shot, i) => {
+      if (shot.id) assert.equal(ids[i], shot.id, 'an authored id is kept');
+    });
+  }
+  // Names that do not clash are the ones they always were.
+  assert.deepEqual(
+    load({ format: FORMAT, nodes, presentation: [{}, { id: 'finale' }, {}] }).graph.scenes.map(
+      (s) => s.id,
+    ),
+    ['scene-1', 'finale', 'scene-3'],
+  );
 });
 
 test('an authored storyboard refers to author ids, and summaries feed the detail card', () => {
