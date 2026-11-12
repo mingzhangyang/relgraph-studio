@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import literature from '../examples/honglou-provisional.relgraph.json' with { type: 'json' };
 import biology from '../examples/biology-signaling-synthetic.json' with { type: 'json' };
+import bookshop from '../examples/bookshop-systems-synthetic.graph.json' with { type: 'json' };
 import { loadDocument } from '../packages/core/src/director/load.ts';
 import { layoutGraph } from '../packages/core/src/director/layout.ts';
 import {
@@ -16,6 +17,7 @@ import {
   localeFor,
   NEUTRAL_STYLE,
   nodeStyleFor,
+  styleForGraph,
 } from '../packages/core/src/style.ts';
 import { composeFrame } from '../packages/render/src/compose.ts';
 import { drawDisplayList } from '../packages/render/src/backends/canvas2d.ts';
@@ -30,7 +32,7 @@ import {
 import { VIDEO_THEMES } from '../packages/render/src/theme.ts';
 import { measure, measuringCanvas, paths, texts } from './helpers/display-list.mjs';
 
-const examples = [literature, biology].map((source) => {
+const examples = [literature, biology, bookshop].map((source) => {
   const { graph, detailAt } = loadDocument(source);
   return { graph, detailAt, layout: layoutGraph(graph) };
 });
@@ -45,7 +47,7 @@ function compose({ graph, layout, detailAt }, frame, spec = DEFAULT_FRAME_SPEC, 
     measure,
     frameSpec: spec,
     theme: VIDEO_THEMES.light,
-    style: domainStyle(graph.domain),
+    style: styleForGraph(graph),
     detailAt,
     ...extra,
   });
@@ -85,7 +87,9 @@ function assertScaled(small, large, factor, path = '$') {
 test('1080p frames are the 720p composition scaled by 1.5, with no fixed pixel positions', () => {
   for (const example of examples) {
     const last = frameCount(example.graph) - 1;
-    for (const frame of [0, 30, Math.floor(last / 2), last]) {
+    // The fourth frame falls in a late shot: highlights, a detail card and,
+    // in the generic example, a self-relation drawn as an arc.
+    for (const frame of [0, 30, Math.floor(last / 2), Math.floor(last * 0.82), last]) {
       const small = compose(example, frame, FRAME_SPECS['landscape-720p']);
       const large = compose(example, frame, FRAME_SPECS['landscape-1080p']);
       assert.equal(large.width, 1920);

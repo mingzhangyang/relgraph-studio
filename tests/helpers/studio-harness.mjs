@@ -2,6 +2,7 @@ import { runInNewContext } from 'node:vm';
 import { createSimulatedStudioDom } from './studio-dom.mjs';
 import { parseDocument } from '../../packages/core/src/director/load.ts';
 import { layoutGraph } from '../../packages/core/src/director/layout.ts';
+import { styleForGraph } from '../../packages/core/src/style.ts';
 import { applyGraphPositions } from '../../packages/core/src/director/position-writeback.ts';
 import { roundPositionCoordinate } from '../../packages/core/src/director/seeded-layout.ts';
 import { DEFAULT_FRAME_SPEC } from '../../packages/render/src/frame-spec.ts';
@@ -12,6 +13,7 @@ import { composeFrame } from '../../packages/render/src/compose.ts';
 import { measure } from './display-list.mjs';
 import literature from '../../examples/honglou-provisional.relgraph.json' with { type: 'json' };
 import biology from '../../examples/biology-signaling-synthetic.json' with { type: 'json' };
+import bookshop from '../../examples/bookshop-systems-synthetic.graph.json' with { type: 'json' };
 import { studioImports, studioSource } from './studio-source.mjs';
 
 export function deferred() {
@@ -65,7 +67,10 @@ export function makeStudio({
   };
   const defaultFetcher = async (path) => ({
     ok: true,
-    text: async () => JSON.stringify(path.includes('biology') ? biology : literature),
+    text: async () =>
+      JSON.stringify(
+        path.includes('biology') ? biology : path.includes('bookshop') ? bookshop : literature,
+      ),
   });
   const context = {
     ...studioImports,
@@ -86,6 +91,7 @@ export function makeStudio({
     structuredClone,
     parseDocument,
     layoutGraph,
+    styleForGraph,
     applyGraphPositions,
     roundPositionCoordinate,
     canvasPoint,

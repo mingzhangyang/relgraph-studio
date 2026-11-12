@@ -172,12 +172,13 @@ test('reaction catalysts and inhibitors keep distinct markers from the biology s
   // An inhibitor ends in a two-point bar; activation ends in a closed arrowhead.
   const bar = (list) =>
     paths(list).some((p) => p.stroke && !p.fill && p.d.length === 2 && p.d[1][0] === 'L');
+  // A swept-back head: tip, wing, notch, wing; filled, never stroked.
   const arrow = (list) =>
-    paths(list).some((p) => p.fill && p.d.at(-1)?.[0] === 'Z' && p.d.length === 4);
+    paths(list).some((p) => p.fill && !p.stroke && p.d.at(-1)?.[0] === 'Z' && p.d.length === 5);
   assert.ok(bar(inhibitor) && !arrow(inhibitor));
   assert.ok(arrow(activation) && !bar(activation));
   // The reaction is a diamond and the protein a pill.
-  assert.ok(paths(catalyst).some((p) => p.d.length === 5 && p.d[4][0] === 'Z'));
+  assert.ok(paths(catalyst).some((p) => p.stroke && p.d.length === 5 && p.d[4][0] === 'Z'));
   assert.ok(paths(catalyst).some((p) => p.d[0][0] === 'RR'));
   assert.ok(texts(catalyst).includes('催化'));
 });

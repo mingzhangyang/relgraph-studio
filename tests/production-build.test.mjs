@@ -7,7 +7,7 @@ import { runInNewContext } from 'node:vm';
 import { build } from 'vite';
 import { createSimulatedStudioDom } from './helpers/studio-dom.mjs';
 
-test('production build includes both examples and the bundled workspace loads them', async () => {
+test('production build includes every example and the bundled workspace loads them', async () => {
   const output = await mkdtemp(join(tmpdir(), 'relgraph-build-'));
   try {
     await build({ logLevel: 'silent', build: { outDir: output, emptyOutDir: true } });
@@ -19,7 +19,11 @@ test('production build includes both examples and the bundled workspace loads th
     const asset = html.match(/<script[^>]+src="([^"]+)"/);
     assert.ok(asset, 'built HTML references a JavaScript bundle');
     const script = await readFile(join(output, 'demo', asset[1]), 'utf8');
-    const exampleNames = ['honglou-provisional.relgraph.json', 'biology-signaling-synthetic.json'];
+    const exampleNames = [
+      'honglou-provisional.relgraph.json',
+      'biology-signaling-synthetic.json',
+      'bookshop-systems-synthetic.graph.json',
+    ];
     for (const name of exampleNames) {
       assert.deepEqual(
         await readFile(join(output, 'examples', name)),

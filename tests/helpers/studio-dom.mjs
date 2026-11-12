@@ -215,6 +215,7 @@ export function createSimulatedStudioDom({
     fileInput: HTMLInputElement,
     exampleLiterature: HTMLButtonElement,
     exampleBiology: HTMLButtonElement,
+    exampleGraph: HTMLButtonElement,
     themeToggle: HTMLButtonElement,
     languageSelect: HTMLSelectElement,
     layoutToggle: HTMLButtonElement,

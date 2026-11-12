@@ -23,7 +23,7 @@ for (const [domain, source] of [
   ['biology', biology],
   ['verified', verified],
 ])
-  for (const type of ['force', 'circle', 'layered']) {
+  for (const type of ['force', 'circle', 'layered', 'flow', 'radial', 'auto']) {
     test(`${domain}/${type}: deterministic, order-independent, immutable and saveable`, () => {
       const { graph } = loadDocument(source),
         before = JSON.stringify(graph),
