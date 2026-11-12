@@ -31,6 +31,8 @@ export interface VisualGroup {
   label: string;
   kind: string;
   color?: string;
+  /** Categorical palette slot used when the group has no authored colour. */
+  tone?: number;
 }
 export interface VisualCamera {
   focusNodeId?: NodeId;
@@ -58,6 +60,8 @@ export interface VisualGraph {
   domain: string;
   meta: { title: string; description?: string; sourceNote?: string };
   timeline?: { unit: string; total?: number };
+  /** Presentation declared per kind by a generic graph document. */
+  kinds?: import('../src/style.js').GraphKinds;
   nodes: VisualNode[];
   edges: VisualEdge[];
   groups: VisualGroup[];
@@ -65,7 +69,7 @@ export interface VisualGraph {
 }
 
 /** A projection contains only the currently visible graph objects. */
-export type ProjectedVisualGraph = Omit<VisualGraph, 'scenes' | 'project'>;
+export type ProjectedVisualGraph = Omit<VisualGraph, 'scenes' | 'project' | 'kinds'>;
 
 export interface ResolvedHighlight {
   nodeIds: NodeId[];

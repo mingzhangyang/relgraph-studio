@@ -2,6 +2,11 @@ import { validateProjectConfig, type ProjectConfig } from '../project.js';
 import { adaptLiteratureDocument, literaryDetailsAt } from '../domains/literature.js';
 import { inspectRelGraph } from '../relgraph.js';
 import { adaptBiologyDocument, validateBiologyDocument } from '../domains/biology.js';
+import {
+  adaptGenericDocument,
+  GENERIC_FORMAT,
+  validateGenericDocument,
+} from '../domains/generic.js';
 import type { Bio } from '../../types/relationship-graph.js';
 import type { VisualGraph } from '../../types/visual-graph.js';
 
@@ -80,7 +85,7 @@ function withOwner(doc: unknown, entry: Diagnostic): Diagnostic {
   )
     return entry;
   const match = entry.path.match(
-    /^\$?\.?(characters|relations|factions|entities|interactions|processes|compartments|presentation)\[(\d+)\]/,
+    /^\$?\.?(characters|relations|factions|entities|interactions|processes|compartments|presentation|nodes|edges|groups)\[(\d+)\]/,
   );
   const collection: unknown = match && object(doc) ? doc[match[1]] : undefined;
   const record: unknown =
@@ -132,6 +137,17 @@ export function loadDocument(doc: unknown): LoadResult {
       adapted = adaptLiteratureDocument(doc);
       const source = inspected.document;
       detailAt = (id, at) => literaryDetailsAt(source, at, { spoilerSafe: true })[id];
+    } else if (object(doc) && doc.format === GENERIC_FORMAT) {
+      const sourceDiagnostics = validateGenericDocument(doc);
+      if (!sourceDiagnostics.valid)
+        return {
+          valid: false,
+          errors: sourceDiagnostics.errors.map((entry) => withOwner(doc, entry)),
+          warnings: sourceDiagnostics.warnings.map((entry) => withOwner(doc, entry)),
+        };
+      const generic = adaptGenericDocument(doc);
+      adapted = generic;
+      detailAt = (id) => generic.detailAt(id);
     } else if (object(doc) && Object.hasOwn(doc, 'format')) {
       const sourceDiagnostics = validateBiologyDocument(doc);
       if (!sourceDiagnostics.valid)
@@ -149,7 +165,7 @@ export function loadDocument(doc: unknown): LoadResult {
             'FORMAT',
             '$',
             '无法识别数据格式。',
-            '文学数据需要 schemaVersion: "0.1"；生物学数据需要 format: "relgraph.bio/0.1-draft"。',
+            '通用关系图使用 format: "relgraph.graph/1"；文学数据需要 schemaVersion: "0.1"；生物学数据需要 format: "relgraph.bio/0.1-draft"。',
           ),
         ],
         warnings: [],

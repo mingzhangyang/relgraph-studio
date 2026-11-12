@@ -42,7 +42,7 @@ export interface ProjectConfig {
     edges?: Record<string, { label?: string }>;
   };
   layout?: {
-    type: 'manual' | 'force' | 'circle' | 'layered';
+    type: 'manual' | 'auto' | 'force' | 'layered' | 'flow' | 'radial' | 'circle' | 'grid';
     mode: 'preserve' | 'missing' | 'rearrange';
     seed: number;
     spacing: number;
@@ -74,7 +74,7 @@ export const APPEARANCE_FIELD_RULES: Record<AppearanceKind, Record<string, Appea
   nodes: {
     image: { type: 'image' },
     imageFit: { type: 'enum', values: ['cover', 'contain'] },
-    shape: { type: 'enum', values: ['circle', 'pill', 'diamond'] },
+    shape: { type: 'enum', values: ['circle', 'pill', 'diamond', 'square', 'hexagon'] },
     size: { type: 'number', min: 8, max: 48 },
     fill: { type: 'color' },
     border: { type: 'color' },
@@ -216,7 +216,10 @@ export function validateProjectConfig(value: unknown, graph?: VisualGraph): stri
       'config.layout',
     )
   ) {
-    if (!enumValue(l.type, ['manual', 'force', 'circle', 'layered'])) fail('config.layout.type');
+    if (
+      !enumValue(l.type, ['manual', 'auto', 'force', 'layered', 'flow', 'radial', 'circle', 'grid'])
+    )
+      fail('config.layout.type');
     if (!enumValue(l.mode, ['preserve', 'missing', 'rearrange'])) fail('config.layout.mode');
     if (!numberIn(l.seed, 0, 0xffffffff) || !Number.isInteger(l.seed)) fail('config.layout.seed');
     if (!numberIn(l.spacing, 64, 400)) fail('config.layout.spacing');

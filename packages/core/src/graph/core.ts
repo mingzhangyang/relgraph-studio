@@ -196,14 +196,6 @@ export function validateVisualGraph(graph: unknown): { valid: boolean; errors: G
         'Missing source/target',
         'Reference existing node ids.',
       );
-    if (e.source === e.target)
-      fail(
-        'SELF_LOOP',
-        'edges[' + i + ']',
-        e.id,
-        'Self loop forbidden',
-        'Model state transition as a process.',
-      );
     interval(e.visibility, 'edges[' + i + '].visibility', e.id);
   });
   collections.scenes.forEach((s, i) => {

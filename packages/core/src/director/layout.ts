@@ -1,4 +1,6 @@
 import type { VisualGraph } from '../../types/visual-graph.js';
+import { autoLayout } from './layout-engines.js';
+import { roundPositionCoordinate } from './seeded-layout.js';
 
 type Position = { x: number; y: number };
 
@@ -14,6 +16,21 @@ export function layoutGraph(
   for (const node of nodes) if (node.position) positions.set(node.id, { ...node.position });
   for (const [id, p] of Object.entries(graph.project?.layout?.positions ?? {}))
     positions.set(id, { ...p });
+  // A document with no coordinates at all is drawn from its structure. Partly
+  // positioned documents keep the conservative fallback below, which never
+  // moves or crowds what the author has already arranged.
+  if (!positions.size && nodes.length > 1) {
+    const arranged = autoLayout({ nodes, edges });
+    return new Map(
+      nodes.map((node) => {
+        const p = arranged.get(node.id) ?? { x: 0, y: 0 };
+        return [
+          node.id,
+          { x: roundPositionCoordinate(p.x) || 0, y: roundPositionCoordinate(p.y) || 0 },
+        ];
+      }),
+    );
+  }
   const existing = [...positions.values()];
   const originX = existing.length ? Math.max(...existing.map((p) => p.x)) + 150 : 0;
   const originY = existing.length ? Math.min(...existing.map((p) => p.y)) : 0;

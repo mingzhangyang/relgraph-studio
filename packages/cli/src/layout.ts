@@ -3,7 +3,9 @@ import { chmod, stat, realpath, rename, unlink, writeFile } from 'node:fs/promis
 import { basename, dirname, join, resolve } from 'node:path';
 import {
   applyGraphPositions,
+  autoLayout,
   layoutMissingNodes,
+  roundPositionCoordinate,
   parseDocument,
   type VisualGraph,
 } from '@relgraph/core';
@@ -69,7 +71,18 @@ export async function layoutFile(request: LayoutRequest): Promise<LayoutSummary>
     if (!missing && !request.out) return summary;
 
     const input: unknown = JSON.parse(text);
-    const positions = layoutMissingNodes(result.graph, { seed: request.seed });
+    // A document without any coordinates is arranged from its structure, as
+    // the player would; otherwise only the gaps are filled around the
+    // author's own arrangement.
+    const positions =
+      missing === summary.total && summary.total > 1
+        ? new Map(
+            [...autoLayout(result.graph, { seed: request.seed })].map(([id, p]) => [
+              id,
+              { x: roundPositionCoordinate(p.x) || 0, y: roundPositionCoordinate(p.y) || 0 },
+            ]),
+          )
+        : layoutMissingNodes(result.graph, { seed: request.seed });
     const output = writeBackPositions(input, result.graph, positions);
     const serialized = JSON.stringify(output.document, null, indentOf(text)) + '\n';
     // Never write a document whose round-trip validation fails.
