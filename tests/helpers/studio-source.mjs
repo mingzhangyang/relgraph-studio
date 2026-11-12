@@ -16,8 +16,18 @@ import {
 import {
   computeLayout,
   DEFAULT_LAYOUT_SETTINGS,
+  planLayout,
 } from '../../packages/core/src/director/layout-strategies.ts';
-import { createLayoutStrategyView } from '../../apps/studio/src/layout-strategy-view.ts';
+import {
+  createLayoutStrategyView,
+  unchangedLayoutMessage,
+} from '../../apps/studio/src/layout-strategy-view.ts';
+import {
+  anchoredPoint,
+  anchorToTime,
+  timeAnchor,
+} from '../../packages/core/src/director/time-anchor.ts';
+import { placeInTime } from '../../packages/core/src/director/layout-engines.ts';
 import {
   currentStudioMode,
   planStudioModeTransition,
@@ -105,6 +115,12 @@ export const studioImports = {
   cancelPositionDrag,
   computeLayout,
   DEFAULT_LAYOUT_SETTINGS,
+  planLayout,
+  unchangedLayoutMessage,
+  anchoredPoint,
+  anchorToTime,
+  placeInTime,
+  timeAnchor,
   createLayoutStrategyView,
   currentStudioMode,
   planStudioModeTransition,

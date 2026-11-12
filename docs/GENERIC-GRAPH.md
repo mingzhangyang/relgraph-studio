@@ -115,6 +115,14 @@ of them back into an ordinary network.
 | **Mind map**                                                       | **Flowchart (dark)**                                     |
 | ![mind map](visuals/generic/diagram-mindmap-light.png)             | ![flowchart](visuals/generic/diagram-flowchart-dark.png) |
 
+A timeline stays a timeline. While it is drawn with the `manual`, `auto` or
+`timeline` strategy, a dated node's x is its place in time and only its lane
+(y) is stored and edited: dragging a bar sideways does nothing, a changed
+`start` or `end` moves the bar to its new years, and a dated node added
+without coordinates takes the first free lane. Applying another strategy in
+the layout panel is the explicit way off the axis; the spans are then drawn as
+points, in the legend as well.
+
 An evolutionary tree that unfolds needs nothing but its branches:
 
 ```json

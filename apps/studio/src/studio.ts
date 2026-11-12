@@ -14,8 +14,8 @@ import {
   dragHasChanges,
   cancelPositionDrag,
 } from './layout-history-model.js';
-import { computeLayout, DEFAULT_LAYOUT_SETTINGS, type LayoutSettings } from '@relgraph/core';
-import { createLayoutStrategyView } from './layout-strategy-view.js';
+import { DEFAULT_LAYOUT_SETTINGS, planLayout, type LayoutSettings } from '@relgraph/core';
+import { createLayoutStrategyView, unchangedLayoutMessage } from './layout-strategy-view.js';
 import {
   currentStudioMode,
   planStudioModeTransition,
@@ -33,7 +33,15 @@ import { createProjectEditor } from './project-editor-view.js';
 import { createDocumentToolbarView } from './document-toolbar-view.js';
 import { documentCommandFromShortcut } from './document-command-model.js';
 import { parseDocument, applyGraphPositions, type LoadResult } from '@relgraph/core';
-import { layoutGraph, styleForGraph, styleForPositions } from '@relgraph/core';
+import {
+  anchoredPoint,
+  anchorToTime,
+  layoutGraph,
+  placeInTime,
+  styleForGraph,
+  styleForPositions,
+  timeAnchor,
+} from '@relgraph/core';
 import { frameCount } from '@relgraph/core';
 import type { Bio } from '@relgraph/core';
 import type { DirectorFrameState, VisualGraph } from '@relgraph/core';
@@ -267,6 +275,8 @@ function applyProjectHistory({
   restoreLayoutPositions(currentLayout, originalLayout);
   for (const [id, p] of Object.entries(graph.project.layout?.positions ?? {}))
     currentLayout.set(id, { ...p });
+  // While the drawing is a timeline, every bar stays at its years.
+  anchorToTime(graph, currentLayout);
   reconcileCommittedCoordinateDrafts();
   projectSavepoint.positionsChanged();
   // Lock-only commits update persisted coordinates/locks, not the user's pending
@@ -285,12 +295,18 @@ const strategyView = createLayoutStrategyView(document, $('layoutStrategyEditor'
     transitionStudio('beginPreview');
     try {
       const before = new Map([...currentLayout].map(([id, p]) => [id, { ...p }]));
-      const next = computeLayout(graph, settings, currentLayout);
+      const plan = planLayout(graph, settings, currentLayout);
+      // A preview that moves nothing would look pending and enable Apply.
+      if (!plan.moved) {
+        strategyView.error(unchangedLayoutMessage(settings));
+        return;
+      }
       layoutPreview = { settings, before, serial: requestSerial };
-      restoreLayoutPositions(currentLayout, next);
+      restoreLayoutPositions(currentLayout, plan.positions);
       projectSavepoint.positionsChanged();
       rebuildRenderer();
       refreshUnsavedState();
+      strategyView.outcome(plan);
     } catch (error) {
       strategyView.error(error instanceof Error ? error.message : String(error));
     }
@@ -418,11 +434,7 @@ const projectActions: Parameters<typeof createProjectEditor>[2] & {
     const config = {
       ...projectHistory.value,
       layout: {
-        type: 'manual' as const,
-        mode: 'preserve' as const,
-        seed: 0,
-        spacing: 160,
-        iterations: 160,
+        ...DEFAULT_LAYOUT_SETTINGS,
         locked: [],
         ...projectHistory.value.layout,
         positions: Object.fromEntries(currentLayout),
@@ -934,11 +946,17 @@ function availableNodes(): VisualGraph['nodes'] {
     ? editableNodes(currentFrameState, currentLayout)
     : [];
 }
+/** Whether the selected node's X is its date: a dated node on an anchored timeline. */
+function selectedNodeInTime(): boolean {
+  const axis = graph ? timeAnchor(graph) : null,
+    node = axis ? graph?.nodes.find((n) => n.id === selectedLayoutNode) : undefined;
+  return Boolean(axis && node && placeInTime(node, axis) !== null);
+}
 function updateLayoutFields(): void {
   const point = selectedLayoutNode ? currentLayout?.get(selectedLayoutNode) : undefined;
   // The position map stores only applied values; restore this node's draft
   // after rendering the canonical values for selection or mode transitions.
-  renderEditorFields(layoutControls, point);
+  renderEditorFields(layoutControls, point, selectedNodeInTime());
   if (selectedLayoutNode && point) {
     const draft = coordinateDrafts.get(selectedLayoutNode);
     const committed = committedCoordinate(selectedLayoutNode);
@@ -994,7 +1012,8 @@ layoutApply.addEventListener('click', () => {
     !availableNodes().some((node) => node.id === selectedLayoutNode)
   )
     return;
-  const point = parseCoordinateInputs(layoutX.value, layoutY.value);
+  const typed = parseCoordinateInputs(layoutX.value, layoutY.value);
+  const point = typed && graph ? anchoredPoint(graph, selectedLayoutNode, typed) : typed;
   if (!point) {
     coordinateValidationMessage = '坐标必须是有限数字，请检查 X 和 Y';
     renderEditorMessage(layoutControls, coordinateValidationMessage);
@@ -1026,6 +1045,7 @@ function updateLayoutControls(): void {
     layoutEditing,
     layoutChanged() || hasPendingCoordinateDraft(),
     coordinateValidationMessage,
+    Boolean(graph && timeAnchor(graph)),
   );
   refreshUnsavedState();
 }
@@ -1093,6 +1113,7 @@ layoutReset.addEventListener('click', () => {
   }
   for (const [id, p] of originalLayout)
     if (!projectHistory.value.layout?.locked.includes(id)) currentLayout.set(id, { ...p });
+  if (graph) anchorToTime(graph, currentLayout);
   projectSavepoint.positionsChanged();
   projectHistory.commit(configWithPositions());
   if (graph) graph.project = projectHistory.value;
@@ -1144,12 +1165,14 @@ function moveLayoutNode(event: PointerEvent): void {
     return;
   const point = pointerLocation(event);
   if (!point) return;
-  const moved = positionForDrag(
+  const dragged = positionForDrag(
     dragging,
     point,
     currentFrameState.cameraResolved,
     renderer.frameSpec,
   );
+  // On a timeline a bar changes lane, never its years.
+  const moved = dragged && graph ? anchoredPoint(graph, dragging.id, dragged) : dragged;
   if (!moved || !updateEditableNodePosition(currentLayout, currentFrameState, dragging.id, moved))
     return;
   projectSavepoint.positionsChanged();

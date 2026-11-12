@@ -53,9 +53,16 @@ export function renderEditorNodes(
   controls.select.value = selected ?? '';
 }
 
-export function renderEditorFields(controls: EditorControls, position: Point | undefined): void {
+/** `inTime`: the node's X is its date on a timeline, so only its lane (Y) is edited. */
+export function renderEditorFields(
+  controls: EditorControls,
+  position: Point | undefined,
+  inTime = false,
+): void {
   controls.x.value = position ? String(position.x) : '';
   controls.y.value = position ? String(position.y) : '';
+  controls.x.readOnly = inTime;
+  controls.x.title = inTime ? uiText('时间轴：横坐标由日期决定') : '';
 }
 
 export function renderEditorStatus(
@@ -63,12 +70,13 @@ export function renderEditorStatus(
   active: boolean,
   dirty: boolean,
   validationMessage: string | null = null,
+  inTime = false,
 ): void {
   controls.reset.disabled = !dirty;
   const text = validationMessage
     ? uiStatus(validationMessage)
     : active
-      ? uiText('拖动当前可见节点 · ') +
+      ? uiText(inTime ? '时间轴 · 拖动可换泳道，横坐标由日期决定 · ' : '拖动当前可见节点 · ') +
         uiText(dirty ? '有坐标调整' : '尚未调整') +
         uiText(' · 通过文档工具栏导出保存')
       : dirty

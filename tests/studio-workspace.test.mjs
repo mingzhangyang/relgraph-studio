@@ -1900,3 +1900,48 @@ test('coordinate validation remains visible in either locale until corrected or 
   await app.node('layoutReset').click();
   assert.notEqual(note.textContent, '坐标必须是有限数字，请检查 X 和 Y');
 });
+
+test('F2/F4: the layout panel refuses a preview that moves nothing and names the engine that ran', async () => {
+  const app = makeStudio();
+  await app.ready;
+  await app.node('exampleGraph').click();
+  await flush();
+  assert.equal(app.node('status').attributes['data-state'], 'ready');
+  const strategy = app.node('layoutStrategyEditor'),
+    note = strategy.children.find((child) => child.tagName === 'P'),
+    type = viewControl(app, 'strategyType'),
+    mode = viewControl(app, 'strategyMode'),
+    apply = viewControl(app, 'strategyApply'),
+    choose = async (control, value) => {
+      control.value = value;
+      await control.dispatch('change');
+    };
+  // A strategy under "preserve" moves nothing: say so, and nothing is pending.
+  await choose(type, 'grid');
+  await choose(mode, 'preserve');
+  await viewControl(app, 'strategyPreview').click();
+  assert.match(note.textContent, /不会移动任何节点/);
+  assert.equal(apply.disabled, true);
+  // Manual keeps everything, whatever the policy.
+  await choose(type, 'manual');
+  await choose(mode, 'rearrange');
+  await viewControl(app, 'strategyPreview').click();
+  assert.equal(note.textContent, '手动策略保留现有坐标：没有可预览的变化。');
+  assert.equal(apply.disabled, true);
+  // A timeline of an undated graph is drawn as a tree, and the panel says so.
+  await choose(type, 'timeline');
+  await viewControl(app, 'strategyPreview').click();
+  assert.equal(apply.disabled, false);
+  assert.match(note.textContent, /临时预览/);
+  assert.match(note.textContent, /实际绘制：树 · 向右展开（没有节点带日期，时间轴退回为树）/);
+  const language = app.node('languageSelect');
+  language.value = 'en';
+  await language.dispatch('change');
+  assert.match(note.textContent, /Drawn with: Tree · Grows to the right \(no node has a date/);
+  language.value = 'zh-CN';
+  await language.dispatch('change');
+  // Cancelling the preview forgets what drew it.
+  await viewControl(app, 'strategyCancel').click();
+  assert.equal(apply.disabled, true);
+  assert.doesNotMatch(note.textContent, /实际绘制/);
+});

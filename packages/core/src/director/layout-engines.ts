@@ -32,6 +32,14 @@ export interface EngineOptions {
   /** Nodes that must stay exactly where they are. */
   fixed?: ReadonlyMap<string, EnginePoint>;
 }
+/**
+ * The spacing and relaxation budget every automatic drawing starts from: the
+ * player's drawing of a document without coordinates, `relgraph layout`, and
+ * the layout panel's defaults. One constant, so that asking the panel to
+ * rearrange a freshly loaded document reproduces what is already on screen.
+ */
+export const LAYOUT_DEFAULTS: Readonly<Pick<EngineOptions, 'spacing' | 'iterations'>> =
+  Object.freeze({ spacing: 150, iterations: 300 });
 type LayoutGraph = Pick<VisualGraph, 'nodes' | 'edges'>;
 /** A node's place in time; `point` when it only has a first appearance. */
 type Span = { from: number; to?: number; point: boolean };
@@ -1054,6 +1062,9 @@ export function placeInTime(
   return ((from + to) / 2 - (axis.from + axis.to) / 2) * axis.scale;
 }
 
+/** How far, in world units, a stored x may lie from its place in time and still keep time. */
+export const TIME_TOLERANCE = 0.02;
+
 /**
  * Whether a drawing keeps time: every dated node sits at its place on the
  * axis, to the precision coordinates are stored with. The timeline engine
@@ -1070,7 +1081,7 @@ export function keepsTime(
     const x = placeInTime(node, axis),
       p = positions.get(node.id);
     if (x === null || !p) continue;
-    if (!(Math.abs(p.x - x) <= 0.02)) return false;
+    if (!(Math.abs(p.x - x) <= TIME_TOLERANCE)) return false;
   }
   return true;
 }
@@ -1435,8 +1446,7 @@ export function autoLayout(
 ): Map<string, EnginePoint> {
   return runLayoutEngine(graph, chooseLayoutEngine(graph), {
     seed: 0,
-    spacing: 150,
-    iterations: 300,
+    ...LAYOUT_DEFAULTS,
     ...options,
   });
 }

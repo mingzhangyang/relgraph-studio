@@ -419,11 +419,14 @@ test('the time axis is drawn only for a drawing that keeps time', () => {
   assert.equal(keepsTime(graph.nodes, year, style.timeAxis), false);
   assert.deepEqual(ticks(compose(result, last(graph), year).list), []);
 
-  // Partly authored coordinates take the conservative fallback, which is not in time.
+  // A timeline is a declared state: partly authored coordinates keep their
+  // lanes, and every bar, authored or not, is put at its years.
   const partly = structuredClone(dynasties);
   partly.nodes[0].position = { x: 0, y: 0 };
   const mixed = load(partly);
-  assert.deepEqual(ticks(compose(mixed, last(mixed.graph)).list), []);
+  assert.equal(keepsTime(mixed.graph.nodes, layoutGraph(mixed.graph), style.timeAxis), true);
+  assert.equal(layoutGraph(mixed.graph).get(byLabel(mixed.graph, '秦').id).y, 0);
+  assert.ok(ticks(compose(mixed, last(mixed.graph)).list).length > 0);
   // A node without a time makes no claim and may sit anywhere.
   assert.equal(placeInTime({}, axis), null);
 });
