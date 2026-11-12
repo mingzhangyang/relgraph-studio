@@ -187,15 +187,19 @@ network can be tried as a tree or laid out on a timeline.
 `biology`, and derives one for every other domain. Channels are allocated once
 per document, never per frame, so a reveal cannot repaint what is on screen:
 
-1. **Node hue** belongs to groups when the graph has any (in declaration
-   order), otherwise to node kinds. A single kind without groups stays neutral.
+1. **Node hue** belongs to the branches of a tree or mind map, then to groups
+   when the graph has any (in declaration order), otherwise to node kinds. A
+   single kind without groups stays neutral. Where branches or groups own the
+   hue, node kinds are told apart by shape alone.
 2. **Node shape** follows the node kind: circle, pill, diamond, square,
    hexagon, most frequent kind first.
-3. **Relation hue** follows the relation kind and takes the palette slots
-   after the node hues, so one hue never means two things. From the fourth
+3. **Relation hue** follows the relation kind and takes only palette slots
+   that no branch, group or node kind uses, so one hue never means two
+   things. A group with a `color` of its own holds no slot. From the fourth
    kind on, a dash rhythm is added as a second channel.
-4. **Past eight tones nothing is cycled or generated.** Further kinds fold to
-   the neutral stroke and keep their rhythm or shape; the legend names them.
+4. **Past eight tones nothing is cycled or generated.** Further node kinds
+   keep their shape. Further relation kinds fold to the neutral stroke, each
+   with a dash rhythm of its own (the first solid); the legend names them.
 5. `kinds` declarations override the automatic choice for their kind.
 
 Literary relation kinds now have curated tones (kinship blue, marriage
@@ -301,7 +305,7 @@ seven examples is exactly the 720p composition scaled by 1.5.
 Run locally on linux-x64, Node 22.23.4, skia-canvas 4.0.0, Chromium 153, after
 merging `main` at `0f995b7` (Prettier pass #36 and the EGFR–MAPK example #37):
 
-- `npm test`: 350 tests in 33 files, including `tests/generic-graph.test.mjs`,
+- `npm test`: 356 tests in 33 files, including `tests/generic-graph.test.mjs`,
   `tests/layout-engines.test.mjs` and `tests/diagrams.test.mjs`, and 236
   golden frames (five examples, two themes) against the native renderer.
 - `npm run typecheck`, `npm run check:types`, `npm run lint`,

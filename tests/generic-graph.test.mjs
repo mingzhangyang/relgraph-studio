@@ -449,6 +449,43 @@ test('hue, shape and rhythm are allocated once, in a fixed order, and never cycl
   assert.deepEqual(tones.slice(0, TONE_COUNT), [0, 1, 2, 3, 4, 5, 6, 7]);
   assert.ok(tones.slice(TONE_COUNT).every((tone) => tone === undefined));
   assert.equal(new Set(tones.filter((t) => t !== undefined)).size, TONE_COUNT);
+  // Without a hue a kind is told by rhythm alone, so each neutral kind has its own.
+  assert.deepEqual(
+    Object.values(many.edges)
+      .slice(TONE_COUNT)
+      .map((e) => e.dash),
+    [undefined, [7, 5], [2, 4], [11, 4, 2, 4]],
+  );
+  // A group with a colour of its own holds no slot, so none is left unused.
+  const coloured = deriveGraphStyle({
+    ...grouped,
+    groups: [
+      { id: 'g1', label: 'G1', kind: 'group', color: '#123456' },
+      { id: 'g2', label: 'G2', kind: 'group', tone: 0 },
+    ],
+  });
+  assert.deepEqual([coloured.edges.visits.tone, coloured.edges.owns.tone], [1, 2]);
+  // Nodes that carry their own tone (the branches of a tree) own the hue as
+  // groups do: kinds are told by shape, and relations take what is left.
+  const branches = (count) =>
+    deriveGraphStyle({
+      ...grouped,
+      groups: [],
+      nodes: [
+        node('root', 'person'),
+        ...Array.from({ length: count }, (_, i) => ({
+          ...node('n' + i, i % 2 ? 'person' : 'place'),
+          tone: i,
+        })),
+      ],
+    });
+  const two = branches(2);
+  assert.deepEqual([two.nodes.person.tone, two.nodes.place.tone], [undefined, undefined]);
+  assert.deepEqual([two.edges.visits.tone, two.edges.owns.tone], [2, 3]);
+  // With every tone on a branch, relations keep the neutral stroke and their rhythm.
+  const full = branches(TONE_COUNT);
+  assert.deepEqual([full.edges.visits.tone, full.edges.owns.tone], [undefined, undefined]);
+  assert.deepEqual([full.edges.visits.dash, full.edges.owns.dash], [undefined, [7, 5]]);
   // Declarations win, in the order they are written.
   const declared = deriveGraphStyle({
     ...grouped,

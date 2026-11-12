@@ -162,6 +162,12 @@ const AUTO_DASH: readonly (readonly number[] | undefined)[] = Object.freeze([
   Object.freeze([4, 4]),
   Object.freeze([14, 6]),
 ]);
+// Without a hue, rhythm is all a kind has: the first stays solid and every
+// later one takes the next rhythm, so no two neutral kinds look alike.
+const NEUTRAL_DASH: readonly (readonly number[] | undefined)[] = Object.freeze([
+  undefined,
+  ...AUTO_DASH.filter((dash) => dash !== undefined),
+]);
 const compareText = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
 const TERMINAL = /^(start|end|begin|finish|stop|terminal|terminator|开始|结束|起点|终点|起止)$/i,
   DECISION = /^(decision|condition|branch|choice|gateway|if|判断|条件|分支|决策)$/i;
@@ -191,10 +197,13 @@ function rankedKinds(items: readonly { kind: string }[], declared: readonly stri
  *
  * Channels are allocated once for the whole document (never per frame, so a
  * reveal cannot repaint what is already on screen):
- *  - node hue belongs to groups when the graph has any, otherwise to node kinds;
+ *  - node hue belongs to the nodes that carry a tone of their own (the
+ *    branches of a tree or mind map), then to groups when the graph has any,
+ *    otherwise to node kinds;
  *  - node shape always follows the node kind;
- *  - edge hue follows the edge kind, taking palette slots after the node hues
- *    so one hue never means two things, with a dash rhythm as second channel.
+ *  - edge hue follows the edge kind and takes only palette slots that no
+ *    node, group or node kind uses, so one hue never means two things, with
+ *    a dash rhythm as second channel.
  * Declarations in `graph.kinds` override the automatic choice for their kind.
  */
 export function deriveGraphStyle(
@@ -207,16 +216,30 @@ export function deriveGraphStyle(
   const nodeKinds = rankedKinds(graph.nodes, Object.keys(declaredNodes)),
     edgeKinds = rankedKinds(graph.edges, Object.keys(declaredEdges));
   const grouped = graph.groups.length > 0;
-  // Hue slots already spoken for by groups (assigned by the adapter in order).
-  let nextTone = grouped ? Math.min(TONE_COUNT, graph.groups.length) : 0;
-  const tone = (): number | undefined => (nextTone < TONE_COUNT ? nextTone++ : undefined);
+  // Hue slots already spoken for, read from what will actually be drawn: the
+  // tone of each group (one with an authored colour holds no slot) and of
+  // each node that carries its own.
+  const taken = new Set<number>();
+  for (const group of graph.groups) if (group.tone !== undefined) taken.add(group.tone);
+  let branched = false;
+  for (const node of graph.nodes)
+    if (node.tone !== undefined) {
+      taken.add(node.tone);
+      branched = true;
+    }
+  let nextTone = 0;
+  const tone = (): number | undefined => {
+    while (taken.has(nextTone)) nextTone++;
+    return nextTone < TONE_COUNT ? nextTone++ : undefined;
+  };
   const nodes: Record<string, NodeStyle> = {},
     edges: Record<string, EdgeStyle> = {},
     legend: LegendEntry[] = [];
   const plain = (text: string): LocalizedText => Object.freeze({ 'zh-CN': text, en: text });
   nodeKinds.forEach((kind, index) => {
     const declared = Object.hasOwn(declaredNodes, kind) ? declaredNodes[kind] : undefined;
-    const assigned = grouped || nodeKinds.length < 2 ? undefined : tone();
+    // Where nodes or groups already speak in hue, a kind is told by shape alone.
+    const assigned = grouped || branched || nodeKinds.length < 2 ? undefined : tone();
     nodes[kind] = Object.freeze({
       shape: declared?.shape ?? conventionalShape(diagram, kind, index),
       ...(declared?.color ? { color: declared.color } : {}),
@@ -225,10 +248,16 @@ export function deriveGraphStyle(
     if (nodeKinds.length > 1 || declared?.label)
       legend.push(Object.freeze({ kind, label: plain(declared?.label ?? kind), of: 'node' }));
   });
+  let neutral = 0;
   edgeKinds.forEach((kind, index) => {
     const declared = Object.hasOwn(declaredEdges, kind) ? declaredEdges[kind] : undefined;
     const assigned = edgeKinds.length < 2 ? undefined : tone();
-    const dash = declared?.line ? LINE_DASH[declared.line] : AUTO_DASH[index % AUTO_DASH.length];
+    const hued = assigned !== undefined || declared?.color !== undefined;
+    const dash = declared?.line
+      ? LINE_DASH[declared.line]
+      : hued
+        ? AUTO_DASH[index % AUTO_DASH.length]
+        : NEUTRAL_DASH[neutral++ % NEUTRAL_DASH.length];
     edges[kind] = Object.freeze({
       stroke: 'plain',
       // Branches of a tree or mind map need no arrowhead: the root says the way.

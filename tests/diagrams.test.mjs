@@ -331,6 +331,39 @@ test('a timeline puts every span at its place in time, in lanes, under an axis',
   );
 });
 
+test('in a tree with several kinds of relation, no hue means both a branch and a kind', () => {
+  const { graph } = load({
+    format: FORMAT,
+    diagram: 'tree',
+    nodes: [
+      { id: 'r', kind: 'topic' },
+      { id: 'a', kind: 'topic' },
+      { id: 'b', kind: 'note' },
+      { id: 'a1', kind: 'note' },
+      { id: 'b1', kind: 'note' },
+    ],
+    edges: [
+      { source: 'r', target: 'a', kind: 'has' },
+      { source: 'r', target: 'b', kind: 'has' },
+      { source: 'a', target: 'a1', kind: 'uses' },
+      { source: 'b', target: 'b1', kind: 'uses' },
+    ],
+  });
+  const style = styleForGraph(graph),
+    onNodes = new Set(graph.nodes.map((n) => n.tone).filter((t) => t !== undefined)),
+    onEdges = Object.values(style.edges).map((e) => e.tone);
+  assert.deepEqual([...onNodes].sort(), [0, 1], 'one tone per main branch');
+  assert.deepEqual(onEdges, [2, 3], 'kinds of relation take the tones after them');
+  // The root has no branch; its kind must not lend it a branch's hue either.
+  assert.equal(graph.nodes.find((n) => n.id === 'r').tone, undefined);
+  for (const kind of Object.values(style.nodes)) assert.equal(kind.tone, undefined);
+  assert.deepEqual(
+    [style.nodes.topic.shape, style.nodes.note.shape].sort(),
+    ['circle', 'pill'],
+    'node kinds are still told apart, by shape',
+  );
+});
+
 test('the time axis is drawn only for a drawing that keeps time', () => {
   const result = load(dynasties),
     { graph } = result,
