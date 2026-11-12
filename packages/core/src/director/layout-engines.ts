@@ -440,86 +440,92 @@ function relax(
   const cohesive = [...groups.entries()].filter(([, ids]) => ids.length > 1 && ids.length < n);
   // Keep the pair loop affordable for large graphs.
   const steps = Math.min(iterations, Math.max(24, Math.floor(4e7 / (n * n))));
-  const force = new Map(members.map((id) => [id, { x: 0, y: 0 }]));
-  const movable = members.filter((id) => !fixed.has(id));
+  // The pair loop is the whole cost of this engine. It reads points, groups
+  // and forces by position in `members`, never by id: same arithmetic in the
+  // same order, without a hash lookup per pair.
+  const index = new Map(members.map((id, i) => [id, i]));
+  const points = members.map((id) => at.get(id)!),
+    groupOf = members.map((id) => p.group.get(id)),
+    fx = new Float64Array(n),
+    fy = new Float64Array(n);
+  const linked = links.map((link) => ({
+    a: index.get(link.source)!,
+    b: index.get(link.target)!,
+    weight: link.weight,
+  }));
+  const cohesiveAt = cohesive.map(([, ids]) => ids.map((id) => index.get(id)!));
+  const movable: number[] = [];
+  members.forEach((id, i) => {
+    if (!fixed.has(id)) movable.push(i);
+  });
   for (let step = 0; step < steps; step++) {
-    for (const f of force.values()) f.x = f.y = 0;
+    fx.fill(0);
+    fy.fill(0);
     for (let i = 0; i < n; i++) {
-      const a = members[i],
-        pa = at.get(a)!,
-        ga = p.group.get(a);
+      const pa = points[i],
+        ga = groupOf[i];
       for (let j = i + 1; j < n; j++) {
-        const b = members[j],
-          pb = at.get(b)!;
+        const pb = points[j];
         let dx = pa.x - pb.x,
           dy = pa.y - pb.y,
           d = Math.hypot(dx, dy);
         if (!Number.isFinite(d)) continue;
         if (d < k * 0.01) {
-          const angle = hash(a + ':' + b, seed) * TAU;
+          const angle = hash(members[i] + ':' + members[j], seed) * TAU;
           dx = Math.cos(angle);
           dy = Math.sin(angle);
           d = k * 0.01;
           dx *= d;
           dy *= d;
         }
-        const gb = p.group.get(b);
+        const gb = groupOf[j];
         // Different groups keep a clear channel between their hulls.
         const push = ((k * k) / d) * (ga && gb ? (ga === gb ? 0.85 : 1.7) : 1);
-        const fa = force.get(a)!,
-          fb = force.get(b)!;
-        fa.x += (dx / d) * push;
-        fa.y += (dy / d) * push;
-        fb.x -= (dx / d) * push;
-        fb.y -= (dy / d) * push;
+        fx[i] += (dx / d) * push;
+        fy[i] += (dy / d) * push;
+        fx[j] -= (dx / d) * push;
+        fy[j] -= (dy / d) * push;
       }
     }
-    for (const link of links) {
-      const pa = at.get(link.source)!,
-        pb = at.get(link.target)!;
+    for (const { a, b, weight } of linked) {
+      const pa = points[a],
+        pb = points[b];
       const dx = pb.x - pa.x,
         dy = pb.y - pa.y,
         d = Math.hypot(dx, dy);
       if (!(d > 0) || !Number.isFinite(d)) continue;
-      const pull = ((d * d) / k) * link.weight;
-      const fa = force.get(link.source)!,
-        fb = force.get(link.target)!;
-      fa.x += (dx / d) * pull;
-      fa.y += (dy / d) * pull;
-      fb.x -= (dx / d) * pull;
-      fb.y -= (dy / d) * pull;
+      const pull = ((d * d) / k) * weight;
+      fx[a] += (dx / d) * pull;
+      fy[a] += (dy / d) * pull;
+      fx[b] -= (dx / d) * pull;
+      fy[b] -= (dy / d) * pull;
     }
-    for (const [, ids] of cohesive) {
+    for (const ids of cohesiveAt) {
       let cx = 0,
         cy = 0;
-      for (const id of ids) {
-        cx += at.get(id)!.x / ids.length;
-        cy += at.get(id)!.y / ids.length;
+      for (const i of ids) {
+        cx += points[i].x / ids.length;
+        cy += points[i].y / ids.length;
       }
-      for (const id of ids) {
-        const q = at.get(id)!,
-          f = force.get(id)!;
-        f.x += (cx - q.x) * 0.8;
-        f.y += (cy - q.y) * 0.8;
+      for (const i of ids) {
+        fx[i] += (cx - points[i].x) * 0.8;
+        fy[i] += (cy - points[i].y) * 0.8;
       }
     }
     // Stronger vertical gravity flattens the result towards the stage shape.
-    for (const id of movable) {
-      const q = at.get(id)!,
-        f = force.get(id)!;
-      f.x += (centre.x - q.x) * 0.05;
-      f.y += (centre.y - q.y) * 0.05 * ASPECT * ASPECT;
+    for (const i of movable) {
+      fx[i] += (centre.x - points[i].x) * 0.05;
+      fy[i] += (centre.y - points[i].y) * 0.05 * ASPECT * ASPECT;
     }
     const cooling = 1 - step / steps,
       limit = k * (0.02 + 0.6 * cooling * cooling);
-    for (const id of movable) {
-      const q = at.get(id)!,
-        f = force.get(id)!,
-        length = Math.hypot(f.x, f.y);
+    for (const i of movable) {
+      const q = points[i],
+        length = Math.hypot(fx[i], fy[i]);
       if (!(length > 0) || !Number.isFinite(length)) continue;
       const move = Math.min(length, limit) / length;
-      const x = q.x + f.x * move,
-        y = q.y + f.y * move;
+      const x = q.x + fx[i] * move,
+        y = q.y + fy[i] * move;
       if (Number.isFinite(x) && Number.isFinite(y)) {
         q.x = x;
         q.y = y;
@@ -543,26 +549,29 @@ function separate(
   const n = members.length,
     minX = k * 0.72,
     minY = k * 0.48;
+  const points = members.map((id) => at.get(id)!),
+    pinned = members.map((id) => fixed.has(id));
   for (let sweep = 0; sweep < 40; sweep++) {
     let moved = false;
-    for (let i = 0; i < n; i++)
+    for (let i = 0; i < n; i++) {
+      const pa = points[i],
+        fa = pinned[i];
       for (let j = i + 1; j < n; j++) {
-        const a = members[i],
-          b = members[j],
-          pa = at.get(a)!,
-          pb = at.get(b)!;
+        const pb = points[j];
         const dx = pb.x - pa.x,
           dy = pb.y - pa.y;
+        // Outside the box around the ellipse nothing can overlap: most pairs
+        // end here, before the square root.
+        if (dx >= minX || dx <= -minX || dy >= minY || dy <= -minY) continue;
         const overlap = 1 - Math.hypot(dx / minX, dy / minY);
         if (!(overlap > 0.02)) continue;
-        const fa = fixed.has(a),
-          fb = fixed.has(b);
+        const fb = pinned[j];
         if (fa && fb) continue;
         let ux = dx / minX,
           uy = dy / minY;
         const length = Math.hypot(ux, uy);
         if (length < 1e-6) {
-          const angle = hash(a + ':' + b + ':gap', seed) * TAU;
+          const angle = hash(members[i] + ':' + members[j] + ':gap', seed) * TAU;
           ux = Math.cos(angle);
           uy = Math.sin(angle);
         } else {
@@ -581,6 +590,7 @@ function separate(
         }
         moved = true;
       }
+    }
     if (!moved) break;
   }
 }
