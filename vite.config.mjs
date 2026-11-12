@@ -3,7 +3,11 @@ import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 
 // Keep the shipped examples as files: users can inspect and load them as JSON.
-const exampleFiles = ['honglou-provisional.relgraph.json', 'biology-signaling-synthetic.json'];
+const exampleFiles = [
+  'honglou-provisional.relgraph.json',
+  'biology-signaling-synthetic.json',
+  'bookshop-systems-synthetic.graph.json',
+];
 
 export default defineConfig({
   base: './',

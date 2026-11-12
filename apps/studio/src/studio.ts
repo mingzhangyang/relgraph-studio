@@ -33,7 +33,7 @@ import { createProjectEditor } from './project-editor-view.js';
 import { createDocumentToolbarView } from './document-toolbar-view.js';
 import { documentCommandFromShortcut } from './document-command-model.js';
 import { parseDocument, applyGraphPositions, type LoadResult } from '@relgraph/core';
-import { layoutGraph } from '@relgraph/core';
+import { layoutGraph, styleForGraph } from '@relgraph/core';
 import { frameCount } from '@relgraph/core';
 import type { Bio } from '@relgraph/core';
 import type { DirectorFrameState, VisualGraph } from '@relgraph/core';
@@ -124,6 +124,7 @@ const canvas = requiredElement('stage', HTMLCanvasElement),
   fileInput = requiredElement('fileInput', HTMLInputElement),
   exampleLiterature = requiredElement('exampleLiterature', HTMLButtonElement),
   exampleBiology = requiredElement('exampleBiology', HTMLButtonElement),
+  exampleGraph = requiredElement('exampleGraph', HTMLButtonElement),
   themeToggle = requiredElement('themeToggle', HTMLButtonElement),
   languageSelect = requiredElement('languageSelect', HTMLSelectElement),
   layoutToggle = requiredElement('layoutToggle', HTMLButtonElement),
@@ -175,6 +176,7 @@ const shellView = createWorkspaceShellView(document, {
   sourceNote: $('sourceNote'),
   exampleLiterature,
   exampleBiology,
+  exampleGraph,
   themeToggle,
   dropzone,
 });
@@ -783,6 +785,14 @@ exampleBiology.addEventListener('click', () => {
   shellView.markSource('exampleBiology');
   return loadExample('../examples/biology-signaling-synthetic.json', '生物信号 · 虚构合成示例');
 });
+exampleGraph.addEventListener('click', () => {
+  if (!confirmSourceReplacement()) return;
+  shellView.markSource('exampleGraph');
+  return loadExample(
+    '../examples/bookshop-systems-synthetic.graph.json',
+    '线上书店 · 通用关系合成示例',
+  );
+});
 async function loadFile(file: File | undefined): Promise<void> {
   if (!file || !confirmSourceReplacement()) return;
   const serial = beginLoad();
@@ -1099,6 +1109,7 @@ canvas.addEventListener('pointerdown', (event) => {
     radius,
     event.pointerId,
     graph?.project,
+    graph ? styleForGraph(graph) : undefined,
   );
   if (!nextDrag || projectHistory.value.layout?.locked.includes(nextDrag.id)) return;
   dragging = nextDrag;

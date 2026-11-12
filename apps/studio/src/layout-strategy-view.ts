@@ -38,9 +38,13 @@ export function createLayoutStrategyView(doc: Document, host: HTMLElement, actio
   };
   const type = select('strategyType', '策略', [
     ['manual', '手动 · 保留微调'],
-    ['layered', '通用分层'],
-    ['force', '确定性力导向'],
-    ['circle', '圆形'],
+    ['auto', '自动 · 按结构选择'],
+    ['force', '力导向 · 聚类'],
+    ['layered', '分层 · 自上而下'],
+    ['flow', '流向 · 从左到右'],
+    ['radial', '放射 · 以核心为圆心'],
+    ['circle', '环形'],
+    ['grid', '网格 · 保持顺序'],
   ]);
   const mode = select('strategyMode', '坐标策略', [
     ['preserve', '保留现有坐标'],
@@ -69,7 +73,7 @@ export function createLayoutStrategyView(doc: Document, host: HTMLElement, actio
   const l = el('label', '锁定选中节点的当前坐标');
   l.append(lock);
   host.append(l);
-  const note = el('p', '布局在播放前计算。分层表示连接结构，不推断家谱世代。');
+  const note = el('p', '布局在播放前计算。分层与流向表示连接结构，不推断家谱世代。');
   note.className = 'muted';
   host.append(note);
   const button = (id: string, text: string, fn: () => void) => {
@@ -86,7 +90,7 @@ export function createLayoutStrategyView(doc: Document, host: HTMLElement, actio
   // A locale-only render must not erase a failed preview/validation message.
   // Store the source message, never the translated label.
   let validationMessage: string | null = null;
-  let hintMessage = '静态确定性布局 · 保留 = 不移动；填补 = 仅缺失；重排 = 移动未锁定节点。分层不推断家谱。';
+  let hintMessage = '静态确定性布局 · 保留 = 不移动；填补 = 仅缺失；重排 = 移动未锁定节点。自动 = 按图的结构选择策略。';
   const refreshNote = () => {
     const message = uiStatus(validationMessage ?? hintMessage);
     if (note.textContent !== message) note.textContent = message;
@@ -179,7 +183,7 @@ export function createLayoutStrategyView(doc: Document, host: HTMLElement, actio
       cancel.disabled = !enabled || !pending;
       hintMessage = pending
         ? '临时预览 · 尚未保存。请应用或取消；可撤销已应用布局。'
-        : '静态确定性布局 · 保留 = 不移动；填补 = 仅缺失；重排 = 移动未锁定节点。分层不推断家谱。';
+        : '静态确定性布局 · 保留 = 不移动；填补 = 仅缺失；重排 = 移动未锁定节点。自动 = 按图的结构选择策略。';
       refreshNote();
     },
     reset(next: LayoutSettings | undefined) {
