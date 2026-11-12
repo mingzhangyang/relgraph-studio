@@ -19,14 +19,15 @@ const relation = (tone?: number, dash?: readonly number[]): EdgeStyle =>
 export const literatureStyle: DomainStyle = Object.freeze({
   domain: 'literature',
   edges: Object.freeze({
-    family: relation(7),
+    // Kinship, the commonest tie, takes the calm blue; marriage the red.
+    family: relation(0),
     marriage: relation(1),
     romance: relation(4),
     friendship: relation(2),
-    alliance: relation(0),
+    alliance: relation(3),
     rivalry: relation(6, DASHED),
-    mentorship: relation(3),
-    service: relation(5, DOTTED),
+    mentorship: relation(5),
+    service: relation(7, DOTTED),
     other: relation(),
   }),
   defaultEdge: relation(),

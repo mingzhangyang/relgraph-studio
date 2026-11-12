@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import literature from '../examples/honglou-provisional.relgraph.json' with { type: 'json' };
 import biology from '../examples/biology-signaling-synthetic.json' with { type: 'json' };
+import bookshop from '../examples/bookshop-systems-synthetic.graph.json' with { type: 'json' };
 import { parseCommand, UsageError } from '../packages/cli/src/args.ts';
 import { formatDiagnostics } from '../packages/cli/src/document.ts';
 import { encodeArgs } from '../packages/cli/src/ffmpeg.ts';
@@ -155,6 +156,7 @@ test('the vendored fonts cover both examples', () => {
 for (const [example, source] of [
   ['literature', literature],
   ['biology', biology],
+  ['graph', bookshop],
 ]) {
   for (const theme of ['light', 'dark']) {
     test(`${example}/${theme}: all committed golden frames match the native renderer`, async (context) => {

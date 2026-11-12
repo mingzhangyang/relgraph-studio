@@ -882,6 +882,69 @@ for (const theme of ['light', 'dark'])
     await context.close();
   }
 
+// The generic format in a real browser: a document that only lists things and
+// relations must load, derive its layout, shots and legend, and accept every
+// layout strategy with pixel-identical repeats.
+const GENERIC_EXAMPLE = {
+  key: 'graph',
+  button: '#exampleGraph',
+  file: 'bookshop-systems-synthetic.graph.json',
+  name: '线上书店 · 通用关系合成示例',
+};
+for (const theme of ['light', 'dark']) {
+  const { context, page, problems } = await openStudio({ colorScheme: theme });
+  await check(
+    `generic graph example: derived film and every layout strategy (${theme})`,
+    async () => {
+      const source = await readExample(GENERIC_EXAMPLE.file);
+      assert.equal(source.presentation, undefined, 'the example authors no storyboard');
+      assert.ok(
+        source.nodes.every((node) => node.position === undefined),
+        'nor any coordinates',
+      );
+      await loadExample(page, GENERIC_EXAMPLE);
+      assert.equal(await status(page), 'ready');
+      assert.equal(await page.getAttribute('#exampleGraph', 'aria-pressed'), 'true');
+      assert.equal(await page.getAttribute('#exampleLiterature', 'aria-pressed'), 'false');
+      assert.equal(await page.evaluate(() => window.renderAt(60)), true);
+      const state = await page.evaluate(() => window.studioFrame());
+      assert.equal(state.view.meta.title, source.meta.title);
+      assert.equal(state.view.nodes.length, source.nodes.length);
+      assert.equal(state.view.edges.length, source.edges.length);
+      assert.ok(state.playback.totalSec > 10, 'a storyboard was derived');
+      const overview = await canvasPng(page);
+      await writeFile(join(outputDir, `generic-${theme}-overview.png`), overview);
+      await page.evaluate((f) => window.renderAt(f), 540);
+      assert.ok(
+        (await page.evaluate(() => window.studioFrame().highlight.edgeIds.length)) > 1,
+        'the derived hub shot highlights its relations',
+      );
+      await writeFile(join(outputDir, `generic-${theme}-hub.png`), await canvasPng(page));
+      await page.evaluate(() => window.renderAt(60));
+      assert.deepEqual(await canvasPng(page), overview, 'frames do not depend on playback history');
+      await page.locator('#layoutStrategies').evaluate((e) => (e.open = true));
+      await page.selectOption('#strategyMode', 'rearrange');
+      const seen = new Set();
+      for (const type of ['auto', 'force', 'layered', 'flow', 'radial', 'circle', 'grid']) {
+        await page.selectOption('#strategyType', type);
+        await page.click('#strategyPreview');
+        const first = await canvasPng(page);
+        await writeFile(join(outputDir, `generic-${theme}-layout-${type}.png`), first);
+        await page.click('#strategyCancel');
+        assert.deepEqual(await canvasPng(page), overview, `${type}: cancel restores the frame`);
+        await page.click('#strategyPreview');
+        assert.deepEqual(await canvasPng(page), first, `${type}: preview is repeatable`);
+        await page.click('#strategyCancel');
+        seen.add(createHash('sha256').update(first).digest('hex'));
+      }
+      // Auto picks the left-to-right flow for this pipeline; the rest all differ.
+      assert.equal(seen.size, 6);
+      assert.deepEqual(problems, []);
+    },
+  );
+  await context.close();
+}
+
 // Uploaded rasters become embedded project pixels; no network/image load during playback.
 for (const theme of ['light', 'dark']) {
   const { context, page, problems } = await openStudio({ colorScheme: theme });

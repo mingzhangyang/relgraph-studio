@@ -474,25 +474,30 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
     if (label && groupProgress > 0.5) {
       const w = measure(label, font) + u(14),
         h = font.size * 1.5;
-      // The name sits on the outline like a tab, where no member can be.
-      const top = hull.points.reduce((best, q) => (q.y < best.y ? q : best)),
-        bottom = hull.points.reduce((best, q) => (q.y > best.y ? q : best)),
-        left = hull.points.reduce((best, q) => (q.x < best.x ? q : best)),
-        right = hull.points.reduce((best, q) => (q.x > best.x ? q : best));
-      const spots = [top, bottom, left, right].map((q) => ({
-        x: q.x - w / 2,
-        y: q.y - h / 2,
-        w,
-        h,
-      }));
-      const free = (box: Rect): boolean =>
-        inBounds(box) && !occupied.some((o) => rectsIntersect(box, o));
-      const fallback = {
-        ...spots[0],
-        x: clamp(spots[0].x, bounds.left, Math.max(bounds.left, bounds.right - w)),
-        y: clamp(spots[0].y, bounds.top, Math.max(bounds.top, bounds.bottom - h)),
-      };
-      const box = spots.find(free) ?? fallback;
+      // The name sits on the outline like a tab, where no member can be:
+      // at the highest point of the outline that is on stage and free.
+      const boxAt = (q: Point): Rect => ({ x: q.x - w / 2, y: q.y - h / 2, w, h });
+      const free = (candidate: Rect): boolean =>
+        inBounds(candidate) && !occupied.some((o) => rectsIntersect(candidate, o));
+      // Long straight runs of the outline have no vertices of their own.
+      const along = hull.points.flatMap((q, i) => {
+        const next = hull.points[(i + 1) % hull.points.length],
+          steps = Math.max(1, Math.ceil(Math.hypot(next.x - q.x, next.y - q.y) / u(36)));
+        return Array.from({ length: steps }, (_, k) => ({
+          x: mix(q.x, next.x, k / steps),
+          y: mix(q.y, next.y, k / steps),
+        }));
+      });
+      const spot = along.sort((m, n) => m.y - n.y || m.x - n.x).find((q) => free(boxAt(q)));
+      const top = hull.points.reduce((best, q) => (q.y < best.y ? q : best));
+      const box = spot
+        ? boxAt(spot)
+        : {
+            w,
+            h,
+            x: clamp(top.x - w / 2, bounds.left, Math.max(bounds.left, bounds.right - w)),
+            y: clamp(top.y - h / 2, bounds.top, Math.max(bounds.top, bounds.bottom - h)),
+          };
       occupied.push(box);
       decoration.push({
         type: 'text',
