@@ -50,7 +50,7 @@ const EXAMPLES = [
     file: 'examples/honglou-provisional.relgraph.json',
     button: '#exampleLiterature',
   },
-  { key: 'biology', file: 'examples/biology-signaling-synthetic.json', button: '#exampleBiology' },
+  { key: 'biology', file: 'examples/biology-egfr-mapk.json', button: '#exampleBiology' },
   // A generic graph with no coordinates or storyboard: layout, encoding and
   // shots are all derived, so its frames pin the whole automatic pipeline.
   {

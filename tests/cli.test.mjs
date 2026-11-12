@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import literature from '../examples/honglou-provisional.relgraph.json' with { type: 'json' };
 import biology from '../examples/biology-signaling-synthetic.json' with { type: 'json' };
+import biologyExample from '../examples/biology-egfr-mapk.json' with { type: 'json' };
 import bookshop from '../examples/bookshop-systems-synthetic.graph.json' with { type: 'json' };
 import { parseCommand, UsageError } from '../packages/cli/src/args.ts';
 import { formatDiagnostics } from '../packages/cli/src/document.ts';
@@ -11,6 +12,7 @@ import { frameFile, isFramePattern } from '../packages/cli/src/frames.ts';
 import { loadDocument } from '../packages/core/src/director/load.ts';
 import { layoutGraph } from '../packages/core/src/director/layout.ts';
 import { frameCount } from '../packages/core/src/director/state.ts';
+import { frameStateAt } from '../packages/core/src/graph/core.ts';
 import {
   createHeadlessRenderer,
   SKIA_CANVAS_VERSION,
@@ -138,6 +140,24 @@ test('headless frames are pure functions of the frame index', () => {
   assert.equal(SKIA_CANVAS_VERSION, '4.0.0');
 });
 
+test('the canonical EGFR–MAPK example keeps its staged network semantics', () => {
+  const result = loadDocument(biologyExample);
+  assert.equal(result.valid, true, JSON.stringify(result.errors));
+  assert.equal(result.graph.scenes.length, 6);
+  assert.ok(result.graph.nodes.filter((node) => node.kind === 'reaction').length >= 5);
+  assert.ok(result.graph.edges.some((edge) => edge.kind === 'inhibition'));
+  assert.equal(
+    frameStateAt(result.graph, 0).view.nodes.some((node) => node.id === 'c-fos'),
+    false,
+  );
+  assert.equal(
+    frameStateAt(result.graph, frameCount(result.graph) - 1).view.nodes.some(
+      (node) => node.id === 'c-fos',
+    ),
+    true,
+  );
+});
+
 test('the vendored fonts cover both examples', () => {
   const strings = (value) =>
     typeof value === 'string'
@@ -145,7 +165,10 @@ test('the vendored fonts cover both examples', () => {
       : value && typeof value === 'object'
         ? Object.values(value).flatMap(strings)
         : [];
-  assert.deepEqual(uncoveredCharacters([...strings(literature), ...strings(biology)]), []);
+  assert.deepEqual(
+    uncoveredCharacters([...strings(literature), ...strings(biology), ...strings(biologyExample)]),
+    [],
+  );
   assert.deepEqual(uncoveredCharacters(['龘 ok']), ['龘']);
   // Requested in charset.txt but absent from every source font.
   assert.deepEqual(uncoveredCharacters(['1⁄2', 'why‽', '‣ item']), ['‣', '‽', '⁄']);
@@ -155,7 +178,7 @@ test('the vendored fonts cover both examples', () => {
 // label-placement hashes elsewhere in either domain or film theme.
 for (const [example, source] of [
   ['literature', literature],
-  ['biology', biology],
+  ['biology', biologyExample],
   ['graph', bookshop],
 ]) {
   for (const theme of ['light', 'dark']) {
@@ -203,7 +226,7 @@ for (const [example, source] of [
 test('renderFilm rejects non-integer ranges and job counts before writing', async () => {
   const { renderFilm, RenderError } = await import('../packages/cli/src/render.ts');
   const base = {
-    file: 'examples/biology-signaling-synthetic.json',
+    file: 'examples/biology-egfr-mapk.json',
     frames: 'output/never/%05d.png',
     frameSpec: 'landscape-720p',
     theme: 'light',

@@ -783,7 +783,7 @@ exampleLiterature.addEventListener('click', () => {
 exampleBiology.addEventListener('click', () => {
   if (!confirmSourceReplacement()) return;
   shellView.markSource('exampleBiology');
-  return loadExample('../examples/biology-signaling-synthetic.json', '生物信号 · 虚构合成示例');
+  return loadExample('../examples/biology-egfr-mapk.json', '生物信号 · EGFR–MAPK 经典通路');
 });
 exampleGraph.addEventListener('click', () => {
   if (!confirmSourceReplacement()) return;

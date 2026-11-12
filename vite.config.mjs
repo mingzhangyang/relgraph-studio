@@ -5,7 +5,7 @@ import { defineConfig } from 'vite';
 // Keep the shipped examples as files: users can inspect and load them as JSON.
 const exampleFiles = [
   'honglou-provisional.relgraph.json',
-  'biology-signaling-synthetic.json',
+  'biology-egfr-mapk.json',
   'bookshop-systems-synthetic.graph.json',
 ];
 

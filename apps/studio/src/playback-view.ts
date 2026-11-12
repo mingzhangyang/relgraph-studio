@@ -42,7 +42,10 @@ export function renderPlaybackControls(
 export function renderPlaybackFrame(controls: PlaybackControls, display: PlaybackDisplay): void {
   controls.scrubber.value = display.frameValue;
   controls.scrubber.setAttribute('style', '--fill:' + display.fillPercent + '%');
-  controls.scrubber.setAttribute('aria-valuetext', display.ariaValueText.replace('，分镜 ', uiText('，分镜 ')));
+  controls.scrubber.setAttribute(
+    'aria-valuetext',
+    display.ariaValueText.replace('，分镜 ', uiText('，分镜 ')),
+  );
   controls.frameNumber.textContent = display.frameLabel;
   controls.time.textContent = display.timeLabel;
 }

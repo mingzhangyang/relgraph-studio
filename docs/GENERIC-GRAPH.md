@@ -1,6 +1,6 @@
 # 一切关系皆可图 · Generic graphs, derived encoding and layouts
 
-Status: implemented on top of `main` at `663d5ec`. This document describes the
+Status: implemented on top of `main` (started at `663d5ec`, reconciled with `0f995b7`). This document describes the
 `relgraph.graph/1` source format, how arbitrary kinds are turned into a visual
 encoding, the layout strategies, and what changed in how the network is drawn.
 
@@ -194,20 +194,18 @@ three examples is exactly the 720p composition scaled by 1.5.
 
 ## Verification
 
-Run locally on linux-x64, Node 22.23.4, skia-canvas 4.0.0, Chromium 153:
+Run locally on linux-x64, Node 22.23.4, skia-canvas 4.0.0, Chromium 153, after
+merging `main` at `0f995b7` (Prettier pass #36 and the EGFR–MAPK example #37):
 
-- `npm test`: 335 tests in 32 files, including `tests/generic-graph.test.mjs`
-  and `tests/layout-engines.test.mjs`, and 84 golden frames (three examples,
+- `npm test`: 336 tests in 32 files, including `tests/generic-graph.test.mjs`
+  and `tests/layout-engines.test.mjs`, and 102 golden frames (three examples,
   two themes) against the native renderer.
-- `npm run typecheck`, `npm run check:types`, `npm run lint`.
+- `npm run typecheck`, `npm run check:types`, `npm run lint`,
+  `npm run format:check`.
 - `npm run check:export -- --update`, then `npm run check:export`: golden
   hashes, H.264 exports of all three examples with matching frame counts, and
   decoded-frame PSNR against PNG renders.
-- `npm run check:browser`: 61 checks in real Chromium, including the generic
+- `npm run check:browser`: 67 checks in real Chromium, including the generic
   example and all seven strategies with pixel-identical repeats.
-- `npm run format:check` reports seven files that are already unformatted on
-  `main` (`apps/studio/src/{field-validation-model,i18n,layout-strategy-view,playback-view,project-editor-view,transcript-view}.ts`
-  and `tests/studio-dom.test.mjs`); they were left alone to keep this change
-  reviewable. Every other file passes.
 
 No GitHub Actions workflow was added, dispatched or rerun.

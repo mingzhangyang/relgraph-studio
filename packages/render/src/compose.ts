@@ -489,28 +489,38 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
         }));
       });
       const spot = along.sort((m, n) => m.y - n.y || m.x - n.x).find((q) => free(boxAt(q)));
-      const top = hull.points.reduce((best, q) => (q.y < best.y ? q : best));
+      // With no free spot, fall back to the visible point nearest the top,
+      // pulled onto the stage. A hull that is entirely off stage, or that
+      // surrounds the whole stage, goes unnamed rather than mislabel a corner.
+      const visible = along.find(
+        (q) =>
+          q.x >= bounds.left && q.x <= bounds.right && q.y >= bounds.top && q.y <= bounds.bottom,
+      );
       const box = spot
         ? boxAt(spot)
-        : {
-            w,
-            h,
-            x: clamp(top.x - w / 2, bounds.left, Math.max(bounds.left, bounds.right - w)),
-            y: clamp(top.y - h / 2, bounds.top, Math.max(bounds.top, bounds.bottom - h)),
-          };
-      occupied.push(box);
-      decoration.push({
-        type: 'text',
-        text: label,
-        x: box.x + w / 2,
-        y: box.y + h / 2,
-        font,
-        fill: c + P.groupLabel,
-        align: 'center',
-        baseline: 'middle',
-        halo: { paint: P.labelHalo, width: u(6) },
-        ...(groupProgress < 1 ? { alpha: (groupProgress - 0.5) * 2 } : {}),
-      });
+        : visible
+          ? {
+              w,
+              h,
+              x: clamp(visible.x - w / 2, bounds.left, Math.max(bounds.left, bounds.right - w)),
+              y: clamp(visible.y - h / 2, bounds.top, Math.max(bounds.top, bounds.bottom - h)),
+            }
+          : null;
+      if (box) {
+        occupied.push(box);
+        decoration.push({
+          type: 'text',
+          text: label,
+          x: box.x + w / 2,
+          y: box.y + h / 2,
+          font,
+          fill: c + P.groupLabel,
+          align: 'center',
+          baseline: 'middle',
+          halo: { paint: P.labelHalo, width: u(6) },
+          ...(groupProgress < 1 ? { alpha: (groupProgress - 0.5) * 2 } : {}),
+        });
+      }
     }
     // Hulls recede with their members when another part of the graph is in focus.
     const hullAlpha = groupProgress * mix(1, Math.max(lit, 0.35 + 0.65 * presence), focusActive);

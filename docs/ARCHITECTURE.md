@@ -58,7 +58,7 @@ Skia; see [four-layer local verification](TESTING.md).
 
 ## Consequences and limits
 
-The graph projection cannot verify a source's scientific truth or turn unverified literary dates into facts. It cannot infer secrets in author-written labels, narration or summaries. Imported data and scripts require review before publishing; the Honglou fixture is explicitly provisional and the biology fixture synthetic. Large-scale layout, standards-based bio import, audio, 9:16 composition and an export UI remain future work.
+The graph projection cannot verify a source's scientific truth or turn unverified literary dates into facts. It cannot infer secrets in author-written labels, narration or summaries. Imported data and scripts require review before publishing; the Honglou fixture is explicitly provisional and the EGFR–MAPK biology example is intentionally simplified. Large-scale layout, standards-based bio import, audio, 9:16 composition and an export UI remain future work.
 
 ## Local network authoring projects
 

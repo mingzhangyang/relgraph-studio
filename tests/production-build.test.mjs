@@ -21,7 +21,7 @@ test('production build includes every example and the bundled workspace loads th
     const script = await readFile(join(output, 'demo', asset[1]), 'utf8');
     const exampleNames = [
       'honglou-provisional.relgraph.json',
-      'biology-signaling-synthetic.json',
+      'biology-egfr-mapk.json',
       'bookshop-systems-synthetic.graph.json',
     ];
     for (const name of exampleNames) {
@@ -147,7 +147,7 @@ test('production build includes every example and the bundled workspace loads th
 
     await elements.get('exampleBiology').click();
     assert.equal(elements.get('status').attributes['data-state'], 'ready');
-    assert.ok(window.studioFrame().view.nodes.some((node) => node.id === 'kinase-k'));
+    assert.ok(window.studioFrame().view.nodes.some((node) => node.id === 'egfr'));
     assert.equal(window.renderAt(48), true);
   } finally {
     await rm(output, { recursive: true, force: true });

@@ -47,8 +47,8 @@ const EXAMPLES = [
   {
     key: 'biology',
     button: '#exampleBiology',
-    file: 'biology-signaling-synthetic.json',
-    name: '生物信号 · 虚构合成示例',
+    file: 'biology-egfr-mapk.json',
+    name: '生物信号 · EGFR–MAPK 经典通路',
   },
 ];
 
@@ -662,7 +662,7 @@ const literatureFrames = Math.ceil(
   await check(
     'late example success and invalid data cannot replace a newer local import',
     async () => {
-      const pattern = '**/examples/biology-signaling-synthetic.json';
+      const pattern = '**/examples/biology-egfr-mapk.json';
       for (const body of [JSON.stringify(documents.biology), '{']) {
         let acceptRoute;
         const pending = new Promise((resolve) => {
