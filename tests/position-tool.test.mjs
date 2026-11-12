@@ -5,6 +5,7 @@ import biology from '../examples/biology-signaling-synthetic.json' with { type: 
 import { applyGraphPositions } from '../packages/core/src/director/position-writeback.ts';
 import { loadDocument } from '../packages/core/src/director/load.ts';
 import { layoutGraph } from '../packages/core/src/director/layout.ts';
+import { LAYOUT_MODES, LAYOUT_TYPES } from '../packages/core/src/director/layout-strategies.ts';
 import { DEFAULT_FRAME_SPEC } from '../packages/render/src/frame-spec.ts';
 import { domainStyle } from '../packages/core/src/style.ts';
 import {
@@ -168,6 +169,12 @@ test('node locks preserve strategy drafts; undo and document switch reset them',
     lock = control('strategyLock'),
     node = control('strategyNode');
   assert.ok(node.value, 'a currently projected node is selectable');
+  // The menus offer exactly what a project may store, each with a name.
+  const offered = (select) => select.children.map((option) => option.value);
+  assert.deepEqual(offered(type), [...LAYOUT_TYPES]);
+  assert.deepEqual(offered(mode), [...LAYOUT_MODES]);
+  for (const option of [...type.children, ...mode.children])
+    assert.ok(option.textContent && option.textContent !== option.value, option.value);
   const draft = [
     [type, 'circle'],
     [mode, 'rearrange'],

@@ -5,6 +5,7 @@ import {
   applyGraphPositions,
   layoutMissingNodes,
   parseDocument,
+  structuralLayout,
   type VisualGraph,
 } from '@relgraph/core';
 import { formatDiagnostics, loadFile } from './document.js';
@@ -69,7 +70,13 @@ export async function layoutFile(request: LayoutRequest): Promise<LayoutSummary>
     if (!missing && !request.out) return summary;
 
     const input: unknown = JSON.parse(text);
-    const positions = layoutMissingNodes(result.graph, { seed: request.seed });
+    // A document without any coordinates is arranged from its structure, as
+    // the player would; otherwise only the gaps are filled around the
+    // author's own arrangement.
+    const positions =
+      missing === summary.total && summary.total > 1
+        ? structuralLayout(result.graph, request.seed)
+        : layoutMissingNodes(result.graph, { seed: request.seed });
     const output = writeBackPositions(input, result.graph, positions);
     const serialized = JSON.stringify(output.document, null, indentOf(text)) + '\n';
     // Never write a document whose round-trip validation fails.

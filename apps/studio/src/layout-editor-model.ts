@@ -1,5 +1,6 @@
 import {
   domainStyle,
+  type DomainStyle,
   roundPositionCoordinate,
   type DirectorFrameState,
   type VisualNode,
@@ -81,6 +82,7 @@ export function startPositionDrag(
   radius: number,
   pointerId: number,
   config?: ProjectConfig,
+  style: DomainStyle = domainStyle(frame.view.domain),
 ): PositionDrag | null {
   if (!(radius > 0) || !Number.isFinite(radius)) return null;
   const id = hitVisibleNode(
@@ -91,7 +93,7 @@ export function startPositionDrag(
     spec,
     point,
     radius,
-    domainStyle(frame.view.domain),
+    style,
     config,
   );
   const previous = id ? positions.get(id) : undefined;

@@ -87,6 +87,17 @@ const english: Record<string, string> = {
   '文学 · 演示数据': 'Literature · Demo data',
   生物信号: 'Biological signaling',
   'EGFR–MAPK · 经典通路': 'EGFR–MAPK · Canonical pathway',
+  线上书店: 'Online bookshop',
+  进化树: 'Evolutionary tree',
+  '树 · 逐层展开': 'Tree · Unfolds by level',
+  朝代更替: 'Dynasties',
+  '时间轴 · 沿时间演进': 'Timeline · Travels through time',
+  读书会: 'Reading club',
+  思维导图: 'Mind map',
+  订单流程: 'Order handling',
+  流程图: 'Flowchart',
+  '通用关系 · 合成数据 · 布局与分镜自动生成':
+    'Any relations · Synthetic data · Layout and shots derived',
   '导入本地 JSON': 'Import local JSON',
   '点击选择，或将文件拖到此处': 'Choose a file or drag and drop it here',
   当前: 'Current',
@@ -121,9 +132,16 @@ const english: Record<string, string> = {
   '布局 · 预览后应用': 'Layout · Preview before applying',
   策略: 'Strategy',
   '手动 · 保留微调': 'Manual · Keep adjustments',
-  通用分层: 'Generic layered',
-  确定性力导向: 'Deterministic force-directed',
-  圆形: 'Circular',
+  '自动 · 按结构选择': 'Auto · Chosen from structure',
+  '力导向 · 聚类': 'Force-directed · Clustered',
+  '分层 · 自上而下': 'Layered · Top to bottom',
+  '流向 · 从左到右': 'Flow · Left to right',
+  '树 · 向右展开': 'Tree · Grows to the right',
+  '思维导图 · 向两侧展开': 'Mind map · Both sides',
+  '时间轴 · 按时间排开': 'Timeline · Placed in time',
+  '放射 · 以核心为圆心': 'Radial · Around the centre',
+  环形: 'Ring',
+  '网格 · 保持顺序': 'Grid · Keeps your order',
   坐标策略: 'Coordinate policy',
   保留现有坐标: 'Preserve coordinates',
   只填补缺失坐标: 'Fill missing coordinates',
@@ -132,16 +150,16 @@ const english: Record<string, string> = {
   力导向迭代次数: 'Force iterations',
   '当前可见节点 · 锁定': 'Visible nodes · Lock',
   锁定选中节点的当前坐标: 'Lock selected node coordinates',
-  '布局在播放前计算。分层表示连接结构，不推断家谱世代。':
-    'Layout is computed before playback. Layers describe connections, not generations.',
+  '布局在播放前计算。分层与流向表示连接结构，不推断家谱世代。':
+    'Layout is computed before playback. Layers and flow describe connections, not generations.',
   预览布局: 'Preview layout',
   应用布局: 'Apply layout',
   取消预览: 'Cancel preview',
   '参数不能为空。': 'Parameters cannot be empty.',
   '临时预览 · 尚未保存。请应用或取消；可撤销已应用布局。':
     'Temporary preview · Not saved. Apply or cancel; applied layouts can be undone.',
-  '静态确定性布局 · 保留 = 不移动；填补 = 仅缺失；重排 = 移动未锁定节点。分层不推断家谱。':
-    'Deterministic static layout · Preserve = no movement; Fill = missing only; Rearrange = unlocked nodes. Layers do not imply genealogy.',
+  '静态确定性布局 · 保留 = 不移动；填补 = 仅缺失；重排 = 移动未锁定节点。自动 = 按图的结构选择策略。':
+    'Deterministic static layout · Preserve = no movement; Fill = missing only; Rearrange = unlocked nodes. Auto = strategy chosen from the graph structure.',
   画面与属性: 'Appearance and properties',
   '选择画面对象或使用列表。空值继承；↺ 清除覆盖。':
     'Select an object on the canvas or in the list. Empty values inherit; ↺ clears overrides.',
@@ -260,6 +278,11 @@ const english: Record<string, string> = {
   '请选择可读取的 JSON 文件。': 'Select a readable JSON file.',
   '红楼梦 · 未经原著核实的技术演示': 'Dream of the Red Chamber · Unverified technical demo',
   '生物信号 · EGFR–MAPK 经典通路': 'Biological signaling · EGFR–MAPK canonical pathway',
+  '线上书店 · 通用关系合成示例': 'Online bookshop · Synthetic generic-graph example',
+  '进化树 · 逐层展开的简化示例': 'Evolutionary tree · Simplified, unfolding by level',
+  '朝代更替 · 时间轴简化示例': 'Dynasties · Simplified timeline',
+  '读书会 · 思维导图合成示例': 'Reading club · Synthetic mind map',
+  '订单流程 · 流程图合成示例': 'Order handling · Synthetic flowchart',
   节点位置调整: 'Node position adjustment',
   '当前投影 ': 'Current projection: ',
   ' 个，已描边 ': ' objects; outlined: ',
@@ -310,8 +333,79 @@ const english: Record<string, string> = {
   '修正该配置字段或移除覆盖。': 'Correct the field or remove the override.',
   '检查对象引用与样式范围。': 'Check object references and style scope.',
   '无法识别数据格式。': 'Unrecognized data format.',
-  '文学数据需要 schemaVersion: "0.1"；生物学数据需要 format: "relgraph.bio/0.1-draft"。':
-    'Literature requires schemaVersion: "0.1"; biology requires format: "relgraph.bio/0.1-draft".',
+  '通用关系图使用 format: "relgraph.graph/1"；文学数据需要 schemaVersion: "0.1"；生物学数据需要 format: "relgraph.bio/0.1-draft"。':
+    'Generic graphs use format: "relgraph.graph/1"; literature requires schemaVersion: "0.1"; biology requires format: "relgraph.bio/0.1-draft".',
+  '图谱中没有任何节点或关系。': 'The graph has no nodes or relations.',
+  '至少添加一个节点或一条关系。': 'Add at least one node or relation.',
+  '不是通用关系图文档。': 'Not a generic graph document.',
+  '节点 id 重复。': 'Duplicate node id.',
+  '每个节点使用唯一 id。': 'Give every node a unique id.',
+  '引用了不存在的对象。': 'References an object that does not exist.',
+  '使用已有 id。': 'Use an existing id.',
+  '颜色无效。': 'Invalid colour.',
+  '可见区间无效。': 'Invalid visibility interval.',
+  '确保 start 不大于 visibleTo，或用 visibleFrom 指定首次出现的时间。':
+    'Keep start at or before visibleTo, or set visibleFrom to say when it first appears.',
+  '分镜 id 重复。': 'Duplicate shot id.',
+  '每个分镜使用唯一 id，或省略 id。': 'Give every shot a unique id, or leave the id out.',
+  '镜头缩放无效。': 'Invalid camera zoom.',
+  '使用大于 0 的数值，或删除 zoom。': 'Use a number greater than 0, or remove zoom.',
+  '转场时长无效。': 'Invalid transition duration.',
+  '使用不小于 0 的毫秒数。': 'Use zero or more milliseconds.',
+  '镜头目标冲突。': 'Conflicting camera targets.',
+  'focusNodeId 与 fitIds 只保留一个。': 'Keep either focusNodeId or fitIds, not both.',
+  '使用 format: "relgraph.graph/1"。': 'Use format: "relgraph.graph/1".',
+  '改为数组，或删除该字段。': 'Change it to an array, or remove the field.',
+  '文本字段无效。': 'Invalid text field.',
+  '需要有限数值。': 'A finite number is required.',
+  '改为数字，或删除该字段。': 'Change it to a number, or remove the field.',
+  '确保 visibleFrom 不大于 visibleTo。': 'Keep visibleFrom at or before visibleTo.',
+  '类别名无效。': 'Invalid kind name.',
+  '先筛选或聚合数据，再制作影片。': 'Filter or aggregate the data before making a film.',
+  '节点缺少有效 id。': 'Node has no valid id.',
+  '提供非空文本或数字 id。': 'Provide a non-empty text or numeric id.',
+  '关系必须是对象。': 'A relation must be an object.',
+  '使用 { "source": …, "target": … }。': 'Use { "source": …, "target": … }.',
+  '填写节点 id。': 'Enter a node id.',
+  '分组缺少有效 id。': 'Group has no valid id.',
+  '分组 id 重复。': 'Duplicate group id.',
+  '每个分组使用唯一 id。': 'Give every group a unique id.',
+  '节点数量超过上限。': 'Too many nodes.',
+  '使用 { nodes, edges }。': 'Use { nodes, edges }.',
+  '类别表必须是对象。': 'A kind table must be an object.',
+  '以类别名为键。': 'Key it by kind name.',
+  '类别声明无效。': 'Invalid kind declaration.',
+  '使用 { "label": …, "color": … } 对象。': 'Use a { "label": …, "color": … } object.',
+  '形状无效。': 'Invalid shape.',
+  '线型无效。': 'Invalid line style.',
+  '端点无效。': 'Invalid line end.',
+  '使用 true 或 false。': 'Use true or false.',
+  '分组引用无效。': 'Invalid group reference.',
+  '填写分组 id，或删除该字段。': 'Enter a group id, or remove the field.',
+  '坐标无效。': 'Invalid coordinates.',
+  '使用 { "x": 数字, "y": 数字 }。': 'Use { "x": number, "y": number }.',
+  '权重不能为负。': 'Weight cannot be negative.',
+  '使用非负数。': 'Use a non-negative number.',
+  'end 需要同时提供 start。': 'end requires start.',
+  '补充 start，或删除 end。': 'Add start, or remove end.',
+  '时间跨度无效。': 'Invalid time span.',
+  '确保 start 不大于 end。': 'Keep start at or before end.',
+  '关系 id 重复。': 'Duplicate relation id.',
+  '每条关系使用唯一 id，或省略 id。': 'Give every relation a unique id, or leave the id out.',
+  '使用 { "title": … }。': 'Use { "title": … }.',
+  'timeline 无效。': 'Invalid timeline.',
+  '使用 { "unit": "步骤" }。': 'Use { "unit": "step" }.',
+  '分镜必须是对象。': 'A shot must be an object.',
+  '使用 { "title": …, "durationSec": … }。': 'Use { "title": …, "durationSec": … }.',
+  '改为 id 数组。': 'Change it to an array of ids.',
+  '使用 { "fitIds": […] }。': 'Use { "fitIds": […] }.',
+  '使用 { "nodeIds": […] }。': 'Use { "nodeIds": […] }.',
+  '时长无效。': 'Invalid duration.',
+  '使用 0 到 600 之间的秒数。': 'Use a number of seconds between 0 and 600.',
+  '如需名称、类别或分组，请在 nodes 中声明它们。':
+    'Declare them in nodes to give them a name, kind, or group.',
+  '图的类型无效。': 'Invalid diagram kind.',
+  '使用 #RRGGBB 六位十六进制颜色。': 'Use a six-digit #RRGGBB colour.',
   '没有可播放的分镜。': 'No playable shots found.',
   '请在 presentation 中至少添加一个分镜。': 'Add at least one shot to presentation.',
   '数据包含时间范围，但首个分镜没有指定领域时间。':
@@ -389,6 +483,25 @@ export function uiDiagnostic(message: string): string {
   const firstScene = /^为首个分镜设置 (.+)，以避免提前显示未来对象。$/.exec(message);
   if (firstScene)
     return `Set ${firstScene[1]} for the first shot to avoid revealing future objects.`;
+  // Generic graph diagnostics that name a field, a limit or the allowed values.
+  const mustBe = /^(\S+) 必须是(数组|对象|布尔值)。$/.exec(message);
+  if (mustBe)
+    return `${mustBe[1]} must be ${{ 数组: 'an array', 对象: 'an object', 布尔值: 'a boolean' }[mustBe[2]]}.`;
+  const textLimit = /^使用不超过 (\d+) 个字符的(非空)?文本。$/.exec(message);
+  if (textLimit)
+    return `Use ${textLimit[2] ? 'non-empty ' : ''}text of at most ${textLimit[1]} characters.`;
+  const tooLarge = /^图谱过大（上限 (\d+) 个节点、(\d+) 条关系）。$/.exec(message);
+  if (tooLarge)
+    return `The graph is too large (limit: ${tooLarge[1]} nodes, ${tooLarge[2]} relations).`;
+  const noEnd = /^关系缺少 (source|target)。$/.exec(message);
+  if (noEnd) return `Relation has no ${noEnd[1]}.`;
+  const allowed = /^可用：(.+)。$/.exec(message);
+  if (allowed) return `Allowed: ${allowed[1].split('、').join(', ')}.`;
+  const implicit = /^(\d+) 个节点只在关系中出现，已按 id 自动创建。$/.exec(message);
+  if (implicit)
+    return implicit[1] === '1'
+      ? '1 node appears only in relations and was created from its id.'
+      : `${implicit[1]} nodes appear only in relations and were created from their ids.`;
   return uiText(message);
 }
 

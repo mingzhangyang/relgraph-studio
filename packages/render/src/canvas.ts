@@ -1,5 +1,5 @@
 import { materializeImages, browserImageFactory, type ImageFactory } from './images.js';
-import { compileTimeline, directorFrameAt, domainStyle, localeFor } from '@relgraph/core';
+import { compileTimeline, directorFrameAt, styleForGraph, localeFor } from '@relgraph/core';
 import type { DirectorFrameState, DomainStyle, VisualGraph } from '@relgraph/core';
 import { canvasTextMeasurer, drawDisplayList, type Canvas2D } from './backends/canvas2d.js';
 import { composeFrame, type DetailLookup } from './compose.js';
@@ -25,7 +25,7 @@ export interface CanvasRendererOptions {
   theme?: unknown;
   /** A preset name or custom spec; defaults to landscape-720p. */
   frameSpec?: FrameSpecName | FrameSpec;
-  /** Overrides the style sheet registered for `graph.domain`. */
+  /** Overrides the style sheet registered for or derived from the graph. */
   style?: DomainStyle;
   /** Locale for renderer captions; unknown values fall back to zh-CN. */
   locale?: unknown;
@@ -89,7 +89,7 @@ export function createCanvasRenderer(
   const spec = frameSpecFor(frameSpec);
   const rate = fps ?? spec.fps;
   const fit = cameraFitFor(spec);
-  const resolvedStyle = style ?? domainStyle(graph.domain);
+  const resolvedStyle = style ?? styleForGraph(graph);
   const resolvedLocale = localeFor(locale);
   // Safe compilation depends on the input document, never on playback order.
   const timeline = compileTimeline(graph, rate);

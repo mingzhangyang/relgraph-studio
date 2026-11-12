@@ -618,6 +618,7 @@ kbd {
   text-align: left;
   transition: border-color .15s, background .15s;
 }
+.source-buttons button.source-wide { grid-column: 1 / -1; }
 .source-buttons button:hover { background: var(--surface-hover); }
 .source-buttons b { font-size: 13px; font-weight: 600; }
 .source-buttons small { color: var(--muted); font-size: 11px; }

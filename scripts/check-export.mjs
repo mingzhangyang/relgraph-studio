@@ -6,7 +6,7 @@
 //   npm run check:export -- --update      # rewrite examples/golden-frames.json
 //   npm run check:export -- --no-browser  # skip the informational browser comparison
 //
-// 1. Golden frames: key frames of both examples in both film themes are
+// 1. Golden frames: key frames of every example in both film themes are
 //    rendered with the skia-canvas backend and their RGBA SHA-256 compared with
 //    examples/golden-frames.json. Hashes are enforced only when skia-canvas and
 //    the vendored fonts are the versions that produced them; otherwise the
@@ -20,7 +20,7 @@
 //    in-process render exactly, which also shows that frames do not depend on
 //    the worker or on previously drawn frames.
 // 4. Informational: pixel differences between the browser preview and the
-//    headless export at 720p, mid-shot frames of both examples and themes.
+//    headless export at 720p, mid-shot frames of every example and theme.
 import assert from 'node:assert/strict';
 import { execFile, spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -45,8 +45,30 @@ const MIN_PSNR = 35;
 const CHANNEL_TOLERANCE = 16;
 
 const EXAMPLES = [
-  { key: 'literature', file: 'examples/honglou-provisional.relgraph.json' },
-  { key: 'biology', file: 'examples/biology-egfr-mapk.json' },
+  {
+    key: 'literature',
+    file: 'examples/honglou-provisional.relgraph.json',
+    button: '#exampleLiterature',
+  },
+  { key: 'biology', file: 'examples/biology-egfr-mapk.json', button: '#exampleBiology' },
+  // A generic graph with no coordinates or storyboard: layout, encoding and
+  // shots are all derived, so its frames pin the whole automatic pipeline.
+  {
+    key: 'graph',
+    file: 'examples/bookshop-systems-synthetic.graph.json',
+    button: '#exampleGraph',
+  },
+  // A tree that unfolds level by level, and a timeline with its axis.
+  {
+    key: 'tree',
+    file: 'examples/vertebrates-tree-provisional.graph.json',
+    button: '#exampleTree',
+  },
+  {
+    key: 'timeline',
+    file: 'examples/dynasties-timeline-provisional.graph.json',
+    button: '#exampleTimeline',
+  },
 ];
 
 const results = [];
@@ -387,7 +409,7 @@ if (!args.has('--no-browser') && !update) {
       const page = await context.newPage();
       await page.goto(`${server.resolvedUrls.local[0]}demo/index.html`);
       for (const example of examples) {
-        await page.click(example.key === 'literature' ? '#exampleLiterature' : '#exampleBiology');
+        await page.click(example.button);
         await page.waitForFunction(
           (title) =>
             document.getElementById('status')?.getAttribute('data-state') === 'ready' &&

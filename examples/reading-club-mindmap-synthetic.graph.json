@@ -1,0 +1,29 @@
+{
+  "format": "relgraph.graph/1",
+  "diagram": "mindmap",
+  "meta": {
+    "title": "筹备一次读书会",
+    "description": "中心是主题，向两侧逐层展开；每条主分支有自己的颜色。",
+    "sourceNote": "虚构的示例内容，仅作技术演示。"
+  },
+  "edges": [
+    { "source": "读书会", "target": "选书" },
+    { "source": "选书", "target": "类型" },
+    { "source": "选书", "target": "篇幅" },
+    { "source": "选书", "target": "成员投票" },
+    { "source": "读书会", "target": "时间" },
+    { "source": "时间", "target": "每月一次" },
+    { "source": "时间", "target": "两个小时" },
+    { "source": "读书会", "target": "地点" },
+    { "source": "地点", "target": "线上会议" },
+    { "source": "地点", "target": "社区书店" },
+    { "source": "读书会", "target": "流程" },
+    { "source": "流程", "target": "开场介绍" },
+    { "source": "流程", "target": "轮流分享" },
+    { "source": "流程", "target": "自由讨论" },
+    { "source": "流程", "target": "总结" },
+    { "source": "读书会", "target": "记录" },
+    { "source": "记录", "target": "笔记" },
+    { "source": "记录", "target": "下次书单" }
+  ]
+}

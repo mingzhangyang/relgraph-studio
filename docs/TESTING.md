@@ -113,8 +113,8 @@ native Skia, FFmpeg/ffprobe **and Chromium** for its final browser/headless
 comparison. `--no-browser` skips that comparison and is only a partial run;
 `--no-build` requires current package and Studio builds.
 
-Native Vitest coverage includes `node-images.test.mjs`, all 62 committed golden
-frames across four example/theme cases in `cli.test.mjs` and the built-package/CLI
+Native Vitest coverage includes `node-images.test.mjs`, all 236 committed golden
+frames across ten example/theme cases in `cli.test.mjs` and the built-package/CLI
 smoke in `package-build.test.mjs`.
 `render-pipeline.test.mjs` and `canvas-renderer.test.mjs` use a recording/fake
 Canvas context: they verify composition/backend commands, not native pixels.
@@ -127,7 +127,9 @@ are informational. Read the output to distinguish an enforced match from an
 informational comparison. Do not change golden hashes to mask an unexpected
 difference. See [the reviewed label-layout baseline](GOLDEN-BASELINE-REVIEW.md)
 for the historical label-layout hashes and the regression that expanded the
-former one-frame smoke test to the historical 44-frame manifest.
+former one-frame smoke test to the historical 44-frame manifest. The hashes were
+regenerated for the redrawn network and the generic example; see
+[generic graphs](GENERIC-GRAPH.md).
 
 ## Fast cycle and full local acceptance
 

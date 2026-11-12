@@ -14,6 +14,13 @@ export interface VisualNode {
   position?: { x: number; y: number };
   pinned?: boolean;
   visibility?: Visibility;
+  /** Categorical palette slot used when the node has no authored colour. */
+  tone?: number;
+  /**
+   * The node's own extent in domain time, drawn as a bar on a timeline. Unlike
+   * `visibility` it never hides the node: what has ended stays on screen.
+   */
+  span?: { from: number; to?: number };
 }
 export interface VisualEdge {
   id: string;
@@ -31,6 +38,8 @@ export interface VisualGroup {
   label: string;
   kind: string;
   color?: string;
+  /** Categorical palette slot used when the group has no authored colour. */
+  tone?: number;
 }
 export interface VisualCamera {
   focusNodeId?: NodeId;
@@ -58,6 +67,10 @@ export interface VisualGraph {
   domain: string;
   meta: { title: string; description?: string; sourceNote?: string };
   timeline?: { unit: string; total?: number };
+  /** What kind of picture the graph is; selects layout, routing and labelling. */
+  diagram?: import('../src/style.js').DiagramKind;
+  /** Presentation declared per kind by a generic graph document. */
+  kinds?: import('../src/style.js').GraphKinds;
   nodes: VisualNode[];
   edges: VisualEdge[];
   groups: VisualGroup[];
@@ -65,7 +78,7 @@ export interface VisualGraph {
 }
 
 /** A projection contains only the currently visible graph objects. */
-export type ProjectedVisualGraph = Omit<VisualGraph, 'scenes' | 'project'>;
+export type ProjectedVisualGraph = Omit<VisualGraph, 'scenes' | 'project' | 'kinds' | 'diagram'>;
 
 export interface ResolvedHighlight {
   nodeIds: NodeId[];

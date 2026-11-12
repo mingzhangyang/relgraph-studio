@@ -7,6 +7,7 @@ import literature from '../examples/honglou-provisional.relgraph.json' with { ty
 import biology from '../examples/biology-signaling-synthetic.json' with { type: 'json' };
 import { loadDocument } from '../packages/core/src/director/load.ts';
 import { layoutMissingNodes } from '../packages/core/src/director/seeded-layout.ts';
+import { layoutGraph } from '../packages/core/src/director/layout.ts';
 import { layoutFile, LayoutError } from '../packages/cli/src/layout.ts';
 
 const graphOf = (document) => {
@@ -291,4 +292,45 @@ test('mixed extreme anchors keep their mean finite without biasing the layout', 
   assert.ok(Number.isFinite(result.get('missing').y));
   assert.deepEqual(result.get('positive'), graph.nodes[0].position);
   assert.deepEqual(result.get('negative'), graph.nodes[1].position);
+});
+
+test('layout fills a generic graph: null positions are gaps, and no coordinates means the player’s drawing', async () => {
+  const folder = await mkdtemp(join(tmpdir(), 'relgraph-generic-'));
+  try {
+    const partial = join(folder, 'partial.graph.json');
+    const source = {
+      format: 'relgraph.graph/1',
+      nodes: [
+        { id: 'a', position: null },
+        { id: 'b', position: { x: 0, y: 0 } },
+      ],
+      edges: [{ source: 'a', target: 'b' }],
+    };
+    await writeFile(partial, JSON.stringify(source));
+    const summary = await layoutFile({ file: partial, seed: 0, write: true });
+    assert.deepEqual([summary.missing, summary.total, summary.written], [1, 2, partial]);
+    const saved = JSON.parse(await readFile(partial, 'utf8'));
+    assert.deepEqual(saved.nodes[1], source.nodes[1]);
+    assert.ok(Number.isFinite(saved.nodes[0].position.x));
+    assert.equal(graphOf(saved).nodes.filter((n) => n.position === undefined).length, 0);
+
+    // Nothing placed yet: the file gets exactly what the player would draw.
+    const bare = join(folder, 'bare.graph.json');
+    const tree = {
+      format: 'relgraph.graph/1',
+      diagram: 'tree',
+      edges: [
+        { source: 'root', target: 'left' },
+        { source: 'root', target: 'right' },
+        { source: 'left', target: 'leaf' },
+      ],
+    };
+    await writeFile(bare, JSON.stringify(tree));
+    await layoutFile({ file: bare, seed: 0, write: true });
+    const drawn = layoutGraph(graphOf(tree)),
+      written = graphOf(JSON.parse(await readFile(bare, 'utf8')));
+    assert.deepEqual(written.nodes.map((n) => [n.id, n.position]).sort(), [...drawn].sort());
+  } finally {
+    await rm(folder, { recursive: true, force: true });
+  }
 });

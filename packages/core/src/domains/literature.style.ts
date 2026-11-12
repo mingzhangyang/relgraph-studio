@@ -1,22 +1,36 @@
 import type { DomainStyle, EdgeStyle } from '../style.js';
 
-const relation: EdgeStyle = Object.freeze({ stroke: 'plain', head: 'arrow' });
+const DASHED = Object.freeze([7, 5]),
+  DOTTED = Object.freeze([2, 4]);
+const relation = (tone?: number, dash?: readonly number[]): EdgeStyle =>
+  Object.freeze({
+    stroke: 'plain',
+    head: 'arrow',
+    ...(tone === undefined ? {} : { tone }),
+    ...(dash ? { dash } : {}),
+  });
 
-/** Literary relations are plain lines; their author labels appear when highlighted. */
+/**
+ * Literary relations. Each kind keeps one hue of the film palette in both
+ * themes, and the kinds that read as distance rather than closeness (rivalry,
+ * service) also change rhythm, so the encoding never rests on colour alone.
+ * Author labels still appear on a relation when a shot highlights it.
+ */
 export const literatureStyle: DomainStyle = Object.freeze({
   domain: 'literature',
   edges: Object.freeze({
-    family: relation,
-    marriage: relation,
-    romance: relation,
-    friendship: relation,
-    alliance: relation,
-    rivalry: relation,
-    mentorship: relation,
-    service: relation,
-    other: relation,
+    // Kinship, the commonest tie, takes the calm blue; marriage the red.
+    family: relation(0),
+    marriage: relation(1),
+    romance: relation(4),
+    friendship: relation(2),
+    alliance: relation(3),
+    rivalry: relation(6, DASHED),
+    mentorship: relation(5),
+    service: relation(7, DOTTED),
+    other: relation(),
   }),
-  defaultEdge: relation,
+  defaultEdge: relation(),
   nodes: Object.freeze({ person: Object.freeze({ shape: 'circle' }) }),
   defaultNode: Object.freeze({ shape: 'circle' }),
   legend: Object.freeze([
@@ -30,4 +44,5 @@ export const literatureStyle: DomainStyle = Object.freeze({
     { kind: 'service', label: { 'zh-CN': '主仆', en: 'Service' } },
     { kind: 'other', label: { 'zh-CN': '其他', en: 'Other' } },
   ]),
+  curvature: 1,
 });
