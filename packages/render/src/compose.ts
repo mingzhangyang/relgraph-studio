@@ -1344,9 +1344,17 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
     // that crosses fewest relations and cannot be read as a neighbour's name.
     let box: Rect | undefined,
       best = Infinity;
-    candidates.forEach((c, rank) => {
-      if (!inBounds(c) || occupied.some((o) => rectsIntersect(c, o))) return;
-      const crossings = edgeObstacles.reduce((n, o) => n + (rectsIntersect(c, o) ? 1 : 0), 0);
+    for (let rank = 0; rank < candidates.length; rank++) {
+      // A place costs at least its rank, so nothing further down can win.
+      if (rank >= best) break;
+      const c = candidates[rank];
+      if (!inBounds(c) || occupied.some((o) => rectsIntersect(c, o))) continue;
+      // Count crossings only while they can still change the outcome: they
+      // are capped at six, and a place already as costly as the best is out.
+      let crossings = 0;
+      for (const o of edgeObstacles)
+        if (rectsIntersect(c, o) && (++crossings >= 6 || rank + crossings * 0.9 >= best)) break;
+      if (rank + Math.min(6, crossings) * 0.9 >= best) continue;
       const cx = c.x + c.w / 2,
         cy = c.y + c.h / 2,
         own = Math.hypot(cx - p.x, cy - p.y);
@@ -1359,7 +1367,7 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
         best = cost;
         box = c;
       }
-    });
+    }
     if (!box) continue;
     const placed: Rect = box;
     occupied.push(placed);

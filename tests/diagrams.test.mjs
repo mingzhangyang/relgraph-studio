@@ -451,6 +451,15 @@ test('shapes that hold their label agree between size, hit test and edge attachm
   assert.ok(long.width <= long.size * 9.5 + 1e-9);
   assert.deepEqual(insideLabel('短', 5, 1.5).lines, ['短']);
   assert.equal(insideLabel('短', 5, 1.5).size, 17 * 1.5);
+  // Wrapping is worked out once per text, size and weight, and shared: a
+  // frame asks for the same shape many times. What is shared cannot be edited.
+  assert.equal(insideLabel('短', 5, 1.5), insideLabel('短', 5, 1.5));
+  assert.equal(insideLabel('短', 3, 1, { fontSize: 15, fontWeight: 500 }), insideLabel('短', 3, 1));
+  assert.notEqual(insideLabel('短', 3, 1), insideLabel('短', 4, 1));
+  assert.notEqual(insideLabel('短', 3, 1), insideLabel('短', 3, 1, { fontWeight: 600 }));
+  assert.ok(Object.isFrozen(long) && Object.isFrozen(long.lines));
+  assert.throws(() => long.lines.push('x'), TypeError);
+  assert.deepEqual(insideLabel('一个非常非常长的步骤名称需要换行才能放进方框里面', 3, 1), long);
   for (const shape of ['box', 'capsule', 'decision']) {
     const style = { ...styleForGraph(load(flowchart).graph), nodes: { step: { shape } } };
     const node = { id: 'n', kind: 'step', label: '检查库存 stock', importance: 3 },

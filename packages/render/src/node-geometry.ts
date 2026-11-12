@@ -36,7 +36,7 @@ export function estimateTextWidth(text: string, size: number): number {
 }
 
 export interface InsideLabel {
-  lines: string[];
+  readonly lines: readonly string[];
   /** Font size in pixels of this frame. */
   size: number;
   weight: number;
@@ -53,6 +53,12 @@ export function insideLabel(
   const size = (authored?.fontSize ?? (importance >= 5 ? 17 : importance >= 4 ? 16 : 15)) * unit,
     weight = authored?.fontWeight ?? (importance >= 4 ? 600 : 500),
     limit = size * 9.5;
+  // The shape is asked for many times in one frame (outline, bounds, hit
+  // test, both ends of every relation) and wrapping measures every prefix of
+  // the text. The result depends on these three values alone.
+  const key = `${size}\u0000${weight}\u0000${text}`,
+    known = wrapped.get(key);
+  if (known) return known;
   const lines: string[] = [];
   let line = '';
   for (const ch of text.trim() || ' ') {
@@ -68,14 +74,19 @@ export function insideLabel(
     while (last.length > 1 && estimateTextWidth(last + '…', size) > limit) last = last.slice(0, -1);
     lines.splice(1, lines.length - 1, last + '…');
   }
-  return {
-    lines,
+  const result: InsideLabel = Object.freeze({
+    lines: Object.freeze(lines),
     size,
     weight,
     width: Math.max(...lines.map((entry) => estimateTextWidth(entry, size))),
     height: lines.length * size * 1.3,
-  };
+  });
+  // Bounded: a long session with many documents starts over rather than grow.
+  if (wrapped.size >= 4096) wrapped.clear();
+  wrapped.set(key, result);
+  return result;
 }
+const wrapped = new Map<string, InsideLabel>();
 
 /** The outline family a shape is drawn, hit-tested and attached with. */
 const familyOf = (shape: NodeShape): 'circle' | 'diamond' | 'hexagon' | 'round' =>
