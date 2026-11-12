@@ -157,6 +157,77 @@ test('every built-in image upload rejection has an English message', async () =>
   }
 });
 
+test('every generic graph diagnostic has an English message and repair', async () => {
+  const { initializeStudioLanguage, setStudioLanguage, uiDiagnostic } =
+    await import('../apps/studio/src/i18n.ts');
+  const { loadDocument } = await import('../packages/core/src/director/load.ts');
+  const { GENERIC_FORMAT, GENERIC_LIMITS } =
+    await import('../packages/core/src/domains/generic.ts');
+  const source = readFileSync(
+    new URL('../packages/core/src/domains/generic.ts', import.meta.url),
+    'utf8',
+  );
+  // Every message and repair the validator can emit: the Chinese literals in
+  // its fail(…) and warn(…) calls, with a sample in place of each interpolation.
+  const sample = (expression) =>
+    expression === 'GENERIC_FORMAT'
+      ? GENERIC_FORMAT
+      : /LIMITS|length/.test(expression)
+        ? '3'
+        : /join/.test(expression)
+          ? 'a、b'
+          : expression === 'end'
+            ? 'source'
+            : 'field';
+  const texts = new Set();
+  for (const call of source.matchAll(/\b(?:fail|warn)\(/g)) {
+    let depth = 1,
+      end = call.index + call[0].length;
+    for (; depth; end++) depth += source[end] === '(' ? 1 : source[end] === ')' ? -1 : 0;
+    const body = source.slice(call.index, end);
+    for (const literal of body.matchAll(/'([^'\n]*)'|`([^`]*)`/g)) {
+      const text = (literal[1] ?? literal[2]).replace(/\$\{([^}]*)\}/g, (_, e) => sample(e));
+      if (/[\u3400-\u9fff]/.test(text)) texts.add(text);
+    }
+  }
+  assert.ok(texts.size >= 70, 'exercise the actual validator strings, found ' + texts.size);
+  initializeStudioLanguage(null);
+  try {
+    setStudioLanguage('en');
+    for (const text of texts) {
+      const localized = uiDiagnostic(text);
+      assert.notEqual(localized, text, 'missing English text for: ' + text);
+      assert.doesNotMatch(localized, /[\u3400-\u9fff]/, text);
+    }
+    // And as produced, with real fields, limits and counts.
+    const produced = [
+      { edges: {} },
+      { nodes: [{ id: 'a', label: 'x'.repeat(GENERIC_LIMITS.text + 1), kind: '' }] },
+      { nodes: Array.from({ length: GENERIC_LIMITS.nodes + 1 }, (_, i) => i) },
+      { edges: [{ source: 'a' }] },
+      { nodes: ['a'], kinds: { nodes: { node: { shape: 'star' } } }, diagram: 'pie', directed: 1 },
+      { nodes: ['a'], presentation: [{ camera: { fitIds: 'a' }, highlight: 1 }] },
+      { edges: [{ source: 'a', target: 'b' }] },
+      { nodes: ['a'], edges: [{ source: 'a', target: 'b' }] },
+    ].flatMap((doc) => {
+      const result = loadDocument({ format: GENERIC_FORMAT, ...doc });
+      return [...result.errors, ...result.warnings].filter((e) => e.layer === 'graph-source');
+    });
+    assert.ok(produced.length >= 12, 'found ' + produced.length);
+    for (const entry of produced)
+      for (const text of [entry.message, entry.fix])
+        assert.doesNotMatch(uiDiagnostic(text), /[\u3400-\u9fff]/, text);
+    assert.equal(uiDiagnostic('edges 必须是数组。'), 'edges must be an array.');
+    assert.equal(uiDiagnostic('可用：solid、dashed、dotted。'), 'Allowed: solid, dashed, dotted.');
+    assert.equal(
+      uiDiagnostic('1 个节点只在关系中出现，已按 id 自动创建。'),
+      '1 node appears only in relations and was created from its id.',
+    );
+  } finally {
+    setStudioLanguage('zh-CN');
+  }
+});
+
 test('shared simulated DOM updates static and generated text without remounting nested controls', async () => {
   const {
     captureStaticStudioUi,

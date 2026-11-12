@@ -354,6 +354,57 @@ const english: Record<string, string> = {
   '使用不小于 0 的毫秒数。': 'Use zero or more milliseconds.',
   '镜头目标冲突。': 'Conflicting camera targets.',
   'focusNodeId 与 fitIds 只保留一个。': 'Keep either focusNodeId or fitIds, not both.',
+  '使用 format: "relgraph.graph/1"。': 'Use format: "relgraph.graph/1".',
+  '改为数组，或删除该字段。': 'Change it to an array, or remove the field.',
+  '文本字段无效。': 'Invalid text field.',
+  '需要有限数值。': 'A finite number is required.',
+  '改为数字，或删除该字段。': 'Change it to a number, or remove the field.',
+  '确保 visibleFrom 不大于 visibleTo。': 'Keep visibleFrom at or before visibleTo.',
+  '类别名无效。': 'Invalid kind name.',
+  '先筛选或聚合数据，再制作影片。': 'Filter or aggregate the data before making a film.',
+  '节点缺少有效 id。': 'Node has no valid id.',
+  '提供非空文本或数字 id。': 'Provide a non-empty text or numeric id.',
+  '关系必须是对象。': 'A relation must be an object.',
+  '使用 { "source": …, "target": … }。': 'Use { "source": …, "target": … }.',
+  '填写节点 id。': 'Enter a node id.',
+  '分组缺少有效 id。': 'Group has no valid id.',
+  '分组 id 重复。': 'Duplicate group id.',
+  '每个分组使用唯一 id。': 'Give every group a unique id.',
+  '节点数量超过上限。': 'Too many nodes.',
+  '使用 { nodes, edges }。': 'Use { nodes, edges }.',
+  '类别表必须是对象。': 'A kind table must be an object.',
+  '以类别名为键。': 'Key it by kind name.',
+  '类别声明无效。': 'Invalid kind declaration.',
+  '使用 { "label": …, "color": … } 对象。': 'Use a { "label": …, "color": … } object.',
+  '形状无效。': 'Invalid shape.',
+  '线型无效。': 'Invalid line style.',
+  '端点无效。': 'Invalid line end.',
+  '使用 true 或 false。': 'Use true or false.',
+  '分组引用无效。': 'Invalid group reference.',
+  '填写分组 id，或删除该字段。': 'Enter a group id, or remove the field.',
+  '坐标无效。': 'Invalid coordinates.',
+  '使用 { "x": 数字, "y": 数字 }。': 'Use { "x": number, "y": number }.',
+  '权重不能为负。': 'Weight cannot be negative.',
+  '使用非负数。': 'Use a non-negative number.',
+  'end 需要同时提供 start。': 'end requires start.',
+  '补充 start，或删除 end。': 'Add start, or remove end.',
+  '时间跨度无效。': 'Invalid time span.',
+  '确保 start 不大于 end。': 'Keep start at or before end.',
+  '关系 id 重复。': 'Duplicate relation id.',
+  '每条关系使用唯一 id，或省略 id。': 'Give every relation a unique id, or leave the id out.',
+  '使用 { "title": … }。': 'Use { "title": … }.',
+  'timeline 无效。': 'Invalid timeline.',
+  '使用 { "unit": "步骤" }。': 'Use { "unit": "step" }.',
+  '分镜必须是对象。': 'A shot must be an object.',
+  '使用 { "title": …, "durationSec": … }。': 'Use { "title": …, "durationSec": … }.',
+  '改为 id 数组。': 'Change it to an array of ids.',
+  '使用 { "fitIds": […] }。': 'Use { "fitIds": […] }.',
+  '使用 { "nodeIds": […] }。': 'Use { "nodeIds": […] }.',
+  '时长无效。': 'Invalid duration.',
+  '使用 0 到 600 之间的秒数。': 'Use a number of seconds between 0 and 600.',
+  '如需名称、类别或分组，请在 nodes 中声明它们。':
+    'Declare them in nodes to give them a name, kind, or group.',
+  '图的类型无效。': 'Invalid diagram kind.',
   '使用 #RRGGBB 六位十六进制颜色。': 'Use a six-digit #RRGGBB colour.',
   '没有可播放的分镜。': 'No playable shots found.',
   '请在 presentation 中至少添加一个分镜。': 'Add at least one shot to presentation.',
@@ -432,6 +483,25 @@ export function uiDiagnostic(message: string): string {
   const firstScene = /^为首个分镜设置 (.+)，以避免提前显示未来对象。$/.exec(message);
   if (firstScene)
     return `Set ${firstScene[1]} for the first shot to avoid revealing future objects.`;
+  // Generic graph diagnostics that name a field, a limit or the allowed values.
+  const mustBe = /^(\S+) 必须是(数组|对象|布尔值)。$/.exec(message);
+  if (mustBe)
+    return `${mustBe[1]} must be ${{ 数组: 'an array', 对象: 'an object', 布尔值: 'a boolean' }[mustBe[2]]}.`;
+  const textLimit = /^使用不超过 (\d+) 个字符的(非空)?文本。$/.exec(message);
+  if (textLimit)
+    return `Use ${textLimit[2] ? 'non-empty ' : ''}text of at most ${textLimit[1]} characters.`;
+  const tooLarge = /^图谱过大（上限 (\d+) 个节点、(\d+) 条关系）。$/.exec(message);
+  if (tooLarge)
+    return `The graph is too large (limit: ${tooLarge[1]} nodes, ${tooLarge[2]} relations).`;
+  const noEnd = /^关系缺少 (source|target)。$/.exec(message);
+  if (noEnd) return `Relation has no ${noEnd[1]}.`;
+  const allowed = /^可用：(.+)。$/.exec(message);
+  if (allowed) return `Allowed: ${allowed[1].split('、').join(', ')}.`;
+  const implicit = /^(\d+) 个节点只在关系中出现，已按 id 自动创建。$/.exec(message);
+  if (implicit)
+    return implicit[1] === '1'
+      ? '1 node appears only in relations and was created from its id.'
+      : `${implicit[1]} nodes appear only in relations and were created from their ids.`;
   return uiText(message);
 }
 
