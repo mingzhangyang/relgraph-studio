@@ -53,11 +53,14 @@ Captured on the same Chromium 153 / Linux x64, before baseline update. The defau
 
 ## Layout strategy and reproducible editing
 
-Open **布局策略 · 预览后应用** beneath the source card. The initial choice is manual/preserve. Select:
+Open **布局策略 · 预览后应用** beneath the source card. The initial choice is manual/preserve. Select (details in [generic graphs](GENERIC-GRAPH.md#layout-strategies)):
 
-- **通用分层**: stable connected-component packing; directed strongly connected components share a level, followed by topological depth. Components with only undirected links use generic graph-distance levels. No relationship label or `family` kind is interpreted as a parent/child generation. This is not a genealogy algorithm.
-- **确定性力导向**: the existing ID-sorted seeded solver, fixed 0–2000 iterations, with spacing 64–400. No simulation runs while playing.
-- **圆形**: stable ID order, seed-controlled rotation and circumference-based spacing.
+- **自动 · 按结构选择**: picks one of the strategies below from the graph: a grid without relations, layered or flow for mostly directed acyclic graphs, radial for forests, force otherwise.
+- **力导向 · 聚类**: ID-sorted, seeded Fruchterman–Reingold relaxation from a radial start with group cohesion and landscape fitting, at most 0–2000 steps, spacing 64–400. Locked and preserved nodes are fixed anchors. No simulation runs while playing.
+- **分层 · 自上而下** and **流向 · 从左到右**: stable component packing; directed strongly connected components share a level, followed by topological depth. Components with only undirected links use graph distance from their best-connected node. Barycentre sweeps reduce crossings and keep groups as bands. No relationship label or `family` kind is interpreted as a parent/child generation. This is not a genealogy algorithm.
+- **放射 · 以核心为圆心**: rings around the graph centre, each subtree in a wedge sized by its leaves; seed-controlled rotation.
+- **环形**: one ring with groups contiguous and neighbours drawn together, seed-controlled rotation and circumference-based spacing.
+- **网格 · 保持顺序**: a matrix per group in the order the nodes were written.
 - **手动**: retain the existing drag/keyboard position tools.
 
 Coordinate modes are explicit: **保留现有坐标** returns the current resolved positions; **只填补缺失坐标** preserves authored/saved coordinates and fills missing positions; **重排未锁定节点** moves every unlocked node. A fallback preview coordinate is not an authored coordinate. Locks preserve the exact current coordinate in all strategies and in manual edits. Only safe currently projected nodes are listed for locking; imported lock IDs for future nodes remain saved but do not appear early.

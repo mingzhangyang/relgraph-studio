@@ -4,7 +4,7 @@ Status: **Accepted for prototype** · 2026-11-06
 
 ## Decision
 
-Keep source formats, domain adapters, a neutral visual graph, deterministic frame projection and Canvas drawing separate. A JSON `presentation` is the storyboard; video frames are derived from an integer frame index, not from animation history. Human-authored coordinates remain fixed and no physics runs during playback. Video time and domain time are independent.
+Keep source formats, domain adapters, a neutral visual graph, deterministic frame projection and Canvas drawing separate. Besides the literary and biological adapters, the generic `relgraph.graph/1` adapter accepts any nodes and relations and derives what the document leaves out (encoding, hierarchy, layout, storyboard); see [generic graphs](GENERIC-GRAPH.md). A JSON `presentation` is the storyboard; video frames are derived from an integer frame index, not from animation history. Human-authored coordinates remain fixed and no physics runs during playback. Video time and domain time are independent.
 
 ## B1 implementation
 
