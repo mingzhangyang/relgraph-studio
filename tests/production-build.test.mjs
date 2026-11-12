@@ -23,6 +23,10 @@ test('production build includes every example and the bundled workspace loads th
       'honglou-provisional.relgraph.json',
       'biology-egfr-mapk.json',
       'bookshop-systems-synthetic.graph.json',
+      'vertebrates-tree-provisional.graph.json',
+      'dynasties-timeline-provisional.graph.json',
+      'reading-club-mindmap-synthetic.graph.json',
+      'order-flowchart-synthetic.graph.json',
     ];
     for (const name of exampleNames) {
       assert.deepEqual(

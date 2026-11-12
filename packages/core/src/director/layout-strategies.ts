@@ -1,7 +1,7 @@
 import type { VisualGraph } from '../../types/visual-graph.js';
 import type { ProjectConfig } from '../project.js';
 import { layoutMissingNodes, roundPositionCoordinate, type LayoutPoint } from './seeded-layout.js';
-import { layoutGraph } from './layout.js';
+import { DIAGRAM_ENGINE, layoutGraph } from './layout.js';
 import { chooseLayoutEngine, runLayoutEngine, type LayoutEngine } from './layout-engines.js';
 
 /** Every strategy a project may store; `manual` keeps coordinates as they are. */
@@ -11,6 +11,9 @@ export const LAYOUT_TYPES = [
   'force',
   'layered',
   'flow',
+  'tree',
+  'mindmap',
+  'timeline',
   'radial',
   'circle',
   'grid',
@@ -67,8 +70,12 @@ export function computeLayout(
     if (fixed) anchors.set(node.id, { ...fixed });
   }
   const nodes = graph.nodes.map((n) => ({ ...n, position: anchors.get(n.id) }));
+  // Auto follows the kind of diagram when the graph declares one.
   const engine: LayoutEngine =
-    type === 'auto' ? chooseLayoutEngine({ nodes, edges: graph.edges }) : (type as LayoutEngine);
+    type === 'auto'
+      ? (DIAGRAM_ENGINE[graph.diagram ?? 'network'] ??
+        chooseLayoutEngine({ nodes, edges: graph.edges }))
+      : (type as LayoutEngine);
   let result: Map<string, LayoutPoint>;
   if (engine === 'force') {
     // Anchors beyond any drawable range keep the overflow-safe incremental

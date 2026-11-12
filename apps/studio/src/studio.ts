@@ -124,7 +124,21 @@ const canvas = requiredElement('stage', HTMLCanvasElement),
   fileInput = requiredElement('fileInput', HTMLInputElement),
   exampleLiterature = requiredElement('exampleLiterature', HTMLButtonElement),
   exampleBiology = requiredElement('exampleBiology', HTMLButtonElement),
-  exampleGraph = requiredElement('exampleGraph', HTMLButtonElement),
+  // Generic-graph examples: any relations, and the diagram kinds drawn from them.
+  gallery = Object.fromEntries(
+    (
+      [
+        ['exampleGraph', 'bookshop-systems-synthetic', '线上书店 · 通用关系合成示例'],
+        ['exampleTree', 'vertebrates-tree-provisional', '进化树 · 逐层展开的简化示例'],
+        ['exampleTimeline', 'dynasties-timeline-provisional', '朝代更替 · 时间轴简化示例'],
+        ['exampleMindmap', 'reading-club-mindmap-synthetic', '读书会 · 思维导图合成示例'],
+        ['exampleFlowchart', 'order-flowchart-synthetic', '订单流程 · 流程图合成示例'],
+      ] as const
+    ).map(([id, file, name]) => [
+      id,
+      { button: requiredElement(id, HTMLButtonElement), file, name },
+    ]),
+  ),
   themeToggle = requiredElement('themeToggle', HTMLButtonElement),
   languageSelect = requiredElement('languageSelect', HTMLSelectElement),
   layoutToggle = requiredElement('layoutToggle', HTMLButtonElement),
@@ -176,7 +190,7 @@ const shellView = createWorkspaceShellView(document, {
   sourceNote: $('sourceNote'),
   exampleLiterature,
   exampleBiology,
-  exampleGraph,
+  gallery: Object.fromEntries(Object.entries(gallery).map(([id, entry]) => [id, entry.button])),
   themeToggle,
   dropzone,
 });
@@ -785,14 +799,12 @@ exampleBiology.addEventListener('click', () => {
   shellView.markSource('exampleBiology');
   return loadExample('../examples/biology-egfr-mapk.json', '生物信号 · EGFR–MAPK 经典通路');
 });
-exampleGraph.addEventListener('click', () => {
-  if (!confirmSourceReplacement()) return;
-  shellView.markSource('exampleGraph');
-  return loadExample(
-    '../examples/bookshop-systems-synthetic.graph.json',
-    '线上书店 · 通用关系合成示例',
-  );
-});
+for (const [id, entry] of Object.entries(gallery))
+  entry.button.addEventListener('click', () => {
+    if (!confirmSourceReplacement()) return;
+    shellView.markSource(id);
+    return loadExample(`../examples/${entry.file}.graph.json`, entry.name);
+  });
 async function loadFile(file: File | undefined): Promise<void> {
   if (!file || !confirmSourceReplacement()) return;
   const serial = beginLoad();

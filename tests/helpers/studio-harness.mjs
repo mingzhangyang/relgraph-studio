@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import { createSimulatedStudioDom } from './studio-dom.mjs';
 import { parseDocument } from '../../packages/core/src/director/load.ts';
@@ -69,7 +70,18 @@ export function makeStudio({
     ok: true,
     text: async () =>
       JSON.stringify(
-        path.includes('biology') ? biology : path.includes('bookshop') ? bookshop : literature,
+        path.includes('biology')
+          ? biology
+          : path.includes('bookshop')
+            ? bookshop
+            : path.includes('.graph.json')
+              ? JSON.parse(
+                  readFileSync(
+                    new URL('../../examples/' + path.split('/').pop(), import.meta.url),
+                    'utf8',
+                  ),
+                )
+              : literature,
       ),
   });
   const context = {

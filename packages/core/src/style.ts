@@ -5,6 +5,7 @@
 import { biologyStyle } from './domains/biology.style.js';
 import { literatureStyle } from './domains/literature.style.js';
 import type { VisualGraph } from '../types/visual-graph.js';
+import { timeAxis } from './director/layout-engines.js';
 
 export const LOCALES = ['zh-CN', 'en'] as const;
 export type Locale = (typeof LOCALES)[number];
@@ -33,8 +34,26 @@ export interface EdgeStyle {
   /** Shown on every edge of this kind; otherwise the edge label appears when highlighted. */
   caption?: LocalizedText;
 }
-export const NODE_SHAPES = ['circle', 'pill', 'diamond', 'square', 'hexagon'] as const;
+/** Glyphs with the label beside them; a derived encoding assigns these in order. */
+export const GLYPH_SHAPES = ['circle', 'pill', 'diamond', 'square', 'hexagon'] as const;
+/**
+ * Shapes that hold their label and take their size from it: a step, a start
+ * or end, and a decision. They are what flowcharts and mind maps are made of.
+ */
+export const LABEL_SHAPES = ['box', 'capsule', 'decision'] as const;
+/** `span` is a bar as long as the node's time span; without one it is a circle. */
+export const NODE_SHAPES = [...GLYPH_SHAPES, ...LABEL_SHAPES, 'span'] as const;
 export type NodeShape = (typeof NODE_SHAPES)[number];
+export const isLabelShape = (shape: NodeShape): boolean =>
+  (LABEL_SHAPES as readonly string[]).includes(shape);
+
+/**
+ * What kind of picture a graph is. Every kind is still nodes and relations;
+ * the kind only chooses the conventions readers expect: how it is laid out,
+ * how relations are routed, where labels go and how the film unfolds.
+ */
+export const DIAGRAM_KINDS = ['network', 'tree', 'mindmap', 'flowchart', 'timeline'] as const;
+export type DiagramKind = (typeof DIAGRAM_KINDS)[number];
 export interface NodeStyle {
   shape: NodeShape;
   /** Fixed radius at camera scale 1; otherwise the radius follows node importance. */
@@ -59,6 +78,17 @@ export interface DomainStyle {
   legend: readonly LegendEntry[];
   /** 0–1: how much a lone relation bows. Diagrams with fixed conventions keep 0. */
   curvature?: number;
+  /** `elbow` leaves and enters sideways, as tree, mind-map and flow links do. */
+  routing?: 'arc' | 'elbow';
+  /** `always` shows every authored relation label, not only highlighted ones. */
+  edgeLabels?: 'highlight' | 'always';
+  /** `target` draws a relation in the colour of the node it leads to. */
+  edgeHue?: 'kind' | 'target';
+  /**
+   * The domain time axis of a timeline: its range and world units per unit of
+   * time. Span glyphs take their length from it and the axis is drawn from it.
+   */
+  timeAxis?: { from: number; to: number; scale: number };
 }
 
 export const isLocale = (value: unknown): value is Locale =>
@@ -120,6 +150,16 @@ const AUTO_DASH: readonly (readonly number[] | undefined)[] = Object.freeze([
   Object.freeze([14, 6]),
 ]);
 const compareText = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
+const TERMINAL = /^(start|end|begin|finish|stop|terminal|terminator|开始|结束|起点|终点|起止)$/i,
+  DECISION = /^(decision|condition|branch|choice|gateway|if|判断|条件|分支|决策)$/i;
+/** The shape readers expect for a kind in this sort of diagram. */
+function conventionalShape(diagram: DiagramKind, kind: string, index: number): NodeShape {
+  if (diagram === 'flowchart')
+    return TERMINAL.test(kind) ? 'capsule' : DECISION.test(kind) ? 'decision' : 'box';
+  if (diagram === 'mindmap') return 'box';
+  if (diagram === 'timeline') return 'span';
+  return GLYPH_SHAPES[index % GLYPH_SHAPES.length];
+}
 /** Kinds by descending frequency, then by name, so array order never matters. */
 function rankedKinds(items: readonly { kind: string }[], declared: readonly string[]): string[] {
   const count = new Map<string, number>();
@@ -145,8 +185,10 @@ function rankedKinds(items: readonly { kind: string }[], declared: readonly stri
  * Declarations in `graph.kinds` override the automatic choice for their kind.
  */
 export function deriveGraphStyle(
-  graph: Pick<VisualGraph, 'nodes' | 'edges' | 'groups' | 'kinds' | 'domain'>,
+  graph: Pick<VisualGraph, 'nodes' | 'edges' | 'groups' | 'kinds' | 'domain' | 'diagram'>,
 ): DomainStyle {
+  const diagram = graph.diagram ?? 'network',
+    axis = diagram === 'timeline' ? timeAxis(graph.nodes) : null;
   const declaredNodes = graph.kinds?.nodes ?? {},
     declaredEdges = graph.kinds?.edges ?? {};
   const nodeKinds = rankedKinds(graph.nodes, Object.keys(declaredNodes)),
@@ -163,7 +205,7 @@ export function deriveGraphStyle(
     const declared = Object.hasOwn(declaredNodes, kind) ? declaredNodes[kind] : undefined;
     const assigned = grouped || nodeKinds.length < 2 ? undefined : tone();
     nodes[kind] = Object.freeze({
-      shape: declared?.shape ?? NODE_SHAPES[index % NODE_SHAPES.length],
+      shape: declared?.shape ?? conventionalShape(diagram, kind, index),
       ...(declared?.color ? { color: declared.color } : {}),
       ...(assigned === undefined || declared?.color ? {} : { tone: assigned }),
     });
@@ -176,7 +218,8 @@ export function deriveGraphStyle(
     const dash = declared?.line ? LINE_DASH[declared.line] : AUTO_DASH[index % AUTO_DASH.length];
     edges[kind] = Object.freeze({
       stroke: 'plain',
-      head: declared?.head ?? 'arrow',
+      // Branches of a tree or mind map need no arrowhead: the root says the way.
+      head: declared?.head ?? (diagram === 'tree' || diagram === 'mindmap' ? 'none' : 'arrow'),
       ...(declared?.color ? { color: declared.color } : {}),
       ...(assigned === undefined || declared?.color ? {} : { tone: assigned }),
       ...(dash ? { dash } : {}),
@@ -191,7 +234,18 @@ export function deriveGraphStyle(
     nodes: Object.freeze(nodes),
     defaultNode: NEUTRAL_STYLE.defaultNode,
     legend: Object.freeze(legend),
-    curvature: 1,
+    ...(diagram === 'network'
+      ? { curvature: 1 }
+      : {
+          curvature: 0,
+          routing: 'elbow' as const,
+          // Branch colour follows the node, unless relation kinds need the hue.
+          ...(edgeKinds.length < 2 && diagram !== 'flowchart'
+            ? { edgeHue: 'target' as const }
+            : {}),
+          ...(diagram === 'flowchart' ? { edgeLabels: 'always' as const } : {}),
+          ...(axis ? { timeAxis: { from: axis.from, to: axis.to, scale: axis.scale } } : {}),
+        }),
   });
 }
 
@@ -201,7 +255,7 @@ const derived = new WeakMap<object, DomainStyle>();
  * domain has one, otherwise an encoding derived from the graph itself.
  */
 export function styleForGraph(
-  graph: Pick<VisualGraph, 'nodes' | 'edges' | 'groups' | 'kinds' | 'domain'>,
+  graph: Pick<VisualGraph, 'nodes' | 'edges' | 'groups' | 'kinds' | 'domain' | 'diagram'>,
 ): DomainStyle {
   if (typeof graph.domain === 'string' && Object.hasOwn(STYLES, graph.domain))
     return STYLES[graph.domain];

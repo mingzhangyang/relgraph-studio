@@ -7,10 +7,20 @@
  * randomness is a seeded hash of node ids, and iteration counts are bounded.
  * Engines compose films for a wide stage, so they prefer landscape results.
  */
-import type { VisualGraph } from '../../types/visual-graph.js';
+import type { VisualGraph, VisualNode } from '../../types/visual-graph.js';
 
 export type EnginePoint = { x: number; y: number };
-export const LAYOUT_ENGINES = ['force', 'layered', 'flow', 'radial', 'circle', 'grid'] as const;
+export const LAYOUT_ENGINES = [
+  'force',
+  'layered',
+  'flow',
+  'tree',
+  'mindmap',
+  'timeline',
+  'radial',
+  'circle',
+  'grid',
+] as const;
 export type LayoutEngine = (typeof LAYOUT_ENGINES)[number];
 export interface EngineOptions {
   /** Unsigned 32-bit seed. */
@@ -23,6 +33,8 @@ export interface EngineOptions {
   fixed?: ReadonlyMap<string, EnginePoint>;
 }
 type LayoutGraph = Pick<VisualGraph, 'nodes' | 'edges'>;
+/** A node's place in time; `point` when it only has a first appearance. */
+type Span = { from: number; to?: number; point: boolean };
 
 /** Landscape proportion the engines aim for; the film stage is about 2.8:1. */
 const ASPECT = 2.2;
@@ -54,6 +66,10 @@ interface Prepared {
   arcs: Link[];
   neighbours: Map<string, string[]>;
   degree: Map<string, number>;
+  /** Position of every node in the author's list. */
+  order: Map<string, number>;
+  /** Where a node lies on the domain time axis, when it says so. */
+  span: Map<string, Span>;
 }
 
 function prepare(graph: LayoutGraph): Prepared {
@@ -92,6 +108,15 @@ function prepare(graph: LayoutGraph): Prepared {
     arcs,
     neighbours,
     degree: new Map(ids.map((id) => [id, sets.get(id)!.size])),
+    order: new Map(graph.nodes.map((n, i) => [n.id, i])),
+    span: new Map(
+      graph.nodes.flatMap((n): [string, Span][] => {
+        const from = n.span?.from ?? n.visibility?.from;
+        return from === undefined
+          ? []
+          : [[n.id, { from, to: n.span?.to, point: n.span === undefined }]];
+      }),
+    ),
   };
 }
 
@@ -768,6 +793,339 @@ function ranksOf(p: Prepared, members: string[]): Map<string, number> {
 }
 
 /**
+ * Ranks for a process that may loop: relations that lead back to a step
+ * already under way are feedback, and are ignored when ranking, so a loop
+ * reads as a sequence with one relation returning instead of one tall rank.
+ */
+function flowRanks(p: Prepared, members: string[]): Map<string, number> {
+  const inside = new Set(members),
+    arcs = p.arcs.filter((a) => inside.has(a.source) && inside.has(a.target));
+  if (!arcs.length) return ranksOf(p, members);
+  const out = new Map(members.map((id) => [id, [] as string[]])),
+    incoming = new Map(members.map((id) => [id, 0]));
+  for (const a of arcs) {
+    out.get(a.source)!.push(a.target);
+    incoming.set(a.target, incoming.get(a.target)! + 1);
+  }
+  const byOrder = (a: string, b: string): number =>
+    (p.order.get(a) ?? 0) - (p.order.get(b) ?? 0) || compare(a, b);
+  for (const list of out.values()) list.sort(byOrder);
+  // Depth-first from the entry points, in the author's order.
+  const starts = [...members].sort(
+    (a, b) => Math.min(1, incoming.get(a)!) - Math.min(1, incoming.get(b)!) || byOrder(a, b),
+  );
+  const state = new Map<string, 1 | 2>(),
+    forward = new Map(members.map((id) => [id, [] as string[]])),
+    pending = new Map(members.map((id) => [id, 0]));
+  for (const start of starts) {
+    if (state.has(start)) continue;
+    const stack: [string, number][] = [[start, 0]];
+    state.set(start, 1);
+    while (stack.length) {
+      const top = stack[stack.length - 1],
+        next = out.get(top[0])![top[1]++];
+      if (next === undefined) {
+        state.set(top[0], 2);
+        stack.pop();
+      } else if (state.get(next) !== 1) {
+        // Not on the current path: a forward relation.
+        forward.get(top[0])!.push(next);
+        pending.set(next, pending.get(next)! + 1);
+        if (!state.has(next)) {
+          state.set(next, 1);
+          stack.push([next, 0]);
+        }
+      }
+    }
+  }
+  const ranks = new Map(members.map((id) => [id, 0])),
+    ready = members.filter((id) => pending.get(id) === 0).sort(byOrder);
+  for (let i = 0; i < ready.length; i++)
+    for (const next of forward.get(ready[i])!) {
+      ranks.set(next, Math.max(ranks.get(next)!, ranks.get(ready[i])! + 1));
+      pending.set(next, pending.get(next)! - 1);
+      if (pending.get(next) === 0) ready.push(next);
+    }
+  return ranks;
+}
+
+/** Where a tree starts: the node nothing points to, else the centre of the part. */
+function rootOf(p: Prepared, members: readonly string[]): string {
+  const inside = new Set(members),
+    incoming = new Map<string, number>(),
+    outgoing = new Map<string, number>();
+  for (const a of p.arcs)
+    if (inside.has(a.source) && inside.has(a.target)) {
+      incoming.set(a.target, (incoming.get(a.target) ?? 0) + 1);
+      outgoing.set(a.source, (outgoing.get(a.source) ?? 0) + 1);
+    }
+  const sources = members
+    .filter((id) => !incoming.get(id) && outgoing.get(id))
+    .sort((a, b) => (p.order.get(a) ?? 0) - (p.order.get(b) ?? 0) || compare(a, b));
+  return sources[0] ?? centreOf(p, members);
+}
+
+interface Tree {
+  root: string;
+  depth: Map<string, number>;
+  children: Map<string, string[]>;
+  /** Breadth-first order: every parent before its children. */
+  order: string[];
+}
+/** The tree a part is drawn as. Siblings keep the order the author gave them. */
+function treeOf(p: Prepared, members: readonly string[], root: string = rootOf(p, members)): Tree {
+  const inside = new Set(members),
+    depth = new Map([[root, 0]]),
+    children = new Map<string, string[]>(members.map((id) => [id, []])),
+    order = [root];
+  for (let i = 0; i < order.length; i++) {
+    const next = (p.neighbours.get(order[i]) ?? [])
+      .filter((v) => inside.has(v) && !depth.has(v))
+      .sort((a, b) => (p.order.get(a) ?? 0) - (p.order.get(b) ?? 0) || compare(a, b));
+    for (const v of next) {
+      depth.set(v, depth.get(order[i])! + 1);
+      children.get(order[i])!.push(v);
+      order.push(v);
+    }
+  }
+  return { root, depth, children, order };
+}
+
+/**
+ * Slot of every node across the growth direction: leaves take consecutive
+ * slots in reading order, a parent sits midway between its first and last
+ * child, and the main branches keep a little extra room between them.
+ */
+function tidySlots(tree: Tree, top: readonly string[] = tree.children.get(tree.root)!) {
+  const slot = new Map<string, number>();
+  let cursor = 0;
+  top.forEach((branch, index) => {
+    if (index) cursor += 0.45;
+    // Iterative depth-first walk: long chains must not exhaust the stack.
+    const stack: [string, number][] = [[branch, 0]];
+    while (stack.length) {
+      const frame = stack[stack.length - 1],
+        kids = tree.children.get(frame[0])!;
+      if (frame[1] < kids.length) stack.push([kids[frame[1]++], 0]);
+      else {
+        slot.set(
+          frame[0],
+          kids.length ? (slot.get(kids[0])! + slot.get(kids[kids.length - 1])!) / 2 : cursor++,
+        );
+        stack.pop();
+      }
+    }
+  });
+  return { slot, size: cursor };
+}
+
+/** A tidy tree growing to the right: depth along x, reading order down y. */
+function treeLayout(p: Prepared, { spacing }: EngineOptions): Map<string, EnginePoint> {
+  const across = spacing * 0.56,
+    along = spacing * 1.5;
+  const at = new Map<string, EnginePoint>(),
+    parts: string[][] = [];
+  for (const members of componentsOf(p)) {
+    const tree = treeOf(p, members),
+      top = tree.children.get(tree.root)!,
+      { slot } = tidySlots(tree);
+    const rootSlot = top.length ? (slot.get(top[0])! + slot.get(top[top.length - 1])!) / 2 : 0;
+    for (const id of members)
+      at.set(id, {
+        x: tree.depth.get(id)! * along,
+        y: (id === tree.root ? rootSlot : slot.get(id)!) * across,
+      });
+    parts.push(members);
+  }
+  return parts.length ? pack(parts, at, spacing * 0.8, 'start') : at;
+}
+
+/**
+ * A mind map: the topic in the middle, its main branches shared between the
+ * right and the left so both sides carry a similar load, each growing outward
+ * as a tidy tree. Both sides read from the top down, the right side first.
+ */
+function mindmapLayout(p: Prepared, { spacing }: EngineOptions): Map<string, EnginePoint> {
+  const across = spacing * 0.5,
+    along = spacing * 1.55;
+  const at = new Map<string, EnginePoint>(),
+    parts: string[][] = [];
+  for (const members of componentsOf(p)) {
+    const tree = treeOf(p, members),
+      top = tree.children.get(tree.root)!;
+    const leaves = new Map<string, number>();
+    for (const id of [...tree.order].reverse())
+      leaves.set(
+        id,
+        Math.max(
+          1,
+          tree.children.get(id)!.reduce((sum, child) => sum + leaves.get(child)!, 0),
+        ),
+      );
+    const total = top.reduce((sum, id) => sum + leaves.get(id)!, 0);
+    const right: string[] = [],
+      left: string[] = [];
+    let carried = 0;
+    for (const branch of top) {
+      // The first branches go right until that side holds half of the leaves.
+      if (top.length > 1 && carried >= total / 2) left.push(branch);
+      else right.push(branch);
+      carried += leaves.get(branch)!;
+    }
+    at.set(tree.root, { x: 0, y: 0 });
+    for (const [branches, direction] of [
+      [right, 1],
+      [left, -1],
+    ] as const) {
+      const { slot, size } = tidySlots(tree, branches);
+      const stack = [...branches];
+      while (stack.length) {
+        const id = stack.pop()!;
+        at.set(id, {
+          x: direction * tree.depth.get(id)! * along,
+          y: (slot.get(id)! - (size - 1) / 2) * across,
+        });
+        stack.push(...tree.children.get(id)!);
+      }
+    }
+    parts.push(members);
+  }
+  return parts.length ? pack(parts, at, spacing * 0.8) : at;
+}
+
+/** How domain time maps to world coordinates in a timeline. */
+export interface TimeAxis {
+  from: number;
+  to: number;
+  /** World units per unit of domain time. */
+  scale: number;
+  /** World x of a domain time. */
+  x(time: number): number;
+}
+/**
+ * The time axis of a graph whose nodes carry a span or a first appearance.
+ * It depends on the nodes alone, so the layout that places them and the
+ * renderer that draws their extent and the axis always agree.
+ */
+export function timeAxis(nodes: readonly VisualNode[]): TimeAxis | null {
+  let from = Infinity,
+    to = -Infinity,
+    count = 0;
+  for (const node of nodes) {
+    const start = node.span?.from ?? node.visibility?.from;
+    if (start === undefined || !Number.isFinite(start)) continue;
+    count++;
+    from = Math.min(from, start);
+    to = Math.max(
+      to,
+      start,
+      node.span?.to !== undefined && Number.isFinite(node.span.to) ? node.span.to : start,
+    );
+  }
+  if (!count || !(to > from)) return null;
+  const width = Math.min(5200, Math.max(1400, count * 170)),
+    scale = width / (to - from);
+  return { from, to, scale, x: (time) => (time - from) * scale - width / 2 };
+}
+
+/**
+ * A timeline: every node at its place in time, in lanes. A tree keeps the
+ * reading order of its leaves, so lineages never cross; anything else gets
+ * one band of lanes per group, packed so that spans do not overlap.
+ */
+function timelineLayout(p: Prepared, graph: LayoutGraph, options: EngineOptions) {
+  const axis = timeAxis(graph.nodes);
+  if (!axis) return treeLayout(p, options);
+  const lane = options.spacing * 0.42,
+    at = new Map<string, EnginePoint>();
+  // A span without an end is still going on; a mere first appearance is a point.
+  const start = (id: string): number => p.span.get(id)?.from ?? axis.from,
+    end = (id: string): number => {
+      const span = p.span.get(id);
+      return !span ? axis.from : span.point ? span.from : (span.to ?? axis.to);
+    },
+    centre = (id: string): number => (axis.x(start(id)) + axis.x(end(id))) / 2;
+  const connected = p.ids.filter((id) => p.degree.get(id));
+  const forest =
+    connected.length === p.ids.length &&
+    p.pairs.length === connected.length - componentsOf(p, connected).length;
+  if (forest && p.pairs.length) {
+    let offset = 0;
+    for (const members of componentsOf(p)) {
+      // A lineage starts with whatever came first.
+      const earliest = [...members].sort(
+        (a, b) => start(a) - start(b) || (p.order.get(a) ?? 0) - (p.order.get(b) ?? 0),
+      )[0];
+      const tree = treeOf(p, members, earliest),
+        top = tree.children.get(tree.root)!,
+        { slot, size } = tidySlots(tree);
+      const rootSlot = top.length ? (slot.get(top[0])! + slot.get(top[top.length - 1])!) / 2 : 0;
+      for (const id of members)
+        at.set(id, {
+          x: centre(id),
+          y: (offset + (id === tree.root ? rootSlot : slot.get(id)!)) * lane * 1.25,
+        });
+      offset += Math.max(1, size) + 0.6;
+    }
+    return at;
+  }
+  const bands = new Map<string, string[]>();
+  for (const id of p.authored) {
+    const key = p.group.get(id) ?? '￿';
+    bands.set(key, [...(bands.get(key) ?? []), id]);
+  }
+  let row = 0;
+  for (const members of bands.values()) {
+    // First fit: the earliest lane whose last span has ended, with breathing room.
+    const lanes: number[] = [],
+      gap = (axis.to - axis.from) * 0.012;
+    for (const id of [...members].sort(
+      (a, b) => start(a) - start(b) || (p.order.get(a) ?? 0) - (p.order.get(b) ?? 0),
+    )) {
+      let index = lanes.findIndex((busyUntil) => busyUntil + gap <= start(id));
+      if (index < 0) index = lanes.push(-Infinity) - 1;
+      lanes[index] = end(id);
+      at.set(id, { x: centre(id), y: (row + index) * lane });
+    }
+    row += lanes.length + 0.7;
+  }
+  return at;
+}
+
+/**
+ * The reading structure of a diagram. `level` is how far a node is from where
+ * the diagram begins: its depth in the tree a tree or mind map is drawn as,
+ * or its step in a process. A storyboard that unfolds a diagram reveals one
+ * level at a time. `branch` numbers the main branches of a tree in reading
+ * order, so each can carry its own colour.
+ */
+export function diagramStructure(
+  graph: LayoutGraph,
+  by: 'tree' | 'flow',
+): { level: Map<string, number>; branch: Map<string, number> } {
+  const p = prepare(graph),
+    level = new Map<string, number>(),
+    branch = new Map<string, number>();
+  let next = 0;
+  for (const members of componentsOf(p)) {
+    if (by === 'flow') {
+      const ranks = flowRanks(p, members);
+      for (const id of members) level.set(id, ranks.get(id) ?? 0);
+      continue;
+    }
+    const tree = treeOf(p, members);
+    for (const id of tree.order) {
+      level.set(id, tree.depth.get(id)!);
+      // Breadth-first order: a child inherits the branch its parent was given.
+      if (tree.depth.get(id) === 1) branch.set(id, next++);
+      for (const child of tree.children.get(id)!)
+        if (branch.has(id)) branch.set(child, branch.get(id)!);
+    }
+  }
+  return { level, branch };
+}
+
+/**
  * Layered drawing: ranks from structure, barycentre sweeps against crossings,
  * then each row is pulled under (or beside) the nodes it connects to.
  */
@@ -782,7 +1140,7 @@ function layeredLayout(
   const at = new Map<string, EnginePoint>(),
     parts: string[][] = [];
   for (const members of componentsOf(p)) {
-    const ranks = ranksOf(p, members),
+    const ranks = horizontal ? flowRanks(p, members) : ranksOf(p, members),
       inside = new Set(members);
     const rows: string[][] = [];
     for (const id of members) (rows[ranks.get(id) ?? 0] ??= []).push(id);
@@ -999,11 +1357,17 @@ export function runLayoutEngine(
         ? layeredLayout(p, options, false)
         : engine === 'flow'
           ? layeredLayout(p, options, true)
-          : engine === 'radial'
-            ? radialLayout(p, options)
-            : engine === 'circle'
-              ? circleLayout(p, options)
-              : gridLayout(p, options);
+          : engine === 'tree'
+            ? treeLayout(p, options)
+            : engine === 'mindmap'
+              ? mindmapLayout(p, options)
+              : engine === 'timeline'
+                ? timelineLayout(p, graph, options)
+                : engine === 'radial'
+                  ? radialLayout(p, options)
+                  : engine === 'circle'
+                    ? circleLayout(p, options)
+                    : gridLayout(p, options);
   return new Map([...result].sort(([a], [b]) => compare(a, b)));
 }
 

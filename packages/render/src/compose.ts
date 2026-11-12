@@ -38,6 +38,7 @@ import {
   nodeGlyphBounds,
   nodeGlyphRayDistance,
   nodeLabelObstacleBounds,
+  insideLabel,
   DEFAULT_BORDER_WIDTH,
   type GlyphGeometry,
 } from './node-geometry.js';
@@ -54,6 +55,8 @@ type EdgeLabel = Point & {
   stroke: string;
   /** Unit direction the tag is pushed in, by half its own size. */
   push?: Point;
+  /** Unit normal of the relation at the tag, towards the side it bows to. */
+  aside?: Point;
 };
 
 /** Exact de Casteljau prefix [0,t] of a quadratic Bézier. No raster approximation. */
@@ -77,6 +80,40 @@ export function quadraticPrefix(
     ['Q', first.x, first.y, point.x, point.y],
   ];
 }
+/** A quadratic Bézier: start, control, end. Routed relations are a run of them. */
+type Segment = [Point, Point, Point];
+const segmentAt = (segments: readonly Segment[], t: number): [Segment, number, number] => {
+  const scaled = clamp(t, 0, 1) * segments.length,
+    index = Math.min(segments.length - 1, Math.floor(scaled));
+  return [segments[index], scaled - index, index];
+};
+/** Point at parameter t of a run of segments, each taking an equal share of [0, 1]. */
+function pathPoint(segments: readonly Segment[], t: number): Point {
+  const [[a, c, b], local] = segmentAt(segments, t),
+    v = 1 - local;
+  return {
+    x: v * v * a.x + 2 * v * local * c.x + local * local * b.x,
+    y: v * v * a.y + 2 * v * local * c.y + local * local * b.y,
+  };
+}
+/** Unit tangent at t, or null where the path has no direction. */
+function pathTangent(segments: readonly Segment[], t: number): Point | null {
+  const [[a, c, b], local] = segmentAt(segments, t);
+  const x = mix(c.x - a.x, b.x - c.x, local),
+    y = mix(c.y - a.y, b.y - c.y, local),
+    length = Math.hypot(x, y);
+  return length > 0 ? { x: x / length, y: y / length } : null;
+}
+/** Exact prefix [0, t] of a run of segments. */
+function pathPrefix(segments: readonly Segment[], t: number): PathCommand[] {
+  const [[a, c, b], local, index] = segmentAt(segments, t);
+  const d: PathCommand[] = [['M', segments[0][0].x, segments[0][0].y]];
+  for (const [, control, end] of segments.slice(0, index))
+    d.push(['Q', control.x, control.y, end.x, end.y]);
+  d.push(quadraticPrefix(a, c, b, local)[1]);
+  return d;
+}
+
 export type DetailLookup = (
   nodeId: string,
   domainAt: number | null,
@@ -400,7 +437,9 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
       c:
         custom.border ??
         color(
-          node.color || (group ? (group.color ?? toneOf(P, group.tone)) : undefined),
+          node.color ||
+            toneOf(P, node.tone) ||
+            (group ? (group.color ?? toneOf(P, group.tone)) : undefined),
           color(kindStyle.color, toneOf(P, kindStyle.tone) ?? P.fallbackNode),
         ),
       alpha: attention(node),
@@ -422,6 +461,81 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
       nodeLabelBounds.set(node.id, obstacle);
       occupied.push(obstacle);
     }
+
+  // A timeline's axis: quiet rules at round times, and a cursor at the
+  // film's present that travels with each shot.
+  const axis = style.timeAxis;
+  if (axis && axis.to > axis.from) {
+    const half = ((axis.to - axis.from) * axis.scale) / 2;
+    const screenX = (time: number): number =>
+      projectCameraPoint({ x: (time - axis.from) * axis.scale - half, y: 0 }, cam, spec).x;
+    // Rules about 110 reference pixels apart, at 1, 2 or 5 times a power of ten.
+    const rough = 110 / (axis.scale * cam.scale),
+      power = Math.pow(10, Math.floor(Math.log10(rough))),
+      ratio = rough / power,
+      step = power * (ratio <= 1 ? 1 : ratio <= 2 ? 2 : ratio <= 5 ? 5 : 10);
+    const decimals = Math.max(0, -Math.floor(Math.log10(step)));
+    const rules: PathCommand[] = [],
+      font = mono(11);
+    for (
+      let k = Math.ceil(axis.from / step);
+      k <= Math.floor(axis.to / step) && rules.length < 400;
+      k++
+    ) {
+      const time = k * step,
+        x = screenX(time);
+      if (x < bounds.left + u(20) || x > bounds.right - u(20)) continue;
+      rules.push(['M', x, stage.y + u(24)], ['L', x, stage.y + stage.h]);
+      const text = decimals ? time.toFixed(decimals) : String(Math.round(time)),
+        w = measure(text, font);
+      occupied.push({ x: x - w / 2 - u(3), y: stage.y + u(5), w: w + u(6), h: u(18) });
+      graphItems.push({
+        type: 'text',
+        text,
+        x,
+        y: stage.y + u(14),
+        font,
+        fill: P.legendText,
+        align: 'center',
+        baseline: 'middle',
+      });
+    }
+    if (rules.length) graphItems.push({ type: 'path', d: rules, stroke: P.bandRule, width: u(1) });
+    if (playback.domainAt !== null) {
+      // The shot before this one may have set the time this one starts from.
+      let before: number = playback.domainAt;
+      for (let i = 0; i < playback.index && i < graph.scenes.length; i++) {
+        const at = graph.scenes[i].domainAt;
+        if (at !== undefined) before = at;
+      }
+      const x = screenX(
+        mix(playback.index > 0 ? before : playback.domainAt, playback.domainAt, transition),
+      );
+      if (x >= bounds.left && x <= bounds.right)
+        graphItems.push(
+          {
+            type: 'path',
+            d: [
+              ['M', x, stage.y + u(24)],
+              ['L', x, stage.y + stage.h],
+            ],
+            stroke: P.progress,
+            width: u(1.4),
+            alpha: 0.55,
+          },
+          {
+            type: 'path',
+            d: [
+              ['M', x - u(5), stage.y + u(24)],
+              ['L', x + u(5), stage.y + u(24)],
+              ['L', x, stage.y + u(31)],
+              ['Z'],
+            ],
+            fill: P.progress,
+          },
+        );
+    }
+  }
 
   // Groups: a soft hull that follows its members instead of a fixed ellipse.
   const focusActive = mix(
@@ -574,13 +688,6 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
       degree.set(id, (degree.get(id) ?? 0) + 1);
   const edgeLabels: EdgeLabel[] = [],
     edgeObstacles: Rect[] = [];
-  const quad = (a: Point, c: Point, b: Point, t: number): Point => {
-    const v = 1 - t;
-    return {
-      x: v * v * a.x + 2 * v * t * c.x + t * t * b.x,
-      y: v * v * a.y + 2 * v * t * c.y + t * t * b.y,
-    };
-  };
   /** A swept-back arrowhead whose notch is where the stroke ends. */
   const arrowhead = (tip: Point, dir: Point, length: number, fill: Paint): DisplayItem => {
     const half = length * 0.4,
@@ -611,7 +718,13 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
       kindColour = color(edgeStyle.color, toneOf(P, edgeStyle.tone) ?? ''),
       stroke =
         custom.color ??
-        (kindColour || (highlighted ? P.edge.highlight : edgePaint(P, edgeStyle.stroke))),
+        (kindColour ||
+          // A branch takes the colour of the node it leads to.
+          (style.edgeHue === 'target'
+            ? to.c
+            : highlighted
+              ? P.edge.highlight
+              : edgePaint(P, edgeStyle.stroke))),
       // Strength is drawn as weight; a highlighted relation gains one more step.
       width = u(
         custom.width ??
@@ -630,7 +743,7 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
             ? [2, 4]
             : [];
     const parts: DisplayItem[] = [];
-    let labelAt: Point, labelPush: Point | undefined;
+    let labelAt: Point, labelPush: Point | undefined, labelAside: Point | undefined;
     if (edge.source === edge.target) {
       // A relation of a node with itself: a loop leaving on the side its
       // neighbours leave free.
@@ -721,8 +834,18 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
         dy = b.y - a.y,
         len = Math.hypot(dx, dy);
       if (len < u(1)) continue;
-      const ux = dx / len,
-        uy = dy / len;
+      const key = [edge.source, edge.target].sort().join('\0');
+      const siblings = pairs.get(key);
+      if (!siblings) throw new Error('Missing edge pair');
+      const order = siblings.indexOf(edge.id) - (siblings.length - 1) / 2;
+      const sign = edge.source < edge.target ? 1 : -1;
+      // Tree, mind-map and process links leave and arrive sideways when the
+      // two nodes are clearly side by side. A pair joined both ways, such as
+      // a step and the retry that returns to it, opens into two arcs instead.
+      const elbow =
+        style.routing === 'elbow' && siblings.length === 1 && Math.abs(dx) > Math.abs(dy) * 0.35;
+      const ux = elbow ? Math.sign(dx) : dx / len,
+        uy = elbow ? 0 : dy / len;
       const sourceRim = nodeGlyphRayDistance(
           from.node,
           { x: ux, y: uy },
@@ -754,58 +877,67 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
               : width / 2 + u(2.5);
       const rb = targetRim + reach;
       // Glyphs that touch or overlap leave no room for a readable stroke.
-      if (len <= ra + rb + u(1)) continue;
+      if ((elbow ? Math.abs(dx) : len) <= ra + rb + u(1)) continue;
       const start = { x: a.x + ux * ra, y: a.y + uy * ra },
         end = { x: b.x - ux * rb, y: b.y - uy * rb };
-      const key = [edge.source, edge.target].sort().join('\0');
-      const siblings = pairs.get(key);
-      if (!siblings) throw new Error('Missing edge pair');
-      const order = siblings.indexOf(edge.id) - (siblings.length - 1) / 2;
-      const sign = edge.source < edge.target ? 1 : -1;
-      // A lone relation bows slightly. All relations of a hub turn the same
-      // way around it, so its spokes read as one gesture instead of a pile
-      // of rulers.
-      const hubFirst =
-        (degree.get(edge.source) ?? 0) - (degree.get(edge.target) ?? 0) ||
-        (edge.source < edge.target ? 1 : -1);
-      const bow =
-        siblings.length === 1 && custom.curve === undefined
-          ? (hubFirst > 0 ? 1 : -1) *
-            Math.min(u(12), (len - ra - rb) * 0.06) *
-            (style.curvature ?? 0)
-          : 0;
-      const offset = order * u(30) * sign + u(custom.curve ?? 0) + bow;
-      const control = {
-        x: (start.x + end.x) / 2 - uy * offset,
-        y: (start.y + end.y) / 2 + ux * offset,
-      };
+      let segments: Segment[];
+      if (elbow) {
+        // Out level, across, in level: two quadratic arcs that meet upright.
+        const turn = (start.x + end.x) / 2 + u(custom.curve ?? 0),
+          middle = { x: turn, y: (start.y + end.y) / 2 };
+        segments = [
+          [start, { x: turn, y: start.y }, middle],
+          [middle, { x: turn, y: end.y }, end],
+        ];
+      } else {
+        // A lone relation bows slightly. All relations of a hub turn the same
+        // way around it, so its spokes read as one gesture instead of a pile
+        // of rulers.
+        const hubFirst =
+          (degree.get(edge.source) ?? 0) - (degree.get(edge.target) ?? 0) ||
+          (edge.source < edge.target ? 1 : -1);
+        const bow =
+          siblings.length === 1 && custom.curve === undefined
+            ? (hubFirst > 0 ? 1 : -1) *
+              Math.min(u(12), (len - ra - rb) * 0.06) *
+              (style.curvature ?? 0)
+            : 0;
+        const offset = order * u(30) * sign + u(custom.curve ?? 0) + bow;
+        segments = [
+          [
+            start,
+            {
+              x: (start.x + end.x) / 2 - uy * offset,
+              y: (start.y + end.y) / 2 + ux * offset,
+            },
+            end,
+          ],
+        ];
+      }
       if (visibility > 0.5) {
         const samples = Array.from({ length: 33 }, (_, i) =>
-          quad(start, control, end, (i / 32) * visibility),
+          pathPoint(segments, (i / 32) * visibility),
         );
         selection.push({ kind: 'edge', id: edge.id, points: samples });
         // A label appearing before halfway would disturb existing label layout.
         // Beyond halfway, only the drawn prefix participates in avoidance.
         for (let t = 0.1; t < visibility; t += 0.1) {
-          const q = quad(start, control, end, t);
+          const q = pathPoint(segments, t);
           edgeObstacles.push({ x: q.x - u(4), y: q.y - u(4), w: u(8), h: u(8) });
         }
       }
       parts.push({
         type: 'path',
-        d: quadraticPrefix(start, control, end, visibility),
+        d: pathPrefix(segments, visibility),
         stroke,
         width,
         ...(dash?.length ? { dash: dash.map(u) } : {}),
       });
       if (edge.directed && visibility > 0) {
         const t = clamp(visibility, 0, 1),
-          tipBase = quad(start, control, end, t);
-        // Tangent of the drawn prefix at its end; the chord when degenerate.
-        const tx = mix(control.x - start.x, end.x - control.x, t),
-          ty = mix(control.y - start.y, end.y - control.y, t),
-          tl = Math.hypot(tx, ty);
-        const dir = tl > 0 ? { x: tx / tl, y: ty / tl } : { x: ux, y: uy };
+          tipBase = pathPoint(segments, t),
+          // Tangent of the drawn prefix at its end; the chord when degenerate.
+          dir = pathTangent(segments, t) ?? { x: dx / len, y: dy / len };
         if (head === 'arrow')
           // The head rides the tip of the line while the relation is drawn.
           parts.push(
@@ -840,7 +972,17 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
           });
         }
       }
-      labelAt = quad(start, control, end, 0.5);
+      labelAt = pathPoint(segments, 0.5);
+      // Where a tag may step aside when it does not fit on the line: across
+      // the relation, first to the side it already bows to.
+      const along = pathTangent(segments, 0.5) ?? { x: dx / len, y: dy / len },
+        bowed =
+          (labelAt.x - (start.x + end.x) / 2) * -along.y +
+          (labelAt.y - (start.y + end.y) / 2) * along.x;
+      labelAside =
+        bowed < 0 || (bowed === 0 && along.x < 0)
+          ? { x: along.y, y: -along.x }
+          : { x: -along.y, y: along.x };
     }
     if (visibility > 0) {
       // A highlighted relation glows softly in its own colour.
@@ -859,7 +1001,7 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
     const caption = edgeStyle.caption ? localize(edgeStyle.caption, locale) : '';
     const label = caption
       ? captionWithLabel(caption, edgeLabel(edge))
-      : (custom.showLabel ?? highlighted)
+      : (custom.showLabel ?? (highlighted || style.edgeLabels === 'always'))
         ? edgeLabel(edge) || ''
         : '';
     if (label && custom.showLabel !== false && visibility > 0.5)
@@ -871,10 +1013,13 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
         x: labelAt.x,
         y: labelAt.y,
         ...(labelPush ? { push: labelPush } : {}),
+        ...(labelAside ? { aside: labelAside } : {}),
         alpha: active * Math.min(1, (visibility - 0.5) * 2),
       });
   }
 
+  // Nodes whose label is drawn inside their shape need none beside it.
+  const held = new Set<string>();
   for (const { node, custom, p, r, geometry, c, alpha, visibility, focus } of drawn) {
     if (visibility > 0.5)
       selection.push({
@@ -898,37 +1043,104 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
     // The body carries a tint of the node's colour over the paper, so colour
     // reads as area and not only as a thin ring.
     const body = custom.fill ?? mixHex(c, P.nodeFill, P.nodeTint);
-    const extent = Math.max(geometry.halfWidth, geometry.halfHeight);
+    const extent = Math.max(geometry.halfWidth, geometry.halfHeight),
+      waist = Math.min(geometry.halfWidth, geometry.halfHeight);
     const glyph: DisplayItem[] = [],
       aura: DisplayItem[] = [];
+    const importance = node.importance ?? 0;
+    // Shapes that are as wide as their words or their years keep their own
+    // outline for the focus ring; compact glyphs are ringed by a circle.
+    const wide = geometry.inside !== undefined || geometry.shape === 'span';
     // Light gathers behind the nodes a shot names, and behind the principals.
-    const glow = Math.max(focus, (node.importance ?? 0) >= 5 && alpha > 0.8 ? 0.55 : 0);
-    if (glow > 0) aura.push(ellipseGlow(p.x, p.y, extent * 2.3, extent * 2.3, c, 0.2 * glow));
-    if (focus > 0)
+    const glow = Math.max(focus, importance >= 5 && alpha > 0.8 ? 0.55 : 0);
+    if (glow > 0)
+      aura.push(
+        ellipseGlow(
+          p.x,
+          p.y,
+          geometry.halfWidth * 1.3 + waist,
+          geometry.halfHeight * 1.3 + waist,
+          c,
+          0.2 * glow,
+        ),
+      );
+    if (focus > 0) {
+      const gap = borderWidth / 2 + u(4.5);
       aura.push({
         type: 'path',
-        d: [['A', p.x, p.y, extent + borderWidth / 2 + u(4.5), 0, TAU]],
+        d: wide
+          ? nodeOutline(p, {
+              ...geometry,
+              halfWidth: geometry.halfWidth + gap * (geometry.shape === 'decision' ? 1.6 : 1),
+              halfHeight: geometry.halfHeight + gap,
+              cornerRadius: geometry.cornerRadius + gap,
+            })
+          : [['A', p.x, p.y, extent + gap, 0, TAU]],
         stroke: c,
         width: u(1.2),
         alpha: 0.55 * focus,
       });
+    }
+    // The topic of a mind map, or the first step, is set in solid colour.
+    const solid = geometry.inside !== undefined && importance >= 5 && !custom.fill;
     if (asset && custom.image)
       glyph.push(
         { type: 'path', d: outline, fill: custom.fill ?? P.nodeFill },
         composeNodeImage(custom.image, asset, imageBox, outline, custom.imageFit ?? 'cover'),
         { type: 'path', d: outline, stroke: c, width: borderWidth },
       );
-    else
-      glyph.push(
-        { type: 'path', d: outline, fill: body, stroke: c, width: borderWidth },
-        {
+    else {
+      glyph.push({
+        type: 'path',
+        d: outline,
+        fill: solid ? c : body,
+        stroke: c,
+        width: borderWidth,
+      });
+      if (!wide)
+        glyph.push({
           type: 'path',
           d: [
             ['A', p.x, p.y, geometry.shape === 'diamond' ? u(3) : Math.max(u(3), r * 0.34), 0, TAU],
           ],
           fill: c,
-        },
-      );
+        });
+    }
+    // Words inside the shape: the label of a step or topic, or of a span
+    // long enough to hold it.
+    const within =
+      geometry.inside ??
+      (geometry.shape === 'span'
+        ? insideLabel(nodeLabel(node), 0, ts, {
+            fontSize: custom.fontSize ?? 13,
+            fontWeight: custom.fontWeight,
+          })
+        : undefined);
+    if (
+      within &&
+      !(asset && custom.image) &&
+      (geometry.inside ||
+        (within.lines.length === 1 && within.width + u(14) <= geometry.halfWidth * 2))
+    ) {
+      held.add(node.id);
+      if (visibility > 0.5) {
+        const lineHeight = within.size * 1.3;
+        within.lines.forEach((line, index) =>
+          glyph.push({
+            type: 'text',
+            text: line,
+            x: p.x,
+            y: p.y - within.height / 2 + (index + 0.5) * lineHeight + u(0.5),
+            font: { family: 'sans', size: within.size, weight: within.weight },
+            fill:
+              custom.textColor ?? (solid ? P.nodeFill : alpha > 0.8 ? P.labelActive : P.labelMuted),
+            align: 'center',
+            baseline: 'middle',
+            ...(visibility < 1 ? { alpha: (visibility - 0.5) * 2 } : {}),
+          }),
+        );
+      }
+    }
     const scale = 0.82 + 0.18 * visibility;
     const frame = {
       type: 'group' as const,
@@ -988,42 +1200,29 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
         const kindStyle = nodeStyleFor(style, entry.kind),
           c = color(kindStyle.color, toneOf(P, kindStyle.tone) ?? P.legendText),
           half = u(5.2);
-        const g: GlyphGeometry =
-          kindStyle.shape === 'pill'
-            ? {
-                shape: 'pill',
-                radius: half,
-                halfWidth: half * 1.25,
-                halfHeight: half * 0.78,
-                cornerRadius: half * 0.62,
-                halfStroke: 0,
-              }
+        // A miniature of the kind's shape: [half width, half height, corner].
+        const [w, h, corner] =
+          kindStyle.shape === 'pill' || kindStyle.shape === 'capsule'
+            ? [1.25, 0.78, 0.62]
             : kindStyle.shape === 'square'
-              ? {
-                  shape: 'square',
-                  radius: half,
-                  halfWidth: half * 0.9,
-                  halfHeight: half * 0.9,
-                  cornerRadius: half * 0.26,
-                  halfStroke: 0,
-                }
-              : kindStyle.shape === 'hexagon'
-                ? {
-                    shape: 'hexagon',
-                    radius: half,
-                    halfWidth: half * 1.08,
-                    halfHeight: half * 1.08 * (Math.sqrt(3) / 2),
-                    cornerRadius: 0,
-                    halfStroke: 0,
-                  }
-                : {
-                    shape: kindStyle.shape,
-                    radius: half,
-                    halfWidth: half,
-                    halfHeight: half,
-                    cornerRadius: 0,
-                    halfStroke: 0,
-                  };
+              ? [0.9, 0.9, 0.26]
+              : kindStyle.shape === 'box'
+                ? [1.25, 0.82, 0.3]
+                : kindStyle.shape === 'span'
+                  ? [1.3, 0.55, 0.25]
+                  : kindStyle.shape === 'hexagon'
+                    ? [1.08, 1.08 * (Math.sqrt(3) / 2), 0]
+                    : kindStyle.shape === 'decision'
+                      ? [1.25, 0.9, 0]
+                      : [1, 1, 0];
+        const g: GlyphGeometry = {
+          shape: kindStyle.shape,
+          radius: half,
+          halfWidth: half * w,
+          halfHeight: half * h,
+          cornerRadius: half * corner,
+          halfStroke: 0,
+        };
         row.push({
           type: 'path',
           d: nodeOutline({ x: x + u(6), y: cy }, g),
@@ -1075,7 +1274,7 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
 
   // Deterministic screen-space label placement: prioritize selected and major nodes.
   const sorted = drawn
-    .filter((entry) => entry.visibility > 0.5)
+    .filter((entry) => entry.visibility > 0.5 && !held.has(entry.node.id))
     .sort(
       (a, b) =>
         b.alpha - a.alpha ||
@@ -1176,14 +1375,26 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
     const text = fitText(measure, label.text, edgeFont, u(150)),
       w = measure(text, edgeFont) + u(14),
       h = Math.max(u(18), edgeFont.size * 1.5),
-      // The tag sits on its relation, interrupting the line like a route marker.
-      box = {
+      // The tag sits on its relation, interrupting the line like a route
+      // marker. Between two close shapes it steps aside instead of vanishing.
+      home = {
         x: label.x - w / 2 + (label.push ? (label.push.x * w) / 2 : 0),
         y: label.y - h / 2 + (label.push ? (label.push.y * h) / 2 : 0),
         w,
         h,
-      };
-    if (!inBounds(box) || occupied.some((o) => rectsIntersect(box, o))) continue;
+      },
+      aside = label.aside,
+      reach = h / 2 + u(15);
+    const box = (aside ? [0, 1, -1, 2, -2] : [0])
+      .map((k) => ({
+        ...home,
+        x: home.x + (aside?.x ?? 0) * k * reach,
+        y: home.y + (aside?.y ?? 0) * k * reach,
+      }))
+      .find(
+        (candidate) => inBounds(candidate) && !occupied.some((o) => rectsIntersect(candidate, o)),
+      );
+    if (!box) continue;
     occupied.push(box);
     graphItems.push(
       {

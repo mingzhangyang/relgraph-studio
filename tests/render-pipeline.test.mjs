@@ -4,6 +4,10 @@ import { readFileSync } from 'node:fs';
 import literature from '../examples/honglou-provisional.relgraph.json' with { type: 'json' };
 import biology from '../examples/biology-signaling-synthetic.json' with { type: 'json' };
 import bookshop from '../examples/bookshop-systems-synthetic.graph.json' with { type: 'json' };
+import tree from '../examples/vertebrates-tree-provisional.graph.json' with { type: 'json' };
+import dynasties from '../examples/dynasties-timeline-provisional.graph.json' with { type: 'json' };
+import mindmap from '../examples/reading-club-mindmap-synthetic.graph.json' with { type: 'json' };
+import flowchart from '../examples/order-flowchart-synthetic.graph.json' with { type: 'json' };
 import { loadDocument } from '../packages/core/src/director/load.ts';
 import { layoutGraph } from '../packages/core/src/director/layout.ts';
 import {
@@ -32,10 +36,12 @@ import {
 import { VIDEO_THEMES } from '../packages/render/src/theme.ts';
 import { measure, measuringCanvas, paths, texts } from './helpers/display-list.mjs';
 
-const examples = [literature, biology, bookshop].map((source) => {
-  const { graph, detailAt } = loadDocument(source);
-  return { graph, detailAt, layout: layoutGraph(graph) };
-});
+const examples = [literature, biology, bookshop, tree, dynasties, mindmap, flowchart].map(
+  (source) => {
+    const { graph, detailAt } = loadDocument(source);
+    return { graph, detailAt, layout: layoutGraph(graph) };
+  },
+);
 
 function compose({ graph, layout, detailAt }, frame, spec = DEFAULT_FRAME_SPEC, extra = {}) {
   const state = directorFrameAt(graph, layout, frame, spec.fps, { fit: cameraFitFor(spec) });
@@ -74,10 +80,19 @@ function assertScaled(small, large, factor, path = '$') {
     });
   } else if (small && typeof small === 'object') {
     assert.deepEqual(Object.keys(large).sort(), Object.keys(small).sort(), path);
+    // A reveal scales a group about its node by a ratio that is the same at
+    // every output size; only the offsets and the children are lengths.
+    const ratio =
+      small.transform && small.transform[0] === small.transform[3] && small.transform[0] <= 1;
     for (const [key, value] of Object.entries(small)) {
-      // A transformed group carries its scale in the transform; its children
-      // are unit shapes.
-      if (key === 'items' && small.transform) assert.deepEqual(large[key], value, `${path}.${key}`);
+      if (key === 'transform' && ratio) {
+        assert.deepEqual(large.transform.slice(0, 4), value.slice(0, 4), `${path}.${key}`);
+        assertScaled(value.slice(4), large.transform.slice(4), factor, `${path}.${key}`);
+      }
+      // Any other transformed group carries its scale in the transform; its
+      // children are unit shapes.
+      else if (key === 'items' && small.transform && !ratio)
+        assert.deepEqual(large[key], value, `${path}.${key}`);
       else if (UNSCALED_KEYS.has(key)) assert.deepEqual(large[key], value, `${path}.${key}`);
       else assertScaled(value, large[key], factor, `${path}.${key}`);
     }

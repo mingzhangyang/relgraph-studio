@@ -458,7 +458,10 @@ test('a hull encloses its members with a smooth closed outline', () => {
 
 test('square and hexagon glyphs agree between outline, hit test and edge attachment', () => {
   const spec = FRAME_SPECS['landscape-720p'];
-  assert.deepEqual([...NODE_SHAPES], ['circle', 'pill', 'diamond', 'square', 'hexagon']);
+  assert.deepEqual(
+    [...NODE_SHAPES],
+    ['circle', 'pill', 'diamond', 'square', 'hexagon', 'box', 'capsule', 'decision', 'span'],
+  );
   for (const shape of ['square', 'hexagon']) {
     const style = {
       ...domainStyle('neutral'),

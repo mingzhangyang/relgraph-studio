@@ -1,12 +1,22 @@
 import type { VisualGraph } from '../../types/visual-graph.js';
-import { autoLayout } from './layout-engines.js';
+import { autoLayout, runLayoutEngine, type LayoutEngine } from './layout-engines.js';
+import type { DiagramKind } from '../style.js';
+
+/** The layout a kind of diagram is drawn with; a network chooses by structure. */
+export const DIAGRAM_ENGINE: Readonly<Record<DiagramKind, LayoutEngine | null>> = Object.freeze({
+  network: null,
+  tree: 'tree',
+  mindmap: 'mindmap',
+  flowchart: 'flow',
+  timeline: 'timeline',
+});
 import { roundPositionCoordinate } from './seeded-layout.js';
 
 type Position = { x: number; y: number };
 
 /** Stable layout prepared once per document, never advanced by playback. */
 export function layoutGraph(
-  graph: Pick<VisualGraph, 'nodes' | 'edges' | 'project'>,
+  graph: Pick<VisualGraph, 'nodes' | 'edges' | 'project' | 'diagram'>,
 ): Map<string, Position> {
   const compare = (a: { id: string }, b: { id: string }): number =>
     a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
@@ -20,7 +30,19 @@ export function layoutGraph(
   // positioned documents keep the conservative fallback below, which never
   // moves or crowds what the author has already arranged.
   if (!positions.size && nodes.length > 1) {
-    const arranged = autoLayout({ nodes, edges });
+    // Engines sort where order must not matter and keep the author's order
+    // where it is the reading order (grids, siblings of a tree).
+    const arranged = DIAGRAM_ENGINE[graph.diagram ?? 'network']
+      ? runLayoutEngine(
+          { nodes: graph.nodes, edges },
+          DIAGRAM_ENGINE[graph.diagram ?? 'network']!,
+          {
+            seed: 0,
+            spacing: 150,
+            iterations: 300,
+          },
+        )
+      : autoLayout({ nodes: graph.nodes, edges });
     return new Map(
       nodes.map((node) => {
         const p = arranged.get(node.id) ?? { x: 0, y: 0 };

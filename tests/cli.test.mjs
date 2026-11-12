@@ -5,6 +5,10 @@ import literature from '../examples/honglou-provisional.relgraph.json' with { ty
 import biology from '../examples/biology-signaling-synthetic.json' with { type: 'json' };
 import biologyExample from '../examples/biology-egfr-mapk.json' with { type: 'json' };
 import bookshop from '../examples/bookshop-systems-synthetic.graph.json' with { type: 'json' };
+import tree from '../examples/vertebrates-tree-provisional.graph.json' with { type: 'json' };
+import dynasties from '../examples/dynasties-timeline-provisional.graph.json' with { type: 'json' };
+import mindmap from '../examples/reading-club-mindmap-synthetic.graph.json' with { type: 'json' };
+import flowchart from '../examples/order-flowchart-synthetic.graph.json' with { type: 'json' };
 import { parseCommand, UsageError } from '../packages/cli/src/args.ts';
 import { formatDiagnostics } from '../packages/cli/src/document.ts';
 import { encodeArgs } from '../packages/cli/src/ffmpeg.ts';
@@ -158,7 +162,7 @@ test('the canonical EGFR–MAPK example keeps its staged network semantics', () 
   );
 });
 
-test('the vendored fonts cover both examples', () => {
+test('the vendored fonts cover every example', () => {
   const strings = (value) =>
     typeof value === 'string'
       ? [value]
@@ -166,7 +170,11 @@ test('the vendored fonts cover both examples', () => {
         ? Object.values(value).flatMap(strings)
         : [];
   assert.deepEqual(
-    uncoveredCharacters([...strings(literature), ...strings(biology), ...strings(biologyExample)]),
+    uncoveredCharacters(
+      [literature, biology, biologyExample, bookshop, tree, dynasties, mindmap, flowchart].flatMap(
+        strings,
+      ),
+    ),
     [],
   );
   assert.deepEqual(uncoveredCharacters(['龘 ok']), ['龘']);
@@ -180,6 +188,8 @@ for (const [example, source] of [
   ['literature', literature],
   ['biology', biologyExample],
   ['graph', bookshop],
+  ['tree', tree],
+  ['timeline', dynasties],
 ]) {
   for (const theme of ['light', 'dark']) {
     test(`${example}/${theme}: all committed golden frames match the native renderer`, async (context) => {

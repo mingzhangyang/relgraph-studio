@@ -58,6 +58,17 @@ const EXAMPLES = [
     file: 'examples/bookshop-systems-synthetic.graph.json',
     button: '#exampleGraph',
   },
+  // A tree that unfolds level by level, and a timeline with its axis.
+  {
+    key: 'tree',
+    file: 'examples/vertebrates-tree-provisional.graph.json',
+    button: '#exampleTree',
+  },
+  {
+    key: 'timeline',
+    file: 'examples/dynasties-timeline-provisional.graph.json',
+    button: '#exampleTimeline',
+  },
 ];
 
 const results = [];

@@ -7,6 +7,10 @@ const exampleFiles = [
   'honglou-provisional.relgraph.json',
   'biology-egfr-mapk.json',
   'bookshop-systems-synthetic.graph.json',
+  'vertebrates-tree-provisional.graph.json',
+  'dynasties-timeline-provisional.graph.json',
+  'reading-club-mindmap-synthetic.graph.json',
+  'order-flowchart-synthetic.graph.json',
 ];
 
 export default defineConfig({

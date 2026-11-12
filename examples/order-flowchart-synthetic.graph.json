@@ -1,0 +1,31 @@
+{
+  "format": "relgraph.graph/1",
+  "diagram": "flowchart",
+  "meta": {
+    "title": "一张订单的处理流程",
+    "description": "流程从开始走到结束：判断分出两条路，失败的支付回到上一步重试。",
+    "sourceNote": "虚构的技术示例，不对应任何真实系统。"
+  },
+  "directed": true,
+  "nodes": [
+    { "id": "开始", "kind": "开始" },
+    { "id": "提交订单", "kind": "步骤" },
+    { "id": "库存充足？", "kind": "判断" },
+    { "id": "通知缺货", "kind": "步骤" },
+    { "id": "发起支付", "kind": "步骤" },
+    { "id": "支付成功？", "kind": "判断" },
+    { "id": "安排发货", "kind": "步骤" },
+    { "id": "结束", "kind": "结束" }
+  ],
+  "edges": [
+    { "source": "开始", "target": "提交订单" },
+    { "source": "提交订单", "target": "库存充足？" },
+    { "source": "库存充足？", "target": "发起支付", "label": "是" },
+    { "source": "库存充足？", "target": "通知缺货", "label": "否" },
+    { "source": "发起支付", "target": "支付成功？" },
+    { "source": "支付成功？", "target": "安排发货", "label": "是" },
+    { "source": "支付成功？", "target": "发起支付", "label": "否，重试" },
+    { "source": "安排发货", "target": "结束" },
+    { "source": "通知缺货", "target": "结束" }
+  ]
+}

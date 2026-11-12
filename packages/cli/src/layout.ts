@@ -4,6 +4,8 @@ import { basename, dirname, join, resolve } from 'node:path';
 import {
   applyGraphPositions,
   autoLayout,
+  DIAGRAM_ENGINE,
+  runLayoutEngine,
   layoutMissingNodes,
   roundPositionCoordinate,
   parseDocument,
@@ -77,7 +79,19 @@ export async function layoutFile(request: LayoutRequest): Promise<LayoutSummary>
     const positions =
       missing === summary.total && summary.total > 1
         ? new Map(
-            [...autoLayout(result.graph, { seed: request.seed })].map(([id, p]) => [
+            [
+              ...(DIAGRAM_ENGINE[result.graph.diagram ?? 'network']
+                ? runLayoutEngine(
+                    result.graph,
+                    DIAGRAM_ENGINE[result.graph.diagram ?? 'network']!,
+                    {
+                      seed: request.seed,
+                      spacing: 150,
+                      iterations: 300,
+                    },
+                  )
+                : autoLayout(result.graph, { seed: request.seed })),
+            ].map(([id, p]) => [
               id,
               { x: roundPositionCoordinate(p.x) || 0, y: roundPositionCoordinate(p.y) || 0 },
             ]),

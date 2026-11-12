@@ -42,7 +42,18 @@ export interface ProjectConfig {
     edges?: Record<string, { label?: string }>;
   };
   layout?: {
-    type: 'manual' | 'auto' | 'force' | 'layered' | 'flow' | 'radial' | 'circle' | 'grid';
+    type:
+      | 'manual'
+      | 'auto'
+      | 'force'
+      | 'layered'
+      | 'flow'
+      | 'tree'
+      | 'mindmap'
+      | 'timeline'
+      | 'radial'
+      | 'circle'
+      | 'grid';
     mode: 'preserve' | 'missing' | 'rearrange';
     seed: number;
     spacing: number;
@@ -74,7 +85,10 @@ export const APPEARANCE_FIELD_RULES: Record<AppearanceKind, Record<string, Appea
   nodes: {
     image: { type: 'image' },
     imageFit: { type: 'enum', values: ['cover', 'contain'] },
-    shape: { type: 'enum', values: ['circle', 'pill', 'diamond', 'square', 'hexagon'] },
+    shape: {
+      type: 'enum',
+      values: ['circle', 'pill', 'diamond', 'square', 'hexagon', 'box', 'capsule', 'decision'],
+    },
     size: { type: 'number', min: 8, max: 48 },
     fill: { type: 'color' },
     border: { type: 'color' },
@@ -217,7 +231,19 @@ export function validateProjectConfig(value: unknown, graph?: VisualGraph): stri
     )
   ) {
     if (
-      !enumValue(l.type, ['manual', 'auto', 'force', 'layered', 'flow', 'radial', 'circle', 'grid'])
+      !enumValue(l.type, [
+        'manual',
+        'auto',
+        'force',
+        'layered',
+        'flow',
+        'tree',
+        'mindmap',
+        'timeline',
+        'radial',
+        'circle',
+        'grid',
+      ])
     )
       fail('config.layout.type');
     if (!enumValue(l.mode, ['preserve', 'missing', 'rearrange'])) fail('config.layout.mode');

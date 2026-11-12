@@ -2,7 +2,7 @@ import { uiText } from './i18n.js';
 
 /** Passive workspace presentation: no graph source, request identity or playback rules. */
 type Theme = 'dark' | 'light';
-type ExampleId = 'exampleLiterature' | 'exampleBiology' | 'exampleGraph';
+type ExampleId = string;
 interface ShellElements {
   canvas: HTMLCanvasElement;
   domainTime: HTMLElement;
@@ -11,8 +11,8 @@ interface ShellElements {
   sourceNote: HTMLElement;
   exampleLiterature: HTMLButtonElement;
   exampleBiology: HTMLButtonElement;
-  /** The generic-graph example; optional so embedders may omit it. */
-  exampleGraph?: HTMLButtonElement;
+  /** Further example buttons by element id; optional so embedders may omit them. */
+  gallery?: Readonly<Record<string, HTMLButtonElement>>;
   themeToggle: HTMLButtonElement;
   dropzone: HTMLLabelElement;
 }
@@ -70,7 +70,8 @@ export function createWorkspaceShellView(
     markSource(id: ExampleId | null): void {
       elements.exampleLiterature.setAttribute('aria-pressed', String(id === 'exampleLiterature'));
       elements.exampleBiology.setAttribute('aria-pressed', String(id === 'exampleBiology'));
-      elements.exampleGraph?.setAttribute('aria-pressed', String(id === 'exampleGraph'));
+      for (const [key, button] of Object.entries(elements.gallery ?? {}))
+        button.setAttribute('aria-pressed', String(id === key));
     },
     renderTheme(theme: Theme, persist: boolean): void {
       if (persist) document.documentElement?.setAttribute('data-theme', theme);
