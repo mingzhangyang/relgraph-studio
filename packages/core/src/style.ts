@@ -5,7 +5,7 @@
 import { biologyStyle } from './domains/biology.style.js';
 import { literatureStyle } from './domains/literature.style.js';
 import type { VisualGraph } from '../types/visual-graph.js';
-import { timeAxis } from './director/layout-engines.js';
+import { keepsTime, timeAxis } from './director/layout-engines.js';
 
 export const LOCALES = ['zh-CN', 'en'] as const;
 export type Locale = (typeof LOCALES)[number];
@@ -247,6 +247,31 @@ export function deriveGraphStyle(
           ...(axis ? { timeAxis: { from: axis.from, to: axis.to, scale: axis.scale } } : {}),
         }),
   });
+}
+
+const untimed = new WeakMap<DomainStyle, DomainStyle>();
+/**
+ * The style a drawing at `positions` is read with. A time axis is a claim
+ * about the drawing, not only about the data: it holds while every dated
+ * node sits at its place in time. For any other arrangement the same style
+ * is returned without the axis, so spans are drawn as points and no rule or
+ * cursor is drawn where it would mislead. Glyph outlines, hit tests and the
+ * composer must all read a drawing through this.
+ */
+export function styleForPositions(
+  style: DomainStyle,
+  nodes: Parameters<typeof keepsTime>[0],
+  positions: Parameters<typeof keepsTime>[1],
+): DomainStyle {
+  if (!style.timeAxis || keepsTime(nodes, positions, style.timeAxis)) return style;
+  let plain = untimed.get(style);
+  if (!plain) {
+    const rest: DomainStyle = { ...style };
+    delete rest.timeAxis;
+    plain = Object.freeze(rest);
+    untimed.set(style, plain);
+  }
+  return plain;
 }
 
 const derived = new WeakMap<object, DomainStyle>();

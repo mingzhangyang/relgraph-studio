@@ -1039,6 +1039,43 @@ export function timeAxis(nodes: readonly VisualNode[]): TimeAxis | null {
 }
 
 /**
+ * Where a dated node sits along the axis: the middle of its span, or its
+ * first appearance when that is all it has. A node without a time has no
+ * place on the axis.
+ */
+export function placeInTime(
+  node: Pick<VisualNode, 'span' | 'visibility'>,
+  axis: Pick<TimeAxis, 'from' | 'to' | 'scale'>,
+): number | null {
+  const from = node.span?.from ?? node.visibility?.from;
+  if (from === undefined || !Number.isFinite(from)) return null;
+  // A span without an end is still going on.
+  const to = node.span === undefined ? from : (node.span.to ?? axis.to);
+  return ((from + to) / 2 - (axis.from + axis.to) / 2) * axis.scale;
+}
+
+/**
+ * Whether a drawing keeps time: every dated node sits at its place on the
+ * axis, to the precision coordinates are stored with. The timeline engine
+ * always does, and so does its result once written to a file. A drawing
+ * that was rearranged, by hand or by another engine, does not, and must not
+ * be shown with an axis: its rules and bars would point at the wrong years.
+ */
+export function keepsTime(
+  nodes: readonly Pick<VisualNode, 'id' | 'span' | 'visibility'>[],
+  positions: ReadonlyMap<string, EnginePoint>,
+  axis: Pick<TimeAxis, 'from' | 'to' | 'scale'>,
+): boolean {
+  for (const node of nodes) {
+    const x = placeInTime(node, axis),
+      p = positions.get(node.id);
+    if (x === null || !p) continue;
+    if (!(Math.abs(p.x - x) <= 0.02)) return false;
+  }
+  return true;
+}
+
+/**
  * A timeline: every node at its place in time, in lanes. A tree keeps the
  * reading order of its leaves, so lineages never cross; anything else gets
  * one band of lanes per group, packed so that spans do not overlap.

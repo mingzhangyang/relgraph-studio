@@ -9,6 +9,7 @@ import {
   nodeStyleFor,
   localize,
   NEUTRAL_STYLE,
+  styleForPositions,
 } from '@relgraph/core';
 import type {
   DirectorFrameState,
@@ -120,8 +121,12 @@ export type DetailLookup = (
 ) => { summary?: string } | null | undefined;
 
 export interface ComposeOptions {
-  /** The full graph; only its scene count is read (the frame state is already projected). */
-  graph: Pick<VisualGraph, 'scenes' | 'project'>;
+  /**
+   * The full graph. The frame state is already projected; what is read here
+   * does not depend on the frame: the scene count, the project, and every
+   * node's place in time, to tell whether the drawing keeps a time axis.
+   */
+  graph: Pick<VisualGraph, 'scenes' | 'project' | 'nodes'>;
   positions: ReadonlyMap<string, Point>;
   frame: number;
   fps: number;
@@ -307,10 +312,12 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
     measure,
     frameSpec: spec = DEFAULT_FRAME_SPEC,
     theme: P = VIDEO_THEMES.dark,
-    style = NEUTRAL_STYLE,
+    style: graphStyle = NEUTRAL_STYLE,
     locale = DEFAULT_LOCALE,
     detailAt = () => undefined,
   } = options;
+  // A time axis is drawn only for a drawing that keeps time.
+  const style = styleForPositions(graphStyle, graph.nodes, positions);
   const config = graph.project;
   const messages = RENDER_MESSAGES[locale];
   const { width: W, height: H, stage, typeScale: ts } = spec;

@@ -33,7 +33,7 @@ import { createProjectEditor } from './project-editor-view.js';
 import { createDocumentToolbarView } from './document-toolbar-view.js';
 import { documentCommandFromShortcut } from './document-command-model.js';
 import { parseDocument, applyGraphPositions, type LoadResult } from '@relgraph/core';
-import { layoutGraph, styleForGraph } from '@relgraph/core';
+import { layoutGraph, styleForGraph, styleForPositions } from '@relgraph/core';
 import { frameCount } from '@relgraph/core';
 import type { Bio } from '@relgraph/core';
 import type { DirectorFrameState, VisualGraph } from '@relgraph/core';
@@ -1121,7 +1121,8 @@ canvas.addEventListener('pointerdown', (event) => {
     radius,
     event.pointerId,
     graph?.project,
-    graph ? styleForGraph(graph) : undefined,
+    // Hit the glyphs as they are drawn: spans only while the drawing keeps time.
+    graph ? styleForPositions(styleForGraph(graph), graph.nodes, currentLayout) : undefined,
   );
   if (!nextDrag || projectHistory.value.layout?.locked.includes(nextDrag.id)) return;
   dragging = nextDrag;

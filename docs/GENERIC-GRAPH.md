@@ -161,7 +161,12 @@ How the conventions are derived, and how to override them:
   its bar; a span without `end` runs to the end of the axis. Unlike
   `visibleTo`, a span never hides the node: what has ended stays on screen.
   Spans that overlap never share a lane; with groups, each group has its own
-  band of lanes.
+  band of lanes. The axis, its cursor and the bars are drawn only while the
+  drawing keeps time, that is, while every dated node sits at its place along
+  x. The timeline layout always does, and so does its result once written to
+  the file; lanes (y) remain yours to choose. A drawing rearranged along x,
+  by hand or by another strategy, is shown without the axis and with spans as
+  points, rather than with rules that point at the wrong years.
 - **Shapes.** In a flowchart, kinds named like `开始`, `结束`, `start`, `end`
   become capsules and kinds named like `判断`, `条件`, `decision` become
   diamonds; everything else is a box. `kinds.nodes.<kind>.shape` overrides.

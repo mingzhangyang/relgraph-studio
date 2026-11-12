@@ -8,6 +8,8 @@ import { loadDocument } from '../packages/core/src/director/load.ts';
 import { DIAGRAM_ENGINE, layoutGraph } from '../packages/core/src/director/layout.ts';
 import {
   diagramStructure,
+  keepsTime,
+  placeInTime,
   runLayoutEngine,
   timeAxis,
 } from '../packages/core/src/director/layout-engines.ts';
@@ -16,7 +18,8 @@ import {
   DEFAULT_LAYOUT_SETTINGS,
 } from '../packages/core/src/director/layout-strategies.ts';
 import { directorFrameAt, frameCount } from '../packages/core/src/director/state.ts';
-import { DIAGRAM_KINDS, styleForGraph } from '../packages/core/src/style.ts';
+import { DIAGRAM_KINDS, styleForGraph, styleForPositions } from '../packages/core/src/style.ts';
+import { applyGraphPositions } from '../packages/core/src/director/position-writeback.ts';
 import { composeFrame } from '../packages/render/src/compose.ts';
 import { cameraFitFor, FRAME_SPECS } from '../packages/render/src/frame-spec.ts';
 import {
@@ -326,6 +329,70 @@ test('a timeline puts every span at its place in time, in lanes, under an axis',
   assert.ok(
     paths(early.list).some((p) => p.fill === VIDEO_THEMES.light.progress && p.d.length === 4),
   );
+});
+
+test('the time axis is drawn only for a drawing that keeps time', () => {
+  const result = load(dynasties),
+    { graph } = result,
+    style = styleForGraph(graph),
+    at = layoutGraph(graph),
+    ticks = (list) => texts(list).filter((t) => /^-?\d+$/.test(t)),
+    cursor = (list) =>
+      paths(list).some((p) => p.fill === VIDEO_THEMES.light.progress && p.d.length === 4);
+  // The engine puts every dated node at its place, and the place is the axis's own.
+  const axis = timeAxis(graph.nodes);
+  for (const node of graph.nodes)
+    assert.ok(Math.abs(placeInTime(node, axis) - at.get(node.id).x) <= 0.005, node.label);
+  assert.equal(keepsTime(graph.nodes, at, style.timeAxis), true);
+  assert.equal(styleForPositions(style, graph.nodes, at), style);
+
+  // Written to the file and read back, the drawing is authored and still in time.
+  const saved = load(applyGraphPositions(dynasties, graph, at).document);
+  assert.ok(saved.graph.nodes.every((n) => n.position));
+  const reread = compose(saved, last(saved.graph));
+  assert.ok(ticks(reread.list).includes('1000'));
+  assert.equal(
+    glyphGeometry(byLabel(saved.graph, '唐'), 0.5, spec, styleForGraph(saved.graph)).shape,
+    'span',
+  );
+
+  // Rearranged by another engine, the same data has no axis to stand on:
+  // no rules, no cursor, and a span is a point again, in outline and hit test alike.
+  const grid = computeLayout(
+    graph,
+    { ...DEFAULT_LAYOUT_SETTINGS, type: 'grid', mode: 'rearrange' },
+    at,
+  );
+  assert.equal(keepsTime(graph.nodes, grid, style.timeAxis), false);
+  const loose = styleForPositions(style, graph.nodes, grid);
+  assert.equal(loose.timeAxis, undefined);
+  assert.equal(styleForPositions(style, graph.nodes, grid), loose, 'one style per drawing');
+  assert.deepEqual({ ...loose, timeAxis: style.timeAxis }, { ...style });
+  for (const frame of [12, last(graph)]) {
+    const { list } = compose(result, frame, grid);
+    assert.deepEqual(ticks(list), []);
+    assert.equal(cursor(list), false);
+  }
+  assert.equal(cursor(compose(result, 12).list), true);
+  assert.equal(glyphGeometry(byLabel(graph, '唐'), 0.5, spec, loose).shape, 'circle');
+
+  // A lane is the author's to choose; a year is not. One node moved along
+  // the axis is enough to lose it, however many others still agree.
+  const tang = byLabel(graph, '唐').id,
+    lane = new Map(at).set(tang, { x: at.get(tang).x, y: at.get(tang).y + 300 }),
+    year = new Map(at).set(tang, { x: at.get(tang).x + 40, y: at.get(tang).y });
+  assert.equal(keepsTime(graph.nodes, lane, style.timeAxis), true);
+  assert.ok(ticks(compose(result, last(graph), lane).list).length > 0);
+  assert.equal(keepsTime(graph.nodes, year, style.timeAxis), false);
+  assert.deepEqual(ticks(compose(result, last(graph), year).list), []);
+
+  // Partly authored coordinates take the conservative fallback, which is not in time.
+  const partly = structuredClone(dynasties);
+  partly.nodes[0].position = { x: 0, y: 0 };
+  const mixed = load(partly);
+  assert.deepEqual(ticks(compose(mixed, last(mixed.graph)).list), []);
+  // A node without a time makes no claim and may sit anywhere.
+  assert.equal(placeInTime({}, axis), null);
 });
 
 test('timeline spans validate, and a lineage with dates keeps its branches apart', () => {
