@@ -1534,7 +1534,9 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
   const titleFont = serif(27, 600),
     metaFont = mono(13);
   const domainTime =
-    playback.domainAt === null ? '' : messages.domainTime(view.timeline?.unit, playback.domainAt);
+    playback.domainAt === null || view.timeline?.ordinal
+      ? ''
+      : messages.domainTime(view.timeline?.unit, playback.domainAt);
   // The film title shares its row with the right-aligned domain time and
   // never exceeds the title safe area; u(850) is the design's maximum length.
   const titleRoom = titleRight - titleX - (domainTime ? measure(domainTime, metaFont) + u(24) : 0);

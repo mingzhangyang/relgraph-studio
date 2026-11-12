@@ -123,6 +123,9 @@ without coordinates takes the first free lane. Applying another strategy in
 the layout panel is the explicit way off the axis; the spans are then drawn as
 points, in the legend as well.
 
+The unfolding of a tree, mind map or flowchart counts reveal order, not time,
+so its frames show no domain time.
+
 An evolutionary tree that unfolds needs nothing but its branches:
 
 ```json

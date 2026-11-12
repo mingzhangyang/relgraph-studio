@@ -251,3 +251,22 @@ test('F4: the plan names the engine that actually ran, and why', () => {
   const untimed = plan(load(undated), 'auto');
   assert.deepEqual([untimed.engine, untimed.reason], ['tree', 'untimed']);
 });
+
+test('F5: a derived unfolding shows no domain time; real domain time still shows', () => {
+  for (const [name, source] of Object.entries({ tree, mindmap, flowchart })) {
+    const graph = load(source);
+    assert.equal(graph.timeline?.ordinal, true, name);
+    assert.ok(
+      graph.nodes.some((n) => n.visibility?.from > 1),
+      `${name} unfolds`,
+    );
+    for (let frame = 0; frame < frameCount(graph); frame += 24) {
+      const list = compose(graph, layoutGraph(graph), frame);
+      assert.equal(list.a11y.domainTime, '', `${name} frame ${frame}`);
+      assert.ok(!texts(list).some((t) => /STEP|TIME \d/.test(t)), `${name} frame ${frame}`);
+    }
+  }
+  const timed = load(dynasties);
+  assert.equal(timed.timeline?.ordinal, undefined);
+  assert.match(compose(timed).a11y.domainTime, /^公元 -?\d+$/);
+});

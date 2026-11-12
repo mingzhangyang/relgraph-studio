@@ -877,7 +877,8 @@ function shapeDiagram(
     for (const node of nodes) node.visibility = { from: step(node.id) };
     for (const edge of edges)
       edge.visibility = { from: Math.max(step(edge.source), step(edge.target)) };
-    graph.timeline = { unit: 'STEP' };
+    // The steps are reveal order, not time: no frame may present them as a date.
+    graph.timeline = { unit: '', ordinal: true };
     graph.scenes = timedStoryboard(graph, summaries, {
       titles: 'labels',
       follow: false,
