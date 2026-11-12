@@ -76,7 +76,8 @@ export function applyGraphPositions(
       const raw = author(entry.id),
         id = raw === null ? undefined : ids.get(raw);
       if (!id || !known.has(id)) throw new TypeError('Unknown source node ' + String(entry.id));
-      if (onlyMissing && entry.position !== undefined) continue;
+      // The format reads `position: null` as no position, so it is a gap to fill.
+      if (onlyMissing && entry.position !== undefined && entry.position !== null) continue;
       const point = positions.get(id);
       if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y))
         throw new TypeError('No finite position for ' + String(entry.id));

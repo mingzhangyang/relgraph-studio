@@ -305,6 +305,24 @@ test('positions write back to author ids, declaring nodes that only relations me
     new Map([...positions].map(([id]) => [id, { x: 1, y: 2 }])),
   );
   assert.equal(all.changed, 2);
+  // `position: null` reads as no position, so it is a gap like any other.
+  const blank = {
+    format: FORMAT,
+    nodes: [
+      { id: 'a', position: null },
+      { id: 'b', position: { x: 0, y: 0 } },
+    ],
+    edges: [{ source: 'a', target: 'b' }],
+  };
+  const loaded = load(blank),
+    gaps = loaded.graph.nodes.filter((n) => n.position === undefined).length;
+  assert.equal(gaps, 1);
+  const repaired = applyGraphPositions(blank, loaded.graph, layoutGraph(loaded.graph), {
+    onlyMissing: true,
+  });
+  assert.equal(repaired.changed, gaps);
+  assert.deepEqual(repaired.document.nodes[1], blank.nodes[1]);
+  assert.ok(Number.isFinite(repaired.document.nodes[0].position.x));
 });
 
 test('hue, shape and rhythm are allocated once, in a fixed order, and never cycled', () => {
