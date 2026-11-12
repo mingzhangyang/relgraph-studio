@@ -9,12 +9,21 @@ export const VIDEO_THEMES = Object.freeze({
   dark: Object.freeze({
     name: 'dark',
     bg: ['#101b2a', '#152638', '#111d2d'],
-    warm: 'rgba(150,112,76,.16)',
+    warm: 'rgba(150,112,76,.14)',
     warmEnd: 'rgba(17,29,45,0)',
-    hatch: 'rgba(226,218,191,.035)',
+    grid: 'rgba(226,218,191,.085)',
     fallbackNode: '#8aaeb1',
-    groupStroke: '40',
-    groupLabel: 'b0',
+    // Categorical tones, validated as a set for this surface (lightness band,
+    // chroma floor, adjacent colour-vision separation, 3:1 contrast). Shape,
+    // dash, direct labels and the legend carry identity alongside the hue.
+    tones: ['#5593d2', '#dd6a4a', '#35a583', '#b8881a', '#d2668f', '#69a343', '#9480dc', '#c47f4c'],
+    // How much of a node's colour is mixed into its body.
+    nodeTint: 0.3,
+    hullFill: '1c',
+    groupStroke: '70',
+    groupLabel: 'e6',
+    legendPlate: '#111d2dcc',
+    legendText: '#aebdc3',
     edge: { highlight: '#f0c99b', physical: '#8aaab5', special: '#d3b783', plain: '#9ebac0' },
     nodeFill: '#14212f',
     labelHalo: '#0f1a27',
@@ -40,12 +49,17 @@ export const VIDEO_THEMES = Object.freeze({
   light: Object.freeze({
     name: 'light',
     bg: ['#f8f4ec', '#f3ede1', '#eee6d6'],
-    warm: 'rgba(214,170,112,.22)',
+    warm: 'rgba(222,184,130,.17)',
     warmEnd: 'rgba(243,237,225,0)',
-    hatch: 'rgba(120,98,66,.05)',
+    grid: 'rgba(120,98,66,.13)',
     fallbackNode: '#5f8a8f',
-    groupStroke: '60',
-    groupLabel: 'e0',
+    tones: ['#2f6fb0', '#d2553a', '#23906c', '#b87d0c', '#c4577f', '#4d8a2c', '#7a5fc0', '#a8643c'],
+    nodeTint: 0.24,
+    hullFill: '14',
+    groupStroke: '78',
+    groupLabel: 'f0',
+    legendPlate: '#f6f1e6d9',
+    legendText: '#5c6973',
     edge: { highlight: '#b5722c', physical: '#5d8696', special: '#a57e3c', plain: '#8197a0' },
     nodeFill: '#fffdf8',
     labelHalo: '#f8f3ea',
@@ -83,3 +97,31 @@ export function edgePaint(theme: VideoTheme, stroke: EdgeStroke): string {
   if (stroke === 'regulatory') return theme.edge.special;
   return theme.edge.plain;
 }
+
+const channels = (hex: string): [number, number, number] => [
+  parseInt(hex.slice(1, 3), 16),
+  parseInt(hex.slice(3, 5), 16),
+  parseInt(hex.slice(5, 7), 16),
+];
+/** Opaque mix of two #RRGGBB colours; `amount` is the share of `a`. */
+export function mixHex(a: string, b: string, amount: number): string {
+  const from = channels(a),
+    to = channels(b),
+    t = Math.min(1, Math.max(0, amount));
+  return (
+    '#' +
+    from
+      .map((value, i) =>
+        Math.round(value * t + to[i] * (1 - t))
+          .toString(16)
+          .padStart(2, '0'),
+      )
+      .join('')
+  );
+}
+
+/** A categorical tone of this palette, or undefined beyond its fixed slots. */
+export const toneOf = (theme: VideoTheme, tone: number | undefined): string | undefined =>
+  tone !== undefined && Number.isInteger(tone) && tone >= 0 && tone < theme.tones.length
+    ? theme.tones[tone]
+    : undefined;

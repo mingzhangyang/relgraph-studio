@@ -22,10 +22,16 @@ export function nodeRadius(
   const custom = nodeAppearance(config, { ...node, id: node.id ?? '', label: '' });
   if (custom.size !== undefined) return custom.size * spec.typeScale;
   const importance = node.importance ?? 0;
+  // A real scale: principals are visibly larger than supporting nodes, so
+  // hierarchy reads from across the room. Unrated nodes use the base size.
   const base =
-    nodeStyleFor(style, node.kind).baseRadius ?? (importance >= 5 ? 16 : importance >= 3 ? 13 : 11);
-  return Math.min(19, Math.max(8, base * Math.sqrt(cameraScale))) * spec.typeScale;
+    nodeStyleFor(style, node.kind).baseRadius ??
+    (importance >= 5 ? 20 : importance >= 4 ? 16.5 : importance >= 3 ? 13.5 : 11);
+  return Math.min(26, Math.max(8, base * Math.sqrt(cameraScale))) * spec.typeScale;
 }
+
+/** Ring width, in 720p reference pixels, of a node without an authored border. */
+export const DEFAULT_BORDER_WIDTH = 2;
 
 export interface GlyphGeometry {
   radius: number;
@@ -50,13 +56,34 @@ export function glyphGeometry(
   const shape = custom.shape ?? nodeStyleFor(style, node.kind).shape;
   const unit = spec.typeScale;
   const revealScale = revealProgress < 1 ? 0.82 + 0.18 * revealProgress : 1;
+  // Half extents chosen so every shape carries about the optical weight of
+  // the circle: a square or hexagon of the same radius would look larger.
+  const round = radius + 3 * unit;
+  const [halfWidth, halfHeight, cornerRadius] =
+    shape === 'pill'
+      ? [radius + 4 * unit, radius * 0.75, radius * 0.65]
+      : shape === 'square'
+        ? [round * 0.9, round * 0.9, round * 0.26]
+        : shape === 'hexagon'
+          ? [round * 1.08, round * 1.08 * (Math.sqrt(3) / 2), 0]
+          : [round, round, 0];
   return {
     shape,
     radius: radius * revealScale,
-    halfWidth: (radius + (shape === 'pill' ? 4 : 3) * unit) * revealScale,
-    halfHeight: (shape === 'pill' ? radius * 0.75 : radius + 3 * unit) * revealScale,
-    cornerRadius: (shape === 'pill' ? radius * 0.65 : 0) * revealScale,
-    halfStroke: ((custom.borderWidth ?? 2) / 2) * unit * revealScale,
+    halfWidth: halfWidth * revealScale,
+    halfHeight: halfHeight * revealScale,
+    cornerRadius: cornerRadius * revealScale,
+    halfStroke: ((custom.borderWidth ?? DEFAULT_BORDER_WIDTH) / 2) * unit * revealScale,
+  };
+}
+
+/** A flat-topped hexagon's slanted edge: unit normal and distance from the centre. */
+function hexagonEdge(g: GlyphGeometry): { nx: number; ny: number; distance: number } {
+  const length = Math.hypot(g.halfHeight, g.halfWidth / 2);
+  return {
+    nx: g.halfHeight / length,
+    ny: g.halfWidth / 2 / length,
+    distance: (g.halfHeight * g.halfWidth) / length,
   };
 }
 
@@ -64,7 +91,9 @@ function boundsFor(point: NodePoint, g: GlyphGeometry): Rect {
   // Canvas defaults to miter joins: at a diamond's 90° tip the stroke
   // extends by sqrt(2) times its half-width, not just the half-width.
   const strokeExtent = g.shape === 'diamond' ? Math.SQRT2 * g.halfStroke : g.halfStroke;
-  const width = g.halfWidth + strokeExtent;
+  // A hexagon's side vertices are 120° miters: 1 / sin 60° of the half stroke.
+  const width =
+    g.halfWidth + (g.shape === 'hexagon' ? g.halfStroke / (Math.sqrt(3) / 2) : strokeExtent);
   const height = g.halfHeight + strokeExtent;
   return { x: point.x - width, y: point.y - height, w: 2 * width, h: 2 * height };
 }
@@ -95,7 +124,15 @@ export function nodeGlyphRayDistance(
     const slope = Math.hypot(1 / g.halfWidth, 1 / g.halfHeight);
     return (1 + g.halfStroke * slope) / (ux / g.halfWidth + uy / g.halfHeight);
   }
-  // A pill is a rounded rectangle: straight runs end at the corner centre,
+  if (g.shape === 'hexagon') {
+    // Nearest of the offset top edge and the offset slanted edge.
+    const edge = hexagonEdge(g);
+    const top = uy ? (g.halfHeight + g.halfStroke) / uy : Infinity;
+    const along = ux * edge.nx + uy * edge.ny;
+    const slant = along > 0 ? (edge.distance + g.halfStroke) / along : Infinity;
+    return Math.min(top, slant);
+  }
+  // A pill or square is a rounded rectangle: straight runs end at the corner centre,
   // with its border increasing the corner radius and overall half-extents.
   const cornerX = g.halfWidth - g.cornerRadius;
   const cornerY = g.halfHeight - g.cornerRadius;
@@ -187,6 +224,12 @@ function containsOffset(dx: number, dy: number, g: GlyphGeometry): boolean {
     const slope = Math.hypot(1 / g.halfWidth, 1 / g.halfHeight);
     return dx / g.halfWidth + dy / g.halfHeight < 1 + g.halfStroke * slope;
   }
+  if (g.shape === 'hexagon') {
+    const edge = hexagonEdge(g);
+    return (
+      dy < g.halfHeight + g.halfStroke && dx * edge.nx + dy * edge.ny < edge.distance + g.halfStroke
+    );
+  }
   const qx = dx - (g.halfWidth - g.cornerRadius),
     qy = dy - (g.halfHeight - g.cornerRadius);
   const distance =
@@ -222,7 +265,17 @@ export function nodeOutline(
       ['L', x - g.halfWidth, y],
       ['Z'],
     ];
-  if (g.shape === 'pill')
+  if (g.shape === 'hexagon')
+    return [
+      ['M', x + g.halfWidth, y],
+      ['L', x + g.halfWidth / 2, y + g.halfHeight],
+      ['L', x - g.halfWidth / 2, y + g.halfHeight],
+      ['L', x - g.halfWidth, y],
+      ['L', x - g.halfWidth / 2, y - g.halfHeight],
+      ['L', x + g.halfWidth / 2, y - g.halfHeight],
+      ['Z'],
+    ];
+  if (g.shape === 'pill' || g.shape === 'square')
     return [
       ['RR', x - g.halfWidth, y - g.halfHeight, g.halfWidth * 2, g.halfHeight * 2, g.cornerRadius],
     ];

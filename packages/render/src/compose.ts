@@ -6,6 +6,7 @@ import {
   displayNodeText,
   displayEdgeText,
   edgeStyleFor,
+  nodeStyleFor,
   localize,
   NEUTRAL_STYLE,
 } from '@relgraph/core';
@@ -37,13 +38,23 @@ import {
   nodeGlyphBounds,
   nodeGlyphRayDistance,
   nodeLabelObstacleBounds,
+  DEFAULT_BORDER_WIDTH,
+  type GlyphGeometry,
 } from './node-geometry.js';
 import { RENDER_MESSAGES } from './locale.js';
-import { edgePaint, VIDEO_THEMES, type VideoTheme } from './theme.js';
+import { edgePaint, mixHex, toneOf, VIDEO_THEMES, type VideoTheme } from './theme.js';
 
 type Point = { x: number; y: number };
 type DrawItem = VisualNode | VisualEdge;
-type EdgeLabel = Point & { text: string; alpha: number; font: FontRef; color: string };
+type EdgeLabel = Point & {
+  text: string;
+  alpha: number;
+  font: FontRef;
+  color: string;
+  stroke: string;
+  /** Unit direction the tag is pushed in, by half its own size. */
+  push?: Point;
+};
 
 /** Exact de Casteljau prefix [0,t] of a quadratic Bézier. No raster approximation. */
 export function quadraticPrefix(
@@ -86,6 +97,12 @@ export interface ComposeOptions {
 }
 
 const TAU = Math.PI * 2;
+/** Share of an arrowhead's length, from the tip, where the stroke meets it. */
+const ARROW_NOTCH = 0.72;
+const ease = (t: number): number => {
+  const x = Math.min(1, Math.max(0, t));
+  return x * x * (3 - 2 * x);
+};
 const clamp = (x: number, a: number, b: number): number => Math.min(b, Math.max(a, x));
 const mix = (a: number, b: number, t: number): number => a + (b - a) * t;
 const color = (value: unknown, fallback: string): string =>
@@ -165,6 +182,47 @@ function wrapText(
   return lines;
 }
 
+/**
+ * Smooth outline around a set of circles: the convex hull of points sampled
+ * on every circle, rounded with quadratic segments through its edge midpoints.
+ * One circle gives a disc, two a capsule, more a soft blob that follows them.
+ */
+export function hullOutline(circles: readonly { x: number; y: number; r: number }[]): {
+  d: PathCommand[];
+  points: Point[];
+} {
+  const samples: Point[] = [];
+  for (const c of circles)
+    for (let i = 0; i < 16; i++) {
+      const angle = (i / 16) * TAU;
+      samples.push({ x: c.x + Math.cos(angle) * c.r, y: c.y + Math.sin(angle) * c.r });
+    }
+  samples.sort((a, b) => a.x - b.x || a.y - b.y);
+  const cross = (o: Point, a: Point, b: Point): number =>
+    (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+  const half = (source: Point[]): Point[] => {
+    const chain: Point[] = [];
+    for (const q of source) {
+      while (chain.length >= 2 && cross(chain[chain.length - 2], chain[chain.length - 1], q) <= 0)
+        chain.pop();
+      chain.push(q);
+    }
+    chain.pop();
+    return chain;
+  };
+  const points = [...half(samples), ...half([...samples].reverse())];
+  if (points.length < 3) return { d: [], points: samples };
+  const mid = (a: Point, b: Point): Point => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+  const first = mid(points[points.length - 1], points[0]);
+  const d: PathCommand[] = [['M', first.x, first.y]];
+  points.forEach((q, i) => {
+    const next = mid(q, points[(i + 1) % points.length]);
+    d.push(['Q', q.x, q.y, next.x, next.y]);
+  });
+  d.push(['Z']);
+  return { d, points };
+}
+
 /** A soft radial glow filling an ellipse, as a unit circle under a transform. */
 function ellipseGlow(
   x: number,
@@ -222,9 +280,6 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
   const { title: titleBand, graph: graphArea, caption: captionBand } = spec.safe;
   // Lengths in the 720p design, scaled to this frame.
   const u = (n: number): number => n * ts;
-  // Decorative background positions are proportions of the reference design.
-  const refX = (n: number): number => (n * W) / 1280,
-    refY = (n: number): number => (n * H) / 720;
   const sans = (size: number, weight = 400): FontRef => ({ family: 'sans', size: u(size), weight });
   const serif = (size: number, weight = 400): FontRef => ({
     family: 'serif',
@@ -276,8 +331,12 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
 
   const items: DisplayItem[] = [];
   const graphItems: DisplayItem[] = [];
+  const legendItems: DisplayItem[] = [];
 
-  // Background: diagonal gradient, warm light and a fine hatch.
+  // Background: a quiet gradient, a soft light behind the stage and a fine
+  // dot lattice that gives the graph a ground to sit on.
+  const stageCx = stage.x + stage.w / 2,
+    stageCy = stage.y + stage.h / 2;
   items.push(
     {
       type: 'path',
@@ -300,12 +359,12 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
       d: [['R', 0, 0, W, H]],
       fill: {
         type: 'radial',
-        x0: refX(850),
-        y0: refY(400),
-        r0: refX(15),
-        x1: refX(850),
-        y1: refY(400),
-        r1: refX(700),
+        x0: stageCx,
+        y0: stageCy,
+        r0: u(20),
+        x1: stageCx,
+        y1: stageCy,
+        r1: stage.w * 0.52,
         stops: [
           { offset: 0, color: P.warm },
           { offset: 1, color: P.warmEnd },
@@ -313,53 +372,148 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
       },
     },
   );
-  const hatch: PathCommand[] = [];
-  for (let i = 0; i < 30; i++) {
-    const x = refX(i * 53 - 80);
-    hatch.push(['M', x, 0], ['L', x + refX(230), H]);
-  }
-  items.push({ type: 'path', d: hatch, stroke: P.hatch, width: u(0.6) });
+  const lattice: PathCommand[] = [];
+  const pitch = u(28),
+    dot = u(0.8);
+  for (let row = 0; stage.y + pitch * (row + 0.5) < stage.y + stage.h; row++)
+    for (let column = 0; stage.x + pitch * (column + 0.5) < stage.x + stage.w; column++) {
+      const x = stage.x + pitch * (column + 0.5),
+        y = stage.y + pitch * (row + 0.5);
+      lattice.push(['M', x + dot, y], ['A', x, y, dot, 0, TAU]);
+    }
+  items.push({ type: 'path', d: lattice, fill: P.grid });
 
+  // Everything about a node that edges, hulls and labels need to agree on.
+  const hasFocus = (h: ResolvedHighlight): boolean =>
+    Boolean(h.nodeIds.length || h.edgeIds.length || h.groupId);
+  const drawn = view.nodes.map((node) => {
+    const custom = nodeAppearance(config, node),
+      kindStyle = nodeStyleFor(style, node.kind),
+      group = node.groupId == null ? undefined : groups.get(node.groupId);
+    return {
+      node,
+      custom,
+      p: pointFor(node.id),
+      r: radius(node),
+      geometry: glyphGeometry(node, cam.scale, spec, style, 1, config),
+      // Colour: the node's own, then its group's, then its kind's.
+      c:
+        custom.border ??
+        color(
+          node.color || (group ? (group.color ?? toneOf(P, group.tone)) : undefined),
+          color(kindStyle.color, toneOf(P, kindStyle.tone) ?? P.fallbackNode),
+        ),
+      alpha: attention(node),
+      visibility: nodeProgress(node.id),
+      // Explicitly named in the shot, as opposed to merely not dimmed.
+      focus: mix(
+        previousHighlight.nodeIds.includes(node.id) ? 1 : 0,
+        highlight.nodeIds.includes(node.id) ? 1 : 0,
+        transition,
+      ),
+    };
+  });
+  const drawnById = new Map(drawn.map((entry) => [entry.node.id, entry]));
+  const occupied: Rect[] = [];
+  const nodeLabelBounds = new Map<string, Rect>();
+  for (const { node, p, visibility } of drawn)
+    if (visibility > 0.5) {
+      const obstacle = nodeLabelObstacleBounds(node, p, cam.scale, spec, style, config);
+      nodeLabelBounds.set(node.id, obstacle);
+      occupied.push(obstacle);
+    }
+
+  // Groups: a soft hull that follows its members instead of a fixed ellipse.
+  const focusActive = mix(
+    hasFocus(previousHighlight) ? 1 : 0,
+    hasFocus(highlight) ? 1 : 0,
+    transition,
+  );
   for (const group of view.groups) {
-    const groupNodes = view.nodes.filter((n) => n.groupId === group.id);
-    const members = groupNodes.map((n) => pointFor(n.id));
+    const members = drawn.filter((entry) => entry.node.groupId === group.id);
     if (!members.length) continue;
-    const groupProgress = Math.max(...groupNodes.map((n) => nodeProgress(n.id)));
-    const minX = Math.min(...members.map((p) => p.x)),
-      maxX = Math.max(...members.map((p) => p.x));
-    const minY = Math.min(...members.map((p) => p.y)),
-      maxY = Math.max(...members.map((p) => p.y));
-    const x = (minX + maxX) / 2,
-      y = (minY + maxY) / 2,
-      rx = Math.max(u(95), (maxX - minX) / 2 + u(75)),
-      ry = Math.max(u(72), (maxY - minY) / 2 + u(65)),
-      c = color(group.color, P.fallbackNode);
+    const groupProgress = Math.max(...members.map((entry) => entry.visibility));
+    if (groupProgress <= 0) continue;
+    // A member that is still arriving pulls the hull out as it appears.
+    const settled = members.filter((entry) => entry.visibility >= 1),
+      anchor = settled.length
+        ? {
+            x: settled.reduce((sum, entry) => sum + entry.p.x / settled.length, 0),
+            y: settled.reduce((sum, entry) => sum + entry.p.y / settled.length, 0),
+          }
+        : null;
+    const circles = members.map((entry) => {
+      const grow = anchor ? ease(entry.visibility) : 1;
+      return {
+        x: anchor ? mix(anchor.x, entry.p.x, grow) : entry.p.x,
+        y: anchor ? mix(anchor.y, entry.p.y, grow) : entry.p.y,
+        r:
+          (Math.max(entry.geometry.halfWidth, entry.geometry.halfHeight) + u(26)) *
+          (0.6 + 0.4 * grow),
+      };
+    });
+    const hull = hullOutline(circles),
+      c = color(group.color, toneOf(P, group.tone) ?? P.fallbackNode);
+    const presence = Math.max(...members.map((entry) => entry.alpha)),
+      lit = mix(
+        previousHighlight.groupId === group.id ? 1 : 0,
+        highlight.groupId === group.id ? 1 : 0,
+        transition,
+      );
     const decoration: DisplayItem[] = [
-      ellipseGlow(x, y, rx * 1.35, ry * 1.35, c, 0.11),
+      { type: 'path', d: hull.d, fill: c + P.hullFill },
       {
         type: 'path',
-        d: [['E', x, y, rx, ry, 0, 0, TAU]],
+        d: hull.d,
         stroke: c + P.groupStroke,
-        width: u(1),
-        dash: [u(4), u(9)],
+        width: u(mix(1, 1.6, lit)),
       },
     ];
     const font = sans(13, 500),
       label = fitText(measure, group.label, font, u(180));
-    if (label && groupProgress > 0.5)
+    if (label && groupProgress > 0.5) {
+      const w = measure(label, font) + u(14),
+        h = font.size * 1.5;
+      // The name sits on the outline like a tab, where no member can be.
+      const top = hull.points.reduce((best, q) => (q.y < best.y ? q : best)),
+        bottom = hull.points.reduce((best, q) => (q.y > best.y ? q : best)),
+        left = hull.points.reduce((best, q) => (q.x < best.x ? q : best)),
+        right = hull.points.reduce((best, q) => (q.x > best.x ? q : best));
+      const spots = [top, bottom, left, right].map((q) => ({
+        x: q.x - w / 2,
+        y: q.y - h / 2,
+        w,
+        h,
+      }));
+      const free = (box: Rect): boolean =>
+        inBounds(box) && !occupied.some((o) => rectsIntersect(box, o));
+      const fallback = {
+        ...spots[0],
+        x: clamp(spots[0].x, bounds.left, Math.max(bounds.left, bounds.right - w)),
+        y: clamp(spots[0].y, bounds.top, Math.max(bounds.top, bounds.bottom - h)),
+      };
+      const box = spots.find(free) ?? fallback;
+      occupied.push(box);
       decoration.push({
         type: 'text',
         text: label,
-        x: x - rx * 0.6,
-        y: y - ry * 0.65,
+        x: box.x + w / 2,
+        y: box.y + h / 2,
         font,
         fill: c + P.groupLabel,
+        align: 'center',
+        baseline: 'middle',
+        halo: { paint: P.labelHalo, width: u(6) },
         ...(groupProgress < 1 ? { alpha: (groupProgress - 0.5) * 2 } : {}),
       });
-    // The fully visible display list keeps its former flat item structure.
-    if (groupProgress === 1) graphItems.push(...decoration);
-    else if (groupProgress > 0)
-      graphItems.push({ type: 'group', alpha: groupProgress, items: decoration });
+    }
+    // Hulls recede with their members when another part of the graph is in focus.
+    const hullAlpha = groupProgress * mix(1, Math.max(lit, 0.35 + 0.65 * presence), focusActive);
+    graphItems.push(
+      hullAlpha >= 1
+        ? { type: 'group', items: decoration }
+        : { type: 'group', alpha: hullAlpha, items: decoration },
+    );
   }
 
   // Parallel and reciprocal links get stable, symmetric curve offsets.
@@ -371,111 +525,87 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
     pairs.set(key, siblings);
   }
   for (const siblings of pairs.values()) siblings.sort();
+  // Where a node's neighbours lie, so loops and labels can face away from them.
+  const pull = new Map<string, Point>(view.nodes.map((n) => [n.id, { x: 0, y: 0 }]));
+  const spokeAngles = new Map<string, number[]>();
+  for (const edge of view.edges) {
+    const a = points.get(edge.source),
+      b = points.get(edge.target);
+    if (!a || !b || edge.source === edge.target) continue;
+    const d = Math.hypot(b.x - a.x, b.y - a.y);
+    if (!(d > 0)) continue;
+    spokeAngles.set(edge.source, [
+      ...(spokeAngles.get(edge.source) ?? []),
+      Math.atan2(b.y - a.y, b.x - a.x),
+    ]);
+    spokeAngles.set(edge.target, [
+      ...(spokeAngles.get(edge.target) ?? []),
+      Math.atan2(a.y - b.y, a.x - b.x),
+    ]);
+    const pa = pull.get(edge.source),
+      pb = pull.get(edge.target);
+    if (pa) {
+      pa.x += (b.x - a.x) / d;
+      pa.y += (b.y - a.y) / d;
+    }
+    if (pb) {
+      pb.x -= (b.x - a.x) / d;
+      pb.y -= (b.y - a.y) / d;
+    }
+  }
+  const degree = new Map<string, number>();
+  for (const edge of view.edges)
+    for (const id of edge.source === edge.target ? [edge.source] : [edge.source, edge.target])
+      degree.set(id, (degree.get(id) ?? 0) + 1);
   const edgeLabels: EdgeLabel[] = [],
     edgeObstacles: Rect[] = [];
+  const quad = (a: Point, c: Point, b: Point, t: number): Point => {
+    const v = 1 - t;
+    return {
+      x: v * v * a.x + 2 * v * t * c.x + t * t * b.x,
+      y: v * v * a.y + 2 * v * t * c.y + t * t * b.y,
+    };
+  };
+  /** A swept-back arrowhead whose notch is where the stroke ends. */
+  const arrowhead = (tip: Point, dir: Point, length: number, fill: Paint): DisplayItem => {
+    const half = length * 0.4,
+      back = { x: tip.x - dir.x * length, y: tip.y - dir.y * length };
+    return {
+      type: 'path',
+      d: [
+        ['M', tip.x, tip.y],
+        ['L', back.x - dir.y * half, back.y + dir.x * half],
+        ['L', tip.x - dir.x * length * ARROW_NOTCH, tip.y - dir.y * length * ARROW_NOTCH],
+        ['L', back.x + dir.y * half, back.y - dir.x * half],
+        ['Z'],
+      ],
+      fill,
+    };
+  };
   for (const edge of view.edges) {
     const custom = edgeAppearance(config, edge);
     const visibility = edgeProgress(edge.id);
-    const a = points.get(edge.source),
-      b = points.get(edge.target),
-      source = view.nodes.find((n) => n.id === edge.source),
-      target = view.nodes.find((n) => n.id === edge.target);
-    if (!a || !b || !source || !target) continue;
-    const dx = b.x - a.x,
-      dy = b.y - a.y,
-      len = Math.hypot(dx, dy);
-    if (len < u(1)) continue;
-    const ux = dx / len,
-      uy = dy / len;
+    const from = drawnById.get(edge.source),
+      to = drawnById.get(edge.target);
+    if (!from || !to) continue;
+    const a = from.p,
+      b = to.p;
     const edgeStyle = edgeStyleFor(style, edge.kind),
       highlighted = highlight.edgeIds.includes(edge.id),
       active = attention(edge),
-      stroke = custom.color ?? (highlighted ? P.edge.highlight : edgePaint(P, edgeStyle.stroke)),
-      width = u(custom.width ?? (highlighted ? 2.6 : 1.4));
+      kindColour = color(edgeStyle.color, toneOf(P, edgeStyle.tone) ?? ''),
+      stroke =
+        custom.color ??
+        (kindColour || (highlighted ? P.edge.highlight : edgePaint(P, edgeStyle.stroke))),
+      // Strength is drawn as weight; a highlighted relation gains one more step.
+      width = u(
+        custom.width ??
+          (edge.strength === undefined ? 1.5 : 1 + 0.28 * clamp(edge.strength, 1, 5)) +
+            (highlighted ? 1 : 0),
+      );
     const head = view.domain === 'biology' ? edgeStyle.head : (custom.head ?? edgeStyle.head);
-    const sourceBoundary = nodeGlyphRayDistance(
-      source,
-      { x: ux, y: uy },
-      cam.scale,
-      spec,
-      style,
-      config,
-    );
-    const targetBoundary = nodeGlyphRayDistance(
-      target,
-      { x: -ux, y: -uy },
-      cam.scale,
-      spec,
-      style,
-      config,
-    );
-    const originalTarget = radius(target) + u(5);
-    const targetAppearance = nodeAppearance(config, target);
-    // Preserve the existing film attachment where no geometry is authored.
-    // Otherwise reserve the full role-marker footprint beyond the stroked
-    // shape, not just the centre of the endpoint. This includes curved bars
-    // whose tangent is rotated and outlined circles with custom line widths.
-    const editedGeometry =
-      targetBoundary > originalTarget ||
-      targetAppearance.size !== undefined ||
-      targetAppearance.shape !== undefined ||
-      targetAppearance.borderWidth !== undefined ||
-      custom.width !== undefined ||
-      custom.head !== undefined;
-    const markerReach = edge.directed
-      ? head === 'hollow-circle'
-        ? u(4) + width / 2
-        : head === 'bar'
-          ? u(5) + width / 2
-          : head === 'arrow'
-            ? u(8)
-            : width / 2
-      : width / 2;
-    const sourceAppearance = nodeAppearance(config, source);
-    const editedSource =
-      sourceAppearance.size !== undefined ||
-      sourceAppearance.shape !== undefined ||
-      sourceAppearance.borderWidth !== undefined ||
-      custom.width !== undefined;
-    const ra = editedSource
-      ? Math.max(radius(source) + u(4), sourceBoundary + width / 2 + u(1))
-      : radius(source) + u(4);
-    const rb = editedGeometry
-      ? Math.max(originalTarget, targetBoundary + markerReach + u(1))
-      : originalTarget;
-    const start = { x: a.x + ux * ra, y: a.y + uy * ra },
-      end = { x: b.x - ux * rb, y: b.y - uy * rb };
-    const key = [edge.source, edge.target].sort().join('\0');
-    const siblings = pairs.get(key);
-    if (!siblings) throw new Error('Missing edge pair');
-    const order = siblings.indexOf(edge.id) - (siblings.length - 1) / 2;
-    const sign = edge.source < edge.target ? 1 : -1,
-      offset = order * u(30) * sign + u(custom.curve ?? 0);
-    const control = {
-      x: (start.x + end.x) / 2 - uy * offset,
-      y: (start.y + end.y) / 2 + ux * offset,
-    };
-    if (visibility > 0.5) {
-      const samples = Array.from({ length: 33 }, (_, i) => {
-        const t = (i / 32) * visibility,
-          v = 1 - t;
-        return {
-          x: v * v * start.x + 2 * v * t * control.x + t * t * end.x,
-          y: v * v * start.y + 2 * v * t * control.y + t * t * end.y,
-        };
-      });
-      selection.push({ kind: 'edge', id: edge.id, points: samples });
-    }
-    // A label appearing before halfway would disturb existing label layout.
-    // Beyond halfway, only the drawn prefix participates in avoidance.
-    if (visibility > 0.5) {
-      for (let t = 0.1; t < visibility; t += 0.1) {
-        const v = 1 - t,
-          x = v * v * start.x + 2 * v * t * control.x + t * t * end.x,
-          y = v * v * start.y + 2 * v * t * control.y + t * t * end.y;
-        edgeObstacles.push({ x: x - u(4), y: y - u(4), w: u(8), h: u(8) });
-      }
-    }
+    const arrow = Boolean(edge.directed) && head === 'arrow',
+      arrowLength = u(8) + width * 1.3;
     const dash =
       custom.dash === undefined
         ? edgeStyle.dash
@@ -484,55 +614,233 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
           : custom.dash === 'dotted'
             ? [2, 4]
             : [];
-    const parts: DisplayItem[] = [
-      {
+    const parts: DisplayItem[] = [];
+    let labelAt: Point, labelPush: Point | undefined;
+    if (edge.source === edge.target) {
+      // A relation of a node with itself: a loop leaving on the side its
+      // neighbours leave free.
+      // It leaves through the widest gap between the node's other relations.
+      const spokes = (spokeAngles.get(edge.source) ?? []).slice().sort((m, n) => m - n);
+      let outAngle = -0.99;
+      if (spokes.length) {
+        let widest = -1;
+        spokes.forEach((angle, i) => {
+          const next = i + 1 < spokes.length ? spokes[i + 1] : spokes[0] + TAU,
+            gap = next - angle;
+          if (gap > widest) {
+            widest = gap;
+            outAngle = angle + gap / 2;
+          }
+        });
+      }
+      const out = { x: Math.cos(outAngle), y: Math.sin(outAngle) };
+      const loops = view.edges
+        .filter((e) => e.source === edge.source && e.target === edge.source)
+        .map((e) => e.id)
+        .sort();
+      const loopRadius = Math.max(u(11), from.r * 0.8) * (1 + 0.45 * loops.indexOf(edge.id));
+      const rim = nodeGlyphRayDistance(from.node, out, cam.scale, spec, style, config) + u(2.5),
+        distance = rim + loopRadius * 0.55,
+        centre = { x: a.x + out.x * distance, y: a.y + out.y * distance };
+      // Hide the part of the loop that would pass under the glyph.
+      const hidden = Math.acos(
+        clamp(
+          (distance * distance + loopRadius * loopRadius - rim * rim) / (2 * distance * loopRadius),
+          -1,
+          1,
+        ),
+      );
+      // Angles are not lengths: keep them identical at every output size.
+      const steady = (angle: number): number => Math.round(angle * 1e9) / 1e9;
+      const back = Math.atan2(-out.y, -out.x),
+        first = steady(back + hidden),
+        sweep = TAU - 2 * hidden - (arrow ? (arrowLength * ARROW_NOTCH) / loopRadius : 0);
+      if (!(sweep > 0.3)) continue;
+      const last = steady(first + sweep * visibility),
+        on = (angle: number): Point => ({
+          x: centre.x + Math.cos(angle) * loopRadius,
+          y: centre.y + Math.sin(angle) * loopRadius,
+        });
+      const begin = on(first);
+      parts.push({
+        type: 'path',
+        d: [
+          ['M', begin.x, begin.y],
+          ['A', centre.x, centre.y, loopRadius, first, last],
+        ],
+        stroke,
+        width,
+        ...(dash?.length ? { dash: dash.map(u) } : {}),
+      });
+      if (arrow && visibility > 0) {
+        const tipBase = on(last),
+          dir = { x: -Math.sin(last), y: Math.cos(last) };
+        parts.push(
+          arrowhead(
+            {
+              x: tipBase.x + dir.x * arrowLength * ARROW_NOTCH,
+              y: tipBase.y + dir.y * arrowLength * ARROW_NOTCH,
+            },
+            dir,
+            arrowLength,
+            stroke,
+          ),
+        );
+      }
+      if (visibility > 0.5) {
+        const samples = Array.from({ length: 17 }, (_, i) =>
+          on(first + (sweep * visibility * i) / 16),
+        );
+        selection.push({ kind: 'edge', id: edge.id, points: samples });
+        // Node labels keep clear of the whole loop, not just of a line.
+        for (const q of [...samples, centre])
+          edgeObstacles.push({ x: q.x - u(4), y: q.y - u(4), w: u(8), h: u(8) });
+      }
+      labelAt = {
+        x: centre.x + out.x * (loopRadius + u(4)),
+        y: centre.y + out.y * (loopRadius + u(4)),
+      };
+      labelPush = out;
+    } else {
+      const dx = b.x - a.x,
+        dy = b.y - a.y,
+        len = Math.hypot(dx, dy);
+      if (len < u(1)) continue;
+      const ux = dx / len,
+        uy = dy / len;
+      const sourceRim = nodeGlyphRayDistance(
+          from.node,
+          { x: ux, y: uy },
+          cam.scale,
+          spec,
+          style,
+          config,
+        ),
+        targetRim = nodeGlyphRayDistance(
+          to.node,
+          { x: -ux, y: -uy },
+          cam.scale,
+          spec,
+          style,
+          config,
+        );
+      // The stroke stops short of both glyphs; a role mark gets its full
+      // footprint beyond the stroked outline, an arrowhead touches down
+      // just outside it.
+      const ra = sourceRim + width / 2 + u(2.5);
+      const reach = !edge.directed
+        ? width / 2 + u(2.5)
+        : head === 'hollow-circle'
+          ? u(4) + width / 2 + u(1.5)
+          : head === 'bar'
+            ? u(5) + width / 2 + u(1.5)
+            : head === 'arrow'
+              ? u(3) + arrowLength * ARROW_NOTCH
+              : width / 2 + u(2.5);
+      const rb = targetRim + reach;
+      // Glyphs that touch or overlap leave no room for a readable stroke.
+      if (len <= ra + rb + u(1)) continue;
+      const start = { x: a.x + ux * ra, y: a.y + uy * ra },
+        end = { x: b.x - ux * rb, y: b.y - uy * rb };
+      const key = [edge.source, edge.target].sort().join('\0');
+      const siblings = pairs.get(key);
+      if (!siblings) throw new Error('Missing edge pair');
+      const order = siblings.indexOf(edge.id) - (siblings.length - 1) / 2;
+      const sign = edge.source < edge.target ? 1 : -1;
+      // A lone relation bows slightly. All relations of a hub turn the same
+      // way around it, so its spokes read as one gesture instead of a pile
+      // of rulers.
+      const hubFirst =
+        (degree.get(edge.source) ?? 0) - (degree.get(edge.target) ?? 0) ||
+        (edge.source < edge.target ? 1 : -1);
+      const bow =
+        siblings.length === 1 && custom.curve === undefined
+          ? (hubFirst > 0 ? 1 : -1) *
+            Math.min(u(12), (len - ra - rb) * 0.06) *
+            (style.curvature ?? 0)
+          : 0;
+      const offset = order * u(30) * sign + u(custom.curve ?? 0) + bow;
+      const control = {
+        x: (start.x + end.x) / 2 - uy * offset,
+        y: (start.y + end.y) / 2 + ux * offset,
+      };
+      if (visibility > 0.5) {
+        const samples = Array.from({ length: 33 }, (_, i) =>
+          quad(start, control, end, (i / 32) * visibility),
+        );
+        selection.push({ kind: 'edge', id: edge.id, points: samples });
+        // A label appearing before halfway would disturb existing label layout.
+        // Beyond halfway, only the drawn prefix participates in avoidance.
+        for (let t = 0.1; t < visibility; t += 0.1) {
+          const q = quad(start, control, end, t);
+          edgeObstacles.push({ x: q.x - u(4), y: q.y - u(4), w: u(8), h: u(8) });
+        }
+      }
+      parts.push({
         type: 'path',
         d: quadraticPrefix(start, control, end, visibility),
         stroke,
         width,
         ...(dash?.length ? { dash: dash.map(u) } : {}),
-      },
-    ];
-    if (edge.directed && visibility >= 1) {
-      const angle = Math.atan2(end.y - control.y, end.x - control.x),
-        size = u(8),
-        bar = u(5);
-      if (head === 'hollow-circle')
-        parts.push({
-          type: 'path',
-          d: [['A', end.x, end.y, u(4), 0, TAU]],
-          fill: P.nodeFill,
-          stroke,
-          width,
-        });
-      else if (head === 'bar')
-        parts.push({
-          type: 'path',
-          d: [
-            ['M', end.x - bar * Math.sin(angle), end.y + bar * Math.cos(angle)],
-            ['L', end.x + bar * Math.sin(angle), end.y - bar * Math.cos(angle)],
-          ],
-          stroke,
-          width,
-        });
-      else if (head === 'arrow')
-        parts.push({
-          type: 'path',
-          d: [
-            ['M', end.x, end.y],
-            ['L', end.x - size * Math.cos(angle - 0.45), end.y - size * Math.sin(angle - 0.45)],
-            ['L', end.x - size * Math.cos(angle + 0.45), end.y - size * Math.sin(angle + 0.45)],
-            ['Z'],
-          ],
-          fill: stroke,
-        });
+      });
+      if (edge.directed && visibility > 0) {
+        const t = clamp(visibility, 0, 1),
+          tipBase = quad(start, control, end, t);
+        // Tangent of the drawn prefix at its end; the chord when degenerate.
+        const tx = mix(control.x - start.x, end.x - control.x, t),
+          ty = mix(control.y - start.y, end.y - control.y, t),
+          tl = Math.hypot(tx, ty);
+        const dir = tl > 0 ? { x: tx / tl, y: ty / tl } : { x: ux, y: uy };
+        if (head === 'arrow')
+          // The head rides the tip of the line while the relation is drawn.
+          parts.push(
+            arrowhead(
+              {
+                x: tipBase.x + dir.x * arrowLength * ARROW_NOTCH,
+                y: tipBase.y + dir.y * arrowLength * ARROW_NOTCH,
+              },
+              dir,
+              arrowLength,
+              stroke,
+            ),
+          );
+        else if (visibility >= 1 && head === 'hollow-circle')
+          parts.push({
+            type: 'path',
+            d: [['A', end.x, end.y, u(4), 0, TAU]],
+            fill: P.nodeFill,
+            stroke,
+            width,
+          });
+        else if (visibility >= 1 && head === 'bar') {
+          const bar = u(5);
+          parts.push({
+            type: 'path',
+            d: [
+              ['M', end.x - bar * dir.y, end.y + bar * dir.x],
+              ['L', end.x + bar * dir.y, end.y - bar * dir.x],
+            ],
+            stroke,
+            width,
+          });
+        }
+      }
+      labelAt = quad(start, control, end, 0.5);
     }
-    if (visibility > 0)
+    if (visibility > 0) {
+      // A highlighted relation glows softly in its own colour.
+      if (highlighted && parts[0].type === 'path')
+        graphItems.push({
+          type: 'group',
+          alpha: active * 0.16,
+          items: [{ type: 'path', d: parts[0].d, stroke, width: width * 3.4 }],
+        });
       graphItems.push({
         type: 'group',
-        alpha: active * (highlighted ? 0.95 : 0.68),
+        alpha: active * (highlighted ? 0.98 : 0.66),
         items: parts,
       });
+    }
     const caption = edgeStyle.caption ? localize(edgeStyle.caption, locale) : '';
     const label = caption
       ? captionWithLabel(caption, edgeLabel(edge))
@@ -542,41 +850,24 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
     if (label && custom.showLabel !== false && visibility > 0.5)
       edgeLabels.push({
         text: label,
-        font: sans(custom.fontSize ?? 12, custom.fontWeight ?? 400),
+        font: sans(custom.fontSize ?? 12, custom.fontWeight ?? 500),
         color: custom.textColor ?? P.edgeLabelText,
-        x: 0.25 * start.x + 0.5 * control.x + 0.25 * end.x,
-        y: 0.25 * start.y + 0.5 * control.y + 0.25 * end.y,
+        stroke,
+        x: labelAt.x,
+        y: labelAt.y,
+        ...(labelPush ? { push: labelPush } : {}),
         alpha: active * Math.min(1, (visibility - 0.5) * 2),
       });
   }
 
-  const occupied: Rect[] = [];
-  const nodeLabelBounds = new Map<string, Rect>();
-  for (const node of view.nodes) {
-    const custom = nodeAppearance(config, node);
-    const visibility = nodeProgress(node.id);
-    const p = pointFor(node.id),
-      r = radius(node),
-      shape = glyphGeometry(node, cam.scale, spec, style, 1, config).shape,
-      c =
-        custom.border ??
-        color(
-          node.color || (node.groupId == null ? undefined : groups.get(node.groupId)?.color),
-          P.fallbackNode,
-        ),
-      alpha = attention(node);
+  for (const { node, custom, p, r, geometry, c, alpha, visibility, focus } of drawn) {
     if (visibility > 0.5)
       selection.push({
         kind: 'node',
         id: node.id,
         box: nodeGlyphBounds(node, p, cam.scale, spec, style, visibility, config),
       });
-    if (visibility > 0.5) {
-      const obstacle = nodeLabelObstacleBounds(node, p, cam.scale, spec, style, config);
-      nodeLabelBounds.set(node.id, obstacle);
-      occupied.push(obstacle);
-    }
-    const geometry = glyphGeometry(node, cam.scale, spec, style, 1, config);
+    if (visibility <= 0) continue;
     const outline = nodeOutline(p, geometry);
     const asset =
       custom.image && config?.assets && Object.hasOwn(config.assets, custom.image)
@@ -588,76 +879,203 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
       w: geometry.halfWidth * 2,
       h: geometry.halfHeight * 2,
     };
-    if (visibility > 0) {
-      const scale = 0.82 + 0.18 * visibility;
-      graphItems.push({
-        type: 'group',
-        alpha: alpha * visibility,
-        ...(visibility < 1
-          ? {
-              transform: [scale, 0, 0, scale, p.x * (1 - scale), p.y * (1 - scale)] as [
-                number,
-                number,
-                number,
-                number,
-                number,
-                number,
-              ],
-            }
-          : {}),
-        items: [
-          ...(alpha > 0.8 ? [ellipseGlow(p.x, p.y, r * 1.8, r * 1.8, c, 0.1)] : []),
-          {
-            type: 'path',
-            d: outline,
-            fill: custom.fill ?? P.nodeFill,
-            ...(asset && custom.image ? {} : { stroke: c, width: u(custom.borderWidth ?? 2) }),
-          },
-          ...(asset && custom.image
-            ? [
-                composeNodeImage(
-                  custom.image,
-                  asset,
-                  imageBox,
-                  outline,
-                  custom.imageFit ?? 'cover',
-                ),
-                { type: 'path' as const, d: outline, stroke: c, width: u(custom.borderWidth ?? 2) },
-              ]
-            : [
-                {
-                  type: 'path' as const,
-                  d: [
-                    ['A', p.x, p.y, shape === 'diamond' ? u(3) : Math.max(u(3), r * 0.32), 0, TAU],
-                  ] as PathCommand[],
-                  fill: c,
-                },
-              ]),
-        ],
+    const borderWidth = u(custom.borderWidth ?? DEFAULT_BORDER_WIDTH);
+    // The body carries a tint of the node's colour over the paper, so colour
+    // reads as area and not only as a thin ring.
+    const body = custom.fill ?? mixHex(c, P.nodeFill, P.nodeTint);
+    const extent = Math.max(geometry.halfWidth, geometry.halfHeight);
+    const glyph: DisplayItem[] = [],
+      aura: DisplayItem[] = [];
+    // Light gathers behind the nodes a shot names, and behind the principals.
+    const glow = Math.max(focus, (node.importance ?? 0) >= 5 && alpha > 0.8 ? 0.55 : 0);
+    if (glow > 0) aura.push(ellipseGlow(p.x, p.y, extent * 2.3, extent * 2.3, c, 0.2 * glow));
+    if (focus > 0)
+      aura.push({
+        type: 'path',
+        d: [['A', p.x, p.y, extent + borderWidth / 2 + u(4.5), 0, TAU]],
+        stroke: c,
+        width: u(1.2),
+        alpha: 0.55 * focus,
       });
+    if (asset && custom.image)
+      glyph.push(
+        { type: 'path', d: outline, fill: custom.fill ?? P.nodeFill },
+        composeNodeImage(custom.image, asset, imageBox, outline, custom.imageFit ?? 'cover'),
+        { type: 'path', d: outline, stroke: c, width: borderWidth },
+      );
+    else
+      glyph.push(
+        { type: 'path', d: outline, fill: body, stroke: c, width: borderWidth },
+        {
+          type: 'path',
+          d: [
+            ['A', p.x, p.y, geometry.shape === 'diamond' ? u(3) : Math.max(u(3), r * 0.34), 0, TAU],
+          ],
+          fill: c,
+        },
+      );
+    const scale = 0.82 + 0.18 * visibility;
+    const frame = {
+      type: 'group' as const,
+      alpha: alpha * visibility,
+      ...(visibility < 1
+        ? {
+            transform: [scale, 0, 0, scale, p.x * (1 - scale), p.y * (1 - scale)] as [
+              number,
+              number,
+              number,
+              number,
+              number,
+              number,
+            ],
+          }
+        : {}),
+    };
+    // The aura is its own layer so the glyph stays one fill and one outline.
+    if (aura.length) graphItems.push({ ...frame, items: aura });
+    graphItems.push({ ...frame, items: glyph });
+  }
+
+  // The legend names what colour, rhythm and shape mean, for the kinds that
+  // are on screen now. Kinds captioned on their own edges need no entry.
+  const legendEntries = style.legend.flatMap((entry) => {
+    const isNode = entry.of === 'node';
+    if (!isNode && edgeStyleFor(style, entry.kind).caption) return [];
+    const progress = isNode
+      ? Math.max(
+          0,
+          ...view.nodes.filter((n) => n.kind === entry.kind).map((n) => nodeProgress(n.id)),
+        )
+      : Math.max(
+          0,
+          ...view.edges.filter((e) => e.kind === entry.kind).map((e) => edgeProgress(e.id)),
+        );
+    return progress > 0.5 ? [{ ...entry, isNode, alpha: Math.min(1, (progress - 0.5) * 2) }] : [];
+  });
+  if (legendEntries.length > 1) {
+    const font = sans(12, 400),
+      swatch = u(20),
+      gap = u(6),
+      between = u(16),
+      padX = u(10),
+      h = u(24);
+    const x0 = titleBand.x + u(2),
+      y0 = stage.y + stage.h - h - u(8),
+      limit = stage.x + stage.w - u(12);
+    const row: DisplayItem[] = [];
+    let x = x0 + padX;
+    for (const entry of legendEntries) {
+      const text = fitText(measure, localize(entry.label, locale), font, u(120)),
+        w = (entry.isNode ? u(12) : swatch) + gap + measure(text, font);
+      if (x + w + padX > limit) break;
+      const cy = y0 + h / 2;
+      if (entry.isNode) {
+        const kindStyle = nodeStyleFor(style, entry.kind),
+          c = color(kindStyle.color, toneOf(P, kindStyle.tone) ?? P.legendText),
+          half = u(5.2);
+        const g: GlyphGeometry =
+          kindStyle.shape === 'pill'
+            ? {
+                shape: 'pill',
+                radius: half,
+                halfWidth: half * 1.25,
+                halfHeight: half * 0.78,
+                cornerRadius: half * 0.62,
+                halfStroke: 0,
+              }
+            : kindStyle.shape === 'square'
+              ? {
+                  shape: 'square',
+                  radius: half,
+                  halfWidth: half * 0.9,
+                  halfHeight: half * 0.9,
+                  cornerRadius: half * 0.26,
+                  halfStroke: 0,
+                }
+              : kindStyle.shape === 'hexagon'
+                ? {
+                    shape: 'hexagon',
+                    radius: half,
+                    halfWidth: half * 1.08,
+                    halfHeight: half * 1.08 * (Math.sqrt(3) / 2),
+                    cornerRadius: 0,
+                    halfStroke: 0,
+                  }
+                : {
+                    shape: kindStyle.shape,
+                    radius: half,
+                    halfWidth: half,
+                    halfHeight: half,
+                    cornerRadius: 0,
+                    halfStroke: 0,
+                  };
+        row.push({
+          type: 'path',
+          d: nodeOutline({ x: x + u(6), y: cy }, g),
+          fill: mixHex(color(c, P.fallbackNode), P.nodeFill, P.nodeTint),
+          stroke: c,
+          width: u(1.5),
+          alpha: entry.alpha,
+        });
+      } else {
+        const edgeStyle = edgeStyleFor(style, entry.kind),
+          c = color(edgeStyle.color, toneOf(P, edgeStyle.tone) ?? edgePaint(P, edgeStyle.stroke));
+        row.push({
+          type: 'path',
+          d: [
+            ['M', x, cy],
+            ['L', x + swatch, cy],
+          ],
+          stroke: c,
+          width: u(2),
+          ...(edgeStyle.dash?.length ? { dash: edgeStyle.dash.map(u) } : {}),
+          alpha: entry.alpha,
+        });
+      }
+      row.push({
+        type: 'text',
+        text,
+        x: x + (entry.isNode ? u(12) : swatch) + gap,
+        y: cy + u(0.5),
+        font,
+        fill: P.legendText,
+        baseline: 'middle',
+        alpha: entry.alpha,
+      });
+      x += w + between;
+    }
+    if (row.length) {
+      const plate = { x: x0, y: y0, w: x - between + padX - x0, h };
+      occupied.push(plate);
+      legendItems.push(
+        {
+          type: 'path',
+          d: [['RR', plate.x, plate.y, plate.w, plate.h, h / 2]],
+          fill: P.legendPlate,
+        },
+        ...row,
+      );
     }
   }
 
   // Deterministic screen-space label placement: prioritize selected and major nodes.
-  const nodeLabelObstacles = [...occupied, ...edgeObstacles];
-  const sorted = view.nodes
-    .filter((node) => nodeProgress(node.id) > 0.5)
+  const sorted = drawn
+    .filter((entry) => entry.visibility > 0.5)
     .sort(
       (a, b) =>
-        attention(b) - attention(a) ||
-        (b.importance || 0) - (a.importance || 0) ||
-        a.id.localeCompare(b.id, 'en'),
+        b.alpha - a.alpha ||
+        (b.node.importance || 0) - (a.node.importance || 0) ||
+        a.node.id.localeCompare(b.node.id, 'en'),
     );
-  for (const node of sorted) {
-    const p = pointFor(node.id),
-      r = radius(node),
-      active = attention(node);
+  for (const { node, custom, p, r, alpha: active } of sorted) {
     const obstacle = nodeLabelBounds.get(node.id);
     if (!obstacle) continue;
-    const custom = nodeAppearance(config, node);
+    const importance = node.importance ?? 0;
+    // Type follows the same hierarchy as the glyphs: principals speak loudest.
     const font = sans(
-      custom.fontSize ?? ((node.importance ?? 0) >= 5 ? 19 : 16),
-      custom.fontWeight ?? 600,
+      custom.fontSize ??
+        (importance >= 5 ? 19 : importance >= 4 ? 17 : importance >= 1 && importance < 3 ? 14 : 16),
+      custom.fontWeight ?? (importance >= 4 ? 600 : 500),
     );
     const lines = wrapText(measure, nodeLabel(node), font, u(170), 2);
     const width = Math.max(0, ...lines.map((line) => measure(line, font))),
@@ -669,43 +1087,71 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
     const nearRightX = Math.max(p.x + r + u(5), obstacle.x + obstacle.w + u(1));
     const nearLeftX = Math.min(p.x - r - u(5) - width, obstacle.x - width - u(1));
     const upperY = Math.min(p.y - r - Math.max(u(24), height + u(4)), obstacle.y - height - u(1));
-    const candidates = [
-      { x: rightX, y: p.y - u(10) },
-      { x: leftX, y: p.y - u(10) },
+    const sides = [
+      { x: rightX, y: p.y - height / 2 },
+      { x: leftX, y: p.y - height / 2 },
       { x: p.x - width / 2, y: topY },
       { x: p.x - width / 2, y: bottomY },
+    ];
+    const corners = [
       { x: nearRightX, y: upperY },
       { x: nearLeftX, y: upperY },
       { x: nearRightX, y: bottomY },
       { x: nearLeftX, y: bottomY },
-    ].map((c) => ({ ...c, w: width, h: height }));
-    const preferred = { auto: 0, right: 0, left: 1, top: 2, bottom: 3 }[
-      custom.textPosition ?? 'right'
     ];
-    if (preferred !== undefined && preferred > 0)
-      candidates.unshift(...candidates.splice(preferred, 1));
-    const available = (c: Rect, obstacles: Rect[]): boolean =>
-      inBounds(c) && !obstacles.some((o) => rectsIntersect(c, o));
-    // A major or highlighted node should not become anonymous merely because
-    // several lines leave it. Text/other nodes still take precedence.
-    const box =
-      candidates.find((c) => available(c, nodeLabelObstacles)) ||
-      ((node.importance ?? 0) >= 4 || highlight.nodeIds.includes(node.id)
-        ? candidates.find((c) => available(c, occupied))
-        : undefined);
+    const preferred =
+      custom.textPosition === undefined || custom.textPosition === 'auto'
+        ? undefined
+        : { right: 0, left: 1, top: 2, bottom: 3 }[custom.textPosition];
+    // An authored side comes first. Otherwise face away from the node's
+    // relations: the side its neighbours leave free. Reading order breaks
+    // ties, so a lone node labels to the right.
+    const towards = pull.get(node.id) ?? { x: 0, y: 0 },
+      reach = Math.hypot(towards.x, towards.y),
+      out = reach > 0.35 ? { x: -towards.x / reach, y: -towards.y / reach } : { x: 0, y: 0 };
+    const score = [out.x + 0.3, -out.x + 0.12, -out.y, out.y + 0.06];
+    const ordered =
+      preferred !== undefined
+        ? [sides[preferred], ...sides.filter((_, i) => i !== preferred)]
+        : sides
+            .map((side, i) => ({ side, score: score[i], i }))
+            .sort((m, n) => n.score - m.score || m.i - n.i)
+            .map((entry) => entry.side);
+    const candidates = [...ordered, ...corners].map((c) => ({ ...c, w: width, h: height }));
+    // Hard rules: stay on the stage and never cover a glyph or other text.
+    // Among the places that remain, prefer the natural side, then the one
+    // that crosses fewest relations and cannot be read as a neighbour's name.
+    let box: Rect | undefined,
+      best = Infinity;
+    candidates.forEach((c, rank) => {
+      if (!inBounds(c) || occupied.some((o) => rectsIntersect(c, o))) return;
+      const crossings = edgeObstacles.reduce((n, o) => n + (rectsIntersect(c, o) ? 1 : 0), 0);
+      const cx = c.x + c.w / 2,
+        cy = c.y + c.h / 2,
+        own = Math.hypot(cx - p.x, cy - p.y);
+      const ambiguous = sorted.some(
+        (other) =>
+          other.node.id !== node.id && Math.hypot(cx - other.p.x, cy - other.p.y) < own * 0.9,
+      );
+      const cost = rank + Math.min(6, crossings) * 0.9 + (ambiguous ? 4 : 0);
+      if (cost < best) {
+        best = cost;
+        box = c;
+      }
+    });
     if (!box) continue;
-    occupied.push(box);
-    nodeLabelObstacles.push(box);
+    const placed: Rect = box;
+    occupied.push(placed);
     lines.forEach((line, index) =>
       graphItems.push({
         type: 'text',
         text: line,
-        x: box.x,
-        y: box.y + index * font.size * 1.3,
+        x: placed.x,
+        y: placed.y + index * font.size * 1.3,
         font,
         fill: custom.textColor ?? (active > 0.8 ? P.labelActive : P.labelMuted),
         baseline: 'top',
-        halo: { paint: P.labelHalo, width: u(4) },
+        halo: { paint: P.labelHalo, width: u(3.5) },
         alpha: active * Math.min(1, (nodeProgress(node.id) - 0.5) * 2),
       }),
     );
@@ -713,31 +1159,40 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
   for (const label of edgeLabels) {
     const edgeFont = label.font;
     const text = fitText(measure, label.text, edgeFont, u(150)),
-      w = measure(text, edgeFont) + u(10),
-      h = Math.max(u(17), edgeFont.size * 1.4),
-      box = { x: label.x - w / 2, y: label.y - h - u(1), w, h };
+      w = measure(text, edgeFont) + u(14),
+      h = Math.max(u(18), edgeFont.size * 1.5),
+      // The tag sits on its relation, interrupting the line like a route marker.
+      box = {
+        x: label.x - w / 2 + (label.push ? (label.push.x * w) / 2 : 0),
+        y: label.y - h / 2 + (label.push ? (label.push.y * h) / 2 : 0),
+        w,
+        h,
+      };
     if (!inBounds(box) || occupied.some((o) => rectsIntersect(box, o))) continue;
     occupied.push(box);
     graphItems.push(
       {
         type: 'path',
-        d: [['R', box.x, box.y, w, box.h]],
+        d: [['RR', box.x, box.y, w, box.h, h / 2]],
         fill: P.edgeLabelBox,
+        stroke: label.stroke,
+        width: u(0.8),
         alpha: label.alpha,
       },
       {
         type: 'text',
         text,
-        x: box.x + u(5),
+        x: box.x + w / 2,
         y: box.y + h / 2 + u(0.5),
         font: edgeFont,
         fill: label.color,
+        align: 'center',
         baseline: 'middle',
         alpha: label.alpha,
       },
     );
   }
-  items.push({ type: 'group', clip: { ...stage }, items: graphItems });
+  items.push({ type: 'group', clip: { ...stage }, items: [...graphItems, ...legendItems] });
 
   // Detail card in the upper right of the graph safe area.
   let detail: FrameText['detail'] = null;
