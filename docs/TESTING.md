@@ -113,8 +113,8 @@ native Skia, FFmpeg/ffprobe **and Chromium** for its final browser/headless
 comparison. `--no-browser` skips that comparison and is only a partial run;
 `--no-build` requires current package and Studio builds.
 
-Native Vitest coverage includes `node-images.test.mjs`, all 102 committed golden
-frames across six example/theme cases in `cli.test.mjs` and the built-package/CLI
+Native Vitest coverage includes `node-images.test.mjs`, all 236 committed golden
+frames across ten example/theme cases in `cli.test.mjs` and the built-package/CLI
 smoke in `package-build.test.mjs`.
 `render-pipeline.test.mjs` and `canvas-renderer.test.mjs` use a recording/fake
 Canvas context: they verify composition/backend commands, not native pixels.

@@ -58,6 +58,7 @@ Open **布局策略 · 预览后应用** beneath the source card. The initial ch
 - **自动 · 按结构选择**: picks one of the strategies below from the graph: a grid without relations, layered or flow for mostly directed acyclic graphs, radial for forests, force otherwise.
 - **力导向 · 聚类**: ID-sorted, seeded Fruchterman–Reingold relaxation from a radial start with group cohesion and landscape fitting, at most 0–2000 steps, spacing 64–400. Locked and preserved nodes are fixed anchors. No simulation runs while playing.
 - **分层 · 自上而下** and **流向 · 从左到右**: stable component packing; directed strongly connected components share a level, followed by topological depth. Components with only undirected links use graph distance from their best-connected node. Barycentre sweeps reduce crossings and keep groups as bands. No relationship label or `family` kind is interpreted as a parent/child generation. This is not a genealogy algorithm.
+- **树 · 向右展开**, **思维导图 · 向两侧展开** and **时间轴 · 按时间排开**: the layouts of the [diagram kinds](GENERIC-GRAPH.md#diagram-kinds), available for any graph. Siblings keep the order they were written in; the timeline needs nodes with a time and otherwise draws the tree.
 - **放射 · 以核心为圆心**: rings around the graph centre, each subtree in a wedge sized by its leaves; seed-controlled rotation.
 - **环形**: one ring with groups contiguous and neighbours drawn together, seed-controlled rotation and circumference-based spacing.
 - **网格 · 保持顺序**: a matrix per group in the order the nodes were written.

@@ -54,16 +54,18 @@ The smallest valid document:
 
 Everything else is optional.
 
-| Field          | Meaning                                                                                                                                                                                                                              |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `meta`         | `title`, `description`, `sourceNote`. The title defaults to `关系图`.                                                                                                                                                                |
-| `directed`     | Default direction of relations (`false`). A kind or a single relation may override it.                                                                                                                                               |
-| `nodes[]`      | `id` (required), `label`, `kind`, `group`, `weight` (≥ 0), `color` (`#RRGGBB`), `summary` (detail card text), `position` `{x, y}`, `visibleFrom`, `visibleTo`. A bare string or number is a node with that id.                       |
-| `edges[]`      | `source`, `target` (required), `id`, `kind`, `label`, `directed`, `weight` (≥ 0), `visibleFrom`, `visibleTo`. Endpoints that are not declared become nodes labelled by their id. `source === target` is a self-relation.             |
-| `groups[]`     | `id` (required), `label`, `kind`, `color`. Groups referenced only by nodes are created.                                                                                                                                              |
-| `kinds`        | `nodes.<kind>`: `label`, `color`, `shape` (`circle`, `pill`, `diamond`, `square`, `hexagon`). `edges.<kind>`: `label`, `color`, `line` (`solid`, `dashed`, `dotted`), `head` (`arrow`, `bar`, `hollow-circle`, `none`), `directed`.  |
-| `timeline`     | `unit` and optional `total` of the domain time used by `visibleFrom` / `visibleTo`.                                                                                                                                                  |
-| `presentation` | Shots, as in the biology format: `id`, `title`, `narration`, `durationSec` (default 4), `transitionMs`, `domainAt`, `camera` (`focusNodeId` \| `fitIds`, `zoom`), `highlight` (`nodeIds`, `edgeIds`, `groupId`), `openDetailNodeId`. |
+| Field          | Meaning                                                                                                                                                                                                                                                                                |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `meta`         | `title`, `description`, `sourceNote`. The title defaults to `关系图`.                                                                                                                                                                                                                  |
+| `directed`     | Default direction of relations (`false`). A kind or a single relation may override it.                                                                                                                                                                                                 |
+| `diagram`      | What kind of picture this is: `network` (default), `tree`, `mindmap`, `flowchart` or `timeline`. See [Diagram kinds](#diagram-kinds).                                                                                                                                                  |
+| `unfold`       | `false` shows a tree, mind map or flowchart whole instead of revealing it level by level.                                                                                                                                                                                              |
+| `nodes[]`      | `id` (required), `label`, `kind`, `group`, `weight` (≥ 0), `color` (`#RRGGBB`), `summary` (detail card text), `position` `{x, y}`, `visibleFrom`, `visibleTo`, `start`, `end` (a span on the time axis; it never hides the node). A bare string or number is a node with that id.      |
+| `edges[]`      | `source`, `target` (required), `id`, `kind`, `label`, `directed`, `weight` (≥ 0), `visibleFrom`, `visibleTo`. Endpoints that are not declared become nodes labelled by their id. `source === target` is a self-relation.                                                               |
+| `groups[]`     | `id` (required), `label`, `kind`, `color`. Groups referenced only by nodes are created.                                                                                                                                                                                                |
+| `kinds`        | `nodes.<kind>`: `label`, `color`, `shape` (`circle`, `pill`, `diamond`, `square`, `hexagon`, or the label-holding `box`, `capsule`, `decision`). `edges.<kind>`: `label`, `color`, `line` (`solid`, `dashed`, `dotted`), `head` (`arrow`, `bar`, `hollow-circle`, `none`), `directed`. |
+| `timeline`     | `unit` and optional `total` of the domain time used by `visibleFrom` / `visibleTo`.                                                                                                                                                                                                    |
+| `presentation` | Shots, as in the biology format: `id`, `title`, `narration`, `durationSec` (default 4), `transitionMs`, `domainAt`, `camera` (`focusNodeId` \| `fitIds`, `zoom`), `highlight` (`nodeIds`, `edgeIds`, `groupId`), `openDetailNodeId`.                                                   |
 
 Rules worth knowing:
 
@@ -87,6 +89,92 @@ Rules worth knowing:
 
 Coordinate export (`仅导出坐标 JSON`) and `relgraph layout` write back to the
 ids you authored and declare nodes that previously existed only as endpoints.
+
+## Diagram kinds
+
+Flowcharts, mind maps, trees and timelines are graphs with conventions. A
+document names the convention with `diagram`; everything else stays the same
+format, the same kernel and the same renderer. Removing the field turns any
+of them back into an ordinary network.
+
+| `diagram`   | Layout                   | Nodes                                                                                                                                                         | Relations                                                                                                                                                                   | Derived film                                                                                    |
+| ----------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `tree`      | `tree`                   | Glyphs with labels beside them; size by depth; one tone per main branch                                                                                       | Elbows without arrowheads, in the child's tone                                                                                                                              | Unfolds one level per shot, lighting the branches that have just arrived, then the whole tree   |
+| `mindmap`   | `mindmap`                | Boxes holding their label; the topic in solid colour; one tone per branch                                                                                     | As for trees                                                                                                                                                                | Topic, main branches, details, then the whole map                                               |
+| `flowchart` | `flow`                   | Pipelines and processes                                                                                                                                       | The same, left to right, with more room along the reading direction for labels. Relations that return to an earlier step are feedback and do not fold a loop into one rank. |
+| `tree`      | Hierarchies and lineages | A tidy tree growing to the right: leaves in written order, each parent midway between its outer children.                                                     |
+| `mindmap`   | A topic and its branches | The topic in the middle; main branches shared between right and left so both sides carry a similar load, each side read from the top.                         |
+| `timeline`  | Anything with dates      | x is time. A tree keeps its leaf order (a phylogram); anything else is packed into lanes, per group, so spans never overlap. Without dates it draws the tree. |
+| `timeline`  | `timeline`               | Bars as long as `start`…`end`; points for nodes with only a first appearance                                                                                  | Elbows                                                                                                                                                                      | Travels along the axis: one shot per start, a cursor at the film's present, then the whole axis |
+
+| Tree unfolding (dark)                                              | Tree, whole                                              |
+| ------------------------------------------------------------------ | -------------------------------------------------------- |
+| ![tree unfolding](visuals/generic/diagram-tree-dark-unfolding.png) | ![tree](visuals/generic/diagram-tree-light.png)          |
+| **Timeline travelling**                                            | **Timeline, whole (dark)**                               |
+| ![timeline](visuals/generic/diagram-timeline-light-travelling.png) | ![timeline](visuals/generic/diagram-timeline-dark.png)   |
+| **Mind map**                                                       | **Flowchart (dark)**                                     |
+| ![mind map](visuals/generic/diagram-mindmap-light.png)             | ![flowchart](visuals/generic/diagram-flowchart-dark.png) |
+
+An evolutionary tree that unfolds needs nothing but its branches:
+
+```json
+{
+  "format": "relgraph.graph/1",
+  "diagram": "tree",
+  "edges": [
+    { "source": "Tetrapoda", "target": "Amphibia" },
+    { "source": "Tetrapoda", "target": "Amniota" },
+    { "source": "Amniota", "target": "Mammalia" },
+    { "source": "Amniota", "target": "Sauropsida" }
+  ]
+}
+```
+
+Civilisations over time need spans:
+
+```json
+{
+  "format": "relgraph.graph/1",
+  "diagram": "timeline",
+  "timeline": { "unit": "公元" },
+  "nodes": [
+    { "id": "唐", "start": 618, "end": 907 },
+    { "id": "辽", "start": 916, "end": 1125 },
+    { "id": "北宋", "start": 960, "end": 1127 }
+  ]
+}
+```
+
+How the conventions are derived, and how to override them:
+
+- **Where it begins.** A tree or mind map starts at the node nothing points
+  to, or at the centre of the graph when relations are undirected. In these
+  kinds and in flowcharts a relation runs from `source` on unless `directed`
+  says otherwise. Siblings keep the order in which they were written.
+- **Unfolding.** Without a `presentation` and without timed facts, each node
+  appears at its depth (trees, mind maps) or step (flowcharts); very deep
+  diagrams are folded into twelve steps. `unfold: false`, your own
+  `visibleFrom` values or your own `presentation` always win. A tree whose
+  nodes carry dates is revealed by those dates, and with `diagram: "timeline"`
+  it is drawn as a phylogram: time along x, leaves in reading order.
+- **Time.** `start` and `end` place a node on the axis and set the length of
+  its bar; a span without `end` runs to the end of the axis. Unlike
+  `visibleTo`, a span never hides the node: what has ended stays on screen.
+  Spans that overlap never share a lane; with groups, each group has its own
+  band of lanes.
+- **Shapes.** In a flowchart, kinds named like `开始`, `结束`, `start`, `end`
+  become capsules and kinds named like `判断`, `条件`, `decision` become
+  diamonds; everything else is a box. `kinds.nodes.<kind>.shape` overrides.
+  Label-holding shapes are sized by their text (two lines at most) with a
+  canvas-independent estimate, so hit tests, edge attachments and both
+  backends agree.
+- **Routing.** Elbow links leave and arrive level and are built from two
+  quadratic arcs, so they are drawn partially with the same exact prefix as
+  every other relation. A pair joined both ways opens into two arcs, and a
+  relation tag that does not fit between two shapes steps aside.
+
+Every strategy can also be chosen in the studio for any graph, so a literary
+network can be tried as a tree or laid out on a timeline.
 
 ## Derived visual encoding
 
@@ -147,10 +235,11 @@ counts are bounded. None of them runs during playback.
 | `flow`    | Pipelines and processes       | The same, left to right, with more room along the reading direction for labels.                                                                                             |
 | `radial`  | Trees and ego networks        | Rings around the graph centre (least eccentricity), each subtree in a wedge sized by its leaves, ring radii grown until siblings have room.                                 |
 | `circle`  | Showing who connects to whom  | One ring; groups stay contiguous and neighbours are drawn towards each other.                                                                                               |
-| `grid`    | Sets and lists                | A tidy matrix per group. The one strategy that keeps the author's order.                                                                                                    |
+| `grid`    | Sets and lists                | A tidy matrix per group. Like `tree` and `mindmap`, it keeps the author's order.                                                                                            |
 
-A document with **no coordinates at all** is arranged by `auto` when it is
-loaded (studio and CLI alike). A partly positioned document keeps the previous
+A document with **no coordinates at all** is arranged when it is loaded
+(studio and CLI alike): by its `diagram` kind if it names one, otherwise by
+`auto`. A partly positioned document keeps the previous
 conservative fallback, which never moves or crowds authored nodes. Locks and
 the `保留 / 填补 / 重排` policies work with every strategy.
 
@@ -175,7 +264,7 @@ the `保留 / 填补 / 重排` policies work with every strategy.
 - **Ground**: the diagonal hatch is replaced by a quiet dot lattice.
 
 Every length still derives from `FrameSpec`; the 1080p composition of all
-three examples is exactly the 720p composition scaled by 1.5.
+seven examples is exactly the 720p composition scaled by 1.5.
 
 ## Compatibility
 
@@ -185,7 +274,11 @@ three examples is exactly the 720p composition scaled by 1.5.
   `DomainStyle` optional `curvature` and per-kind `tone` / `color`. Existing
   custom style sheets remain valid.
 - `ProjectConfig.layout.type` accepts the new strategies; shapes accept
-  `square` and `hexagon`. Older projects validate unchanged.
+  `square`, `hexagon`, `box`, `capsule` and `decision`. Older projects
+  validate unchanged.
+- `VisualGraph` gains optional `diagram`; `VisualNode` optional `tone` and
+  `span`; `DomainStyle` optional `routing`, `edgeLabels`, `edgeHue` and
+  `timeAxis`.
 - The kernel no longer rejects `source === target`; the literary and
   biological validators still do.
 - `layoutGraph` now returns a structural layout for documents without any
@@ -197,15 +290,19 @@ three examples is exactly the 720p composition scaled by 1.5.
 Run locally on linux-x64, Node 22.23.4, skia-canvas 4.0.0, Chromium 153, after
 merging `main` at `0f995b7` (Prettier pass #36 and the EGFR–MAPK example #37):
 
-- `npm test`: 336 tests in 32 files, including `tests/generic-graph.test.mjs`
-  and `tests/layout-engines.test.mjs`, and 102 golden frames (three examples,
-  two themes) against the native renderer.
+- `npm test`: 350 tests in 33 files, including `tests/generic-graph.test.mjs`,
+  `tests/layout-engines.test.mjs` and `tests/diagrams.test.mjs`, and 236
+  golden frames (five examples, two themes) against the native renderer.
 - `npm run typecheck`, `npm run check:types`, `npm run lint`,
   `npm run format:check`.
 - `npm run check:export -- --update`, then `npm run check:export`: golden
-  hashes, H.264 exports of all three examples with matching frame counts, and
+  hashes, H.264 exports of the five examples with matching frame counts, and
   decoded-frame PSNR against PNG renders.
-- `npm run check:browser`: 67 checks in real Chromium, including the generic
-  example and all seven strategies with pixel-identical repeats.
+- `npm run check:browser`: 75 checks in real Chromium, including the generic
+  example with all ten strategies and the four diagram examples, each with
+  pixel-identical repeats.
+
+The mind-map and flowchart examples are covered by the display-list tests and
+the browser check rather than by golden frames.
 
 No GitHub Actions workflow was added, dispatched or rerun.
