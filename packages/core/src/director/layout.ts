@@ -14,6 +14,29 @@ import { roundPositionCoordinate } from './seeded-layout.js';
 
 type Position = { x: number; y: number };
 
+/**
+ * A drawing made from the structure alone: the engine of the diagram kind,
+ * or, for a network, the engine its structure suggests. Coordinates are
+ * rounded the way stored coordinates are. This is what a document without
+ * any coordinates looks like in the player, and what `relgraph layout`
+ * writes for one, so the two cannot drift apart.
+ */
+export function structuralLayout(
+  graph: Pick<VisualGraph, 'nodes' | 'edges' | 'diagram'>,
+  seed = 0,
+): Map<string, Position> {
+  const engine = DIAGRAM_ENGINE[graph.diagram ?? 'network'];
+  const arranged = engine
+    ? runLayoutEngine(graph, engine, { seed, spacing: 150, iterations: 300 })
+    : autoLayout(graph, { seed });
+  return new Map(
+    [...arranged].map(([id, p]) => [
+      id,
+      { x: roundPositionCoordinate(p.x) || 0, y: roundPositionCoordinate(p.y) || 0 },
+    ]),
+  );
+}
+
 /** Stable layout prepared once per document, never advanced by playback. */
 export function layoutGraph(
   graph: Pick<VisualGraph, 'nodes' | 'edges' | 'project' | 'diagram'>,
@@ -32,26 +55,8 @@ export function layoutGraph(
   if (!positions.size && nodes.length > 1) {
     // Engines sort where order must not matter and keep the author's order
     // where it is the reading order (grids, siblings of a tree).
-    const arranged = DIAGRAM_ENGINE[graph.diagram ?? 'network']
-      ? runLayoutEngine(
-          { nodes: graph.nodes, edges },
-          DIAGRAM_ENGINE[graph.diagram ?? 'network']!,
-          {
-            seed: 0,
-            spacing: 150,
-            iterations: 300,
-          },
-        )
-      : autoLayout({ nodes: graph.nodes, edges });
-    return new Map(
-      nodes.map((node) => {
-        const p = arranged.get(node.id) ?? { x: 0, y: 0 };
-        return [
-          node.id,
-          { x: roundPositionCoordinate(p.x) || 0, y: roundPositionCoordinate(p.y) || 0 },
-        ];
-      }),
-    );
+    const arranged = structuralLayout({ nodes: graph.nodes, edges, diagram: graph.diagram });
+    return new Map(nodes.map((node) => [node.id, arranged.get(node.id) ?? { x: 0, y: 0 }]));
   }
   const existing = [...positions.values()];
   const originX = existing.length ? Math.max(...existing.map((p) => p.x)) + 150 : 0;

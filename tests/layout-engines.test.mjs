@@ -2,6 +2,7 @@ import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import bookshop from '../examples/bookshop-systems-synthetic.graph.json' with { type: 'json' };
 import {
+  AUTO_LAYOUT_NODE_LIMIT,
   autoLayout,
   chooseLayoutEngine,
   LAYOUT_ENGINES,
@@ -12,7 +13,7 @@ import {
   DEFAULT_LAYOUT_SETTINGS,
   LAYOUT_TYPES,
 } from '../packages/core/src/director/layout-strategies.ts';
-import { layoutGraph } from '../packages/core/src/director/layout.ts';
+import { layoutGraph, structuralLayout } from '../packages/core/src/director/layout.ts';
 import { loadDocument } from '../packages/core/src/director/load.ts';
 import { validateProjectConfig } from '../packages/core/src/project.ts';
 
@@ -123,6 +124,33 @@ test('the structure chooses the engine', () => {
   assert.equal(chooseLayoutEngine(cycle), 'force', 'a directed cycle has no ranks to show');
   const { graph } = loadDocument(bookshop);
   assert.equal(chooseLayoutEngine(graph), 'flow');
+});
+
+test('no automatic choice puts a very large graph through the pairwise engine', () => {
+  // A mesh: neither ranks nor a tree, so a small one is drawn with forces.
+  const mesh = (n) => ({
+    nodes: Array.from({ length: n }, (_, i) => node('n' + String(i).padStart(4, '0'))),
+    edges: Array.from({ length: n }, (_, i) => [
+      edge('n' + String(i).padStart(4, '0'), 'n' + String((i + 1) % n).padStart(4, '0')),
+      edge('n' + String(i).padStart(4, '0'), 'n' + String((i * 7 + 3) % n).padStart(4, '0')),
+    ])
+      .flat()
+      .filter((e) => e.source !== e.target),
+  });
+  assert.equal(chooseLayoutEngine(mesh(40)), 'force');
+  const large = mesh(AUTO_LAYOUT_NODE_LIMIT + 1);
+  assert.equal(chooseLayoutEngine(large), 'grid');
+  const graph = { domain: 'graph', meta: { title: 'mesh' }, groups: [], scenes: [], ...large };
+  const grid = sorted(runLayoutEngine(large, 'grid', { seed: 0, spacing: 150, iterations: 300 }));
+  // The player, the CLI and the studio's "auto" all take that same choice.
+  assert.deepEqual(sorted(autoLayout(large)), grid);
+  assert.deepEqual(sorted(layoutGraph(graph)), sorted(structuralLayout(graph)));
+  const studio = computeLayout(
+    graph,
+    { ...DEFAULT_LAYOUT_SETTINGS, type: 'auto', mode: 'rearrange', spacing: 150, iterations: 300 },
+    new Map(graph.nodes.map((n) => [n.id, { x: 0, y: 0 }])),
+  );
+  assert.deepEqual(sorted(studio), sorted(structuralLayout(graph)));
 });
 
 test('force keeps groups together and apart from one another, on a landscape canvas', () => {

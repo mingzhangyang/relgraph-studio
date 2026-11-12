@@ -243,6 +243,12 @@ A document with **no coordinates at all** is arranged when it is loaded
 conservative fallback, which never moves or crowds authored nodes. Locks and
 the `保留 / 填补 / 重排` policies work with every strategy.
 
+`auto` never chooses `force` for more than 1500 nodes: the pairwise model
+would hold the page for seconds, so such a graph gets the `grid`. The player,
+`relgraph layout` and the studio's `auto` share that one choice
+(`chooseLayoutEngine`, `structuralLayout`). `force` can still be asked for by
+name.
+
 ## How the network is drawn
 
 - **Hulls** are the smoothed convex hull of circles around each member. A

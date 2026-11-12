@@ -3,12 +3,9 @@ import { chmod, stat, realpath, rename, unlink, writeFile } from 'node:fs/promis
 import { basename, dirname, join, resolve } from 'node:path';
 import {
   applyGraphPositions,
-  autoLayout,
-  DIAGRAM_ENGINE,
-  runLayoutEngine,
   layoutMissingNodes,
-  roundPositionCoordinate,
   parseDocument,
+  structuralLayout,
   type VisualGraph,
 } from '@relgraph/core';
 import { formatDiagnostics, loadFile } from './document.js';
@@ -78,24 +75,7 @@ export async function layoutFile(request: LayoutRequest): Promise<LayoutSummary>
     // author's own arrangement.
     const positions =
       missing === summary.total && summary.total > 1
-        ? new Map(
-            [
-              ...(DIAGRAM_ENGINE[result.graph.diagram ?? 'network']
-                ? runLayoutEngine(
-                    result.graph,
-                    DIAGRAM_ENGINE[result.graph.diagram ?? 'network']!,
-                    {
-                      seed: request.seed,
-                      spacing: 150,
-                      iterations: 300,
-                    },
-                  )
-                : autoLayout(result.graph, { seed: request.seed })),
-            ].map(([id, p]) => [
-              id,
-              { x: roundPositionCoordinate(p.x) || 0, y: roundPositionCoordinate(p.y) || 0 },
-            ]),
-          )
+        ? structuralLayout(result.graph, request.seed)
         : layoutMissingNodes(result.graph, { seed: request.seed });
     const output = writeBackPositions(input, result.graph, positions);
     const serialized = JSON.stringify(output.document, null, indentOf(text)) + '\n';

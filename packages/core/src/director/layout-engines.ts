@@ -1322,11 +1322,21 @@ function circleLayout(p: Prepared, { seed, spacing }: EngineOptions): Map<string
 }
 
 /**
+ * Above this many nodes no engine is chosen automatically: the pairwise force
+ * model would hold the thread for seconds, and no structural drawing of that
+ * many nodes is legible on a film stage anyway.
+ */
+export const AUTO_LAYOUT_NODE_LIMIT = 1500;
+
+/**
  * Pick the engine that suits the structure: a grid for unrelated items, a
  * layered drawing for hierarchies and pipelines (downwards when broad,
- * sideways when deep), rings for trees, forces for everything else.
+ * sideways when deep), rings for trees, forces for everything else. Very
+ * large graphs always get the grid. Every automatic choice goes through
+ * here, so the player, the studio and the CLI agree.
  */
 export function chooseLayoutEngine(graph: LayoutGraph): LayoutEngine {
+  if (graph.nodes.length > AUTO_LAYOUT_NODE_LIMIT) return 'grid';
   const p = prepare(graph);
   if (!p.pairs.length) return 'grid';
   const directed = p.pairs.filter((l) => l.directed).length;
@@ -1386,7 +1396,10 @@ export function autoLayout(
   graph: LayoutGraph,
   options: Partial<EngineOptions> = {},
 ): Map<string, EnginePoint> {
-  // The pairwise force model is not meant for thousands of nodes.
-  const engine = graph.nodes.length > 1500 ? 'grid' : chooseLayoutEngine(graph);
-  return runLayoutEngine(graph, engine, { seed: 0, spacing: 150, iterations: 300, ...options });
+  return runLayoutEngine(graph, chooseLayoutEngine(graph), {
+    seed: 0,
+    spacing: 150,
+    iterations: 300,
+    ...options,
+  });
 }
