@@ -1,6 +1,19 @@
 import { validImageAsset, MAX_IMAGE_BYTES, type ImageAsset } from './image-assets.js';
 import type { VisualGraph, VisualNode, VisualEdge } from '../types/visual-graph.js';
-import type { NodeShape, EdgeHead } from './style.js';
+import {
+  APPEARANCE_SHAPES,
+  EDGE_HEADS,
+  LINE_STYLES,
+  type EdgeHead,
+  type LineStyle,
+  type NodeShape,
+} from './style.js';
+import {
+  LAYOUT_MODES,
+  LAYOUT_TYPES,
+  type LayoutMode,
+  type LayoutType,
+} from './director/layout-strategies.js';
 
 export interface NodeAppearance {
   image?: string | null;
@@ -18,7 +31,7 @@ export interface NodeAppearance {
 export interface EdgeAppearance {
   color?: string;
   width?: number;
-  dash?: 'solid' | 'dashed' | 'dotted';
+  dash?: LineStyle;
   head?: EdgeHead;
   curve?: number;
   showLabel?: boolean;
@@ -42,19 +55,8 @@ export interface ProjectConfig {
     edges?: Record<string, { label?: string }>;
   };
   layout?: {
-    type:
-      | 'manual'
-      | 'auto'
-      | 'force'
-      | 'layered'
-      | 'flow'
-      | 'tree'
-      | 'mindmap'
-      | 'timeline'
-      | 'radial'
-      | 'circle'
-      | 'grid';
-    mode: 'preserve' | 'missing' | 'rearrange';
+    type: LayoutType;
+    mode: LayoutMode;
     seed: number;
     spacing: number;
     iterations: number;
@@ -85,10 +87,7 @@ export const APPEARANCE_FIELD_RULES: Record<AppearanceKind, Record<string, Appea
   nodes: {
     image: { type: 'image' },
     imageFit: { type: 'enum', values: ['cover', 'contain'] },
-    shape: {
-      type: 'enum',
-      values: ['circle', 'pill', 'diamond', 'square', 'hexagon', 'box', 'capsule', 'decision'],
-    },
+    shape: { type: 'enum', values: APPEARANCE_SHAPES },
     size: { type: 'number', min: 8, max: 48 },
     fill: { type: 'color' },
     border: { type: 'color' },
@@ -101,8 +100,8 @@ export const APPEARANCE_FIELD_RULES: Record<AppearanceKind, Record<string, Appea
   edges: {
     color: { type: 'color' },
     width: { type: 'number', min: 0.5, max: 8 },
-    dash: { type: 'enum', values: ['solid', 'dashed', 'dotted'] },
-    head: { type: 'enum', values: ['arrow', 'bar', 'hollow-circle', 'none'] },
+    dash: { type: 'enum', values: LINE_STYLES },
+    head: { type: 'enum', values: EDGE_HEADS },
     curve: { type: 'number', min: -160, max: 160 },
     showLabel: { type: 'boolean' },
     fontSize: { type: 'number', min: 9, max: 32 },
@@ -230,23 +229,8 @@ export function validateProjectConfig(value: unknown, graph?: VisualGraph): stri
       'config.layout',
     )
   ) {
-    if (
-      !enumValue(l.type, [
-        'manual',
-        'auto',
-        'force',
-        'layered',
-        'flow',
-        'tree',
-        'mindmap',
-        'timeline',
-        'radial',
-        'circle',
-        'grid',
-      ])
-    )
-      fail('config.layout.type');
-    if (!enumValue(l.mode, ['preserve', 'missing', 'rearrange'])) fail('config.layout.mode');
+    if (!enumValue(l.type, LAYOUT_TYPES)) fail('config.layout.type');
+    if (!enumValue(l.mode, LAYOUT_MODES)) fail('config.layout.mode');
     if (!numberIn(l.seed, 0, 0xffffffff) || !Number.isInteger(l.seed)) fail('config.layout.seed');
     if (!numberIn(l.spacing, 64, 400)) fail('config.layout.spacing');
     if (!numberIn(l.iterations, 0, 2000) || !Number.isInteger(l.iterations))

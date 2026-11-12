@@ -2,10 +2,34 @@ import { uiElement, uiStatus } from './i18n.js';
 import {
   DEFAULT_LAYOUT_SETTINGS,
   displayNodeText,
+  LAYOUT_MODES,
+  LAYOUT_TYPES,
+  type LayoutMode,
   type LayoutSettings,
+  type LayoutType,
   type DirectorFrameState,
   type ProjectConfig,
 } from '@relgraph/core';
+// One label per strategy and policy the core knows: adding one there without
+// naming it here does not compile, and the menus cannot offer what it lacks.
+const TYPE_LABELS: Record<LayoutType, string> = {
+  manual: '手动 · 保留微调',
+  auto: '自动 · 按结构选择',
+  force: '力导向 · 聚类',
+  layered: '分层 · 自上而下',
+  flow: '流向 · 从左到右',
+  tree: '树 · 向右展开',
+  mindmap: '思维导图 · 向两侧展开',
+  timeline: '时间轴 · 按时间排开',
+  radial: '放射 · 以核心为圆心',
+  circle: '环形',
+  grid: '网格 · 保持顺序',
+};
+const MODE_LABELS: Record<LayoutMode, string> = {
+  preserve: '保留现有坐标',
+  missing: '只填补缺失坐标',
+  rearrange: '重排未锁定节点',
+};
 interface Actions {
   preview(settings: LayoutSettings): void;
   apply(): void;
@@ -36,24 +60,16 @@ export function createLayoutStrategyView(doc: Document, host: HTMLElement, actio
     host.append(l);
     return s;
   };
-  const type = select('strategyType', '策略', [
-    ['manual', '手动 · 保留微调'],
-    ['auto', '自动 · 按结构选择'],
-    ['force', '力导向 · 聚类'],
-    ['layered', '分层 · 自上而下'],
-    ['flow', '流向 · 从左到右'],
-    ['tree', '树 · 向右展开'],
-    ['mindmap', '思维导图 · 向两侧展开'],
-    ['timeline', '时间轴 · 按时间排开'],
-    ['radial', '放射 · 以核心为圆心'],
-    ['circle', '环形'],
-    ['grid', '网格 · 保持顺序'],
-  ]);
-  const mode = select('strategyMode', '坐标策略', [
-    ['preserve', '保留现有坐标'],
-    ['missing', '只填补缺失坐标'],
-    ['rearrange', '重排未锁定节点'],
-  ]);
+  const type = select(
+    'strategyType',
+    '策略',
+    LAYOUT_TYPES.map((value) => [value, TYPE_LABELS[value]]),
+  );
+  const mode = select(
+    'strategyMode',
+    '坐标策略',
+    LAYOUT_MODES.map((value) => [value, MODE_LABELS[value]]),
+  );
   const number = (id: string, label: string, min: string, max: string, value: string) => {
     const l = el('label', label),
       input = el('input');

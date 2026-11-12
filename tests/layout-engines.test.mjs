@@ -11,6 +11,7 @@ import {
 import {
   computeLayout,
   DEFAULT_LAYOUT_SETTINGS,
+  LAYOUT_MODES,
   LAYOUT_TYPES,
 } from '../packages/core/src/director/layout-strategies.ts';
 import { layoutGraph, structuralLayout } from '../packages/core/src/director/layout.ts';
@@ -327,7 +328,23 @@ test('every stored strategy computes, honours locks and validates in a project',
     current = layoutGraph(graph),
     locked = graph.nodes[3].id;
   current.set(locked, { x: 17.1234567, y: 23.7654321 });
-  assert.deepEqual([...LAYOUT_TYPES].sort(), ['manual', 'auto', ...LAYOUT_ENGINES].sort());
+  // One list: whatever engine exists can be stored, and nothing else can.
+  assert.deepEqual([...LAYOUT_TYPES], ['manual', 'auto', ...LAYOUT_ENGINES]);
+  assert.deepEqual([...LAYOUT_MODES], ['preserve', 'missing', 'rearrange']);
+  for (const mode of LAYOUT_MODES) {
+    const settings = { ...DEFAULT_LAYOUT_SETTINGS, type: 'grid', mode };
+    assert.equal(computeLayout(graph, settings, current).size, graph.nodes.length, mode);
+    assert.deepEqual(validateProjectConfig({ layout: settings }, graph), [], mode);
+  }
+  assert.throws(
+    () => computeLayout(graph, { ...DEFAULT_LAYOUT_SETTINGS, mode: 'shuffle' }, current),
+    RangeError,
+  );
+  assert.ok(
+    validateProjectConfig({ layout: { ...DEFAULT_LAYOUT_SETTINGS, mode: 'shuffle' } }).includes(
+      'config.layout.mode',
+    ),
+  );
   for (const type of LAYOUT_TYPES) {
     const settings = { ...DEFAULT_LAYOUT_SETTINGS, type, mode: 'rearrange', locked: [locked] };
     const result = computeLayout(graph, settings, current);

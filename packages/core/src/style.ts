@@ -15,7 +15,12 @@ export type LocalizedText = Readonly<Record<Locale, string>>;
 /** Semantic stroke; the video theme resolves it to a colour. */
 export type EdgeStroke = 'plain' | 'physical' | 'regulatory';
 /** Marker at the target end, drawn only for directed edges. */
-export type EdgeHead = 'arrow' | 'bar' | 'hollow-circle' | 'none';
+/** How a relation ends at its target. */
+export const EDGE_HEADS = ['arrow', 'bar', 'hollow-circle', 'none'] as const;
+export type EdgeHead = (typeof EDGE_HEADS)[number];
+/** The line rhythms an author may ask for by name. */
+export const LINE_STYLES = ['solid', 'dashed', 'dotted'] as const;
+export type LineStyle = (typeof LINE_STYLES)[number];
 /**
  * Number of categorical tones every video theme provides. A tone is an index
  * into the theme's validated palette, so the same kind keeps one identity in
@@ -44,6 +49,11 @@ export const LABEL_SHAPES = ['box', 'capsule', 'decision'] as const;
 /** `span` is a bar as long as the node's time span; without one it is a circle. */
 export const NODE_SHAPES = [...GLYPH_SHAPES, ...LABEL_SHAPES, 'span'] as const;
 export type NodeShape = (typeof NODE_SHAPES)[number];
+/**
+ * The shapes a project may give a node by hand: every shape but `span`,
+ * whose length is a fact about the node's time and not a choice of style.
+ */
+export const APPEARANCE_SHAPES = [...GLYPH_SHAPES, ...LABEL_SHAPES] as const;
 export const isLabelShape = (shape: NodeShape): boolean =>
   (LABEL_SHAPES as readonly string[]).includes(shape);
 
@@ -128,7 +138,7 @@ export interface KindDeclaration {
   label?: string;
   color?: string;
   shape?: NodeShape;
-  line?: 'solid' | 'dashed' | 'dotted';
+  line?: LineStyle;
   head?: EdgeHead;
 }
 export interface GraphKinds {
@@ -136,8 +146,11 @@ export interface GraphKinds {
   edges?: Readonly<Record<string, KindDeclaration>>;
 }
 
-const LINE_DASH: Readonly<Record<'solid' | 'dashed' | 'dotted', readonly number[] | undefined>> =
-  Object.freeze({ solid: undefined, dashed: Object.freeze([7, 5]), dotted: Object.freeze([2, 4]) });
+const LINE_DASH: Readonly<Record<LineStyle, readonly number[] | undefined>> = Object.freeze({
+  solid: undefined,
+  dashed: Object.freeze([7, 5]),
+  dotted: Object.freeze([2, 4]),
+});
 // Redundant with hue: the first kinds stay solid, later ones also change rhythm.
 const AUTO_DASH: readonly (readonly number[] | undefined)[] = Object.freeze([
   undefined,

@@ -22,7 +22,13 @@ import {
 import { loadDocument } from '../packages/core/src/director/load.ts';
 import { layoutGraph } from '../packages/core/src/director/layout.ts';
 import { directorFrameAt } from '../packages/core/src/director/state.ts';
-import { domainStyle } from '../packages/core/src/style.ts';
+import {
+  APPEARANCE_SHAPES,
+  domainStyle,
+  EDGE_HEADS,
+  LINE_STYLES,
+  NODE_SHAPES,
+} from '../packages/core/src/style.ts';
 import { composeFrame } from '../packages/render/src/compose.ts';
 import {
   FRAME_SPECS,
@@ -100,6 +106,20 @@ test('shared appearance constraints match project validation and documented boun
   assert.deepEqual(APPEARANCE_FIELD_RULES.nodes.size, { type: 'number', min: 8, max: 48 });
   assert.deepEqual(APPEARANCE_FIELD_RULES.edges.width, { type: 'number', min: 0.5, max: 8 });
   assert.equal(validAppearanceField('nodes', 'unexpected', 3), false);
+  // The choices are the style system's own lists, not copies of them.
+  assert.deepEqual(
+    [...APPEARANCE_SHAPES],
+    NODE_SHAPES.filter((shape) => shape !== 'span'),
+  );
+  assert.equal(APPEARANCE_FIELD_RULES.nodes.shape.values, APPEARANCE_SHAPES);
+  assert.equal(APPEARANCE_FIELD_RULES.edges.dash.values, LINE_STYLES);
+  assert.equal(APPEARANCE_FIELD_RULES.edges.head.values, EDGE_HEADS);
+  for (const shape of APPEARANCE_SHAPES)
+    assert.equal(validAppearanceField('nodes', 'shape', shape), true, shape);
+  // A span's length is a fact about time, so it is never a style choice.
+  assert.equal(validAppearanceField('nodes', 'shape', 'span'), false);
+  for (const head of EDGE_HEADS) assert.equal(validAppearanceField('edges', 'head', head), true);
+  for (const line of LINE_STYLES) assert.equal(validAppearanceField('edges', 'dash', line), true);
 });
 
 test('appearance field parser separates inheritance, incomplete numeric input and invalid values', () => {

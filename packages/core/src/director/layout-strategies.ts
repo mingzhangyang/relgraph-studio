@@ -2,22 +2,23 @@ import type { VisualGraph } from '../../types/visual-graph.js';
 import type { ProjectConfig } from '../project.js';
 import { layoutMissingNodes, roundPositionCoordinate, type LayoutPoint } from './seeded-layout.js';
 import { DIAGRAM_ENGINE, layoutGraph } from './layout.js';
-import { chooseLayoutEngine, runLayoutEngine, type LayoutEngine } from './layout-engines.js';
+import {
+  chooseLayoutEngine,
+  LAYOUT_ENGINES,
+  runLayoutEngine,
+  type LayoutEngine,
+} from './layout-engines.js';
 
-/** Every strategy a project may store; `manual` keeps coordinates as they are. */
-export const LAYOUT_TYPES = [
-  'manual',
-  'auto',
-  'force',
-  'layered',
-  'flow',
-  'tree',
-  'mindmap',
-  'timeline',
-  'radial',
-  'circle',
-  'grid',
-] as const;
+/**
+ * Every strategy a project may store: `manual` keeps coordinates as they
+ * are, `auto` chooses an engine, and each engine can be asked for by name.
+ * The project type, its validator and the studio's menu all read this list.
+ */
+export const LAYOUT_TYPES = ['manual', 'auto', ...LAYOUT_ENGINES] as const;
+export type LayoutType = (typeof LAYOUT_TYPES)[number];
+/** What a strategy may do with the coordinates that already exist. */
+export const LAYOUT_MODES = ['preserve', 'missing', 'rearrange'] as const;
+export type LayoutMode = (typeof LAYOUT_MODES)[number];
 export type LayoutSettings = NonNullable<ProjectConfig['layout']>;
 export const DEFAULT_LAYOUT_SETTINGS: LayoutSettings = {
   type: 'manual',
@@ -51,7 +52,7 @@ export function computeLayout(
     throw new RangeError('Invalid layout parameters');
   if (
     !(LAYOUT_TYPES as readonly string[]).includes(type) ||
-    !['preserve', 'missing', 'rearrange'].includes(mode)
+    !(LAYOUT_MODES as readonly string[]).includes(mode)
   )
     throw new RangeError('Invalid layout strategy');
   if (type === 'manual' || mode === 'preserve')

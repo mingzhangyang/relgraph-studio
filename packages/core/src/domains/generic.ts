@@ -11,6 +11,8 @@
 import { validateVisualGraph } from '../graph/core.js';
 import {
   DIAGRAM_KINDS,
+  EDGE_HEADS,
+  LINE_STYLES,
   NODE_SHAPES,
   TONE_COUNT,
   type DiagramKind,
@@ -276,21 +278,16 @@ function parse(doc: unknown, errors: GenericDiagnostic[], warnings: GenericDiagn
           }
           if (scope === 'edges') {
             if (value.line !== undefined) {
-              if (['solid', 'dashed', 'dotted'].includes(value.line as string))
+              if ((LINE_STYLES as readonly unknown[]).includes(value.line))
                 entry.line = value.line as KindDeclaration['line'];
-              else fail('ENUM', path + '.line', '', '线型无效。', '可用：solid、dashed、dotted。');
+              else
+                fail('ENUM', path + '.line', '', '线型无效。', `可用：${LINE_STYLES.join('、')}。`);
             }
             if (value.head !== undefined) {
-              if (['arrow', 'bar', 'hollow-circle', 'none'].includes(value.head as string))
+              if ((EDGE_HEADS as readonly unknown[]).includes(value.head))
                 entry.head = value.head as KindDeclaration['head'];
               else
-                fail(
-                  'ENUM',
-                  path + '.head',
-                  '',
-                  '端点无效。',
-                  '可用：arrow、bar、hollow-circle、none。',
-                );
+                fail('ENUM', path + '.head', '', '端点无效。', `可用：${EDGE_HEADS.join('、')}。`);
             }
             if (typeof value.directed === 'boolean') edgeDirected.set(name.trim(), value.directed);
             else if (value.directed !== undefined)
