@@ -172,7 +172,7 @@ test('every generic graph diagnostic has an English message and repair', async (
   const sample = (expression) =>
     expression === 'GENERIC_FORMAT'
       ? GENERIC_FORMAT
-      : /LIMITS|length/.test(expression)
+      : /LIMITS|length|size/.test(expression)
         ? '3'
         : /join/.test(expression)
           ? 'a、b'
@@ -209,6 +209,7 @@ test('every generic graph diagnostic has an English message and repair', async (
       { nodes: ['a'], presentation: [{ camera: { fitIds: 'a' }, highlight: 1 }] },
       { edges: [{ source: 'a', target: 'b' }] },
       { nodes: ['a'], edges: [{ source: 'a', target: 'b' }] },
+      { nodes: Array.from({ length: GENERIC_LIMITS.previewNodes + 1 }, (_, i) => i) },
     ].flatMap((doc) => {
       const result = loadDocument({ format: GENERIC_FORMAT, ...doc });
       return [...result.errors, ...result.warnings].filter((e) => e.layer === 'graph-source');

@@ -8,6 +8,8 @@ import { directorFrameAt, frameCount } from '../packages/core/src/director/state
 import { applyGraphPositions } from '../packages/core/src/director/position-writeback.ts';
 import {
   autoStoryboard,
+  GENERIC_FORMAT,
+  GENERIC_LIMITS,
   internalIds,
   validateGenericDocument,
 } from '../packages/core/src/domains/generic.ts';
@@ -649,4 +651,43 @@ test('relations carry strength as weight and their kind as hue and rhythm', () =
   assert.ok(
     paths(dark).some((p) => p.stroke === VIDEO_THEMES.dark.tones[style.edges['调用'].tone]),
   );
+});
+
+test('a graph above the preview budget loads with a warning; above the hard limit it is refused', () => {
+  const graph = (nodes, edges = []) =>
+    loadDocument({
+      format: GENERIC_FORMAT,
+      nodes: Array.from({ length: nodes }, (_, i) => `n${i}`),
+      edges,
+    });
+  const large = (result) => result.warnings.filter((entry) => entry.code === 'LARGE_GRAPH');
+  // The examples and anything within the budget load without it.
+  assert.deepEqual(large(loadDocument(bookshop)), []);
+  assert.deepEqual(large(graph(GENERIC_LIMITS.previewNodes)), []);
+  const chain = (count) =>
+    Array.from({ length: count }, (_, i) => ({ source: `n${i % 50}`, target: `n${(i + 1) % 50}` }));
+  assert.deepEqual(large(graph(50, chain(GENERIC_LIMITS.previewEdges))), []);
+  // Either count above its budget warns, names both counts and still loads.
+  for (const result of [
+    graph(GENERIC_LIMITS.previewNodes + 1),
+    graph(50, chain(GENERIC_LIMITS.previewEdges + 1)),
+  ]) {
+    assert.equal(result.valid, true);
+    const [warning] = large(result);
+    assert.ok(warning, JSON.stringify(result.warnings));
+    assert.equal(warning.level, 'warning');
+    assert.match(warning.message, /\d+ 个节点、\d+ 条关系/);
+  }
+  assert.match(
+    large(graph(GENERIC_LIMITS.previewNodes + 1))[0].message,
+    new RegExp(`^图谱较大（${GENERIC_LIMITS.previewNodes + 1} 个节点、0 条关系）`),
+  );
+  // The hard limit is unchanged and still an error.
+  const refused = graph(GENERIC_LIMITS.nodes + 1);
+  assert.equal(refused.valid, false);
+  assert.ok(refused.errors.some((entry) => entry.code === 'TOO_LARGE'));
+  // The budget measured from playback (docs/GENERIC-GRAPH.md, "Size").
+  assert.deepEqual([GENERIC_LIMITS.previewNodes, GENERIC_LIMITS.previewEdges], [300, 600]);
+  assert.ok(GENERIC_LIMITS.previewNodes < GENERIC_LIMITS.nodes);
+  assert.ok(GENERIC_LIMITS.previewEdges < GENERIC_LIMITS.edges);
 });

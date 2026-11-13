@@ -83,13 +83,70 @@ Rules worth knowing:
   `visibleFrom` / `visibleTo` instead grows one step per domain time (at most
   twelve steps), which keeps the existing spoiler guarantee.
 - **Limits.** 5,000 nodes and 20,000 relations; text fields up to 2,000
-  characters. Unknown fields are ignored, so exported data can be loaded with
-  its extra attributes in place.
+  characters. Above 300 nodes or 600 relations the graph still loads, with
+  a `LARGE_GRAPH` warning that the preview may stutter (see [Size](#size)).
+  Unknown fields are ignored, so exported data can be loaded with its extra
+  attributes in place.
 - **Diagnostics** use the same shape as the other formats: code, JSON path,
   record id, message and repair.
 
 Coordinate export (`仅导出坐标 JSON`) and `relgraph layout` write back to the
 ids you authored and declare nodes that previously existed only as endpoints.
+
+## Size
+
+`GENERIC_LIMITS` holds two kinds of number:
+
+| Limit                                           | Nodes | Relations | Above it                                                                              |
+| ----------------------------------------------- | ----- | --------- | ------------------------------------------------------------------------------------- |
+| Preview budget (`previewNodes`, `previewEdges`) | 300   | 600       | Loads with the `LARGE_GRAPH` warning: the preview may stutter; export is not affected |
+| Hard limit (`nodes`, `edges`)                   | 5,000 | 20,000    | Refused with `TOO_LARGE`                                                              |
+
+The preview budget is set by playback, not by composition alone: a preview
+tick composes a frame and then draws it, and at 24 fps it has about 42 ms.
+Measured in the review of #41 in the built studio, headless Chromium
+(software rasterising, so a desktop with a GPU is faster), synthetic graph:
+
+| Nodes / relations | Playback, frames per second | Tick (compose and draw), mean |
+| ----------------- | --------------------------- | ----------------------------- |
+| 100 / 200         | 56                          | 6 ms                          |
+| 300 / 600         | 31                          | 16 ms                         |
+| 500 / 1,000       | 18                          | 29 ms                         |
+| 1,000 / 2,000     | 9                           | 63 ms                         |
+
+At 300 / 600 playback still keeps up with 24 fps; at 500 / 1,000 it no
+longer does.
+
+Composition alone, measured with `scripts/bench-compose.mjs` on linux-x64,
+Node 22.23.4, after `npm run build:packages`; the graph is
+`tests/helpers/synthetic-graph.mjs` (six groups, three node and relation
+kinds), seven frames across shots with every highlight form, text measured in
+constant time. Real frames also measure and draw text, so they are slower.
+The default command composes the first four rows; the last row needs
+`--sizes 5000 --per-node 4`, since the default of two relations per node gives
+5,000 / 10,000.
+
+| Nodes / relations | Compose, 1080p (mean) | Compose, 720p (mean) | Frame state (mean) |
+| ----------------- | --------------------- | -------------------- | ------------------ |
+| 200 / 400         | 10–19 ms (13)         | —                    | 1.4 ms             |
+| 300 / 600         | 15–26 ms (20)         | 17–23 ms (20)        | 2 ms               |
+| 500 / 1,000       | 27–40 ms (33)         | 27–42 ms (34)        | 3 ms               |
+| 1,500 / 3,000     | 67–115 ms (85)        | —                    | 18 ms              |
+| 5,000 / 20,000    | 0.45–0.64 s (0.54)    | —                    | 61 ms              |
+
+Before the per-frame work was reduced (`main` at `a2589bf`), the same frames
+took 24, 36, 66, 265 and 3,452 ms on average at 1080p.
+
+How the work grows. Each concern (attention, groups, self-loops, the legend)
+is one pass over the view, and every text is measured a bounded number of
+times. Label collisions are tested only against rectangles in nearby cells
+of a grid. When the camera shows part of a large graph, the density on stage
+does not change with the size of the graph, and composition costs a bounded
+amount of work per node and relation. A whole-graph shot is different: every
+node is on stage, so the stage gets denser as the graph grows and each label
+place meets more neighbours. There collision tests still grow faster than the
+graph, though far slower than its square: four times the nodes cost about six
+times the rectangle tests (`tests/compose-cost.test.mjs` bounds both cases).
 
 ## Diagram kinds
 

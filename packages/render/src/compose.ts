@@ -33,7 +33,6 @@ import type {
 import { projectCameraPoint, DEFAULT_FRAME_SPEC, type FrameSpec, type Rect } from './frame-spec.js';
 import {
   nodeRadius,
-  rectsIntersect,
   glyphGeometry,
   nodeOutline,
   nodeGlyphBounds,
@@ -44,6 +43,7 @@ import {
   type GlyphGeometry,
 } from './node-geometry.js';
 import { RENDER_MESSAGES } from './locale.js';
+import { PointIndex, RectIndex } from './spatial.js';
 import { edgePaint, mixHex, toneOf, VIDEO_THEMES, type VideoTheme } from './theme.js';
 
 type Point = { x: number; y: number };
@@ -163,34 +163,49 @@ const alphaHex = (alpha: number): string =>
 const captionWithLabel = (caption: string, label: string | undefined): string =>
   label && !/^1$/.test(label) ? `${caption} · ${label}` : caption;
 
+/**
+ * Attention (0–1) of the nodes and edges of a view under a shot highlight.
+ * The lookups are built once, so asking for every item costs one pass over
+ * the view instead of one per item.
+ */
+function attentionUnder(
+  highlight: ResolvedHighlight,
+  view: ProjectedVisualGraph,
+): (item: DrawItem) => number {
+  const ids = new Set(highlight.nodeIds),
+    edges = new Set(highlight.edgeIds),
+    group = highlight.groupId;
+  const active = ids.size || edges.size || group;
+  if (!active) return () => 1;
+  // Members of the highlighted group that are in view, and nodes that a
+  // highlighted relation in view touches.
+  const members = new Set(
+    group ? view.nodes.filter((n) => n.groupId === group).map((n) => n.id) : [],
+  );
+  const touched = new Set<string>();
+  for (const edge of view.edges) if (edges.has(edge.id)) touched.add(edge.source).add(edge.target);
+  return (item) => {
+    if (isEdge(item))
+      return edges.has(item.id) || (group && members.has(item.source) && members.has(item.target))
+        ? 1
+        : 0.2;
+    // Only a highlighted group may match: ungrouped nodes (groupId null or
+    // undefined) must not equal an absent group and stay dimmed.
+    return ids.has(item.id) || (group && item.groupId === group) || touched.has(item.id) ? 1 : 0.24;
+  };
+}
+
 /** Attention (0–1) of a node or edge under a shot highlight. */
 export function shotAttention(
   item: DrawItem,
   highlight: ResolvedHighlight,
   view: ProjectedVisualGraph,
 ): number {
-  const ids = highlight.nodeIds,
-    edges = highlight.edgeIds,
-    group = highlight.groupId;
-  const active = ids.length || edges.length || group;
-  if (!active) return 1;
-  if (isEdge(item))
-    return edges.includes(item.id) ||
-      (group &&
-        view.nodes.some((n) => n.id === item.source && n.groupId === group) &&
-        view.nodes.some((n) => n.id === item.target && n.groupId === group))
-      ? 1
-      : 0.2;
-  // Only a highlighted group may match: ungrouped nodes (groupId null or
-  // undefined) must not equal an absent group and stay dimmed.
-  return ids.includes(item.id) ||
-    (group && item.groupId === group) ||
-    view.edges.some(
-      (edge) => edges.includes(edge.id) && (edge.source === item.id || edge.target === item.id),
-    )
-    ? 1
-    : 0.24;
+  return attentionUnder(highlight, view)(item);
 }
+
+/** Node ids in reading order; one collator instead of one per comparison. */
+const byId = new Intl.Collator('en').compare;
 
 function fitText(measure: TextMeasurer, text: unknown, font: FontRef, maxWidth: number): string {
   const s = String(text || '');
@@ -343,6 +358,18 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
     box.x + box.w <= bounds.right &&
     box.y >= bounds.top &&
     box.y + box.h <= bounds.bottom;
+  // Collision tests go through grids over the label bounds: every candidate
+  // is tested in bounds first, so only nearby rectangles can meet it. A cell
+  // about the height of a label line keeps the rectangles per cell few when a
+  // whole graph is on stage, where a coarser cell holds more of them the
+  // larger the graph (tests/compose-cost.test.mjs).
+  const boundsRect = {
+    x: bounds.left,
+    y: bounds.top,
+    w: bounds.right - bounds.left,
+    h: bounds.bottom - bounds.top,
+  };
+  const rectIndex = (): RectIndex => new RectIndex(boundsRect, u(16));
 
   const { view, playback, cameraResolved: cam, highlight, previousHighlight, transition } = state;
   const nodeProgress = (id: string): number => state.reveal?.nodes[id] ?? 1;
@@ -360,12 +387,13 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
     return result;
   };
   const groups = new Map(view.groups.map((g) => [g.id, g]));
+  const attentionBefore = attentionUnder(previousHighlight, view),
+    attentionNow = attentionUnder(highlight, view);
   const attention = (item: DrawItem): number =>
-    mix(
-      shotAttention(item, previousHighlight, view),
-      shotAttention(item, highlight, view),
-      transition,
-    );
+    mix(attentionBefore(item), attentionNow(item), transition);
+  const namedBefore = new Set(previousHighlight.nodeIds),
+    namedNow = new Set(highlight.nodeIds),
+    highlightedEdges = new Set(highlight.edgeIds);
   const radius = (node: VisualNode): number => nodeRadius(node, cam.scale, spec, style, config);
   const nodeLabel = (node: VisualNode): string =>
     displayNodeText(config, node.id)?.label ?? node.label;
@@ -452,21 +480,17 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
       alpha: attention(node),
       visibility: nodeProgress(node.id),
       // Explicitly named in the shot, as opposed to merely not dimmed.
-      focus: mix(
-        previousHighlight.nodeIds.includes(node.id) ? 1 : 0,
-        highlight.nodeIds.includes(node.id) ? 1 : 0,
-        transition,
-      ),
+      focus: mix(namedBefore.has(node.id) ? 1 : 0, namedNow.has(node.id) ? 1 : 0, transition),
     };
   });
   const drawnById = new Map(drawn.map((entry) => [entry.node.id, entry]));
-  const occupied: Rect[] = [];
+  const occupied = rectIndex();
   const nodeLabelBounds = new Map<string, Rect>();
   for (const { node, p, visibility } of drawn)
     if (visibility > 0.5) {
       const obstacle = nodeLabelObstacleBounds(node, p, cam.scale, spec, style, config);
       nodeLabelBounds.set(node.id, obstacle);
-      occupied.push(obstacle);
+      occupied.add(obstacle);
     }
 
   // A timeline's axis: quiet rules at round times, and a cursor at the
@@ -495,7 +519,7 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
       rules.push(['M', x, stage.y + u(24)], ['L', x, stage.y + stage.h]);
       const text = decimals ? time.toFixed(decimals) : String(Math.round(time)),
         w = measure(text, font);
-      occupied.push({ x: x - w / 2 - u(3), y: stage.y + u(5), w: w + u(6), h: u(18) });
+      occupied.add({ x: x - w / 2 - u(3), y: stage.y + u(5), w: w + u(6), h: u(18) });
       graphItems.push({
         type: 'text',
         text,
@@ -550,8 +574,15 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
     hasFocus(highlight) ? 1 : 0,
     transition,
   );
+  const membersOf = new Map<string, typeof drawn>();
+  for (const entry of drawn)
+    if (entry.node.groupId != null) {
+      const members = membersOf.get(entry.node.groupId);
+      if (members) members.push(entry);
+      else membersOf.set(entry.node.groupId, [entry]);
+    }
   for (const group of view.groups) {
-    const members = drawn.filter((entry) => entry.node.groupId === group.id);
+    const members = membersOf.get(group.id) ?? [];
     if (!members.length) continue;
     const groupProgress = Math.max(...members.map((entry) => entry.visibility));
     if (groupProgress <= 0) continue;
@@ -599,7 +630,7 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
       // at the highest point of the outline that is on stage and free.
       const boxAt = (q: Point): Rect => ({ x: q.x - w / 2, y: q.y - h / 2, w, h });
       const free = (candidate: Rect): boolean =>
-        inBounds(candidate) && !occupied.some((o) => rectsIntersect(candidate, o));
+        inBounds(candidate) && !occupied.someIntersecting(candidate);
       // Long straight runs of the outline have no vertices of their own.
       const along = hull.points.flatMap((q, i) => {
         const next = hull.points[(i + 1) % hull.points.length],
@@ -628,7 +659,7 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
             }
           : null;
       if (box) {
-        occupied.push(box);
+        occupied.add(box);
         decoration.push({
           type: 'text',
           text: label,
@@ -670,14 +701,14 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
     if (!a || !b || edge.source === edge.target) continue;
     const d = Math.hypot(b.x - a.x, b.y - a.y);
     if (!(d > 0)) continue;
-    spokeAngles.set(edge.source, [
-      ...(spokeAngles.get(edge.source) ?? []),
-      Math.atan2(b.y - a.y, b.x - a.x),
-    ]);
-    spokeAngles.set(edge.target, [
-      ...(spokeAngles.get(edge.target) ?? []),
-      Math.atan2(a.y - b.y, a.x - b.x),
-    ]);
+    for (const [id, angle] of [
+      [edge.source, Math.atan2(b.y - a.y, b.x - a.x)],
+      [edge.target, Math.atan2(a.y - b.y, a.x - b.x)],
+    ] as const) {
+      const angles = spokeAngles.get(id);
+      if (angles) angles.push(angle);
+      else spokeAngles.set(id, [angle]);
+    }
     const pa = pull.get(edge.source),
       pb = pull.get(edge.target);
     if (pa) {
@@ -693,8 +724,17 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
   for (const edge of view.edges)
     for (const id of edge.source === edge.target ? [edge.source] : [edge.source, edge.target])
       degree.set(id, (degree.get(id) ?? 0) + 1);
+  // A node's loops, in id order, so that each has its own radius.
+  const loopsOf = new Map<string, string[]>();
+  for (const edge of view.edges)
+    if (edge.source === edge.target) {
+      const loops = loopsOf.get(edge.source);
+      if (loops) loops.push(edge.id);
+      else loopsOf.set(edge.source, [edge.id]);
+    }
+  for (const loops of loopsOf.values()) loops.sort();
   const edgeLabels: EdgeLabel[] = [],
-    edgeObstacles: Rect[] = [];
+    edgeObstacles = rectIndex();
   /** A swept-back arrowhead whose notch is where the stroke ends. */
   const arrowhead = (tip: Point, dir: Point, length: number, fill: Paint): DisplayItem => {
     const half = length * 0.4,
@@ -720,7 +760,7 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
     const a = from.p,
       b = to.p;
     const edgeStyle = edgeStyleFor(style, edge.kind),
-      highlighted = highlight.edgeIds.includes(edge.id),
+      highlighted = highlightedEdges.has(edge.id),
       active = attention(edge),
       kindColour = color(edgeStyle.color, toneOf(P, edgeStyle.tone) ?? ''),
       stroke =
@@ -769,10 +809,7 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
         });
       }
       const out = { x: Math.cos(outAngle), y: Math.sin(outAngle) };
-      const loops = view.edges
-        .filter((e) => e.source === edge.source && e.target === edge.source)
-        .map((e) => e.id)
-        .sort();
+      const loops = loopsOf.get(edge.source) ?? [];
       const loopRadius = Math.max(u(11), from.r * 0.8) * (1 + 0.45 * loops.indexOf(edge.id));
       const rim = nodeGlyphRayDistance(from.node, out, cam.scale, spec, style, config) + u(2.5),
         distance = rim + loopRadius * 0.55,
@@ -829,7 +866,7 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
         selection.push({ kind: 'edge', id: edge.id, points: samples });
         // Node labels keep clear of the whole loop, not just of a line.
         for (const q of [...samples, centre])
-          edgeObstacles.push({ x: q.x - u(4), y: q.y - u(4), w: u(8), h: u(8) });
+          edgeObstacles.add({ x: q.x - u(4), y: q.y - u(4), w: u(8), h: u(8) });
       }
       labelAt = {
         x: centre.x + out.x * (loopRadius + u(4)),
@@ -930,7 +967,7 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
         // Beyond halfway, only the drawn prefix participates in avoidance.
         for (let t = 0.1; t < visibility; t += 0.1) {
           const q = pathPoint(segments, t);
-          edgeObstacles.push({ x: q.x - u(4), y: q.y - u(4), w: u(8), h: u(8) });
+          edgeObstacles.add({ x: q.x - u(4), y: q.y - u(4), w: u(8), h: u(8) });
         }
       }
       parts.push({
@@ -1172,18 +1209,22 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
 
   // The legend names what colour, rhythm and shape mean, for the kinds that
   // are on screen now. Kinds captioned on their own edges need no entry.
+  // How far the most advanced item of each kind has come.
+  const kindProgress = (
+    list: readonly { id: string; kind: string }[],
+    progressOf: (id: string) => number,
+  ): Map<string, number> => {
+    const most = new Map<string, number>();
+    for (const item of list)
+      most.set(item.kind, Math.max(most.get(item.kind) ?? 0, progressOf(item.id)));
+    return most;
+  };
+  const nodeKindProgress = kindProgress(view.nodes, nodeProgress),
+    edgeKindProgress = kindProgress(view.edges, edgeProgress);
   const legendEntries = style.legend.flatMap((entry) => {
     const isNode = entry.of === 'node';
     if (!isNode && edgeStyleFor(style, entry.kind).caption) return [];
-    const progress = isNode
-      ? Math.max(
-          0,
-          ...view.nodes.filter((n) => n.kind === entry.kind).map((n) => nodeProgress(n.id)),
-        )
-      : Math.max(
-          0,
-          ...view.edges.filter((e) => e.kind === entry.kind).map((e) => edgeProgress(e.id)),
-        );
+    const progress = (isNode ? nodeKindProgress : edgeKindProgress).get(entry.kind) ?? 0;
     return progress > 0.5 ? [{ ...entry, isNode, alpha: Math.min(1, (progress - 0.5) * 2) }] : [];
   });
   if (legendEntries.length > 1) {
@@ -1269,7 +1310,7 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
     }
     if (row.length) {
       const plate = { x: x0, y: y0, w: x - between + padX - x0, h };
-      occupied.push(plate);
+      occupied.add(plate);
       legendItems.push(
         {
           type: 'path',
@@ -1288,8 +1329,11 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
       (a, b) =>
         b.alpha - a.alpha ||
         (b.node.importance || 0) - (a.node.importance || 0) ||
-        a.node.id.localeCompare(b.node.id, 'en'),
+        byId(a.node.id, b.node.id),
     );
+  // Where the other labelled nodes are, for the test that a label reads as theirs.
+  const labelled = new PointIndex(u(96));
+  for (const entry of sorted) labelled.add(entry.node.id, entry.p.x, entry.p.y);
   for (const { node, custom, p, r, alpha: active } of sorted) {
     const obstacle = nodeLabelBounds.get(node.id);
     if (!obstacle) continue;
@@ -1350,29 +1394,25 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
       // A place costs at least its rank, so nothing further down can win.
       if (rank >= best) break;
       const c = candidates[rank];
-      if (!inBounds(c) || occupied.some((o) => rectsIntersect(c, o))) continue;
+      if (!inBounds(c) || occupied.someIntersecting(c)) continue;
       // Count crossings only while they can still change the outcome: they
       // are capped at six, and a place already as costly as the best is out.
       let crossings = 0;
-      for (const o of edgeObstacles)
-        if (rectsIntersect(c, o) && (++crossings >= 6 || rank + crossings * 0.9 >= best)) break;
+      edgeObstacles.someIntersecting(c, () => ++crossings >= 6 || rank + crossings * 0.9 >= best);
       if (rank + Math.min(6, crossings) * 0.9 >= best) continue;
       const cx = c.x + c.w / 2,
         cy = c.y + c.h / 2,
         own = Math.hypot(cx - p.x, cy - p.y);
-      const ambiguous = sorted.some(
-        (other) =>
-          other.node.id !== node.id && Math.hypot(cx - other.p.x, cy - other.p.y) < own * 0.9,
-      );
-      const cost = rank + Math.min(6, crossings) * 0.9 + (ambiguous ? 4 : 0);
-      if (cost < best) {
-        best = cost;
+      const ambiguous = labelled.anyCloser(cx, cy, own * 0.9, node.id);
+      const placeCost = rank + Math.min(6, crossings) * 0.9 + (ambiguous ? 4 : 0);
+      if (placeCost < best) {
+        best = placeCost;
         box = c;
       }
     }
     if (!box) continue;
     const placed: Rect = box;
-    occupied.push(placed);
+    occupied.add(placed);
     lines.forEach((line, index) =>
       graphItems.push({
         type: 'text',
@@ -1408,11 +1448,9 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
         x: home.x + (aside?.x ?? 0) * k * reach,
         y: home.y + (aside?.y ?? 0) * k * reach,
       }))
-      .find(
-        (candidate) => inBounds(candidate) && !occupied.some((o) => rectsIntersect(candidate, o)),
-      );
+      .find((candidate) => inBounds(candidate) && !occupied.someIntersecting(candidate));
     if (!box) continue;
-    occupied.push(box);
+    occupied.add(box);
     graphItems.push(
       {
         type: 'path',
