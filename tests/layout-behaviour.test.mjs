@@ -30,7 +30,9 @@ import {
   anchorToTime,
   declaresTimeAxis,
   timeAnchor,
+  timeCoordinate,
 } from '../packages/core/src/director/time-anchor.ts';
+import { layoutMissingNodes } from '../packages/core/src/director/seeded-layout.ts';
 import { styleForDrawing } from '../packages/core/src/style.ts';
 import { layoutFile } from '../packages/cli/src/layout.ts';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
@@ -428,8 +430,15 @@ test('#40 item 6: relgraph layout puts a new dated node at its years, in a free 
     // What the CLI wrote is what the player draws: the lane, with x from the dates (F6).
     const fresh = written.nodes.find((n) => n.id === '新').position;
     assert.deepEqual(Object.keys(fresh), ['y']);
-    assert.deepEqual(at.get(byLabel(graph, '新').id), byLabel(graph, '新').position);
-    assert.equal(at.get(byLabel(graph, '新').id).y, fresh.y);
+    // The point the CLI placed, computed as it does, independently of the file.
+    const before = load(source),
+      placed = layoutMissingNodes(before, { seed: 0, ...LAYOUT_DEFAULTS });
+    anchorToTime(before, placed, { unplaced: new Set([byLabel(before, '新').id]) });
+    const node = byLabel(graph, '新'),
+      expected = { x: timeCoordinate(node, timeAnchor(graph)), y: fresh.y };
+    assert.deepEqual(placed.get(byLabel(before, '新').id), expected);
+    assert.deepEqual(node.position, expected);
+    assert.deepEqual(at.get(node.id), expected);
     inTime(graph, at);
     lanesClear(graph, at);
     // The new lane, if any, is one of the drawing's own lane steps below the others.
@@ -576,53 +585,64 @@ test('F6: x written by hand, or by an earlier export, is still told apart and ca
   assert.deepEqual(layoutGraph(load(fixed.document)), shown);
 });
 
-test('F6: a lane-only position is accepted only for a dated node on a timeline that keeps time', () => {
-  const lane = (doc, id) => {
-    const copy = structuredClone(doc),
-      node = copy.nodes.find((n) => n.id === id);
-    node.position = { y: 40 };
-    return copy;
-  };
-  const errorAt = (doc) => {
+test('F6: a lane-only position that cannot take x from dates is unplaced, not an error', () => {
+  const source = exported();
+  const laneOnly = (doc, count) => {
     const result = loadDocument(doc);
-    assert.equal(result.valid, false);
-    const [error] = result.errors;
-    assert.equal(error.code, 'POSITION');
-    assert.match(error.path, /position\.x$/);
-    assert.equal(error.message, '只有在时间轴上的带日期节点可以省略 x。');
+    assert.equal(result.valid, true, JSON.stringify(result.errors));
+    const notices = result.warnings.filter((w) => w.code === 'LANE_ONLY');
+    assert.equal(notices.length, 1);
+    assert.match(notices[0].message, new RegExp('^' + count + ' 个节点的坐标只有 y'));
+    return result.graph;
   };
-  // An undated node on a timeline has no x to derive.
-  const undated = structuredClone(dynasties);
-  undated.nodes.push({ id: '无', position: { y: 0 } });
-  errorAt(undated);
-  // A timeline declared off its axis keeps x as written.
-  errorAt({ ...lane(dynasties, '唐'), timeAxis: false });
-  // Other diagram kinds have no axis.
-  const network = lane(dynasties, '唐');
+  // Every hand edit of an exported timeline still loads; layout fills the gaps.
+  const undated = structuredClone(source);
+  delete undated.nodes.find((n) => n.id === '唐').start;
+  delete undated.nodes.find((n) => n.id === '唐').end;
+  const g = laneOnly(undated, 1);
+  assert.equal(byLabel(g, '唐').position, undefined);
+  assert.ok(layoutGraph(g).get(byLabel(g, '唐').id));
+  laneOnly({ ...source, timeAxis: false }, 18);
+  const network = structuredClone(source);
   delete network.diagram;
-  errorAt(network);
+  laneOnly(network, 18);
   // x present but not a number is still invalid, as before.
   const broken = structuredClone(dynasties);
   broken.nodes[0].position = { x: null, y: 0 };
   assert.equal(loadDocument(broken).errors[0].message, '坐标无效。');
-  // One time for every node: there is no axis, and lane-only nodes stand at x 0.
+  // One time for every node: no axis, so no x to take; nothing is stacked at x 0.
   const flat = {
     format: 'relgraph.graph/1',
     diagram: 'timeline',
     nodes: [
       { id: 'a', start: 1900, position: { y: 0 } },
-      { id: 'b', start: 1900, position: { y: 80 } },
+      { id: 'b', start: 1900, position: { y: 0 } },
     ],
     presentation: [{ id: 's', domainAt: 1900 }],
   };
-  const g = load(flat);
-  assert.deepEqual(
-    g.nodes.map((n) => n.position),
-    [
-      { x: 0, y: 0 },
-      { x: 0, y: 80 },
-    ],
-  );
+  const f = laneOnly(flat, 2),
+    at = layoutGraph(f),
+    [a, b] = f.nodes.map((n) => at.get(n.id));
+  assert.notDeepEqual(a, b);
+});
+
+test('F6: relgraph layout fills a lane-only position it cannot place, and the file loads', async () => {
+  const source = { ...exported(), timeAxis: false };
+  const folder = await mkdtemp(join(tmpdir(), 'relgraph-lane-'));
+  try {
+    const file = join(folder, 'off.json'),
+      out = join(folder, 'filled.json');
+    await writeFile(file, JSON.stringify(source, null, 2) + '\n');
+    const summary = await layoutFile({ file, out, seed: 0, write: false });
+    assert.equal(summary.missing, 18);
+    const written = JSON.parse(await readFile(out, 'utf8'));
+    for (const node of written.nodes) assert.deepEqual(Object.keys(node.position), ['x', 'y']);
+    const result = loadDocument(written);
+    assert.equal(result.valid, true, JSON.stringify(result.errors));
+    assert.deepEqual(result.warnings, []);
+  } finally {
+    await rm(folder, { recursive: true, force: true });
+  }
 });
 
 test('F6: a timeline off its axis, and other formats, still store x', () => {
@@ -630,11 +650,31 @@ test('F6: a timeline off its axis, and other formats, still store x', () => {
     grid = computeLayout(graph, rearrange('grid'), layoutGraph(graph));
   const off = applyGraphPositions(dynasties, graph, grid, { timeAxis: false }).document;
   for (const node of off.nodes) assert.deepEqual(Object.keys(node.position), ['x', 'y']);
-  // Without the option the graph's declared state decides: the CLI's case.
+  // Without the option the field is left as is, and the file's own state decides.
   const declared = applyGraphPositions(dynasties, graph, layoutGraph(graph)).document;
   for (const node of declared.nodes) assert.deepEqual(Object.keys(node.position), ['y']);
+  // A strategy the file does not record cannot make it contradict itself.
   const left = applyGraphPositions(dynasties, withLayout(graph, { type: 'grid' }), grid).document;
-  for (const node of left.nodes) assert.deepEqual(Object.keys(node.position), ['x', 'y']);
+  assert.equal(left.timeAxis, undefined);
+  for (const node of left.nodes) assert.deepEqual(Object.keys(node.position), ['y']);
+  assert.deepEqual(offAxis(left), []);
+  const offSource = { ...dynasties, timeAxis: false },
+    onProject = withLayout(load(offSource), { type: 'timeline' }),
+    kept = applyGraphPositions(offSource, onProject, layoutGraph(graph)).document;
+  assert.equal(kept.timeAxis, false);
+  for (const node of kept.nodes) assert.deepEqual(Object.keys(node.position), ['x', 'y']);
+  assert.equal(loadDocument(kept).valid, true);
+  // Written once, read once: exactly the nodes the adapter places from dates.
+  const flat = {
+    format: 'relgraph.graph/1',
+    diagram: 'timeline',
+    nodes: [{ id: 'a', start: 1900 }, { id: 'b' }],
+    presentation: [{ id: 's', domainAt: 1900 }],
+  };
+  const fg = load(flat),
+    noAxis = applyGraphPositions(flat, fg, layoutGraph(fg)).document;
+  for (const node of noAxis.nodes) assert.deepEqual(Object.keys(node.position), ['x', 'y']);
+  assert.deepEqual(layoutGraph(load(noAxis)), layoutGraph(fg));
   for (const doc of [bookshop, tree]) {
     const g = load(doc),
       written = applyGraphPositions(doc, g, layoutGraph(g)).document;

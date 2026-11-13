@@ -376,28 +376,36 @@ in the file.
 
 - **Lanes only.** `applyGraphPositions` writes a dated node of an anchored
   timeline as `"position": { "y": … }` (`lanedNodes` in
-  `packages/core/src/director/time-anchor.ts`). The state is the `timeAxis`
-  option, or the graph's declared state (`declaresTimeAxis`) when omitted, so
-  the studio's positioned export and `relgraph layout` both write lanes. Off
-  the axis (`"timeAxis": false`, or a stored strategy that leaves it), for
-  undated nodes, and in the literature and biology formats, x is written as
-  before.
-- **x on load.** The generic parser accepts `{ "y": … }` only for a dated node
-  on a timeline that does not say `"timeAxis": false`; anywhere else it is a
-  `POSITION` error at `position.x`. The adapter derives x from the dates
-  (`timeCoordinate`, rounded as stored coordinates are). With no axis (one
-  time for every node) lane-only nodes stand at x 0.
+  `packages/core/src/director/time-anchor.ts`). Whether the timeline is
+  anchored is the state written to the file (`sourceKeepsTime` of the
+  output: the `timeAxis` option applied, or the field as is when omitted),
+  never a stored strategy the file does not record, so the output always
+  loads. The studio's positioned export passes its declared state and
+  `relgraph layout` omits it; both write lanes. Off the axis, for undated
+  nodes, while there is no axis yet (fewer than two distinct times, where x
+  is layout, not a date) and in the literature and biology formats, x is
+  written as before.
+- **x on load.** One rule for both directions: the adapter derives x
+  (`timeCoordinate`, rounded as stored coordinates are) for exactly the nodes
+  `lanedNodes` names under the source's own state. A lane-only position
+  anywhere else (an undated node, `"timeAxis": false`, another diagram kind,
+  no axis) is not an error: the node is unplaced, the layout fills the gap
+  and a `LANE_ONLY` warning says how to add x. Hand edits of an exported
+  timeline therefore still load, and nothing is stacked at x 0.
+  `relgraph layout` counts such a node as missing and fills it.
 - **The warning.** `OFF_TIME_AXIS` still reports x written by hand, or by an
   export from before F6, and now names both fixes: keep only y, which
   re-exporting the positioned source does, or declare `"timeAxis": false`.
   The studio translates the new texts.
 - Tests: the "F6" cases in `tests/layout-behaviour.test.mjs` (one changed
   `end`, a moved end of the axis, an added dated node, a pre-F6 file repaired
-  by re-export, the accepted and refused lane-only positions, what stays
-  `{x, y}`) and the simulated-DOM case "F6" in
+  by re-export, lane-only positions that cannot be placed, `relgraph layout`
+  filling them, what stays `{x, y}`, an export under a strategy the file does
+  not record) and the simulated-DOM case "F6" in
   `tests/studio-workspace.test.mjs`, which exports from the studio, moves the
-  end of the axis and loads the file again. All five fail against the core of
-  `682dbbd`; the item 6 CLI case now expects a lane-only position.
+  end of the axis and loads the file again. All fail against the core of
+  `682dbbd`; the item 6 CLI case now checks the CLI's own placement, the
+  derived x and the drawn point against one another.
 - Golden frames are unaffected: no example stores timeline coordinates.
 
 Validation, run locally on linux-x64, Node 22.23.4: `npm run typecheck`,

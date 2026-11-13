@@ -26,7 +26,7 @@ import {
   timeAxis as axisOf,
   timedNodes,
 } from '../director/layout-engines.js';
-import { timeCoordinate } from '../director/time-anchor.js';
+import { lanedNodes, sourceKeepsTime, timeCoordinate } from '../director/time-anchor.js';
 import type {
   VisualEdge,
   VisualGraph,
@@ -126,8 +126,8 @@ interface Parsed {
   scenes: VisualScene[];
   /** Internal node id → the id written in the source. */
   sourceIds: Map<string, string>;
-  /** Dated timeline nodes whose position is their lane alone (`{ "y": … }`). */
-  lanes: Set<string>;
+  /** Nodes whose position is their lane alone (`{ "y": … }`), by id: the adapter places them. */
+  lanes: Map<string, number>;
 }
 
 function parse(doc: unknown, errors: GenericDiagnostic[], warnings: GenericDiagnostic[]) {
@@ -377,7 +377,7 @@ function parse(doc: unknown, errors: GenericDiagnostic[], warnings: GenericDiagn
   const nodeSeen = new Set<string>(),
     weights = new Map<string, number>(),
     sourceIds = new Map<string, string>(),
-    lanes = new Set<string>();
+    lanes = new Map<string, number>();
   rawNodes.forEach((n, i) => {
     const raw = object(n) ? rawId(n.id) : rawId(n);
     if (raw === null || nodeSeen.has(raw)) return;
@@ -421,25 +421,14 @@ function parse(doc: unknown, errors: GenericDiagnostic[], warnings: GenericDiagn
         '确保 start 不大于 visibleTo，或用 visibleFrom 指定首次出现的时间。',
       );
     // On a timeline that keeps time a dated node's x is its date, so its
-    // position may be its lane alone; the adapter derives x (`timeCoordinate`).
+    // position may be its lane alone. Whether x can be derived is decided by
+    // the adapter (`lanedNodes`), with the rule the writer uses.
     let position: { x: number; y: number } | undefined;
     if (record.position !== undefined && record.position !== null) {
       const at = record.position;
       if (object(at) && finite(at.x) && finite(at.y)) position = { x: at.x, y: at.y };
-      else if (object(at) && at.x === undefined && finite(at.y)) {
-        const dated = start !== undefined || shown?.from !== undefined;
-        if (doc.diagram === 'timeline' && doc.timeAxis !== false && dated) {
-          position = { x: 0, y: at.y };
-          lanes.add(id);
-        } else
-          fail(
-            'POSITION',
-            path + '.position.x',
-            raw,
-            '只有在时间轴上的带日期节点可以省略 x。',
-            '补充 x，使用 { "x": 数字, "y": 数字 }。',
-          );
-      } else
+      else if (object(at) && at.x === undefined && finite(at.y)) lanes.set(id, at.y);
+      else
         fail('POSITION', path + '.position', raw, '坐标无效。', '使用 { "x": 数字, "y": 数字 }。');
     }
     nodes.push({
@@ -983,17 +972,38 @@ export function adaptGenericDocument(input: unknown) {
     scenes: parsed.scenes,
   };
   shapeDiagram(graph, parsed, summaries);
+  // A lane-only position takes its x from the node's dates. Where there is
+  // none to take (no axis, an undated node, a timeline off its axis, another
+  // kind of diagram) the node is unplaced and the layout fills the gap: hand
+  // edits to an exported timeline still load.
+  if (parsed.lanes.size) {
+    const timed = timedNodes(graph),
+      axis = axisOf(timed),
+      laned = lanedNodes(graph, sourceKeepsTime(graph)),
+      unplaced: string[] = [];
+    graph.nodes.forEach((node, i) => {
+      const y = parsed.lanes.get(node.id);
+      if (y === undefined) return;
+      const x = axis && laned.has(node.id) ? timeCoordinate(timed[i], axis) : null;
+      if (x === null) unplaced.push(node.id);
+      else node.position = { x, y };
+    });
+    if (unplaced.length)
+      warnings.push({
+        level: 'warning',
+        layer: 'graph-source',
+        code: 'LANE_ONLY',
+        path: 'nodes',
+        id: unplaced.length === 1 ? (parsed.sourceIds.get(unplaced[0]) ?? '') : '',
+        message: `${unplaced.length} 个节点的坐标只有 y，其横坐标无法由日期得出，已重新摆放。`,
+        fix: '只有在保持时间轴、且至少有两个不同时间的时间线上，带日期节点才能只写 y；否则补充 x，使用 { "x": 数字, "y": 数字 }。',
+      });
+  }
   // A timeline keeps time unless it says otherwise: authored x that is not a
   // node's place in time is redrawn there, and the author is told how to keep it.
   if (graph.diagram === 'timeline' && graph.timeAxis !== false) {
     const nodes = timedNodes(graph),
       axis = axisOf(nodes);
-    // A lane-only position takes its x from the dates; without an axis (one
-    // date for every node) all of them stand at one time.
-    graph.nodes.forEach(({ id, position }, i) => {
-      if (position && parsed.lanes.has(id))
-        position.x = (axis && timeCoordinate(nodes[i], axis)) ?? 0;
-    });
     const off = axis
       ? nodes.filter((node) => {
           const x = placeInTime(node, axis);

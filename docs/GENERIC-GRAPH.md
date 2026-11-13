@@ -190,9 +190,13 @@ exported from the studio, and a node added by `relgraph layout`, write a dated
 node of such a timeline as `"position": { "y": 126 }`, and loading derives x
 from its dates. Editing a date, moving the end of the axis or adding a dated
 node (both rescale the axis) therefore leaves nothing stale in the file. A
-lane-only position is accepted only for a dated node, on a timeline that does
-not say `"timeAxis": false`; anywhere else it is a `POSITION` error. When every
-node has the same time there is no axis, and lane-only nodes stand at x 0.
+lane-only position takes x from the node's dates only for a dated node, on a
+timeline that does not say `"timeAxis": false` and has an axis (at least two
+distinct times). Anywhere else the node is unplaced: the layout puts it in a
+free place and a `LANE_ONLY` warning says to add x. While there is no axis
+yet, x is layout, not a date, so it is stored; once dates make an axis, that
+x is reported with `OFF_TIME_AXIS` until the positioned source is exported
+again.
 
 Applying another strategy in the layout panel is the explicit way off the
 axis; the spans are then drawn as points, in the legend as well. Exporting the

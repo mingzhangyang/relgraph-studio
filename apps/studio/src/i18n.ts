@@ -407,9 +407,8 @@ const english: Record<string, string> = {
   '填写分组 id，或删除该字段。': 'Enter a group id, or remove the field.',
   '坐标无效。': 'Invalid coordinates.',
   '使用 { "x": 数字, "y": 数字 }。': 'Use { "x": number, "y": number }.',
-  '只有在时间轴上的带日期节点可以省略 x。':
-    'Only a dated node on a timeline that keeps time may leave out x.',
-  '补充 x，使用 { "x": 数字, "y": 数字 }。': 'Add x: use { "x": number, "y": number }.',
+  '只有在保持时间轴、且至少有两个不同时间的时间线上，带日期节点才能只写 y；否则补充 x，使用 { "x": 数字, "y": 数字 }。':
+    'Only a dated node on a timeline that keeps time, with at least two distinct times, may give y alone; otherwise add x: use { "x": number, "y": number }.',
   '权重不能为负。': 'Weight cannot be negative.',
   '使用非负数。': 'Use a non-negative number.',
   'end 需要同时提供 start。': 'end requires start.',
@@ -534,6 +533,11 @@ export function uiDiagnostic(message: string): string {
     return offAxis[1] === '1'
       ? '1 dated node has an x that is not its place in time; it is drawn at its date.'
       : `${offAxis[1]} dated nodes have an x that is not their place in time; they are drawn at their dates.`;
+  const laneOnly = /^(\d+) 个节点的坐标只有 y，其横坐标无法由日期得出，已重新摆放。$/.exec(message);
+  if (laneOnly)
+    return laneOnly[1] === '1'
+      ? '1 node gives y alone, but its x cannot be taken from its dates; it was placed again.'
+      : `${laneOnly[1]} nodes give y alone, but their x cannot be taken from their dates; they were placed again.`;
   const implicit = /^(\d+) 个节点只在关系中出现，已按 id 自动创建。$/.exec(message);
   if (implicit)
     return implicit[1] === '1'

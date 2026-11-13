@@ -1,6 +1,6 @@
 import type { VisualGraph } from '../../types/visual-graph.js';
 import { GENERIC_FORMAT, internalIds } from '../domains/generic.js';
-import { lanedNodes } from './time-anchor.js';
+import { lanedNodes, sourceKeepsTime } from './time-anchor.js';
 
 // Node 20+ and modern browsers provide this host API. Keep its declaration
 // local so the ES-only core build needs neither DOM nor Node ambient types.
@@ -23,10 +23,15 @@ const record = (value: unknown): value is RecordValue =>
  * file is read again: false writes `"timeAxis": false`, true removes it.
  * Only the generic format has timelines; omitted, the field is left as is.
  *
- * On a timeline that keeps time (`timeAxis`, or when omitted the state the
- * graph declares), a dated node's x is its date, so only its lane is written:
- * `"position": { "y": … }`. The adapter derives x again on load, so an edited
- * date or a rescaled axis cannot leave a stale x in the file.
+ * On a timeline that keeps time, a dated node's x is its date, so only its
+ * lane is written: `"position": { "y": … }` (`lanedNodes`). Whether it keeps
+ * time is the state written to the file (`sourceKeepsTime` of the result),
+ * never a strategy the file does not record, so the output always loads. The
+ * adapter derives x again on load, so an edited date or a rescaled axis
+ * cannot leave a stale x in the file.
+ *
+ * With onlyMissing=true a lane-only position the adapter could not place (it
+ * reports `LANE_ONLY`) counts as missing, as it does for `relgraph layout`.
  */
 export function applyGraphPositions(
   input: unknown,
@@ -84,34 +89,6 @@ export function applyGraphPositions(
           }
         }
     const ids = internalIds([...present].filter((id): id is string => id !== null));
-    const laned = timeAxis === undefined ? lanedNodes(graph) : lanedNodes(graph, timeAxis);
-    for (const entry of entries) {
-      const raw = author(entry.id),
-        id = raw === null ? undefined : ids.get(raw);
-      if (!id || !known.has(id)) throw new TypeError('Unknown source node ' + String(entry.id));
-      // The format reads `position: null` as no position, so it is a gap to fill.
-      if (onlyMissing && entry.position !== undefined && entry.position !== null) continue;
-      const point = positions.get(id);
-      if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y))
-        throw new TypeError('No finite position for ' + String(entry.id));
-      if (laned.has(id)) {
-        if (
-          record(entry.position) &&
-          entry.position.x === undefined &&
-          entry.position.y === point.y
-        )
-          continue;
-        entry.position = { y: point.y };
-      } else if (
-        record(entry.position) &&
-        entry.position.x === point.x &&
-        entry.position.y === point.y
-      )
-        continue;
-      else entry.position = { x: point.x, y: point.y };
-      changed++;
-    }
-    document.nodes = entries;
     if (timeAxis === false && document.timeAxis !== false) {
       document.timeAxis = false;
       changed++;
@@ -119,6 +96,27 @@ export function applyGraphPositions(
       delete document.timeAxis;
       changed++;
     }
+    // Decided on the file as written, so writer and adapter apply one rule.
+    const laned = lanedNodes(graph, sourceKeepsTime(document));
+    for (const entry of entries) {
+      const raw = author(entry.id),
+        id = raw === null ? undefined : ids.get(raw);
+      if (!id || !known.has(id)) throw new TypeError('Unknown source node ' + String(entry.id));
+      const at = entry.position;
+      // The format reads `position: null` as no position, and a lane-only
+      // position off the axis as unplaced, so both are gaps to fill.
+      if (onlyMissing && record(at) && (at.x !== undefined || laned.has(id))) continue;
+      const point = positions.get(id);
+      if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y))
+        throw new TypeError('No finite position for ' + String(entry.id));
+      const next: { x?: number; y: number } = laned.has(id)
+        ? { y: point.y }
+        : { x: point.x, y: point.y };
+      if (record(at) && at.x === next.x && at.y === next.y) continue;
+      entry.position = next;
+      changed++;
+    }
+    document.nodes = entries;
   } else throw new TypeError('Unsupported source format');
   return { document, changed };
 }
