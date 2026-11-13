@@ -417,6 +417,17 @@ the two baseline comparisons did not run), on the sources of `e29cc70`,
 which `a8c2a80` changes only by a test. No GitHub Actions workflow was added,
 dispatched or rerun.
 
+Review of #42, fixed in `ada4d09`: the writer could produce a file the
+parser refused (a stored strategy decided the lanes, not the file's own
+state), writer and parser used different rules, and an unplaceable lane-only
+position was an error or stacked at x 0. Validation on the tree of
+`ada4d09`, linux-x64, Node 22.23.4: `npm run typecheck`,
+`npm run check:types`, `npm run lint`, `npm run format:check` passed;
+`npm test` 396 tests in 36 files passed; `npm run check:export` 31/31 passed
+with the golden frames matching (no `--update`); `npm run check:browser`
+76/76 passed (no local baseline). The new "F6" cases fail against the core
+of `e631ac9`. No GitHub Actions workflow was added, dispatched or rerun.
+
 ### PR 2 · as implemented
 
 - **P1** · `composeFrame` no longer scans the whole view per item.
