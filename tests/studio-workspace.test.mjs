@@ -2,6 +2,14 @@ import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import literature from '../examples/honglou-provisional.relgraph.json' with { type: 'json' };
 import biology from '../examples/biology-signaling-synthetic.json' with { type: 'json' };
+import dynasties from '../examples/dynasties-timeline-provisional.graph.json' with { type: 'json' };
+import { loadDocument } from '../packages/core/src/director/load.ts';
+import { layoutGraph } from '../packages/core/src/director/layout.ts';
+import { frameCount } from '../packages/core/src/director/state.ts';
+import {
+  computeLayout,
+  DEFAULT_LAYOUT_SETTINGS,
+} from '../packages/core/src/director/layout-strategies.ts';
 import { deferred, flush, makeStudio } from './helpers/studio-harness.mjs';
 import {
   currentStudioMode,
@@ -1899,4 +1907,224 @@ test('coordinate validation remains visible in either locale until corrected or 
   assert.equal(note.textContent, '坐标必须是有限数字，请检查 X 和 Y');
   await app.node('layoutReset').click();
   assert.notEqual(note.textContent, '坐标必须是有限数字，请检查 X 和 Y');
+});
+
+test('F2/F4: the layout panel refuses a preview that moves nothing and names the engine that ran', async () => {
+  const app = makeStudio();
+  await app.ready;
+  await app.node('exampleGraph').click();
+  await flush();
+  assert.equal(app.node('status').attributes['data-state'], 'ready');
+  const strategy = app.node('layoutStrategyEditor'),
+    note = strategy.children.find((child) => child.tagName === 'P'),
+    type = viewControl(app, 'strategyType'),
+    mode = viewControl(app, 'strategyMode'),
+    apply = viewControl(app, 'strategyApply'),
+    choose = async (control, value) => {
+      control.value = value;
+      await control.dispatch('change');
+    };
+  // A strategy under "preserve" moves nothing: say so, and nothing is pending.
+  await choose(type, 'grid');
+  await choose(mode, 'preserve');
+  await viewControl(app, 'strategyPreview').click();
+  assert.match(note.textContent, /不会移动任何节点/);
+  assert.equal(apply.disabled, true);
+  // Manual keeps everything, whatever the policy.
+  await choose(type, 'manual');
+  await choose(mode, 'rearrange');
+  await viewControl(app, 'strategyPreview').click();
+  assert.equal(note.textContent, '手动策略保留现有坐标：没有可预览的变化。');
+  assert.equal(apply.disabled, true);
+  // A timeline of an undated graph is drawn as a tree, and the panel says so.
+  await choose(type, 'timeline');
+  await viewControl(app, 'strategyPreview').click();
+  assert.equal(apply.disabled, false);
+  assert.match(note.textContent, /临时预览/);
+  assert.match(note.textContent, /实际绘制：树 · 向右展开（没有节点带日期，时间轴退回为树）/);
+  const language = app.node('languageSelect');
+  language.value = 'en';
+  await language.dispatch('change');
+  assert.match(note.textContent, /Drawn with: Tree · Grows to the right \(no node has a date/);
+  language.value = 'zh-CN';
+  await language.dispatch('change');
+  // Cancelling the preview forgets what drew it.
+  await viewControl(app, 'strategyCancel').click();
+  assert.equal(apply.disabled, true);
+  assert.doesNotMatch(note.textContent, /实际绘制/);
+});
+
+test('#40 items 4 and 5: the panel can re-anchor a timeline, and Reset restores the loaded strategy', async () => {
+  const graph = loadDocument(dynasties).graph,
+    shown = layoutGraph(graph),
+    grid = computeLayout(
+      graph,
+      { ...DEFAULT_LAYOUT_SETTINGS, type: 'grid', mode: 'rearrange' },
+      shown,
+    );
+  const project = (positions) =>
+    JSON.stringify({
+      format: 'relgraph.studio/1',
+      source: dynasties,
+      config: {
+        layout: {
+          ...DEFAULT_LAYOUT_SETTINGS,
+          type: 'grid',
+          positions: Object.fromEntries(positions),
+        },
+      },
+    });
+  const open = async (positions) => {
+    const app = makeStudio();
+    await app.ready;
+    const input = app.node('fileInput');
+    input.files = [readFile('dynasties.studio.json', project(positions))];
+    await input.dispatch('change');
+    await flush();
+    assert.equal(app.node('status').attributes['data-state'], 'ready');
+    return app;
+  };
+  const controls = (app) => ({
+    type: viewControl(app, 'strategyType'),
+    mode: viewControl(app, 'strategyMode'),
+    apply: viewControl(app, 'strategyApply'),
+    note: app.node('layoutStrategyEditor').children.find((child) => child.tagName === 'P'),
+  });
+  const choose = async (control, value) => {
+    control.value = value;
+    await control.dispatch('change');
+  };
+  const select = async (app) => {
+    const chooser = app.node('layoutNode');
+    chooser.value = chooser.children[0].value;
+    await chooser.dispatch('change');
+    return chooser.value;
+  };
+
+  // Item 4: saved as grid with the coordinates of the timeline. Nothing moves,
+  // but the drawing is put back on its axis, so the preview is not refused.
+  {
+    const app = await open(shown),
+      c = controls(app);
+    await app.node('layoutToggle').click();
+    await select(app);
+    assert.equal(app.node('layoutX').readOnly, false, 'not anchored: X is free');
+    await choose(c.type, 'timeline');
+    await choose(c.mode, 'rearrange');
+    await viewControl(app, 'strategyPreview').click();
+    assert.match(c.note.textContent, /临时预览/);
+    assert.equal(c.apply.disabled, false);
+    await c.apply.click();
+    await app.node('layoutToggle').click();
+    await select(app);
+    assert.equal(app.node('layoutX').readOnly, true, 'anchored: X is the date');
+    // The tooltip of the read-only X follows the language.
+    assert.equal(app.node('layoutX').title, '时间轴：横坐标由日期决定');
+    const language = app.node('languageSelect');
+    language.value = 'en';
+    await language.dispatch('change');
+    assert.equal(app.node('layoutX').title, 'Timeline: X is set by the dates');
+    language.value = 'zh-CN';
+    await language.dispatch('change');
+    // Reset restores the loaded strategy, even though no coordinate changed.
+    assert.equal(app.node('layoutReset').disabled, false);
+    await app.node('layoutReset').click();
+    await select(app);
+    assert.equal(app.node('layoutX').readOnly, false, 'reset takes it off the axis again');
+  }
+
+  // Item 5: saved as grid with grid coordinates; Timeline, then Reset, is the grid again.
+  {
+    const app = await open(grid),
+      c = controls(app);
+    await choose(c.type, 'timeline');
+    await choose(c.mode, 'rearrange');
+    await viewControl(app, 'strategyPreview').click();
+    await c.apply.click();
+    await app.node('layoutToggle').click();
+    const id = await select(app);
+    assert.equal(app.node('layoutX').readOnly, true);
+    await app.node('layoutReset').click();
+    await select(app);
+    assert.equal(app.node('layoutX').readOnly, false);
+    assert.deepEqual(
+      { x: Number(app.node('layoutX').value), y: Number(app.node('layoutY').value) },
+      grid.get(id),
+      'the loaded grid coordinate, not its year in a grid row',
+    );
+  }
+});
+
+test('#40 re-review: Reset never moves a locked node sideways onto the loaded axis', async () => {
+  const graph = loadDocument(dynasties).graph,
+    sanguo = graph.nodes.find((n) => n.label === '三国').id;
+  const app = makeStudio();
+  await app.ready;
+  const input = app.node('fileInput');
+  input.files = [readFile('dynasties.graph.json', JSON.stringify(dynasties))];
+  await input.dispatch('change');
+  await flush();
+  assert.equal(app.window.renderAt(frameCount(graph, 24) - 1), true);
+  const choose = async (control, value) => {
+    control.value = value;
+    await control.dispatch('change');
+  };
+  await choose(viewControl(app, 'strategyType'), 'grid');
+  await choose(viewControl(app, 'strategyMode'), 'rearrange');
+  await viewControl(app, 'strategyPreview').click();
+  await viewControl(app, 'strategyApply').click();
+  await choose(viewControl(app, 'strategyNode'), sanguo);
+  const lock = viewControl(app, 'strategyLock');
+  lock.checked = true;
+  await lock.dispatch('change');
+  await app.node('layoutToggle').click();
+  await choose(app.node('layoutNode'), sanguo);
+  const at = () => [Number(app.node('layoutX').value), Number(app.node('layoutY').value)];
+  const gridded = at();
+  await app.node('layoutReset').click();
+  assert.deepEqual(at(), gridded, 'the locked node stays where the lock holds it');
+  assert.equal(
+    app.node('layoutNote').textContent,
+    '时间轴会横向移动已锁定的节点：三国。请先解锁它们，再重置。',
+  );
+  const language = app.node('languageSelect');
+  language.value = 'en';
+  await language.dispatch('change');
+  assert.equal(
+    app.node('layoutNote').textContent,
+    'The time axis would move locked nodes sideways: 三国. Unlock them first, then reset.',
+  );
+  language.value = 'zh-CN';
+  await language.dispatch('change');
+  // Unlocked, Reset restores the loaded timeline: 三国 is back at its years and lane.
+  await choose(viewControl(app, 'strategyNode'), sanguo);
+  lock.checked = false;
+  await lock.dispatch('change');
+  await choose(app.node('layoutNode'), sanguo);
+  await app.node('layoutReset').click();
+  await choose(app.node('layoutNode'), sanguo);
+  const loaded = layoutGraph(graph).get(sanguo);
+  assert.deepEqual(at(), [loaded.x, loaded.y]);
+  assert.equal(app.node('layoutX').readOnly, true);
+});
+
+test('#40 re-review: a preview refused as a no-op leaves nothing unsaved', async () => {
+  const app = makeStudio();
+  await app.ready;
+  await app.node('exampleGraph').click();
+  await flush();
+  const dirty = () => app.node('saveState').attributes['data-dirty'],
+    type = viewControl(app, 'strategyType'),
+    mode = viewControl(app, 'strategyMode');
+  assert.equal(dirty(), 'false');
+  type.value = 'grid';
+  await type.dispatch('change');
+  assert.equal(dirty(), 'true', 'an unapplied strategy draft is pending');
+  await viewControl(app, 'strategyPreview').click();
+  assert.equal(viewControl(app, 'strategyApply').disabled, true, 'grid under preserve is refused');
+  assert.equal(dirty(), 'false', 'a draft that would change nothing has nothing to lose');
+  // Any further edit is a draft again.
+  mode.value = 'rearrange';
+  await mode.dispatch('change');
+  assert.equal(dirty(), 'true');
 });

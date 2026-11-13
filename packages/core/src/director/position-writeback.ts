@@ -16,12 +16,17 @@ const record = (value: unknown): value is RecordValue =>
  *
  * With onlyMissing=true, all authored positions are preserved verbatim. The
  * default writes the complete static layout for export from the workbench.
+ *
+ * `timeAxis` records whether a timeline's coordinates are on its time axis
+ * (`timeAnchor`), so that a drawing taken off the axis stays off it when the
+ * file is read again: false writes `"timeAxis": false`, true removes it.
+ * Only the generic format has timelines; omitted, the field is left as is.
  */
 export function applyGraphPositions(
   input: unknown,
   graph: Pick<VisualGraph, 'nodes'>,
   positions: ReadonlyMap<string, Point>,
-  { onlyMissing = false }: { onlyMissing?: boolean } = {},
+  { onlyMissing = false, timeAxis }: { onlyMissing?: boolean; timeAxis?: boolean } = {},
 ): { document: unknown; changed: number } {
   if (!record(input)) throw new TypeError('Invalid source document');
   const document: unknown = structuredClone(input);
@@ -87,6 +92,13 @@ export function applyGraphPositions(
       changed++;
     }
     document.nodes = entries;
+    if (timeAxis === false && document.timeAxis !== false) {
+      document.timeAxis = false;
+      changed++;
+    } else if (timeAxis === true && document.timeAxis !== undefined) {
+      delete document.timeAxis;
+      changed++;
+    }
   } else throw new TypeError('Unsupported source format');
   return { document, changed };
 }

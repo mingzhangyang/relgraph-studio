@@ -924,12 +924,21 @@ for (const theme of ['light', 'dark']) {
       assert.deepEqual(await canvasPng(page), overview, 'frames do not depend on playback history');
       await page.locator('#layoutStrategies').evaluate((e) => (e.open = true));
       await page.selectOption('#strategyMode', 'rearrange');
+      const note = () => page.locator('#layoutStrategyEditor p.muted').innerText();
+      // The player drew this document with auto (the left-to-right flow) and
+      // the panel's defaults: asking for either again moves nothing, and the
+      // panel says so instead of showing a preview that looks pending.
+      for (const type of ['auto', 'flow']) {
+        await page.selectOption('#strategyType', type);
+        await page.click('#strategyPreview');
+        assert.match(await note(), /此布局与当前画面相同/, type);
+        assert.equal(await page.locator('#strategyApply').isDisabled(), true, type);
+        assert.deepEqual(await canvasPng(page), overview, `${type}: nothing moved`);
+      }
       const seen = new Set();
       for (const type of [
-        'auto',
         'force',
         'layered',
-        'flow',
         'tree',
         'mindmap',
         'timeline',
@@ -939,6 +948,9 @@ for (const theme of ['light', 'dark']) {
       ]) {
         await page.selectOption('#strategyType', type);
         await page.click('#strategyPreview');
+        assert.equal(await page.locator('#strategyApply').isDisabled(), false, type);
+        if (type === 'timeline')
+          assert.match(await note(), /实际绘制：树 · 向右展开（没有节点带日期/);
         const first = await canvasPng(page);
         await writeFile(join(outputDir, `generic-${theme}-layout-${type}.png`), first);
         await page.click('#strategyCancel');
@@ -948,9 +960,8 @@ for (const theme of ['light', 'dark']) {
         await page.click('#strategyCancel');
         seen.add(createHash('sha256').update(first).digest('hex'));
       }
-      // Auto picks the left-to-right flow for this pipeline, and without dates
-      // the timeline strategy draws the tree; the rest all differ.
-      assert.equal(seen.size, 8);
+      // Without dates the timeline strategy draws the tree; the rest all differ.
+      assert.equal(seen.size, 7);
       assert.deepEqual(problems, []);
     },
   );
@@ -1022,6 +1033,67 @@ for (const theme of ['light', 'dark']) {
         assert.deepEqual(problems, []);
       },
     );
+  await context.close();
+}
+
+// A timeline stays one under the pointer: a bar dragged sideways keeps its
+// years (and the axis), and a bar dragged down only changes lane.
+{
+  const { context, page, problems } = await openStudio();
+  await check('timeline: dragging a bar sideways keeps it in time; down changes lane', async () => {
+    await loadExample(page, DIAGRAM_EXAMPLES[1]);
+    const total = await page.evaluate(() => Number(document.getElementById('scrubber').max));
+    await page.evaluate((f) => window.renderAt(f), total);
+    const exportXs = async () => {
+      const promise = page.waitForEvent('download');
+      await page.click('#layoutExport');
+      const source = JSON.parse(await readFile(await (await promise).path(), 'utf8'));
+      return Object.fromEntries(source.nodes.map((n) => [n.id, n.position ?? { x: n.x, y: n.y }]));
+    };
+    await page.click('#layoutToggle');
+    const id = await page.locator('#layoutNode option', { hasText: /^唐$/ }).getAttribute('value');
+    await page.selectOption('#layoutNode', id);
+    assert.equal(await page.locator('#layoutX').evaluate((input) => input.readOnly), true);
+    const before = { x: await page.inputValue('#layoutX'), y: await page.inputValue('#layoutY') };
+    await page.locator('#stage').scrollIntoViewIfNeeded();
+    const point = await page.evaluate(({ x, y }) => {
+      const s = window.studioFrame(),
+        r = document.getElementById('stage').getBoundingClientRect();
+      return {
+        x:
+          r.left +
+          ((640 + (Number(x) - s.cameraResolved.x) * s.cameraResolved.scale) * r.width) / 1280,
+        y:
+          r.top +
+          ((330 + (Number(y) - s.cameraResolved.y) * s.cameraResolved.scale) * r.height) / 720,
+      };
+    }, before);
+    const drawn = await canvasPng(page),
+      saved = await exportXs();
+    // About 12 px to the right: nothing moves and the frame is unchanged.
+    await page.mouse.move(point.x, point.y);
+    await page.mouse.down();
+    await page.mouse.move(point.x + 6, point.y);
+    await page.mouse.move(point.x + 12, point.y);
+    await page.mouse.up();
+    assert.equal(await page.inputValue('#layoutX'), before.x);
+    assert.deepEqual(await canvasPng(page), drawn, 'the axis and every bar are still drawn');
+    assert.deepEqual(await exportXs(), saved);
+    // Down and sideways at once: a new lane, the same years.
+    await page.mouse.move(point.x, point.y);
+    await page.mouse.down();
+    await page.mouse.move(point.x + 20, point.y + 30);
+    await page.mouse.up();
+    assert.equal(await page.inputValue('#layoutX'), before.x);
+    assert.notEqual(await page.inputValue('#layoutY'), before.y);
+    assert.notDeepEqual(await canvasPng(page), drawn);
+    const after = await exportXs();
+    for (const [node, p] of Object.entries(saved))
+      assert.equal(after[node].x, p.x, `${node} keeps its years`);
+    assert.notEqual(after['唐'].y, saved['唐'].y);
+    await writeFile(join(outputDir, 'timeline-lane-drag.png'), await canvasPng(page));
+    assert.deepEqual(problems, []);
+  });
   await context.close();
 }
 

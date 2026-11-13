@@ -66,7 +66,20 @@ export interface VisualGraph {
   project?: import('../src/project.js').ProjectConfig;
   domain: string;
   meta: { title: string; description?: string; sourceNote?: string };
-  timeline?: { unit: string; total?: number };
+  timeline?: {
+    unit: string;
+    total?: number;
+    /**
+     * The steps count reveal order, not domain time: a tree, mind map or
+     * flowchart unfolded one level at a time. Nothing shows them as a date.
+     */
+    ordinal?: boolean;
+  };
+  /**
+   * False when the source of a timeline declares that its coordinates are not
+   * on the time axis (`"timeAxis": false`); see `timeAnchor`.
+   */
+  timeAxis?: false;
   /** What kind of picture the graph is; selects layout, routing and labelling. */
   diagram?: import('../src/style.js').DiagramKind;
   /** Presentation declared per kind by a generic graph document. */

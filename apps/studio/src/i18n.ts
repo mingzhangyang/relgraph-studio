@@ -61,6 +61,9 @@ const english: Record<string, string> = {
   'Y 坐标': 'Y coordinate',
   应用坐标: 'Apply coordinates',
   '拖动当前可见节点 · ': 'Drag visible nodes · ',
+  '时间轴 · 拖动可换泳道，横坐标由日期决定 · ':
+    'Timeline · Drag to change lane; X is set by the dates · ',
+  '时间轴：横坐标由日期决定': 'Timeline: X is set by the dates',
   有坐标调整: 'Coordinates changed',
   尚未调整: 'No adjustments yet',
   ' · 通过文档工具栏导出保存': ' · Export from the document toolbar',
@@ -156,6 +159,24 @@ const english: Record<string, string> = {
   应用布局: 'Apply layout',
   取消预览: 'Cancel preview',
   '参数不能为空。': 'Parameters cannot be empty.',
+  '手动策略保留现有坐标：没有可预览的变化。':
+    'Manual keeps the current coordinates: there is nothing to preview.',
+  '“保留现有坐标”不会移动任何节点：请改选“重排未锁定节点”或“只填补缺失坐标”。':
+    '“Preserve coordinates” moves no node: choose “Rearrange unlocked nodes” or “Fill missing coordinates”.',
+  '此布局与当前画面相同：没有可应用的变化。':
+    'This layout matches the current picture: there is nothing to apply.',
+  '实际绘制：': 'Drawn with: ',
+  '时间轴会横向移动已锁定的节点：': 'The time axis would move locked nodes sideways: ',
+  '。请先解锁它们，或改选其他布局。': '. Unlock them first, or choose another layout.',
+  '。请先解锁它们，再重置。': '. Unlock them first, then reset.',
+  '如需保留这些横坐标并不显示时间轴，请设置 "timeAxis": false。':
+    'To keep these x coordinates and draw no time axis, set "timeAxis": false.',
+  '（保留现有坐标）': ' (existing coordinates kept)',
+  '（按图的类型）': ' (follows the diagram kind)',
+  '（按图的结构）': ' (chosen from the graph structure)',
+  '（节点过多，改用网格）': ' (too many nodes; grid instead)',
+  '（没有节点带日期，时间轴退回为树）':
+    ' (no node has a date, so the timeline falls back to a tree)',
   '临时预览 · 尚未保存。请应用或取消；可撤销已应用布局。':
     'Temporary preview · Not saved. Apply or cancel; applied layouts can be undone.',
   '静态确定性布局 · 保留 = 不移动；填补 = 仅缺失；重排 = 移动未锁定节点。自动 = 按图的结构选择策略。':
@@ -497,6 +518,11 @@ export function uiDiagnostic(message: string): string {
   if (noEnd) return `Relation has no ${noEnd[1]}.`;
   const allowed = /^可用：(.+)。$/.exec(message);
   if (allowed) return `Allowed: ${allowed[1].split('、').join(', ')}.`;
+  const offAxis = /^(\d+) 个带日期的节点横坐标不在其时间上，已按日期绘制。$/.exec(message);
+  if (offAxis)
+    return offAxis[1] === '1'
+      ? '1 dated node has an x that is not its place in time; it is drawn at its date.'
+      : `${offAxis[1]} dated nodes have an x that is not their place in time; they are drawn at their dates.`;
   const implicit = /^(\d+) 个节点只在关系中出现，已按 id 自动创建。$/.exec(message);
   if (implicit)
     return implicit[1] === '1'
@@ -520,6 +546,14 @@ export function uiStatus(message: string): string {
     if (message.startsWith(prefix))
       return uiText(prefix) + uiDiagnostic(message.slice(prefix.length));
   }
+  const blockedPrefix = '时间轴会横向移动已锁定的节点：';
+  for (const blockedSuffix of ['。请先解锁它们，或改选其他布局。', '。请先解锁它们，再重置。'])
+    if (message.startsWith(blockedPrefix) && message.endsWith(blockedSuffix))
+      return (
+        uiText(blockedPrefix) +
+        message.slice(blockedPrefix.length, -blockedSuffix.length).split('、').join(', ') +
+        uiText(blockedSuffix)
+      );
   const exportPrefix = '已准备导出：';
   const exportSuffix = '。此文件仅保存源数据坐标，不代表完整项目已保存。';
   if (message.startsWith(exportPrefix) && message.endsWith(exportSuffix))

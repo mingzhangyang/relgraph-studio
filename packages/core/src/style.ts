@@ -6,6 +6,7 @@ import { biologyStyle } from './domains/biology.style.js';
 import { literatureStyle } from './domains/literature.style.js';
 import type { VisualGraph } from '../types/visual-graph.js';
 import { keepsTime, timeAxis } from './director/layout-engines.js';
+import { timeAnchor } from './director/time-anchor.js';
 
 export const LOCALES = ['zh-CN', 'en'] as const;
 export type Locale = (typeof LOCALES)[number];
@@ -292,20 +293,7 @@ export function deriveGraphStyle(
 }
 
 const untimed = new WeakMap<DomainStyle, DomainStyle>();
-/**
- * The style a drawing at `positions` is read with. A time axis is a claim
- * about the drawing, not only about the data: it holds while every dated
- * node sits at its place in time. For any other arrangement the same style
- * is returned without the axis, so spans are drawn as points and no rule or
- * cursor is drawn where it would mislead. Glyph outlines, hit tests and the
- * composer must all read a drawing through this.
- */
-export function styleForPositions(
-  style: DomainStyle,
-  nodes: Parameters<typeof keepsTime>[0],
-  positions: Parameters<typeof keepsTime>[1],
-): DomainStyle {
-  if (!style.timeAxis || keepsTime(nodes, positions, style.timeAxis)) return style;
+function withoutAxis(style: DomainStyle): DomainStyle {
   let plain = untimed.get(style);
   if (!plain) {
     const rest: DomainStyle = { ...style };
@@ -314,6 +302,39 @@ export function styleForPositions(
     untimed.set(style, plain);
   }
   return plain;
+}
+
+/**
+ * The style a drawing of `graph` at `positions` is read with. Whether it has
+ * a time axis is the declared state `timeAnchor` defines, the one the editor
+ * and the layout panel use too. Positions can only take the axis away, as a
+ * guard for callers that pass coordinates no anchoring has pinned: rules and
+ * bars must never point at the wrong years. Without an axis spans are drawn
+ * as points and no rule or cursor is drawn. Glyph outlines, hit tests and the
+ * composer must all read a drawing through this.
+ */
+export function styleForDrawing(
+  style: DomainStyle,
+  graph: Parameters<typeof timeAnchor>[0],
+  positions: Parameters<typeof keepsTime>[1],
+): DomainStyle {
+  if (!style.timeAxis) return style;
+  if (!timeAnchor(graph)) return withoutAxis(style);
+  return styleForPositions(style, graph.nodes, positions);
+}
+
+/**
+ * The coordinate guard of `styleForDrawing` alone: the style without its axis
+ * unless every dated node sits at its place in time. It does not know whether
+ * the drawing is declared a timeline; read drawings through `styleForDrawing`.
+ */
+export function styleForPositions(
+  style: DomainStyle,
+  nodes: Parameters<typeof keepsTime>[0],
+  positions: Parameters<typeof keepsTime>[1],
+): DomainStyle {
+  if (!style.timeAxis || keepsTime(nodes, positions, style.timeAxis)) return style;
+  return withoutAxis(style);
 }
 
 const derived = new WeakMap<object, DomainStyle>();

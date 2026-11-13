@@ -1,5 +1,10 @@
 import type { VisualGraph } from '../../types/visual-graph.js';
-import { autoLayout, runLayoutEngine, type LayoutEngine } from './layout-engines.js';
+import {
+  autoLayout,
+  LAYOUT_DEFAULTS,
+  runLayoutEngine,
+  type LayoutEngine,
+} from './layout-engines.js';
 import type { DiagramKind } from '../style.js';
 
 /** The layout a kind of diagram is drawn with; a network chooses by structure. */
@@ -11,6 +16,7 @@ export const DIAGRAM_ENGINE: Readonly<Record<DiagramKind, LayoutEngine | null>> 
   timeline: 'timeline',
 });
 import { roundPositionCoordinate } from './seeded-layout.js';
+import { anchorToTime } from './time-anchor.js';
 
 type Position = { x: number; y: number };
 
@@ -27,7 +33,7 @@ export function structuralLayout(
 ): Map<string, Position> {
   const engine = DIAGRAM_ENGINE[graph.diagram ?? 'network'];
   const arranged = engine
-    ? runLayoutEngine(graph, engine, { seed, spacing: 150, iterations: 300 })
+    ? runLayoutEngine(graph, engine, { seed, ...LAYOUT_DEFAULTS })
     : autoLayout(graph, { seed });
   return new Map(
     [...arranged].map(([id, p]) => [
@@ -39,6 +45,22 @@ export function structuralLayout(
 
 /** Stable layout prepared once per document, never advanced by playback. */
 export function layoutGraph(
+  graph: Pick<VisualGraph, 'nodes' | 'edges' | 'project' | 'diagram' | 'timeAxis' | 'timeline'>,
+): Map<string, Position> {
+  const positions = placeNodes(graph);
+  // A timeline stays one: dates edited or added after the drawing was saved
+  // move their bars to their years instead of taking the axis away.
+  const authored = new Set(graph.nodes.filter((n) => n.position).map((n) => n.id));
+  for (const id of Object.keys(graph.project?.layout?.positions ?? {})) authored.add(id);
+  if (authored.size < graph.nodes.length && authored.size)
+    anchorToTime(graph, positions, {
+      unplaced: new Set(graph.nodes.filter((n) => !authored.has(n.id)).map((n) => n.id)),
+    });
+  else anchorToTime(graph, positions);
+  return positions;
+}
+
+function placeNodes(
   graph: Pick<VisualGraph, 'nodes' | 'edges' | 'project' | 'diagram'>,
 ): Map<string, Position> {
   const compare = (a: { id: string }, b: { id: string }): number =>

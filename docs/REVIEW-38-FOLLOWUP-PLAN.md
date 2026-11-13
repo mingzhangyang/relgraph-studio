@@ -29,7 +29,7 @@ The repository rules in [AGENTS.md](../AGENTS.md) apply to every step:
 
 | PR | Scope | Items | Golden frames | Status |
 | --- | --- | --- | --- | --- |
-| 1 | Behaviour fixes | F1–F5 | Tree example changes (F5); others identical | ☐ not started |
+| 1 | Behaviour fixes | F1–F5 | Tree example changes (F5); others identical | ◐ [#40](https://github.com/mingzhangyang/relgraph-studio/pull/40) open; re-reviewed ready to merge; leftovers 1–2 fixed, leftover 3 tracked as F6 |
 | 2 | Per-frame cost and limits | P1–P3 | Must stay identical | ☐ not started |
 | 3 | Core structure | S1–S3 | Must stay identical | ☐ not started |
 | 4 | Render structure | S4–S6 | Must stay identical | ☐ not started |
@@ -50,7 +50,9 @@ not pass `--update` to the golden or browser baselines.
 ## Decisions needed before coding
 
 These are choices for the owner. Each has a recommendation; the plan assumes
-the recommendation until it is changed here.
+the recommendation until it is changed here. PR 1 implements the
+recommendations of D1, D2 and D4; the boxes stay open until the owner
+confirms them.
 
 | Id | Question | Recommendation | Decided |
 | --- | --- | --- | --- |
@@ -108,6 +110,24 @@ the recommendation until it is changed here.
   - Done when: a derived unfolding shows no domain time. Golden frames of the
     tree example are regenerated and the change is listed in the PR. Depends
     on D4.
+
+## Follow-up · from the re-review of #40
+
+- [ ] **F6 · A date edit must not look like an off-axis drawing.** The source
+  of an anchored timeline still stores each dated node's x, although D1 meant
+  to store only its lane. After an ordinary date edit the stored x no longer
+  matches the date, so loading reports `OFF_TIME_AXIS`: one node when one
+  `end` changes, all 18 of the dynasties example when the end of the axis
+  moves (the axis rescales). The only fix the warning offers is
+  `"timeAxis": false`, which is the wrong advice here.
+  - Evidence: re-review of #40 at `588bb88`, leftover 3, reproduced with a
+    script.
+  - Done when: an anchored timeline's x is not authored data. Either the
+    positioned source stores only lanes for dated nodes (x derived on load),
+    or the warning distinguishes "the axis moved since the coordinates were
+    written" from "the author placed x by hand" and offers re-exporting the
+    coordinates. A pure test covers a changed `end` and a moved axis end.
+    Golden frames unchanged.
 
 ## PR 2 · Per-frame cost and limits
 
@@ -236,6 +256,104 @@ frames in both themes.
 - [ ] **V4 · Legend size.** At 12 px it is the smallest text in the frame
   (about 9 px in the workspace preview).
 
+### PR 1 · as implemented
+
+- **F1** · `packages/core/src/director/time-anchor.ts`: `timeAnchor` (a
+  timeline diagram under `manual`, `auto` or `timeline` is anchored),
+  `anchoredPoint` (a dated node's x is its time) and `anchorToTime` (pin every
+  dated node; first-fit lanes for dated nodes without coordinates).
+  `layoutGraph`, the studio's history replay, reset, drag and numeric X/Y use
+  them. The legend miniature of a span is a point when the drawing has no
+  axis. Tests: `tests/layout-behaviour.test.mjs` (F1), the updated case in
+  `tests/diagrams.test.mjs`, and the real-browser check "timeline: dragging a
+  bar sideways keeps it in time; down changes lane".
+- **F2 / F4** · `planLayout` returns the positions with the engine that ran,
+  the reason (`kept`, `diagram`, `structure`, `size`, `untimed`) and the
+  number of nodes moved; `computeLayout` is its positions. The panel refuses a
+  preview that moves nothing and names the engine of a pending preview.
+  Tests: `tests/layout-behaviour.test.mjs` (F2, F4) and the simulated-DOM case
+  in `tests/studio-workspace.test.mjs`; the generic-example browser check now
+  expects `auto` and `flow` to be refused (they reproduce the loaded drawing).
+- **F3** · `LAYOUT_DEFAULTS` (150 / 300) in `layout-engines.ts` feeds
+  `structuralLayout`, `autoLayout`, `DEFAULT_LAYOUT_SETTINGS`, the panel
+  inputs and project save. Auto + rearrange on every coordinate-free example
+  now moves no node (before: bookshop 15, tree 22, flowchart 8, dynasties 10,
+  mind map 18).
+- **F5** · a derived unfolding sets `timeline.ordinal`; the composer and the
+  studio show no domain time for it. The 58 tree golden hashes are
+  regenerated; the other 178 are unchanged.
+
+### PR 1 · review of #40 at `2319903`
+
+The review found that "is this a timeline" had two sources of truth: the
+renderer inferred it from coordinates (`styleForPositions` / `keepsTime`), the
+editor from the stored strategy (`timeAnchor`). Now `timeAnchor` is the only
+definition and every reader uses it:
+
+- **Declared state.** A timeline diagram is anchored when its stored strategy
+  is `auto` or `timeline`, or when none was applied (`manual`) and the source
+  does not declare `"timeAxis": false`. `manual` is no longer an anchoring
+  strategy of its own. The renderer reads drawings through
+  `styleForDrawing(style, graph, positions)`; coordinates can only veto the
+  axis, as a guard for callers that pass unpinned positions.
+  `styleForPositions` remains as that guard alone.
+- **Item 1 · the off-axis state survives a save.** The generic format accepts
+  `timeAxis` (boolean). `applyGraphPositions(…, { timeAxis })` writes
+  `"timeAxis": false` for a drawing off the axis and removes it for one on the
+  axis; the studio's positioned-source export passes the declared state.
+  Hand-authored off-axis x without the field is drawn at its dates with the
+  `OFF_TIME_AXIS` warning (translated in the studio), which names the field.
+  A `.studio.json` whose strategy leaves the axis does not show that warning.
+- **Item 2 · locks.** A strategy on the axis is refused (`plan.blocked`) while
+  a locked dated node is away from its date; the panel names the nodes. On an
+  anchored drawing a lock holds the lane, and x is the date.
+- **Item 3 · preview equals apply.** `planLayout` pins the result of a strategy
+  on the axis: generic collision displacement skips dated nodes, and dated
+  nodes whose bars touch a fixed bar in its lane (`crowdedBy`) are re-laned by
+  `anchorToTime`, so the stored layout is exactly the preview.
+- **Item 4 · strategy-only changes.** `LayoutPlan.anchored` and
+  `anchorChanged` report the target state; the panel refuses a preview only
+  when nothing moves and the state does not change. During a preview the
+  renderer draws under the previewed strategy (`drawnGraph`).
+- **Item 5 · Reset.** Reset restores the loaded strategy with the coordinates,
+  and is enabled when only the strategy differs.
+- **Item 6 · CLI.** `relgraph layout` fills gaps with `LAYOUT_DEFAULTS` and then
+  `anchorToTime`, so a new dated node is written at its years in a free lane;
+  what it writes is what the player draws.
+- **Item 7 · reveal steps.** `timedNodes` drops visibility from an ordinal
+  graph before any time is derived (`runLayoutEngine` for `timeline`,
+  `planLayout`'s `untimed` check, `timeAnchor`); the timeline strategy on the
+  vertebrates tree reports `tree` / `untimed`.
+- **Minor.** The X tooltip is re-translated on a language switch
+  (`refreshEditorFieldText`). `TIMELINE_LANE` and `TIMELINE_GAP` are shared by
+  the engine and `anchorToTime`; a new lane is one of the drawing's own lane
+  steps (at least half the default), and the lane index is built only when a
+  node is waiting for a lane.
+- Tests: `#40 item …` cases in `tests/layout-behaviour.test.mjs` (pure, CLI
+  through `layoutFile`) and the simulated-DOM case "#40 items 4 and 5" in
+  `tests/studio-workspace.test.mjs`. Golden frames are unchanged by these
+  fixes; browser frames match a baseline captured at `2319903`.
+
+### PR 1 · re-review of #40 at `588bb88`
+
+Verdict: ready to merge, with three leftovers. Two are fixed here, the third
+is tracked as F6.
+
+- **Leftover 1 · export of an undated timeline.** The positioned-source export
+  wrote `"timeAxis": false` whenever no axis existed, including for a timeline
+  that simply had no dates yet. It now records the declared state
+  (`declaresTimeAxis`), so dates added later draw the axis.
+- **Leftover 2 · Reset and locks.** Reset restored the loaded timeline and then
+  pinned a locked node to its year, moving it sideways. Reset now applies the
+  same rule as a strategy: it is refused before anything is discarded while
+  the loaded axis would move a locked dated node, and it names the nodes.
+- **Unsaved flag.** A preview refused because it would change nothing no
+  longer leaves its strategy inputs counted as an unsaved draft; any further
+  edit makes them a draft again.
+- **Leftover 3** · tracked as F6 above, as the re-review suggested.
+- Tests: "#40 re-review" cases in `tests/layout-behaviour.test.mjs` and
+  `tests/studio-workspace.test.mjs`.
+
 ## Review evidence
 
 Ran locally on linux-x64, Node 22.23.4, at `73af432`: `npm run typecheck`,
@@ -251,3 +369,7 @@ rerun.
 | Date | Item | PR | Commit on `main` | Note |
 | --- | --- | --- | --- | --- |
 | 2026-11-12 | Plan | — | — | Review completed; plan written |
+| 2026-11-12 | F1–F4 | #40 | — (branch `94a97d3`) | Golden frames unchanged |
+| 2026-11-12 | F5 | #40 | — (branch `6034b30`) | 58 tree golden hashes regenerated |
+| 2026-11-13 | #40 review, items 1–8 and minor | #40 | — | One anchor definition; golden frames unchanged |
+| 2026-11-13 | #40 re-review, leftovers 1–2 and unsaved flag | #40 | — | Leftover 3 tracked as F6 |

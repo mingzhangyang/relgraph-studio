@@ -32,7 +32,24 @@ export interface EngineOptions {
   /** Nodes that must stay exactly where they are. */
   fixed?: ReadonlyMap<string, EnginePoint>;
 }
-type LayoutGraph = Pick<VisualGraph, 'nodes' | 'edges'>;
+/**
+ * The spacing and relaxation budget every automatic drawing starts from: the
+ * player's drawing of a document without coordinates, `relgraph layout`, and
+ * the layout panel's defaults. One constant, so that asking the panel to
+ * rearrange a freshly loaded document reproduces what is already on screen.
+ */
+export const LAYOUT_DEFAULTS: Readonly<Pick<EngineOptions, 'spacing' | 'iterations'>> =
+  Object.freeze({ spacing: 150, iterations: 300 });
+/**
+ * A timeline's lane height, as a share of the spacing, and the breathing room
+ * between two spans in one lane, as a share of the axis. The timeline engine
+ * and the anchoring of a saved timeline (`time-anchor.ts`) share them.
+ */
+export const TIMELINE_LANE = 0.42;
+export const TIMELINE_GAP = 0.012;
+type LayoutGraph = Pick<VisualGraph, 'nodes' | 'edges'> & {
+  timeline?: Pick<NonNullable<VisualGraph['timeline']>, 'ordinal'>;
+};
 /** A node's place in time; `point` when it only has a first appearance. */
 type Span = { from: number; to?: number; point: boolean };
 
@@ -1039,6 +1056,24 @@ export function timeAxis(nodes: readonly VisualNode[]): TimeAxis | null {
 }
 
 /**
+ * The nodes as the time axis sees them. The reveal steps of an unfolding tree,
+ * mind map or flowchart (`timeline.ordinal`) count order, not time, so only
+ * spans are dates there.
+ */
+export function timedNodes<N extends Pick<VisualNode, 'visibility'>>(graph: {
+  nodes: readonly N[];
+  timeline?: { ordinal?: boolean };
+}): readonly N[] {
+  if (!graph.timeline?.ordinal) return graph.nodes;
+  return graph.nodes.map((node) => {
+    if (!node.visibility) return node;
+    const copy = { ...node };
+    delete copy.visibility;
+    return copy;
+  });
+}
+
+/**
  * Where a dated node sits along the axis: the middle of its span, or its
  * first appearance when that is all it has. A node without a time has no
  * place on the axis.
@@ -1053,6 +1088,9 @@ export function placeInTime(
   const to = node.span === undefined ? from : (node.span.to ?? axis.to);
   return ((from + to) / 2 - (axis.from + axis.to) / 2) * axis.scale;
 }
+
+/** How far, in world units, a stored x may lie from its place in time and still keep time. */
+export const TIME_TOLERANCE = 0.02;
 
 /**
  * Whether a drawing keeps time: every dated node sits at its place on the
@@ -1070,7 +1108,7 @@ export function keepsTime(
     const x = placeInTime(node, axis),
       p = positions.get(node.id);
     if (x === null || !p) continue;
-    if (!(Math.abs(p.x - x) <= 0.02)) return false;
+    if (!(Math.abs(p.x - x) <= TIME_TOLERANCE)) return false;
   }
   return true;
 }
@@ -1083,7 +1121,7 @@ export function keepsTime(
 function timelineLayout(p: Prepared, graph: LayoutGraph, options: EngineOptions) {
   const axis = timeAxis(graph.nodes);
   if (!axis) return treeLayout(p, options);
-  const lane = options.spacing * 0.42,
+  const lane = options.spacing * TIMELINE_LANE,
     at = new Map<string, EnginePoint>();
   // A span without an end is still going on; a mere first appearance is a point.
   const start = (id: string): number => p.span.get(id)?.from ?? axis.from,
@@ -1125,7 +1163,7 @@ function timelineLayout(p: Prepared, graph: LayoutGraph, options: EngineOptions)
   for (const members of bands.values()) {
     // First fit: the earliest lane whose last span has ended, with breathing room.
     const lanes: number[] = [],
-      gap = (axis.to - axis.from) * 0.012;
+      gap = (axis.to - axis.from) * TIMELINE_GAP;
     for (const id of [...members].sort(
       (a, b) => start(a) - start(b) || (p.order.get(a) ?? 0) - (p.order.get(b) ?? 0),
     )) {
@@ -1406,6 +1444,9 @@ export function runLayoutEngine(
   engine: LayoutEngine,
   options: EngineOptions,
 ): Map<string, EnginePoint> {
+  // Reveal steps are not dates: an unfolding drawn on a timeline has no axis.
+  if (engine === 'timeline' && graph.timeline?.ordinal)
+    graph = { nodes: timedNodes(graph) as VisualNode[], edges: graph.edges };
   const p = prepare(graph);
   const result =
     engine === 'force'
@@ -1435,8 +1476,7 @@ export function autoLayout(
 ): Map<string, EnginePoint> {
   return runLayoutEngine(graph, chooseLayoutEngine(graph), {
     seed: 0,
-    spacing: 150,
-    iterations: 300,
+    ...LAYOUT_DEFAULTS,
     ...options,
   });
 }

@@ -9,7 +9,7 @@ import {
   nodeStyleFor,
   localize,
   NEUTRAL_STYLE,
-  styleForPositions,
+  styleForDrawing,
 } from '@relgraph/core';
 import type {
   DirectorFrameState,
@@ -316,8 +316,8 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
     locale = DEFAULT_LOCALE,
     detailAt = () => undefined,
   } = options;
-  // A time axis is drawn only for a drawing that keeps time.
-  const style = styleForPositions(graphStyle, graph.nodes, positions);
+  // A time axis is drawn only for a drawing anchored to time (`timeAnchor`).
+  const style = styleForDrawing(graphStyle, graph, positions);
   const config = graph.project;
   const messages = RENDER_MESSAGES[locale];
   const { width: W, height: H, stage, typeScale: ts } = spec;
@@ -1206,24 +1206,26 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
       if (entry.isNode) {
         const kindStyle = nodeStyleFor(style, entry.kind),
           c = color(kindStyle.color, toneOf(P, kindStyle.tone) ?? P.legendText),
-          half = u(5.2);
+          half = u(5.2),
+          // The miniature is the glyph as drawn: off the time axis a span is a point.
+          shape = kindStyle.shape === 'span' && !style.timeAxis ? 'circle' : kindStyle.shape;
         // A miniature of the kind's shape: [half width, half height, corner].
         const [w, h, corner] =
-          kindStyle.shape === 'pill' || kindStyle.shape === 'capsule'
+          shape === 'pill' || shape === 'capsule'
             ? [1.25, 0.78, 0.62]
-            : kindStyle.shape === 'square'
+            : shape === 'square'
               ? [0.9, 0.9, 0.26]
-              : kindStyle.shape === 'box'
+              : shape === 'box'
                 ? [1.25, 0.82, 0.3]
-                : kindStyle.shape === 'span'
+                : shape === 'span'
                   ? [1.3, 0.55, 0.25]
-                  : kindStyle.shape === 'hexagon'
+                  : shape === 'hexagon'
                     ? [1.08, 1.08 * (Math.sqrt(3) / 2), 0]
-                    : kindStyle.shape === 'decision'
+                    : shape === 'decision'
                       ? [1.25, 0.9, 0]
                       : [1, 1, 0];
         const g: GlyphGeometry = {
-          shape: kindStyle.shape,
+          shape,
           radius: half,
           halfWidth: half * w,
           halfHeight: half * h,
@@ -1532,7 +1534,9 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
   const titleFont = serif(27, 600),
     metaFont = mono(13);
   const domainTime =
-    playback.domainAt === null ? '' : messages.domainTime(view.timeline?.unit, playback.domainAt);
+    playback.domainAt === null || view.timeline?.ordinal
+      ? ''
+      : messages.domainTime(view.timeline?.unit, playback.domainAt);
   // The film title shares its row with the right-aligned domain time and
   // never exceeds the title safe area; u(850) is the design's maximum length.
   const titleRoom = titleRight - titleX - (domainTime ? measure(domainTime, metaFont) + u(24) : 0);

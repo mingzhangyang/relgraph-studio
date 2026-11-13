@@ -16,8 +16,23 @@ import {
 import {
   computeLayout,
   DEFAULT_LAYOUT_SETTINGS,
+  planLayout,
 } from '../../packages/core/src/director/layout-strategies.ts';
-import { createLayoutStrategyView } from '../../apps/studio/src/layout-strategy-view.ts';
+import {
+  blockedLayoutMessage,
+  blockedResetMessage,
+  createLayoutStrategyView,
+  unchangedLayoutMessage,
+} from '../../apps/studio/src/layout-strategy-view.ts';
+import { displayNodeText } from '../../packages/core/src/project.ts';
+import {
+  anchoredPoint,
+  anchorToTime,
+  declaresTimeAxis,
+  offTime,
+  timeAnchor,
+} from '../../packages/core/src/director/time-anchor.ts';
+import { placeInTime } from '../../packages/core/src/director/layout-engines.ts';
 import {
   currentStudioMode,
   planStudioModeTransition,
@@ -52,6 +67,7 @@ import {
   renderEditorNodes,
   renderEditorSelection,
   renderEditorStatus,
+  refreshEditorFieldText,
 } from '../../apps/studio/src/layout-editor-view.ts';
 
 import {
@@ -105,6 +121,17 @@ export const studioImports = {
   cancelPositionDrag,
   computeLayout,
   DEFAULT_LAYOUT_SETTINGS,
+  planLayout,
+  unchangedLayoutMessage,
+  blockedLayoutMessage,
+  blockedResetMessage,
+  displayNodeText,
+  anchoredPoint,
+  anchorToTime,
+  declaresTimeAxis,
+  offTime,
+  placeInTime,
+  timeAnchor,
   createLayoutStrategyView,
   currentStudioMode,
   planStudioModeTransition,
@@ -132,6 +159,7 @@ export const studioImports = {
   renderEditorNodes,
   renderEditorSelection,
   renderEditorStatus,
+  refreshEditorFieldText,
   advancePlayback,
   createPlaybackState,
   formatPlaybackTime,

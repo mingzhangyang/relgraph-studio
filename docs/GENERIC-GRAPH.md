@@ -65,6 +65,7 @@ Everything else is optional.
 | `groups[]`     | `id` (required), `label`, `kind`, `color`. Groups referenced only by nodes are created.                                                                                                                                                                                                |
 | `kinds`        | `nodes.<kind>`: `label`, `color`, `shape` (`circle`, `pill`, `diamond`, `square`, `hexagon`, or the label-holding `box`, `capsule`, `decision`). `edges.<kind>`: `label`, `color`, `line` (`solid`, `dashed`, `dotted`), `head` (`arrow`, `bar`, `hollow-circle`, `none`), `directed`. |
 | `timeline`     | `unit` and optional `total` of the domain time used by `visibleFrom` / `visibleTo`.                                                                                                                                                                                                    |
+| `timeAxis`     | `false` declares that a timeline's coordinates are not on its time axis: x is kept as written and no axis is drawn. Written by the studio when it exports a timeline drawn with another strategy. See [Diagram kinds](#diagram-kinds).                                                 |
 | `presentation` | Shots, as in the biology format: `id`, `title`, `narration`, `durationSec` (default 4), `transitionMs`, `domainAt`, `camera` (`focusNodeId` \| `fitIds`, `zoom`), `highlight` (`nodeIds`, `edgeIds`, `groupId`), `openDetailNodeId`.                                                   |
 
 Rules worth knowing:
@@ -115,6 +116,38 @@ of them back into an ordinary network.
 | **Mind map**                                                       | **Flowchart (dark)**                                     |
 | ![mind map](visuals/generic/diagram-mindmap-light.png)             | ![flowchart](visuals/generic/diagram-flowchart-dark.png) |
 
+A timeline stays a timeline. Whether a drawing is on its time axis is a
+declared state, and one definition (`timeAnchor`) serves the editor, the layout
+panel, the player, the CLI and the renderer. A timeline is on its axis while
+no strategy was applied and the source does not say `"timeAxis": false`, or
+while it is drawn with the `auto` or `timeline` strategy. Then a dated node's x
+is its place in time and only its lane (y) is stored and edited: dragging a
+bar sideways does nothing, a changed `start` or `end` moves the bar to its new
+years, and a dated node added without coordinates (in the player or by
+`relgraph layout`) takes the first free lane, one of the drawing's own lane
+steps below the others when none is free. A lock holds a dated node's lane;
+its x is its date.
+
+Applying another strategy in the layout panel is the explicit way off the
+axis; the spans are then drawn as points, in the legend as well. Exporting the
+positioned source writes `"timeAxis": false` for such a drawing, so it stays
+off the axis when the file is read again; applying `timeline` or `auto` puts
+it back, and the next export removes the field. Coordinates written by hand
+that are off the axis, without that field, are drawn at their dates with a
+warning that says how to keep them.
+
+The layout panel previews a strategy only when it changes something: a
+coordinate, or whether the drawing is on its axis. A strategy on the axis is
+refused while a locked dated node sits away from its date, since applying it
+would have to move that node; unlock it or choose another strategy. Reset
+restores the loaded coordinates together with the strategy they were loaded
+with, and is refused in the same way when the loaded axis would move a locked
+node. Exporting a timeline that has no dates yet does not write
+`"timeAxis": false`: once dates are added, it is drawn on its axis.
+
+The unfolding of a tree, mind map or flowchart counts reveal order, not time,
+so its frames show no domain time.
+
 An evolutionary tree that unfolds needs nothing but its branches:
 
 ```json
@@ -162,11 +195,11 @@ How the conventions are derived, and how to override them:
   `visibleTo`, a span never hides the node: what has ended stays on screen.
   Spans that overlap never share a lane; with groups, each group has its own
   band of lanes. The axis, its cursor and the bars are drawn only while the
-  drawing keeps time, that is, while every dated node sits at its place along
-  x. The timeline layout always does, and so does its result once written to
-  the file; lanes (y) remain yours to choose. A drawing rearranged along x,
-  by hand or by another strategy, is shown without the axis and with spans as
-  points, rather than with rules that point at the wrong years.
+  drawing is on its time axis (see above); lanes (y) remain yours to choose.
+  A drawing taken off the axis is shown without it and with spans as points,
+  rather than with rules that point at the wrong years. The reveal steps of
+  an unfolding tree, mind map or flowchart are not dates: the timeline
+  strategy draws such a graph as a tree, and says so.
 - **Shapes.** In a flowchart, kinds named like `开始`, `结束`, `start`, `end`
   become capsules and kinds named like `判断`, `条件`, `decision` become
   diamonds; everything else is a box. `kinds.nodes.<kind>.shape` overrides.
