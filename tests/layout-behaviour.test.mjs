@@ -10,6 +10,7 @@ import egfr from '../examples/biology-egfr-mapk.json' with { type: 'json' };
 import biology from '../examples/biology-signaling-synthetic.json' with { type: 'json' };
 import literature from '../examples/honglou-provisional.relgraph.json' with { type: 'json' };
 import { loadDocument } from '../packages/core/src/director/load.ts';
+import { validateGenericDocument } from '../packages/core/src/domains/generic.ts';
 import { layoutGraph, structuralLayout } from '../packages/core/src/director/layout.ts';
 import { LAYOUT_DEFAULTS, autoLayout } from '../packages/core/src/director/layout-engines.ts';
 import {
@@ -591,8 +592,11 @@ test('F6: a lane-only position that cannot take x from dates is unplaced, not an
     const result = loadDocument(doc);
     assert.equal(result.valid, true, JSON.stringify(result.errors));
     const notices = result.warnings.filter((w) => w.code === 'LANE_ONLY');
-    assert.equal(notices.length, 1);
-    assert.match(notices[0].message, new RegExp('^' + count + ' 个节点的坐标只有 y'));
+    assert.equal(notices.length, count);
+    for (const notice of notices) {
+      assert.match(notice.path, /^nodes\[\d+\]\.position$/);
+      assert.match(notice.message, /原有 y 不会保留/);
+    }
     return result.graph;
   };
   // Every hand edit of an exported timeline still loads; layout fills the gaps.
@@ -624,6 +628,78 @@ test('F6: a lane-only position that cannot take x from dates is unplaced, not an
     at = layoutGraph(f),
     [a, b] = f.nodes.map((n) => at.get(n.id));
   assert.notDeepEqual(a, b);
+});
+
+test('F6 review: the nodes-only writer API uses the source diagram and state', () => {
+  const graph = load(dynasties),
+    positions = layoutGraph(graph);
+  for (const supplied of [
+    { nodes: graph.nodes },
+    { ...graph, diagram: 'network' },
+    { ...graph, timeline: { unit: '', ordinal: true } },
+  ]) {
+    const written = applyGraphPositions(dynasties, supplied, positions).document;
+    for (const node of written.nodes) assert.deepEqual(Object.keys(node.position), ['y']);
+    written.nodes.find((n) => n.id === '清').end += 100;
+    assert.deepEqual(offAxis(written), []);
+    const off = applyGraphPositions(dynasties, supplied, positions, { timeAxis: false }).document;
+    for (const node of off.nodes) assert.deepEqual(Object.keys(node.position), ['x', 'y']);
+    const on = applyGraphPositions(off, supplied, positions, { timeAxis: true }).document;
+    assert.equal(on.timeAxis, undefined);
+    assert.deepEqual(offAxis(on), []);
+    for (const node of on.nodes) assert.deepEqual(Object.keys(node.position), ['y']);
+  }
+});
+
+test('F6 review: source validation locates each unplaceable lane without duplicate load warnings', () => {
+  for (const diagram of ['network', 'tree', 'mindmap', 'flowchart', 'timeline']) {
+    const doc = {
+      format: 'relgraph.graph/1',
+      diagram,
+      nodes: ['plain', { id: '甲', position: { y: 120 } }, { id: 42, position: { y: 240 } }],
+    };
+    const checked = validateGenericDocument(doc),
+      loaded = loadDocument(doc);
+    assert.equal(checked.valid, true);
+    assert.equal(loaded.valid, true);
+    const lanes = (warnings) => warnings.filter((w) => w.code === 'LANE_ONLY');
+    assert.deepEqual(
+      lanes(checked.warnings).map(({ path, id }) => ({ path, id })),
+      [
+        { path: 'nodes[1].position', id: '甲' },
+        { path: 'nodes[2].position', id: '42' },
+      ],
+    );
+    assert.deepEqual(
+      lanes(loaded.warnings).map(({ path, id }) => ({ path, id })),
+      lanes(checked.warnings).map(({ path, id }) => ({ path, id })),
+    );
+  }
+  const valid = exported();
+  assert.deepEqual(validateGenericDocument(valid).warnings, []);
+  valid.nodes[0].position = { x: null, y: 5 };
+  assert.ok(validateGenericDocument(valid).errors.some((e) => e.code === 'POSITION'));
+});
+
+test('F6 review: onlyMissing preserves invalid supplied values for validation to reject', () => {
+  const graph = load(dynasties),
+    positions = layoutGraph(graph);
+  for (const invalid of [5, false, 'bad', [], {}, { y: '5' }, { x: null, y: 5 }]) {
+    const source = exported();
+    source.nodes[0].position = invalid;
+    const output = applyGraphPositions(source, graph, positions, { onlyMissing: true });
+    assert.deepEqual(output.document.nodes[0].position, invalid);
+    assert.equal(output.changed, 0);
+    assert.equal(validateGenericDocument(output.document).valid, false);
+  }
+  for (const missing of [undefined, null]) {
+    const source = exported();
+    source.nodes[0].position = missing;
+    const output = applyGraphPositions(source, graph, positions, { onlyMissing: true });
+    assert.equal(output.changed, 1);
+    assert.deepEqual(Object.keys(output.document.nodes[0].position), ['y']);
+    assert.equal(validateGenericDocument(output.document).valid, true);
+  }
 });
 
 test('F6: relgraph layout fills a lane-only position it cannot place, and the file loads', async () => {

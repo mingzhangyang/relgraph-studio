@@ -193,8 +193,17 @@ node (both rescale the axis) therefore leaves nothing stale in the file. A
 lane-only position takes x from the node's dates only for a dated node, on a
 timeline that does not say `"timeAxis": false` and has an axis (at least two
 distinct times). Anywhere else the node is unplaced: the layout puts it in a
-free place and a `LANE_ONLY` warning says to add x. While there is no axis
-yet, x is layout, not a date, so it is stored; once dates make an axis, that
+free place and a `LANE_ONLY` warning at that node's `nodes[i].position` says
+to add x. Source validation reports the same warning as loading. **This
+fallback discards the original y as well**: it is a new placement, not a
+layout with y held fixed. This applies when `timeAxis` is changed to `false`,
+the diagram kind changes, a node loses its date, or dates no longer define
+an axis. To keep an arrangement while disabling the axis by hand, first
+supply a full `{x, y}` position for each lane-only node. In the studio,
+apply the desired off-axis layout strategy, adjust the positions, then
+export; that writes full coordinates together with `"timeAxis": false`.
+While there is no axis yet, x is layout, not a date, so it is stored; once
+dates make an axis, that
 x is reported with `OFF_TIME_AXIS` until the positioned source is exported
 again.
 

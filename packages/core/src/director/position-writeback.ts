@@ -15,8 +15,11 @@ const record = (value: unknown): value is RecordValue =>
  * Apply neutral graph coordinates to either source format without changing its
  * other fields. The source is cloned; the caller retains ownership of its data.
  *
- * With onlyMissing=true, all authored positions are preserved verbatim. The
- * default writes the complete static layout for export from the workbench.
+ * With onlyMissing=true, supplied positions are preserved verbatim except
+ * missing positions and, in the generic format, null or unplaceable lane-only
+ * positions (below).
+ * Invalid supplied values are left for source validation to reject, not
+ * silently repaired. The default writes the complete layout for export.
  *
  * `timeAxis` records whether a timeline's coordinates are on its time axis
  * (`timeAnchor`), so that a drawing taken off the axis stays off it when the
@@ -96,8 +99,14 @@ export function applyGraphPositions(
       delete document.timeAxis;
       changed++;
     }
-    // Decided on the file as written, so writer and adapter apply one rule.
-    const laned = lanedNodes(graph, sourceKeepsTime(document));
+    // Source metadata, not optional caller metadata: the nodes-only API must
+    // write the same lanes as a full graph. Generic sources have no ordinal
+    // reveal-time flag; their authored spans/visibility are domain dates.
+    const keepsTime = sourceKeepsTime(document);
+    const laned = lanedNodes(
+      { nodes: graph.nodes, diagram: keepsTime ? 'timeline' : undefined },
+      keepsTime,
+    );
     for (const entry of entries) {
       const raw = author(entry.id),
         id = raw === null ? undefined : ids.get(raw);
@@ -105,7 +114,13 @@ export function applyGraphPositions(
       const at = entry.position;
       // The format reads `position: null` as no position, and a lane-only
       // position off the axis as unplaced, so both are gaps to fill.
-      if (onlyMissing && record(at) && (at.x !== undefined || laned.has(id))) continue;
+      const unplaceableLane =
+        record(at) &&
+        at.x === undefined &&
+        typeof at.y === 'number' &&
+        Number.isFinite(at.y) &&
+        !laned.has(id);
+      if (onlyMissing && at !== undefined && at !== null && !unplaceableLane) continue;
       const point = positions.get(id);
       if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y))
         throw new TypeError('No finite position for ' + String(entry.id));

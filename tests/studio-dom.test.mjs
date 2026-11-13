@@ -209,6 +209,12 @@ test('every generic graph diagnostic has an English message and repair', async (
       { nodes: ['a'], presentation: [{ camera: { fitIds: 'a' }, highlight: 1 }] },
       { edges: [{ source: 'a', target: 'b' }] },
       { nodes: ['a'], edges: [{ source: 'a', target: 'b' }] },
+      {
+        nodes: [
+          { id: 'a', position: { y: 5 } },
+          { id: 'b', position: { y: 10 } },
+        ],
+      },
       { nodes: Array.from({ length: GENERIC_LIMITS.previewNodes + 1 }, (_, i) => i) },
     ].flatMap((doc) => {
       const result = loadDocument({ format: GENERIC_FORMAT, ...doc });

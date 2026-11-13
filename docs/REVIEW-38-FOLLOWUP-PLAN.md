@@ -428,6 +428,46 @@ with the golden frames matching (no `--update`); `npm run check:browser`
 76/76 passed (no local baseline). The new "F6" cases fail against the core
 of `e631ac9`. No GitHub Actions workflow was added, dispatched or rerun.
 
+### F6 · follow-up review of `61a6b48`
+
+The [five inline comments](https://github.com/mingzhangyang/relgraph-studio/pull/42#pullrequestreview-5893708808)
+and the [subsequent P3 browser-test finding](https://github.com/mingzhangyang/relgraph-studio/pull/42#pullrequestreview-5894118716)
+are addressed together:
+
+- The writer takes diagram/time-axis metadata from the source, including
+  when callers pass only `{ nodes }`. Optional caller metadata cannot switch
+  which nodes are written as lanes.
+- The shared source parser resolves lanes and reports each unplaceable lane
+  at `nodes[i].position` with its source id. Validation-only callers and
+  imports receive the same warning, without duplicate import warnings.
+- The warning and `GENERIC-GRAPH.md` explicitly say that unplacing discards
+  y too, and document how to supply full coordinates before disabling the
+  axis. This takes the design comment's documentation option; holding y
+  fixed during partial layout is not implemented by this PR.
+- `onlyMissing` preserves invalid supplied positions for validation to
+  reject, rather than silently overwriting them. The documented exceptions
+  are missing positions and generic null/unplaceable lane-only positions.
+- The Chromium drag check asserts the lane-only schema, imports both
+  exports and reads every actual x from the position editor. A date mutation
+  must change the observed x while retaining y, so two absent x fields can
+  no longer satisfy the assertion.
+
+Regression evidence: all three `F6 review` unit cases fail on `61a6b48` and
+pass with these fixes. They cover the nodes-only API, per-node source
+warnings and invalid-value preservation. The real-browser check also covers
+export, reimport and a changed date.
+
+Validation of this follow-up (linux-x64, Node 24.22.1): `typecheck`,
+`check:types`, `lint`, `format:check` and `build:packages` passed; `npm test`
+passed all 399 tests in 36 files. `check:browser` passed 76/76 in Chromium
+153.0.8010.12, including the strengthened export check. `check:export --
+--no-build`, using the just-built packages and Studio, passed 31/31; all
+236 golden hashes matched without `--update`. No local browser baseline
+was present, so cross-revision browser pixel comparisons did not run.
+The sandbox did not capture Node child-process stdout in the package
+consumer tests; the unchanged tests and then the full suite passed outside
+that sandbox. No GitHub Actions workflow was added, dispatched or rerun.
+
 ### PR 2 · as implemented
 
 - **P1** · `composeFrame` no longer scans the whole view per item.
