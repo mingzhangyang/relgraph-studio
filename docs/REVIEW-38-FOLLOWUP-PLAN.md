@@ -59,7 +59,7 @@ until the owner confirms them.
 | --- | --- | --- | --- |
 | D1 | How does a drawing remain a timeline (F1)? | Make it a declared state instead of inferring it from coordinates every frame: while a drawing is time-anchored, a dated node's x is derived from its time and only its lane (y) is stored and editable. Leaving that state is an explicit act (applying another strategy), shown in the layout panel. | ☐ |
 | D2 | Which layout defaults are canonical (F3)? | The load-time values (spacing 150, iterations 300), exported once and used by the panel too: the golden frames and browser baselines are recorded against them. | ☐ |
-| D3 | What happens to the 5,000 / 20,000 limits (P3)? | Keep them as hard limits, add a warning diagnostic above a measured preview budget, and document both numbers. | ☐ |
+| D3 | What happens to the 5,000 / 20,000 limits (P3)? | Keep them as hard limits, add a warning diagnostic above a measured preview budget, and document both numbers. | ☑ budget 300 / 600, from measured playback (#41 review, item 3) |
 | D4 | How deep does the "STEP" fix go in PR 1 (F5 vs S3)? | PR 1 only stops showing the internal unit. Separating reveal order from domain time is S3, in PR 3. | ☐ |
 
 ## PR 1 · Behaviour fixes
@@ -365,8 +365,8 @@ is tracked as F6.
 
 ### PR 2 · as implemented
 
-- **P1** · `composeFrame` does a bounded amount of work per node and
-  relation. Attention under a highlight is a lookup built once per frame
+- **P1** · `composeFrame` no longer scans the whole view per item.
+  Attention under a highlight is a lookup built once per frame
   (`attentionUnder`; `shotAttention` keeps its signature). Label collisions
   go through a uniform grid over the label bounds (`RectIndex` in
   `packages/render/src/spatial.ts`), for placed labels and obstacles and for
@@ -387,7 +387,7 @@ is tracked as F6.
   previous composer, the view is read 35.6 million times at 1,600 nodes
   (budget 145,000; 15.9 times the count at 400 nodes) and the test fails.
   `tests/spatial-index.test.mjs` checks both indexes against a full scan.
-- **P3** · `GENERIC_LIMITS.previewNodes` (500) and `previewEdges` (1,000):
+- **P3** · `GENERIC_LIMITS.previewNodes` (300) and `previewEdges` (600):
   above either, loading warns with `LARGE_GRAPH` (translated in the
   studio); 5,000 / 20,000 stay hard limits. `docs/GENERIC-GRAPH.md`, "Size",
   states both and the measurements; `scripts/bench-compose.mjs` reproduces
@@ -403,8 +403,10 @@ method as the table above (`scripts/bench-compose.mjs --baseline`):
 | 1,500 / 3,000 | 281 ms | 93 ms |
 | 5,000 / 20,000 | 3.2 s | 0.53 s |
 
-What remains is linear: selection outlines (33 samples per relation), hull
-sampling and garbage collection. Frame-state evaluation (`directorFrameAt`
+Under a camera that shows part of the graph, what remains is linear:
+selection outlines (33 samples per relation), hull sampling and garbage
+collection. A whole-graph shot is not linear in its collision tests; see the
+review of #41 below. Frame-state evaluation (`directorFrameAt`
 with a compiled timeline) adds 4 ms at 500 nodes and 84 ms at 5,000; it is
 outside P1.
 
@@ -415,6 +417,50 @@ Validation, run locally on linux-x64, Node 22.23.4, on the tree of
 (no `--update`); `npm run check:browser` 76/76 passed (no local baseline
 from an earlier commit was present, so the two baseline comparisons did not
 run). No GitHub Actions workflow was added, dispatched or rerun.
+
+### PR 2 · review of #41
+
+The review of #41 at `d794160` found the frames identical and the speed-up
+real, and raised three items:
+
+- **1 · "Linear work" did not hold for a whole-graph shot.** The cost test
+  fixed the camera at scale 1, so about 100 nodes were on stage at every
+  size. Under the fit camera every node is on stage, and a 64-unit cell held
+  more rectangles the larger the graph. Fixed: the grid cell is now 16 units
+  (about a label line), which brings rectangle tests of a whole-graph shot at
+  1,600 nodes from 376,901 to 85,950 (5.8 times the count at 400 nodes, was
+  10.0). `docs/GENERIC-GRAPH.md` now says that composition is bounded per
+  node and relation only while the density on stage is, and that a
+  whole-graph shot still grows faster than the graph.
+- **2 · The cost test did not catch the regression it named.** It counted
+  only tests made through the indexes. Fixed: the test now counts at the
+  predicates, every call of `rectsIntersect` (through `vi.mock`) and of
+  `Math.hypot` (through `vi.spyOn`), and adds a whole-graph shot under the
+  fit camera with its own growth bound and budget. Each of these mutations
+  now fails it: the ambiguity check as a scan of every labelled node
+  (189,483 distances, budget 99,000), placed labels or relation obstacles as
+  a list scan (261,077 and 2,345,052 rectangle tests, budget 129,000), and
+  the 64-unit cell (growth 10.0, bound 7).
+- **3 · The preview budget (D3).** Playback measured in the built studio
+  ran at 18 fps at 500 / 1,000. The owner chose to lower the budget to
+  300 / 600, where playback measured 31 fps.
+- **Minor.** The "Size" table names `--per-node 4` for its last row; the
+  label loop's `cost` is now `placeCost`; `ComposeOptions.cost` is removed
+  (the test no longer needs a hook, so it is not public surface).
+
+Compose time at 1080p after these changes, `scripts/bench-compose.mjs
+--baseline` against the build of `a2589bf`, identical lists 7/7 at every
+size: 200 / 400 at 13 ms (was 24), 300 / 600 at 20 ms (36), 500 / 1,000 at
+33 ms (66), 1,500 / 3,000 at 85 ms (265), 5,000 / 20,000 at 0.54 s (3.5 s).
+
+Validation, run locally on linux-x64, Node 22.23.4, on the tree with these
+fixes: `npm run typecheck`, `npm run check:types`, `npm run lint`,
+`npm run format:check` passed; `npm test` 390 tests in 36 files passed;
+`npm run check:export` 31/31 passed with the 236 golden frames matching (no
+`--update`); `npm run check:browser` 76/76 passed (no local baseline, so the
+two baseline comparisons did not run). The playback figures of item 3 are
+the reviewer's and were not re-measured. No GitHub Actions workflow was
+added, dispatched or rerun.
 
 ## Review evidence
 
@@ -438,3 +484,4 @@ rerun.
 | 2026-11-13 | PR 1 merged | #40 | `a2589bf` | Squash of `0348d87` onto `08c8e57`; tree identical to the reviewed head |
 | 2026-11-13 | P1, P2 | — | — (branch `dd2fa58`) | Display lists and golden frames identical |
 | 2026-11-13 | P3 | — | — (branch `f54385b`) | `LARGE_GRAPH` above 500 nodes or 1,000 relations |
+| 2026-11-13 | #41 review, items 1–3 and minor | #41 | — (branch, see "PR 2 · review of #41") | Budget lowered to 300 / 600 (D3); golden frames unchanged |
