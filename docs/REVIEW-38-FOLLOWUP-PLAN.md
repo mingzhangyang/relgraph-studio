@@ -1,7 +1,7 @@
 # Follow-up plan · review of #37 and #38
 
 Status: **open** · baseline `main` at `73af432` · reviewed 2026-11-12 ·
-PR 1 merged as `a2589bf` on 2026-11-13
+PR 1 merged as `a2589bf` and PR 2 as `682dbbd` on 2026-11-13
 
 This is the tracking document for the work that came out of reviewing
 [#38](https://github.com/mingzhangyang/relgraph-studio/pull/38) (generic graphs,
@@ -31,7 +31,8 @@ The repository rules in [AGENTS.md](../AGENTS.md) apply to every step:
 | PR | Scope | Items | Golden frames | Status |
 | --- | --- | --- | --- | --- |
 | 1 | Behaviour fixes | F1–F5 | Tree example changes (F5); others identical | ☑ [#40](https://github.com/mingzhangyang/relgraph-studio/pull/40) merged as `a2589bf` (2026-11-13); leftover 3 tracked as F6 |
-| 2 | Per-frame cost and limits | P1–P3 | Must stay identical | ◐ implemented on branch `claude/dreamy-euler-7o0lcl` from `a2589bf`; golden frames identical |
+| 1b | Behaviour fix | F6 | Must stay identical | ◐ implemented on branch `claude/brave-hypatia-waiyi9` from `682dbbd`; golden frames identical |
+| 2 | Per-frame cost and limits | P1–P3 | Must stay identical | ☑ [#41](https://github.com/mingzhangyang/relgraph-studio/pull/41) merged as `682dbbd` (2026-11-13) |
 | 3 | Core structure | S1–S3 | Must stay identical | ☐ not started |
 | 4 | Render structure | S4–S6 | Must stay identical | ☐ not started |
 | 5 | Tooling and docs | T1–T4 | Not affected | ☐ not started |
@@ -122,7 +123,7 @@ compared with the reviewed head `0348d87`: identical (base `08c8e57`, which
 F6 is a behaviour fix, so it does not travel with the cost work of PR 2 or
 the structural work of PRs 3 and 4; it gets its own fix PR from `main`.
 
-- [ ] **F6 · A date edit must not look like an off-axis drawing.** The source
+- [x] **F6 · A date edit must not look like an off-axis drawing.** The source
   of an anchored timeline still stores each dated node's x, although D1 meant
   to store only its lane. After an ordinary date edit the stored x no longer
   matches the date, so loading reports `OFF_TIME_AXIS`: one node when one
@@ -152,7 +153,7 @@ frames are slower. Synthetic graph, six groups, three relation kinds.
 
 The preview budget at 24 fps is about 42 ms.
 
-- [ ] **P1 · Remove quadratic work from `composeFrame`.** Known sites: the
+- [x] **P1 · Remove quadratic work from `composeFrame`.** Known sites: the
   label ambiguity check scans every other label per candidate
   (`packages/render/src/compose.ts:1361`); `shotAttention` scans all nodes per
   edge when a group is highlighted (`compose.ts:180`); self-loop ordering and
@@ -160,13 +161,18 @@ The preview budget at 24 fps is about 42 ms.
   array copy.
   - Done when: lookups go through maps built once per frame, a spatial bucket
     serves the label check, and every golden hash is unchanged.
-- [ ] **P2 · A cost test.** A pure test composes a fixed synthetic graph and
+- [x] **P2 · A cost test.** A pure test composes a fixed synthetic graph and
   fails on a regression in operation count (not wall time), so it is stable on
   any machine.
-- [ ] **P3 · Limits that mean something.** Depends on D3.
+- [x] **P3 · Limits that mean something.** Depends on D3.
   - Done when: `GENERIC_LIMITS` and `docs/GENERIC-GRAPH.md` state the hard
     limit and the measured preview budget, and loading a graph above the budget
     produces a warning diagnostic.
+
+P1–P3 landed in [#41](https://github.com/mingzhangyang/relgraph-studio/pull/41),
+merged to `main` as `682dbbd`. After the merge, the tree of `682dbbd` was
+compared with the reviewed head `72beefa`: identical (base `a2589bf`, which
+`main` had not moved from).
 
 ## PR 3 · Core structure
 
@@ -363,6 +369,105 @@ is tracked as F6.
 - Tests: "#40 re-review" cases in `tests/layout-behaviour.test.mjs` and
   `tests/studio-workspace.test.mjs`.
 
+### F6 · as implemented
+
+The first of the two ways the item allows: an anchored timeline's x is not
+in the file.
+
+- **Lanes only.** `applyGraphPositions` writes a dated node of an anchored
+  timeline as `"position": { "y": … }` (`lanedNodes` in
+  `packages/core/src/director/time-anchor.ts`). Whether the timeline is
+  anchored is the state written to the file (`sourceKeepsTime` of the
+  output: the `timeAxis` option applied, or the field as is when omitted),
+  never a stored strategy the file does not record, so the output always
+  loads. The studio's positioned export passes its declared state and
+  `relgraph layout` omits it; both write lanes. Off the axis, for undated
+  nodes, while there is no axis yet (fewer than two distinct times, where x
+  is layout, not a date) and in the literature and biology formats, x is
+  written as before.
+- **x on load.** One rule for both directions: the adapter derives x
+  (`timeCoordinate`, rounded as stored coordinates are) for exactly the nodes
+  `lanedNodes` names under the source's own state. A lane-only position
+  anywhere else (an undated node, `"timeAxis": false`, another diagram kind,
+  no axis) is not an error: the node is unplaced, the layout fills the gap
+  and a `LANE_ONLY` warning says how to add x. Hand edits of an exported
+  timeline therefore still load, and nothing is stacked at x 0.
+  `relgraph layout` counts such a node as missing and fills it.
+- **The warning.** `OFF_TIME_AXIS` still reports x written by hand, or by an
+  export from before F6, and now names both fixes: keep only y, which
+  re-exporting the positioned source does, or declare `"timeAxis": false`.
+  The studio translates the new texts.
+- Tests: the "F6" cases in `tests/layout-behaviour.test.mjs` (one changed
+  `end`, a moved end of the axis, an added dated node, a pre-F6 file repaired
+  by re-export, lane-only positions that cannot be placed, `relgraph layout`
+  filling them, what stays `{x, y}`, an export under a strategy the file does
+  not record) and the simulated-DOM case "F6" in
+  `tests/studio-workspace.test.mjs`, which exports from the studio, moves the
+  end of the axis and loads the file again. All fail against the core of
+  `682dbbd`; the item 6 CLI case now checks the CLI's own placement, the
+  derived x and the drawn point against one another.
+- Golden frames are unaffected: no example stores timeline coordinates.
+
+Validation, run locally on linux-x64, Node 22.23.4: `npm run typecheck`,
+`npm run check:types`, `npm run lint`, `npm run format:check` passed and
+`npm test` 395 tests in 36 files passed, on the tree of `a8c2a80`;
+`npm run check:export` 31/31 passed with the 236 golden frames matching (no
+`--update`) and `npm run check:browser` 76/76 passed (no local baseline, so
+the two baseline comparisons did not run), on the sources of `e29cc70`,
+which `a8c2a80` changes only by a test. No GitHub Actions workflow was added,
+dispatched or rerun.
+
+Review of #42, fixed in `ada4d09`: the writer could produce a file the
+parser refused (a stored strategy decided the lanes, not the file's own
+state), writer and parser used different rules, and an unplaceable lane-only
+position was an error or stacked at x 0. Validation on the tree of
+`ada4d09`, linux-x64, Node 22.23.4: `npm run typecheck`,
+`npm run check:types`, `npm run lint`, `npm run format:check` passed;
+`npm test` 396 tests in 36 files passed; `npm run check:export` 31/31 passed
+with the golden frames matching (no `--update`); `npm run check:browser`
+76/76 passed (no local baseline). The new "F6" cases fail against the core
+of `e631ac9`. No GitHub Actions workflow was added, dispatched or rerun.
+
+### F6 · follow-up review of `61a6b48`
+
+The [five inline comments](https://github.com/mingzhangyang/relgraph-studio/pull/42#pullrequestreview-5893708808)
+and the [subsequent P3 browser-test finding](https://github.com/mingzhangyang/relgraph-studio/pull/42#pullrequestreview-5894118716)
+are addressed together:
+
+- The writer takes diagram/time-axis metadata from the source, including
+  when callers pass only `{ nodes }`. Optional caller metadata cannot switch
+  which nodes are written as lanes.
+- The shared source parser resolves lanes and reports each unplaceable lane
+  at `nodes[i].position` with its source id. Validation-only callers and
+  imports receive the same warning, without duplicate import warnings.
+- The warning and `GENERIC-GRAPH.md` explicitly say that unplacing discards
+  y too, and document how to supply full coordinates before disabling the
+  axis. This takes the design comment's documentation option; holding y
+  fixed during partial layout is not implemented by this PR.
+- `onlyMissing` preserves invalid supplied positions for validation to
+  reject, rather than silently overwriting them. The documented exceptions
+  are missing positions and generic null/unplaceable lane-only positions.
+- The Chromium drag check asserts the lane-only schema, imports both
+  exports and reads every actual x from the position editor. A date mutation
+  must change the observed x while retaining y, so two absent x fields can
+  no longer satisfy the assertion.
+
+Regression evidence: all three `F6 review` unit cases fail on `61a6b48` and
+pass with these fixes. They cover the nodes-only API, per-node source
+warnings and invalid-value preservation. The real-browser check also covers
+export, reimport and a changed date.
+
+Validation of this follow-up (linux-x64, Node 24.22.1): `typecheck`,
+`check:types`, `lint`, `format:check` and `build:packages` passed; `npm test`
+passed all 399 tests in 36 files. `check:browser` passed 76/76 in Chromium
+153.0.8010.12, including the strengthened export check. `check:export --
+--no-build`, using the just-built packages and Studio, passed 31/31; all
+236 golden hashes matched without `--update`. No local browser baseline
+was present, so cross-revision browser pixel comparisons did not run.
+The sandbox did not capture Node child-process stdout in the package
+consumer tests; the unchanged tests and then the full suite passed outside
+that sandbox. No GitHub Actions workflow was added, dispatched or rerun.
+
 ### PR 2 · as implemented
 
 - **P1** · `composeFrame` no longer scans the whole view per item.
@@ -482,6 +587,8 @@ rerun.
 | 2026-11-13 | #40 review, items 1–8 and minor | #40 | `a2589bf` (branch `588bb88`) | One anchor definition; golden frames unchanged |
 | 2026-11-13 | #40 re-review, leftovers 1–2 and unsaved flag | #40 | `a2589bf` (branch `0348d87`) | Leftover 3 tracked as F6 |
 | 2026-11-13 | PR 1 merged | #40 | `a2589bf` | Squash of `0348d87` onto `08c8e57`; tree identical to the reviewed head |
-| 2026-11-13 | P1, P2 | — | — (branch `dd2fa58`) | Display lists and golden frames identical |
-| 2026-11-13 | P3 | — | — (branch `f54385b`) | `LARGE_GRAPH` above 500 nodes or 1,000 relations |
-| 2026-11-13 | #41 review, items 1–3 and minor | #41 | — (branch, see "PR 2 · review of #41") | Budget lowered to 300 / 600 (D3); golden frames unchanged |
+| 2026-11-13 | P1, P2 | #41 | `682dbbd` (branch `dd2fa58`) | Display lists and golden frames identical |
+| 2026-11-13 | P3 | #41 | `682dbbd` (branch `f54385b`) | `LARGE_GRAPH` above 500 nodes or 1,000 relations |
+| 2026-11-13 | #41 review, items 1–3 and minor | #41 | `682dbbd` (branch `72beefa`) | Budget lowered to 300 / 600 (D3); golden frames unchanged |
+| 2026-11-13 | PR 2 merged | #41 | `682dbbd` | Squash of `72beefa` onto `a2589bf`; tree identical to the reviewed head |
+| 2026-11-13 | F6 | — | — (branch `e29cc70`, `a8c2a80`) | Lanes only for anchored dated nodes; golden frames unchanged |

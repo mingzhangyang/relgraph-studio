@@ -2128,3 +2128,23 @@ test('#40 re-review: a preview refused as a no-op leaves nothing unsaved', async
   await mode.dispatch('change');
   assert.equal(dirty(), 'true');
 });
+
+test('F6: the positioned export of a timeline stores lanes, so a date edit loads without warning', async () => {
+  const app = makeStudio();
+  await app.ready;
+  const input = app.node('fileInput');
+  input.files = [readFile('dynasties.graph.json', JSON.stringify(dynasties))];
+  await input.dispatch('change');
+  await flush();
+  await app.node('layoutExport').click();
+  assert.match(app.downloads.at(-1).filename, /^dynasties\.graph\.positioned\.json$/);
+  const exported = JSON.parse(await app.blobs.at(-1).text());
+  for (const node of exported.nodes) assert.deepEqual(Object.keys(node.position), ['y'], node.id);
+  // Move the end of the axis: every bar rescales, and nothing in the file is stale.
+  exported.nodes.find((n) => n.id === '清').end += 100;
+  input.files = [readFile('dynasties.positioned.json', JSON.stringify(exported))];
+  await input.dispatch('change');
+  await flush();
+  assert.doesNotMatch(app.node('warnings').textContent, /OFF_TIME_AXIS/);
+  assert.equal(app.node('layoutExport').disabled, false);
+});

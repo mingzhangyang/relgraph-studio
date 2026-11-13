@@ -171,8 +171,8 @@ const english: Record<string, string> = {
   '。请先解锁它们，再重置。': '. Unlock them first, then reset.',
   '预览可能卡顿，导出的影片不受影响；如需流畅预览，请先筛选或聚合数据。':
     'The preview may stutter; exported films are not affected. For a smooth preview, filter or aggregate the data first.',
-  '如需保留这些横坐标并不显示时间轴，请设置 "timeAxis": false。':
-    'To keep these x coordinates and draw no time axis, set "timeAxis": false.',
+  '带日期节点的横坐标由日期决定：删除其 x，只保留 y（重新导出带坐标的数据会这样写）；如需保留这些横坐标并不显示时间轴，请设置 "timeAxis": false。':
+    'A dated node\'s x is set by its date: remove the x and keep only y (re-exporting the positioned data writes it that way). To keep these x coordinates and draw no time axis, set "timeAxis": false.',
   '（保留现有坐标）': ' (existing coordinates kept)',
   '（按图的类型）': ' (follows the diagram kind)',
   '（按图的结构）': ' (chosen from the graph structure)',
@@ -406,7 +406,11 @@ const english: Record<string, string> = {
   '分组引用无效。': 'Invalid group reference.',
   '填写分组 id，或删除该字段。': 'Enter a group id, or remove the field.',
   '坐标无效。': 'Invalid coordinates.',
+  '坐标只有 y，无法由日期得出 x；布局将重新摆放此节点，原有 y 不会保留。':
+    'The position gives y alone, but x cannot be derived from dates; layout will place this node again and will not keep its original y.',
   '使用 { "x": 数字, "y": 数字 }。': 'Use { "x": number, "y": number }.',
+  '只有在保持时间轴、且至少有两个不同时间的时间线上，带日期节点才能只写 y；否则补充 x，使用 { "x": 数字, "y": 数字 }。':
+    'Only a dated node on a timeline that keeps time, with at least two distinct times, may give y alone; otherwise add x: use { "x": number, "y": number }.',
   '权重不能为负。': 'Weight cannot be negative.',
   '使用非负数。': 'Use a non-negative number.',
   'end 需要同时提供 start。': 'end requires start.',

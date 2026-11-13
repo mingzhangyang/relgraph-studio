@@ -1,5 +1,6 @@
 import type { VisualGraph } from '../../types/visual-graph.js';
 import { GENERIC_FORMAT, internalIds } from '../domains/generic.js';
+import { lanedNodes, sourceKeepsTime } from './time-anchor.js';
 
 // Node 20+ and modern browsers provide this host API. Keep its declaration
 // local so the ES-only core build needs neither DOM nor Node ambient types.
@@ -14,17 +15,31 @@ const record = (value: unknown): value is RecordValue =>
  * Apply neutral graph coordinates to either source format without changing its
  * other fields. The source is cloned; the caller retains ownership of its data.
  *
- * With onlyMissing=true, all authored positions are preserved verbatim. The
- * default writes the complete static layout for export from the workbench.
+ * With onlyMissing=true, supplied positions are preserved verbatim except
+ * missing positions and, in the generic format, null or unplaceable lane-only
+ * positions (below).
+ * Invalid supplied values are left for source validation to reject, not
+ * silently repaired. The default writes the complete layout for export.
  *
  * `timeAxis` records whether a timeline's coordinates are on its time axis
  * (`timeAnchor`), so that a drawing taken off the axis stays off it when the
  * file is read again: false writes `"timeAxis": false`, true removes it.
  * Only the generic format has timelines; omitted, the field is left as is.
+ *
+ * On a timeline that keeps time, a dated node's x is its date, so only its
+ * lane is written: `"position": { "y": … }` (`lanedNodes`). Whether it keeps
+ * time is the state written to the file (`sourceKeepsTime` of the result),
+ * never a strategy the file does not record, so the output always loads. The
+ * adapter derives x again on load, so an edited date or a rescaled axis
+ * cannot leave a stale x in the file.
+ *
+ * With onlyMissing=true a lane-only position the adapter could not place (it
+ * reports `LANE_ONLY`) counts as missing, as it does for `relgraph layout`.
  */
 export function applyGraphPositions(
   input: unknown,
-  graph: Pick<VisualGraph, 'nodes'>,
+  graph: Pick<VisualGraph, 'nodes'> &
+    Partial<Pick<VisualGraph, 'diagram' | 'project' | 'timeAxis' | 'timeline'>>,
   positions: ReadonlyMap<string, Point>,
   { onlyMissing = false, timeAxis }: { onlyMissing?: boolean; timeAxis?: boolean } = {},
 ): { document: unknown; changed: number } {
@@ -77,21 +92,6 @@ export function applyGraphPositions(
           }
         }
     const ids = internalIds([...present].filter((id): id is string => id !== null));
-    for (const entry of entries) {
-      const raw = author(entry.id),
-        id = raw === null ? undefined : ids.get(raw);
-      if (!id || !known.has(id)) throw new TypeError('Unknown source node ' + String(entry.id));
-      // The format reads `position: null` as no position, so it is a gap to fill.
-      if (onlyMissing && entry.position !== undefined && entry.position !== null) continue;
-      const point = positions.get(id);
-      if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y))
-        throw new TypeError('No finite position for ' + String(entry.id));
-      if (record(entry.position) && entry.position.x === point.x && entry.position.y === point.y)
-        continue;
-      entry.position = { x: point.x, y: point.y };
-      changed++;
-    }
-    document.nodes = entries;
     if (timeAxis === false && document.timeAxis !== false) {
       document.timeAxis = false;
       changed++;
@@ -99,6 +99,39 @@ export function applyGraphPositions(
       delete document.timeAxis;
       changed++;
     }
+    // Source metadata, not optional caller metadata: the nodes-only API must
+    // write the same lanes as a full graph. Generic sources have no ordinal
+    // reveal-time flag; their authored spans/visibility are domain dates.
+    const keepsTime = sourceKeepsTime(document);
+    const laned = lanedNodes(
+      { nodes: graph.nodes, diagram: keepsTime ? 'timeline' : undefined },
+      keepsTime,
+    );
+    for (const entry of entries) {
+      const raw = author(entry.id),
+        id = raw === null ? undefined : ids.get(raw);
+      if (!id || !known.has(id)) throw new TypeError('Unknown source node ' + String(entry.id));
+      const at = entry.position;
+      // The format reads `position: null` as no position, and a lane-only
+      // position off the axis as unplaced, so both are gaps to fill.
+      const unplaceableLane =
+        record(at) &&
+        at.x === undefined &&
+        typeof at.y === 'number' &&
+        Number.isFinite(at.y) &&
+        !laned.has(id);
+      if (onlyMissing && at !== undefined && at !== null && !unplaceableLane) continue;
+      const point = positions.get(id);
+      if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y))
+        throw new TypeError('No finite position for ' + String(entry.id));
+      const next: { x?: number; y: number } = laned.has(id)
+        ? { y: point.y }
+        : { x: point.x, y: point.y };
+      if (record(at) && at.x === next.x && at.y === next.y) continue;
+      entry.position = next;
+      changed++;
+    }
+    document.nodes = entries;
   } else throw new TypeError('Unsupported source format');
   return { document, changed };
 }

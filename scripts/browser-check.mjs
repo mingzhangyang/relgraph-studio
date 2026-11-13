@@ -1044,11 +1044,12 @@ for (const theme of ['light', 'dark']) {
     await loadExample(page, DIAGRAM_EXAMPLES[1]);
     const total = await page.evaluate(() => Number(document.getElementById('scrubber').max));
     await page.evaluate((f) => window.renderAt(f), total);
-    const exportXs = async () => {
+    const exportSource = async () => {
       const promise = page.waitForEvent('download');
       await page.click('#layoutExport');
       const source = JSON.parse(await readFile(await (await promise).path(), 'utf8'));
-      return Object.fromEntries(source.nodes.map((n) => [n.id, n.position ?? { x: n.x, y: n.y }]));
+      for (const node of source.nodes) assert.deepEqual(Object.keys(node.position), ['y']);
+      return source;
     };
     await page.click('#layoutToggle');
     const id = await page.locator('#layoutNode option', { hasText: /^唐$/ }).getAttribute('value');
@@ -1069,7 +1070,7 @@ for (const theme of ['light', 'dark']) {
       };
     }, before);
     const drawn = await canvasPng(page),
-      saved = await exportXs();
+      saved = await exportSource();
     // About 12 px to the right: nothing moves and the frame is unchanged.
     await page.mouse.move(point.x, point.y);
     await page.mouse.down();
@@ -1078,7 +1079,7 @@ for (const theme of ['light', 'dark']) {
     await page.mouse.up();
     assert.equal(await page.inputValue('#layoutX'), before.x);
     assert.deepEqual(await canvasPng(page), drawn, 'the axis and every bar are still drawn');
-    assert.deepEqual(await exportXs(), saved);
+    assert.deepEqual(await exportSource(), saved);
     // Down and sideways at once: a new lane, the same years.
     await page.mouse.move(point.x, point.y);
     await page.mouse.down();
@@ -1087,11 +1088,63 @@ for (const theme of ['light', 'dark']) {
     assert.equal(await page.inputValue('#layoutX'), before.x);
     assert.notEqual(await page.inputValue('#layoutY'), before.y);
     assert.notDeepEqual(await canvasPng(page), drawn);
-    const after = await exportXs();
-    for (const [node, p] of Object.entries(saved))
-      assert.equal(after[node].x, p.x, `${node} keeps its years`);
-    assert.notEqual(after['唐'].y, saved['唐'].y);
+    const after = await exportSource();
+    assert.notEqual(
+      after.nodes.find((n) => n.id === '唐').position.y,
+      saved.nodes.find((n) => n.id === '唐').position.y,
+    );
     await writeFile(join(outputDir, 'timeline-lane-drag.png'), await canvasPng(page));
+    // Read the actual positions after import, not the absent source x field.
+    const reloaded = await openStudio();
+    try {
+      const positionsAfterImport = async (source, name) => {
+        const p = reloaded.page;
+        await p.locator('#fileInput').setInputFiles({
+          name,
+          mimeType: 'application/json',
+          buffer: Buffer.from(JSON.stringify(source)),
+        });
+        await p.waitForFunction(
+          (name) => document.getElementById('sourceName').textContent === name,
+          name,
+        );
+        await waitReady(p);
+        assert.equal(await status(p), 'ready');
+        assert.doesNotMatch(await text(p, '#warnings'), /OFF_TIME_AXIS|LANE_ONLY/);
+        await p.evaluate(() => window.renderAt(Number(document.getElementById('scrubber').max)));
+        await p.click('#layoutToggle');
+        const options = await p
+          .locator('#layoutNode option')
+          .evaluateAll((all) => all.map((o) => ({ id: o.value, label: o.textContent })));
+        assert.equal(options.length, source.nodes.length);
+        const positions = {};
+        for (const { id, label } of options) {
+          await p.selectOption('#layoutNode', id);
+          const x = await p.inputValue('#layoutX'),
+            y = await p.inputValue('#layoutY');
+          assert.ok(
+            x !== '' && y !== '' && Number.isFinite(Number(x)) && Number.isFinite(Number(y)),
+          );
+          positions[label] = { x: Number(x), y: Number(y) };
+        }
+        return positions;
+      };
+      const prior = await positionsAfterImport(saved, 'timeline-before.json');
+      const next = await positionsAfterImport(after, 'timeline-after.json');
+      for (const [node, p] of Object.entries(prior))
+        assert.equal(next[node].x, p.x, `${node} keeps its years after reimport`);
+      assert.notEqual(next['唐'].y, prior['唐'].y);
+      // A date mutation must change the observed x: the check cannot pass on
+      // two undefined values. Every authored lane must still survive.
+      const edited = structuredClone(after);
+      edited.nodes.find((n) => n.id === '唐').end += 100;
+      const changed = await positionsAfterImport(edited, 'timeline-date-edit.json');
+      assert.notEqual(changed['唐'].x, next['唐'].x);
+      for (const [node, p] of Object.entries(next)) assert.equal(changed[node].y, p.y);
+      assert.deepEqual(reloaded.problems, []);
+    } finally {
+      await reloaded.context.close();
+    }
     assert.deepEqual(problems, []);
   });
   await context.close();

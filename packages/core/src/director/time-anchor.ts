@@ -13,7 +13,10 @@
  * survives a reload and the CLI.
  *
  * While a drawing is anchored, every dated node's x is its place in time and
- * only its lane (y) is stored and edited. A lock holds a dated node's lane;
+ * only its lane (y) is stored and edited: a positioned source writes such a
+ * node as `"position": { "y": … }` (`lanedNodes`) and the adapter derives x
+ * from its dates (`timeCoordinate`), so a date edit or a rescaled axis
+ * leaves no stale x behind. A lock holds a dated node's lane;
  * its x is its date, which is data, not layout. Leaving the anchored state is
  * an explicit act: applying another strategy.
  */
@@ -36,6 +39,16 @@ export const TIME_ANCHORED_TYPES = Object.freeze(['auto', 'timeline'] as const);
 type AnchorGraph = Pick<VisualGraph, 'nodes' | 'diagram' | 'project' | 'timeAxis' | 'timeline'>;
 
 /**
+ * Whether a source declares that its timeline keeps time: the state a file
+ * records in `diagram` and `timeAxis`, with no strategy applied. The adapter
+ * reads lane-only positions by this state and `applyGraphPositions` writes
+ * them by the state it leaves in the file, so the two cannot disagree.
+ */
+export function sourceKeepsTime(source: { diagram?: unknown; timeAxis?: unknown }): boolean {
+  return source.diagram === 'timeline' && source.timeAxis !== false;
+}
+
+/**
  * Whether the drawing of `graph` under strategy `type` (by default the one
  * stored in the project) declares a time axis, before asking whether the
  * graph has dates at all.
@@ -43,7 +56,7 @@ type AnchorGraph = Pick<VisualGraph, 'nodes' | 'diagram' | 'project' | 'timeAxis
 function declared(graph: AnchorGraph, type: string): boolean {
   if (graph.diagram !== 'timeline') return false;
   // No strategy applied: the source says, and keeps time unless it says otherwise.
-  if (type === 'manual') return graph.timeAxis !== false;
+  if (type === 'manual') return sourceKeepsTime(graph);
   return (TIME_ANCHORED_TYPES as readonly string[]).includes(type);
 }
 
@@ -83,6 +96,42 @@ function pinned(
   // A coordinate already in time stays exactly as authored.
   if (x !== undefined && Math.abs(x - exact) <= TIME_TOLERANCE) return x;
   return roundPositionCoordinate(exact) || 0;
+}
+
+/**
+ * The x a dated node has on `axis`, rounded as stored coordinates are, or
+ * null when it has no date: what a lane-only position (`{ "y": … }`) stands for.
+ */
+export function timeCoordinate(
+  node: Pick<VisualNode, 'span' | 'visibility'>,
+  axis: TimeAxis,
+): number | null {
+  return pinned(node, axis);
+}
+
+/**
+ * The nodes whose stored position is their lane alone: the dated nodes of a
+ * timeline that is `anchored` (by default, as declared) and has an axis. On
+ * such a drawing x is derived from the dates, so it is not authored data.
+ *
+ * This is the one rule for both directions: the adapter derives x for exactly
+ * these nodes (anchored as the source says, `sourceKeepsTime`), and
+ * `applyGraphPositions` writes exactly these as `{ "y": … }` (anchored as the
+ * file it writes says). Without an axis, while fewer than two distinct times
+ * exist, every dated node stands at one time, so its x is layout, not a date,
+ * and is stored; once dates make an axis, that x is reported as off the axis
+ * (`OFF_TIME_AXIS`) until the positioned source is exported again.
+ */
+export function lanedNodes(
+  graph: AnchorGraph,
+  anchored: boolean = declaresTimeAxis(graph),
+): Set<string> {
+  if (!anchored || graph.diagram !== 'timeline') return new Set();
+  const nodes = timedNodes(graph),
+    axis = timeAxis(nodes);
+  return axis
+    ? new Set(nodes.filter((node) => placeInTime(node, axis) !== null).map((node) => node.id))
+    : new Set();
 }
 
 /** Dated nodes as the axis sees them, by id. */
