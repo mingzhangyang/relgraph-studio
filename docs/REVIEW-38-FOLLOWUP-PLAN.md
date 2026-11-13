@@ -31,7 +31,7 @@ The repository rules in [AGENTS.md](../AGENTS.md) apply to every step:
 | PR | Scope | Items | Golden frames | Status |
 | --- | --- | --- | --- | --- |
 | 1 | Behaviour fixes | F1–F5 | Tree example changes (F5); others identical | ☑ [#40](https://github.com/mingzhangyang/relgraph-studio/pull/40) merged as `a2589bf` (2026-11-13); leftover 3 tracked as F6 |
-| 2 | Per-frame cost and limits | P1–P3 | Must stay identical | ☐ not started |
+| 2 | Per-frame cost and limits | P1–P3 | Must stay identical | ◐ implemented on branch `claude/dreamy-euler-7o0lcl` from `a2589bf`; golden frames identical |
 | 3 | Core structure | S1–S3 | Must stay identical | ☐ not started |
 | 4 | Render structure | S4–S6 | Must stay identical | ☐ not started |
 | 5 | Tooling and docs | T1–T4 | Not affected | ☐ not started |
@@ -52,8 +52,8 @@ not pass `--update` to the golden or browser baselines.
 
 These are choices for the owner. Each has a recommendation; the plan assumes
 the recommendation until it is changed here. PR 1 implements the
-recommendations of D1, D2 and D4; the boxes stay open until the owner
-confirms them.
+recommendations of D1, D2 and D4, and PR 2 that of D3; the boxes stay open
+until the owner confirms them.
 
 | Id | Question | Recommendation | Decided |
 | --- | --- | --- | --- |
@@ -363,6 +363,59 @@ is tracked as F6.
 - Tests: "#40 re-review" cases in `tests/layout-behaviour.test.mjs` and
   `tests/studio-workspace.test.mjs`.
 
+### PR 2 · as implemented
+
+- **P1** · `composeFrame` does a bounded amount of work per node and
+  relation. Attention under a highlight is a lookup built once per frame
+  (`attentionUnder`; `shotAttention` keeps its signature). Label collisions
+  go through a uniform grid over the label bounds (`RectIndex` in
+  `packages/render/src/spatial.ts`), for placed labels and obstacles and for
+  the relation obstacles counted as crossings; the "reads as a neighbour's
+  name" check asks a point hash grid (`PointIndex`). Self-loop order, group
+  members and legend progress are maps built once, spoke angles are pushed
+  instead of copied, and ids sort with one `Intl.Collator`. The indexes only
+  narrow candidates and the original predicate decides each answer, so
+  results equal a full scan: 21,440 frames (nine examples and a 300-node
+  synthetic graph, both themes, both locales, 720p and 1080p) give
+  byte-identical display lists against the build of `a2589bf`, and the 236
+  golden hashes are unchanged.
+- **P2** · `tests/compose-cost.test.mjs` composes the synthetic graph of
+  `tests/helpers/synthetic-graph.mjs` at 400 and 1,600 nodes under a fixed
+  camera and counts reads of the view, text measurements and collision
+  tests. Four times the graph may cost at most 4.5 times the reads and
+  measurements, and the counts stay within a recorded budget. Run against the
+  previous composer, the view is read 35.6 million times at 1,600 nodes
+  (budget 145,000; 15.9 times the count at 400 nodes) and the test fails.
+  `tests/spatial-index.test.mjs` checks both indexes against a full scan.
+- **P3** · `GENERIC_LIMITS.previewNodes` (500) and `previewEdges` (1,000):
+  above either, loading warns with `LARGE_GRAPH` (translated in the
+  studio); 5,000 / 20,000 stay hard limits. `docs/GENERIC-GRAPH.md`, "Size",
+  states both and the measurements; `scripts/bench-compose.mjs` reproduces
+  them.
+
+Compose time per frame at 1080p, means of seven frames, same machine and
+method as the table above (`scripts/bench-compose.mjs --baseline`):
+
+| Nodes / relations | Before (`a2589bf`) | After |
+| --- | --- | --- |
+| 200 / 400 | 23 ms | 14 ms |
+| 500 / 1,000 | 65 ms | 34 ms |
+| 1,500 / 3,000 | 281 ms | 93 ms |
+| 5,000 / 20,000 | 3.2 s | 0.53 s |
+
+What remains is linear: selection outlines (33 samples per relation), hull
+sampling and garbage collection. Frame-state evaluation (`directorFrameAt`
+with a compiled timeline) adds 4 ms at 500 nodes and 84 ms at 5,000; it is
+outside P1.
+
+Validation, run locally on linux-x64, Node 22.23.4, on the tree of
+`f54385b`: `npm run typecheck`, `npm run check:types`, `npm run lint`,
+`npm run format:check` passed; `npm test` 389 tests in 36 files passed;
+`npm run check:export` 31/31 passed with the 236 golden frames matching
+(no `--update`); `npm run check:browser` 76/76 passed (no local baseline
+from an earlier commit was present, so the two baseline comparisons did not
+run). No GitHub Actions workflow was added, dispatched or rerun.
+
 ## Review evidence
 
 Ran locally on linux-x64, Node 22.23.4, at `73af432`: `npm run typecheck`,
@@ -383,3 +436,5 @@ rerun.
 | 2026-11-13 | #40 review, items 1–8 and minor | #40 | `a2589bf` (branch `588bb88`) | One anchor definition; golden frames unchanged |
 | 2026-11-13 | #40 re-review, leftovers 1–2 and unsaved flag | #40 | `a2589bf` (branch `0348d87`) | Leftover 3 tracked as F6 |
 | 2026-11-13 | PR 1 merged | #40 | `a2589bf` | Squash of `0348d87` onto `08c8e57`; tree identical to the reviewed head |
+| 2026-11-13 | P1, P2 | — | — (branch `dd2fa58`) | Display lists and golden frames identical |
+| 2026-11-13 | P3 | — | — (branch `f54385b`) | `LARGE_GRAPH` above 500 nodes or 1,000 relations |
