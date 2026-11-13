@@ -169,6 +169,8 @@ const english: Record<string, string> = {
   '时间轴会横向移动已锁定的节点：': 'The time axis would move locked nodes sideways: ',
   '。请先解锁它们，或改选其他布局。': '. Unlock them first, or choose another layout.',
   '。请先解锁它们，再重置。': '. Unlock them first, then reset.',
+  '预览可能卡顿，导出的影片不受影响；如需流畅预览，请先筛选或聚合数据。':
+    'The preview may stutter; exported films are not affected. For a smooth preview, filter or aggregate the data first.',
   '如需保留这些横坐标并不显示时间轴，请设置 "timeAxis": false。':
     'To keep these x coordinates and draw no time axis, set "timeAxis": false.',
   '（保留现有坐标）': ' (existing coordinates kept)',
@@ -514,6 +516,12 @@ export function uiDiagnostic(message: string): string {
   const tooLarge = /^图谱过大（上限 (\d+) 个节点、(\d+) 条关系）。$/.exec(message);
   if (tooLarge)
     return `The graph is too large (limit: ${tooLarge[1]} nodes, ${tooLarge[2]} relations).`;
+  const large =
+    /^图谱较大（(\d+) 个节点、(\d+) 条关系），超出流畅预览的范围（约 (\d+) 个节点、(\d+) 条关系）。$/.exec(
+      message,
+    );
+  if (large)
+    return `The graph is large (${large[1]} nodes, ${large[2]} relations), beyond what previews smoothly (about ${large[3]} nodes, ${large[4]} relations).`;
   const noEnd = /^关系缺少 (source|target)。$/.exec(message);
   if (noEnd) return `Relation has no ${noEnd[1]}.`;
   const allowed = /^可用：(.+)。$/.exec(message);

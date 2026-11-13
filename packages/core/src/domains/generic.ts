@@ -35,7 +35,20 @@ import type {
 } from '../../types/visual-graph.js';
 
 export const GENERIC_FORMAT = 'relgraph.graph/1';
-export const GENERIC_LIMITS = Object.freeze({ nodes: 5000, edges: 20000, text: 2000, id: 200 });
+/**
+ * Hard limits of a generic graph, and the preview budget: above
+ * `previewNodes` nodes or `previewEdges` relations a frame takes longer to
+ * compose than a 24 fps preview allows (about 42 ms), so loading warns.
+ * Export is not affected. Measured in docs/GENERIC-GRAPH.md, "Size".
+ */
+export const GENERIC_LIMITS = Object.freeze({
+  nodes: 5000,
+  edges: 20000,
+  text: 2000,
+  id: 200,
+  previewNodes: 500,
+  previewEdges: 1000,
+});
 
 export interface GenericDiagnostic {
   level: 'error' | 'warning';
@@ -251,6 +264,14 @@ function parse(doc: unknown, errors: GenericDiagnostic[], warnings: GenericDiagn
     fail('TOO_LARGE', '$', '', '节点数量超过上限。', '先筛选或聚合数据，再制作影片。');
     return null;
   }
+  if (nodeIds.size > GENERIC_LIMITS.previewNodes || rawEdges.length > GENERIC_LIMITS.previewEdges)
+    warn(
+      'LARGE_GRAPH',
+      '$',
+      '',
+      `图谱较大（${nodeIds.size} 个节点、${rawEdges.length} 条关系），超出流畅预览的范围（约 ${GENERIC_LIMITS.previewNodes} 个节点、${GENERIC_LIMITS.previewEdges} 条关系）。`,
+      '预览可能卡顿，导出的影片不受影响；如需流畅预览，请先筛选或聚合数据。',
+    );
 
   // Kinds: declared presentation per node and edge kind.
   const kinds: { nodes: Record<string, KindDeclaration>; edges: Record<string, KindDeclaration> } =

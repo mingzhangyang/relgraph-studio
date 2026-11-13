@@ -83,13 +83,44 @@ Rules worth knowing:
   `visibleFrom` / `visibleTo` instead grows one step per domain time (at most
   twelve steps), which keeps the existing spoiler guarantee.
 - **Limits.** 5,000 nodes and 20,000 relations; text fields up to 2,000
-  characters. Unknown fields are ignored, so exported data can be loaded with
-  its extra attributes in place.
+  characters. Above 500 nodes or 1,000 relations the graph still loads, with
+  a `LARGE_GRAPH` warning that the preview may stutter (see [Size](#size)).
+  Unknown fields are ignored, so exported data can be loaded with its extra
+  attributes in place.
 - **Diagnostics** use the same shape as the other formats: code, JSON path,
   record id, message and repair.
 
 Coordinate export (`仅导出坐标 JSON`) and `relgraph layout` write back to the
 ids you authored and declare nodes that previously existed only as endpoints.
+
+## Size
+
+`GENERIC_LIMITS` holds two kinds of number:
+
+| Limit                                           | Nodes | Relations | Above it                                                                              |
+| ----------------------------------------------- | ----- | --------- | ------------------------------------------------------------------------------------- |
+| Preview budget (`previewNodes`, `previewEdges`) | 500   | 1,000     | Loads with the `LARGE_GRAPH` warning: the preview may stutter; export is not affected |
+| Hard limit (`nodes`, `edges`)                   | 5,000 | 20,000    | Refused with `TOO_LARGE`                                                              |
+
+The preview budget is where a frame still composes within the time a 24 fps
+preview allows (about 42 ms). Composition does a bounded amount of work per
+node and relation (`tests/compose-cost.test.mjs` bounds its operation count),
+so the time grows in proportion to the graph. Measured with
+`scripts/bench-compose.mjs` on linux-x64, Node 22.23.4, after
+`npm run build:packages`; the graph is `tests/helpers/synthetic-graph.mjs`
+(six groups, three node and relation kinds), seven frames across shots with
+every highlight form, text measured in constant time. Real frames also measure
+and draw text, so they are slower.
+
+| Nodes / relations | Compose, 1080p (mean) | Compose, 720p (mean) | Frame state (mean) |
+| ----------------- | --------------------- | -------------------- | ------------------ |
+| 200 / 400         | 12–23 ms (14)         | —                    | 1.5 ms             |
+| 500 / 1,000       | 29–49 ms (34)         | 27–35 ms (31)        | 3–4 ms             |
+| 1,500 / 3,000     | 75–104 ms (93)        | —                    | 14 ms              |
+| 5,000 / 20,000    | 0.42–0.64 s (0.53)    | —                    | 84 ms              |
+
+Before the per-frame work was made linear (`main` at `a2589bf`), the same
+frames took 23, 65, 281 and 3,225 ms on average at 1080p.
 
 ## Diagram kinds
 
