@@ -8,6 +8,7 @@ export * from './director/timeline.js';
 export * from './domains/biology.js';
 export * from './domains/biology.style.js';
 export * from './domains/generic.js';
+export { autoStoryboard } from './director/storyboard.js';
 export * from './domains/literature.js';
 export * from './domains/literature.style.js';
 export * from './graph/core.js';

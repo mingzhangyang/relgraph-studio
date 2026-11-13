@@ -3,11 +3,7 @@ import { adaptLiteratureDocument, literaryDetailsAt } from '../domains/literatur
 import { inspectRelGraph } from '../relgraph.js';
 import { adaptBiologyDocument, validateBiologyDocument } from '../domains/biology.js';
 import { timeAnchor } from './time-anchor.js';
-import {
-  adaptGenericDocument,
-  GENERIC_FORMAT,
-  validateGenericDocument,
-} from '../domains/generic.js';
+import { GENERIC_FORMAT, inspectGenericDocument } from '../domains/generic.js';
 import type { Bio } from '../../types/relationship-graph.js';
 import type { VisualGraph } from '../../types/visual-graph.js';
 
@@ -144,14 +140,15 @@ export function loadDocument(doc: unknown): LoadResult {
       const source = inspected.document;
       detailAt = (id, at) => literaryDetailsAt(source, at, { spoilerSafe: true })[id];
     } else if (object(doc) && doc.format === GENERIC_FORMAT) {
-      const sourceDiagnostics = validateGenericDocument(doc);
-      if (!sourceDiagnostics.valid)
+      // One parse validates and adapts the source.
+      const inspected = inspectGenericDocument(doc);
+      if (!inspected.valid)
         return {
           valid: false,
-          errors: sourceDiagnostics.errors.map((entry) => withOwner(doc, entry)),
-          warnings: sourceDiagnostics.warnings.map((entry) => withOwner(doc, entry)),
+          errors: inspected.errors.map((entry) => withOwner(doc, entry)),
+          warnings: inspected.warnings.map((entry) => withOwner(doc, entry)),
         };
-      const generic = adaptGenericDocument(doc);
+      const generic = inspected.adapted;
       adapted = generic;
       detailAt = (id) => generic.detailAt(id);
     } else if (object(doc) && Object.hasOwn(doc, 'format')) {

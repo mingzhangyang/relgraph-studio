@@ -6,8 +6,8 @@ import { loadDocument } from '../packages/core/src/director/load.ts';
 import { layoutGraph } from '../packages/core/src/director/layout.ts';
 import { directorFrameAt, frameCount } from '../packages/core/src/director/state.ts';
 import { applyGraphPositions } from '../packages/core/src/director/position-writeback.ts';
+import { autoStoryboard } from '../packages/core/src/director/storyboard.ts';
 import {
-  autoStoryboard,
   GENERIC_FORMAT,
   GENERIC_LIMITS,
   internalIds,
@@ -690,4 +690,31 @@ test('a graph above the preview budget loads with a warning; above the hard limi
   assert.deepEqual([GENERIC_LIMITS.previewNodes, GENERIC_LIMITS.previewEdges], [300, 600]);
   assert.ok(GENERIC_LIMITS.previewNodes < GENERIC_LIMITS.nodes);
   assert.ok(GENERIC_LIMITS.previewEdges < GENERIC_LIMITS.edges);
+});
+
+test('S2: loading a generic source parses it once, with the same diagnostics as validation', () => {
+  // Every parse reads each list of the source once; count the reads.
+  const reads = new Map();
+  const counted = (doc) =>
+    new Proxy(doc, {
+      get(target, key, receiver) {
+        if (typeof key === 'string') reads.set(key, (reads.get(key) ?? 0) + 1);
+        return Reflect.get(target, key, receiver);
+      },
+    });
+  const loaded = loadDocument(counted(structuredClone(bookshop)));
+  assert.equal(loaded.valid, true);
+  assert.equal(reads.get('nodes'), 1, 'nodes read by one parse');
+  assert.equal(reads.get('presentation'), 1, 'presentation read by one parse');
+
+  // An invalid source reports what validation reports, and is read once too.
+  reads.clear();
+  const broken = { ...structuredClone(bookshop), diagram: 'pie', directed: 'no' };
+  const failed = loadDocument(counted(broken));
+  assert.equal(failed.valid, false);
+  assert.equal(reads.get('nodes'), 1);
+  assert.deepEqual(
+    failed.errors.map((e) => [e.code, e.path]),
+    validateGenericDocument(broken).errors.map((e) => [e.code, e.path]),
+  );
 });
