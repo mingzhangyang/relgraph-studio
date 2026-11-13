@@ -37,8 +37,7 @@ function rectFrom(next) {
 test('RectIndex answers exactly as a scan over every rectangle', () => {
   const next = random(11);
   for (let round = 0; round < 20; round++) {
-    const cost = { rectTests: 0, pointTests: 0 };
-    const index = new RectIndex(REGION, 24 + round * 7, cost);
+    const index = new RectIndex(REGION, 24 + round * 7);
     const stored = [];
     for (let i = 0; i < 300; i++) {
       const box = rectFrom(next);
@@ -58,7 +57,6 @@ test('RectIndex answers exactly as a scan over every rectangle', () => {
       assert.deepEqual(new Set(visited), new Set(expected));
       assert.equal(index.someIntersecting(query), expected.length > 0);
     }
-    assert.ok(cost.rectTests > 0);
   }
 });
 

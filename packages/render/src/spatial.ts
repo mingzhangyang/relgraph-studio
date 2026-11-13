@@ -7,15 +7,6 @@ import type { Rect } from './frame-spec.js';
 import { rectsIntersect } from './node-geometry.js';
 
 /**
- * Operation counts of one composed frame: rectangle and distance tests made
- * through the indexes. Deterministic, so a test can bound them on any machine.
- */
-export interface ComposeCost {
-  rectTests: number;
-  pointTests: number;
-}
-
-/**
  * Rectangles in a uniform grid over a region. A rectangle that reaches past
  * the region is kept in the border cells it would clamp to; one entirely
  * outside it is kept apart and consulted only for queries that are not inside
@@ -35,7 +26,6 @@ export class RectIndex {
   constructor(
     private readonly region: Rect,
     private readonly cell: number,
-    private readonly cost?: ComposeCost,
   ) {
     this.cols = Math.max(1, Math.ceil(region.w / cell));
     this.rows = Math.max(1, Math.ceil(region.h / cell));
@@ -83,7 +73,6 @@ export class RectIndex {
     const test = (id: number): boolean => {
       if (this.seen[id] === stamp) return false;
       this.seen[id] = stamp;
-      if (this.cost) this.cost.rectTests++;
       return rectsIntersect(box, this.rects[id]) && visit(this.rects[id]);
     };
     // A query without finite corners, or of negative size, has no cells: ask every rectangle.
@@ -115,10 +104,7 @@ export class PointIndex {
   private readonly ys: number[] = [];
   private readonly ids: string[] = [];
 
-  constructor(
-    private readonly cell: number,
-    private readonly cost?: ComposeCost,
-  ) {}
+  constructor(private readonly cell: number) {}
 
   add(id: string, x: number, y: number): void {
     // A point that is not finite is never closer than anything.
@@ -139,7 +125,6 @@ export class PointIndex {
    */
   anyCloser(x: number, y: number, limit: number, except: string): boolean {
     const test = (index: number): boolean => {
-      if (this.cost) this.cost.pointTests++;
       return (
         this.ids[index] !== except && Math.hypot(x - this.xs[index], y - this.ys[index]) < limit
       );

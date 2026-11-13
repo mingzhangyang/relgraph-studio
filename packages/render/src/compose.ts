@@ -43,7 +43,7 @@ import {
   type GlyphGeometry,
 } from './node-geometry.js';
 import { RENDER_MESSAGES } from './locale.js';
-import { PointIndex, RectIndex, type ComposeCost } from './spatial.js';
+import { PointIndex, RectIndex } from './spatial.js';
 import { edgePaint, mixHex, toneOf, VIDEO_THEMES, type VideoTheme } from './theme.js';
 
 type Point = { x: number; y: number };
@@ -136,11 +136,7 @@ export interface ComposeOptions {
   style?: DomainStyle;
   locale?: Locale;
   detailAt?: DetailLookup;
-  /** Incremented with the collision tests this frame makes; for tests and profiling. */
-  cost?: ComposeCost;
 }
-
-export type { ComposeCost } from './spatial.js';
 
 const TAU = Math.PI * 2;
 /** Share of an arrowhead's length, from the tip, where the stroke meets it. */
@@ -334,7 +330,6 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
     style: graphStyle = NEUTRAL_STYLE,
     locale = DEFAULT_LOCALE,
     detailAt = () => undefined,
-    cost,
   } = options;
   // A time axis is drawn only for a drawing anchored to time (`timeAnchor`).
   const style = styleForDrawing(graphStyle, graph, positions);
@@ -364,14 +359,17 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
     box.y >= bounds.top &&
     box.y + box.h <= bounds.bottom;
   // Collision tests go through grids over the label bounds: every candidate
-  // is tested in bounds first, so only nearby rectangles can meet it.
+  // is tested in bounds first, so only nearby rectangles can meet it. A cell
+  // about the height of a label line keeps the rectangles per cell few when a
+  // whole graph is on stage, where a coarser cell holds more of them the
+  // larger the graph (tests/compose-cost.test.mjs).
   const boundsRect = {
     x: bounds.left,
     y: bounds.top,
     w: bounds.right - bounds.left,
     h: bounds.bottom - bounds.top,
   };
-  const rectIndex = (): RectIndex => new RectIndex(boundsRect, u(64), cost);
+  const rectIndex = (): RectIndex => new RectIndex(boundsRect, u(16));
 
   const { view, playback, cameraResolved: cam, highlight, previousHighlight, transition } = state;
   const nodeProgress = (id: string): number => state.reveal?.nodes[id] ?? 1;
@@ -1334,7 +1332,7 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
         byId(a.node.id, b.node.id),
     );
   // Where the other labelled nodes are, for the test that a label reads as theirs.
-  const labelled = new PointIndex(u(96), cost);
+  const labelled = new PointIndex(u(96));
   for (const entry of sorted) labelled.add(entry.node.id, entry.p.x, entry.p.y);
   for (const { node, custom, p, r, alpha: active } of sorted) {
     const obstacle = nodeLabelBounds.get(node.id);
@@ -1406,9 +1404,9 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
         cy = c.y + c.h / 2,
         own = Math.hypot(cx - p.x, cy - p.y);
       const ambiguous = labelled.anyCloser(cx, cy, own * 0.9, node.id);
-      const cost = rank + Math.min(6, crossings) * 0.9 + (ambiguous ? 4 : 0);
-      if (cost < best) {
-        best = cost;
+      const placeCost = rank + Math.min(6, crossings) * 0.9 + (ambiguous ? 4 : 0);
+      if (placeCost < best) {
+        best = placeCost;
         box = c;
       }
     }
