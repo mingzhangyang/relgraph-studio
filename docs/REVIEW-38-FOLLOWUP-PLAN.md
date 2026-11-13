@@ -33,7 +33,7 @@ The repository rules in [AGENTS.md](../AGENTS.md) apply to every step:
 | 1 | Behaviour fixes | F1–F5 | Tree example changes (F5); others identical | ☑ [#40](https://github.com/mingzhangyang/relgraph-studio/pull/40) merged as `a2589bf` (2026-11-13); leftover 3 tracked as F6 |
 | 1b | Behaviour fix | F6 | Must stay identical | ☑ [#42](https://github.com/mingzhangyang/relgraph-studio/pull/42) merged as `a63875c` (2026-11-13); golden frames identical |
 | 2 | Per-frame cost and limits | P1–P3 | Must stay identical | ☑ [#41](https://github.com/mingzhangyang/relgraph-studio/pull/41) merged as `682dbbd` (2026-11-13) |
-| 3 | Core structure | S1–S3 | Must stay identical | ☐ not started |
+| 3 | Core structure | S1–S3 | Must stay identical | ◐ implemented on branch `claude/eloquent-feynman-qhxjit` from `a63875c`; golden frames identical |
 | 4 | Render structure | S4–S6 | Must stay identical | ☐ not started |
 | 5 | Tooling and docs | T1–T4 | Not affected | ☐ not started |
 | 6 | Workspace UI | W1–W5 | Not affected | ☐ not started |
@@ -178,7 +178,7 @@ compared with the reviewed head `72beefa`: identical (base `a2589bf`, which
 
 No behaviour change; golden hashes and browser baselines identical.
 
-- [ ] **S1 · Dependencies point inward.** Today `style.ts` imports
+- [x] **S1 · Dependencies point inward.** Today `style.ts` imports
   `timeAxis` / `keepsTime` from `director/layout-engines.ts`,
   `domains/generic.ts` imports `diagramStructure` from it, and `project.ts`
   imports the strategy lists from `director/layout-strategies.ts`.
@@ -187,14 +187,14 @@ No behaviour change; golden hashes and browser baselines identical.
     time-axis model lives in its own module, and the strategy and mode name
     lists live beside the project types. Adapters, styles and engines import
     those; none of them imports an engine.
-- [ ] **S2 · `generic.ts` does one job per module.** It currently holds the
+- [x] **S2 · `generic.ts` does one job per module.** It currently holds the
   parser and validator (one 570-line `parse`), the id mapping, the visual
   hierarchy and the storyboard derivation.
   - Done when: storyboard derivation (`autoStoryboard`, `timedStoryboard`,
     `shapeDiagram`) is a module that works on any `VisualGraph`; `parse` is
     split by section; `loadDocument` parses a document once instead of twice
     (`packages/core/src/director/load.ts:141` and `:148`).
-- [ ] **S3 · Reveal order is not domain time.** Completes F5: unfolding has its
+- [x] **S3 · Reveal order is not domain time.** Completes F5: unfolding has its
   own track in the compiled timeline instead of borrowing `visibility` and
   `timeline.unit`.
   - Done when: a graph can both unfold and carry real domain time, and the
@@ -567,6 +567,57 @@ two baseline comparisons did not run). The playback figures of item 3 are
 the reviewer's and were not re-measured. No GitHub Actions workflow was
 added, dispatched or rerun.
 
+### PR 3 · as implemented
+
+- **S1** · Three modules that import no engine:
+  `packages/core/src/graph/analysis.ts` (`prepare`, components, clusters,
+  hub and centre, spanning and reading trees, strongly connected components,
+  ranks, flow ranks, `diagramStructure`), `packages/core/src/graph/time-axis.ts`
+  (`TimeAxis`, `timeAxis`, `placeInTime`, `TIME_TOLERANCE`, `keepsTime`, the
+  lane geometry) and `packages/core/src/project-layout.ts`, beside the project
+  types (`LAYOUT_ENGINES`, `LAYOUT_TYPES`, `LAYOUT_MODES`, `LAYOUT_DEFAULTS`).
+  `style.ts`, `domains/generic.ts`, `project.ts`, `director/time-anchor.ts`,
+  the engines and the strategies import them. `time-anchor.ts` stays in
+  `director/`: it imports no engine, and the adapter and the styles read the
+  anchored state from it. The built package exports the same 113 names.
+- **S2** · `domains/generic-source.ts` is the parser and validator: one
+  function per section over a shared `Reader`, called in the order the old
+  `parse` read the file, so diagnostics keep their order.
+  `director/storyboard.ts` holds `autoStoryboard`, `timedStoryboard` and
+  `shapeDiagram`, which now reads the kind from the graph and works on any
+  `VisualGraph`. `domains/generic.ts` adapts; `inspectGenericDocument`
+  validates and adapts with one parse, and `loadDocument` uses it. On 87
+  documents (every example and dataset, 16 malformed or edge-case sources and
+  each generic example with one top-level field removed or broken),
+  `loadDocument`, `validateGenericDocument` and `adaptGenericDocument` return
+  the same results as `a63875c`. A test counts reads of the source; it fails
+  on `a63875c`.
+- **S3** · Reveal order is `revealStep` on nodes, relations and shots, a
+  track of its own: `compileTimeline` keeps `revealSteps` beside `domainTime`,
+  each shot inherits each value separately, and `projectVisualGraph(graph,
+  domainAt, revealStep)` admits an object only when both admit it.
+  `timeline.ordinal` and `timedNodes` are gone, with the checks in the
+  timeline engine, the composer and the studio: `visibility` is always domain
+  time. Every frame of every example (5,376 frames, 8 films) composes to the
+  same display list as `a63875c`; for the three unfolding examples the old
+  `domainTime` values are now the `revealSteps` values. A test builds a graph
+  that unfolds and has dates and checks both tracks; it fails on `a63875c`.
+  Public API: `inspectGenericDocument` is added, `timedNodes` is removed.
+
+Not done here: the generic adapter still unfolds only graphs without timed
+facts, so a tree with dates is revealed by its dates, as before. Unfolding a
+dated tree level by level is now possible in the model, but choosing it for
+a source is a behaviour change for a later PR.
+
+Validation, run locally on linux-x64, Node 22.23.4, on the tree of
+`9c7ae0a`: `npm run typecheck`, `npm run check:types`, `npm run lint`,
+`npm run format:check` passed; `npm test` 401 tests in 36 files passed;
+`npm run check:export` 31/31 passed with the 236 golden frames matching (no
+`--update`); `npm run check:browser` 76/76 passed in real Chromium (no local
+baseline, so the baseline comparisons did not run). The comparisons against
+`a63875c` above used both commits' built packages. No GitHub Actions
+workflow was added, dispatched or rerun.
+
 ## Review evidence
 
 Ran locally on linux-x64, Node 22.23.4, at `73af432`: `npm run typecheck`,
@@ -594,3 +645,6 @@ rerun.
 | 2026-11-13 | F6 | #42 | `a63875c` (branch `e29cc70`, `a8c2a80`) | Lanes only for anchored dated nodes; golden frames unchanged |
 | 2026-11-13 | #42 review and follow-up review | #42 | `a63875c` (branch `ada4d09`, `1271551`) | One lane rule for writer and reader; `LANE_ONLY` warning; golden frames unchanged |
 | 2026-11-13 | PR 1b merged | #42 | `a63875c` | Squash of `1271551` onto `682dbbd`; tree identical to the reviewed head |
+| 2026-11-13 | S1 | — | — (branch `5e21269`) | Graph analysis, time axis and layout names in their own modules; exports unchanged |
+| 2026-11-13 | S2 | — | — (branch `8e49fc2`) | Parser split by section, storyboard module, one parse per load; 87 documents identical |
+| 2026-11-13 | S3 | — | — (branch `9c7ae0a`) | `revealStep` track; 5,376 frames identical; golden frames unchanged |
