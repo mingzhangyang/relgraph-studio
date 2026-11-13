@@ -14,8 +14,18 @@ import {
   dragHasChanges,
   cancelPositionDrag,
 } from './layout-history-model.js';
-import { DEFAULT_LAYOUT_SETTINGS, planLayout, type LayoutSettings } from '@relgraph/core';
-import { createLayoutStrategyView, unchangedLayoutMessage } from './layout-strategy-view.js';
+import {
+  DEFAULT_LAYOUT_SETTINGS,
+  displayNodeText,
+  planLayout,
+  type LayoutSettings,
+  type LayoutType,
+} from '@relgraph/core';
+import {
+  blockedLayoutMessage,
+  createLayoutStrategyView,
+  unchangedLayoutMessage,
+} from './layout-strategy-view.js';
 import {
   currentStudioMode,
   planStudioModeTransition,
@@ -38,8 +48,8 @@ import {
   anchorToTime,
   layoutGraph,
   placeInTime,
+  styleForDrawing,
   styleForGraph,
-  styleForPositions,
   timeAnchor,
 } from '@relgraph/core';
 import { frameCount } from '@relgraph/core';
@@ -70,6 +80,7 @@ import {
   renderEditorNodes,
   renderEditorSelection,
   renderEditorStatus,
+  refreshEditorFieldText,
 } from './layout-editor-view.js';
 import {
   advancePlayback,
@@ -286,6 +297,11 @@ function applyProjectHistory({
   updateLayoutFields();
   updateLayoutControls();
 }
+/** A node as the workspace names it: its display label, else its own. */
+function nodeName(id: string): string {
+  const node = graph?.nodes.find((n) => n.id === id);
+  return displayNodeText(graph?.project, id)?.label ?? node?.label ?? id;
+}
 const strategyView = createLayoutStrategyView(document, $('layoutStrategyEditor'), {
   draftChanged() {
     refreshUnsavedState();
@@ -296,8 +312,15 @@ const strategyView = createLayoutStrategyView(document, $('layoutStrategyEditor'
     try {
       const before = new Map([...currentLayout].map(([id, p]) => [id, { ...p }]));
       const plan = planLayout(graph, settings, currentLayout);
-      // A preview that moves nothing would look pending and enable Apply.
-      if (!plan.moved) {
+      // A lock is never moved, and the time axis would have to move these.
+      if (plan.blocked.length) {
+        strategyView.error(blockedLayoutMessage(plan.blocked.map(nodeName)));
+        return;
+      }
+      // A preview that changes nothing would look pending and enable Apply.
+      // Putting the drawing on the time axis, or taking it off, is a change
+      // even when no coordinate moves.
+      if (!plan.moved && !plan.anchorChanged) {
         strategyView.error(unchangedLayoutMessage(settings));
         return;
       }
@@ -504,6 +527,8 @@ let currentDiagnostics: Pick<LoadResult, 'errors' | 'warnings'> | null = null;
 let currentDetailAt: DetailAt = () => undefined;
 let currentLayout: ReturnType<typeof layoutGraph> | null = null;
 let originalLayout: ReturnType<typeof layoutGraph> | null = null;
+// The strategy the document was loaded with: Reset restores it with the coordinates.
+let originalLayoutType: LayoutType = 'manual';
 let sourceDocument: unknown = null;
 let sourceFilename = 'relgraph.json';
 let activeSourceName = '尚未加载';
@@ -734,6 +759,7 @@ function applyResult(result: LoadResult, name: string, sourceText?: string, exam
   currentDetailAt = result.detailAt || (() => undefined);
   currentLayout = layoutGraph(graph);
   originalLayout = new Map([...currentLayout].map(([id, point]) => [id, { ...point }]));
+  originalLayoutType = graph.project?.layout?.type ?? 'manual';
   projectSavepoint.markClean(projectHistory.value, currentLayout);
   renderEditorAvailability(layoutControls, sourceDocument !== null);
   renderer = createCanvasRenderer(canvas, graph, currentLayout, {
@@ -930,14 +956,8 @@ function applyTheme(next: Theme, persist: boolean): void {
   shellView.renderTheme(theme, persist);
   // The theme is a renderer input: rebuild it and redraw the same frame
   // without disturbing the fractional playback position.
-  if (renderer && graph && currentLayout) {
-    renderer = createCanvasRenderer(canvas, graph, currentLayout, {
-      fps: FPS,
-      detailAt: currentDetailAt,
-      theme,
-    });
-    setFrame(playback.frame, false);
-  } else shellView.repaintEmptyStage(theme);
+  if (renderer && graph && currentLayout) rebuildRenderer();
+  else shellView.repaintEmptyStage(theme);
 }
 
 /**
@@ -1041,7 +1061,11 @@ layoutApply.addEventListener('click', () => {
 // A position edit uses the existing renderer but freezes the visible camera.
 // No projection, timeline or authored source data changes until explicit export.
 const layoutChanged = (): boolean =>
-  Boolean(currentLayout && originalLayout && layoutHasChanges(currentLayout, originalLayout));
+  Boolean(currentLayout && originalLayout && layoutHasChanges(currentLayout, originalLayout)) ||
+  layoutTypeChanged();
+/** Whether the applied strategy is no longer the one the document was loaded with. */
+const layoutTypeChanged = (): boolean =>
+  Boolean(graph) && (projectHistory.value.layout?.type ?? 'manual') !== originalLayoutType;
 function updateLayoutControls(): void {
   renderEditorStatus(
     layoutControls,
@@ -1052,9 +1076,24 @@ function updateLayoutControls(): void {
   );
   refreshUnsavedState();
 }
+/**
+ * The graph as it is being drawn: during a preview, under the previewed
+ * strategy, so that the picture is on the time axis exactly when the applied
+ * layout would be.
+ */
+function drawnGraph(): VisualGraph | null {
+  if (!graph || !layoutPreview) return graph;
+  const layout = graph.project?.layout ?? DEFAULT_LAYOUT_SETTINGS;
+  return {
+    ...graph,
+    project: { ...graph.project, layout: { ...layout, type: layoutPreview.settings.type } },
+  };
+}
 function rebuildRenderer(): void {
-  if (!graph || !currentLayout) return;
-  renderer = createCanvasRenderer(canvas, graph, currentLayout, {
+  const drawn = drawnGraph();
+  if (!graph || !drawn || !currentLayout) return;
+  renderer = createCanvasRenderer(canvas, drawn, currentLayout, {
+    style: styleForGraph(graph),
     fps: FPS,
     detailAt: currentDetailAt,
     theme,
@@ -1116,10 +1155,20 @@ layoutReset.addEventListener('click', () => {
   }
   for (const [id, p] of originalLayout)
     if (!projectHistory.value.layout?.locked.includes(id)) currentLayout.set(id, { ...p });
-  if (graph) anchorToTime(graph, currentLayout);
+  // The loaded picture is its coordinates and the strategy it was drawn with,
+  // which decides whether it is on the time axis.
+  const settings = {
+    ...(projectHistory.value.layout ?? DEFAULT_LAYOUT_SETTINGS),
+    type: originalLayoutType,
+  };
+  if (graph) {
+    graph.project = { ...projectHistory.value, layout: { ...settings } };
+    anchorToTime(graph, currentLayout);
+  }
   projectSavepoint.positionsChanged();
-  projectHistory.commit(configWithPositions());
+  projectHistory.commit(configWithPositions(settings));
   if (graph) graph.project = projectHistory.value;
+  strategyView.reset(projectHistory.value.layout);
   rebuildRenderer();
   updateLayoutFields();
   updateLayoutControls();
@@ -1146,7 +1195,7 @@ canvas.addEventListener('pointerdown', (event) => {
     event.pointerId,
     graph?.project,
     // Hit the glyphs as they are drawn: spans only while the drawing keeps time.
-    graph ? styleForPositions(styleForGraph(graph), graph.nodes, currentLayout) : undefined,
+    graph ? styleForDrawing(styleForGraph(graph), graph, currentLayout) : undefined,
   );
   if (!nextDrag || projectHistory.value.layout?.locked.includes(nextDrag.id)) return;
   dragging = nextDrag;
@@ -1220,7 +1269,10 @@ function exportPositionedSource(): void {
   transitionStudio('cancelPreview');
   if (!graph || !currentLayout || sourceDocument === null) return;
   try {
-    const output = applyGraphPositions(sourceDocument, graph, currentLayout);
+    // A timeline taken off its axis says so in the file, or it would be redrawn on it.
+    const output = applyGraphPositions(sourceDocument, graph, currentLayout, {
+      ...(graph.diagram === 'timeline' ? { timeAxis: Boolean(timeAnchor(graph)) } : {}),
+    });
     const text = JSON.stringify(output.document, null, 2) + '\n';
     const check = parseDocument(text);
     if (!check.valid) throw new Error('导出的 JSON 没有通过数据校验');
@@ -1249,6 +1301,7 @@ function applyLanguage(next: StudioLanguage): void {
   setStudioLanguage(next, languageStorage);
   languageSelect.value = next;
   refreshStudioUi(document);
+  refreshEditorFieldText(layoutControls);
   shellView.renderTheme(theme, false);
   shellView.renderSourceName(displaySourceName());
   if (graph)

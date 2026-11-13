@@ -9,7 +9,7 @@ import {
   nodeStyleFor,
   localize,
   NEUTRAL_STYLE,
-  styleForPositions,
+  styleForDrawing,
 } from '@relgraph/core';
 import type {
   DirectorFrameState,
@@ -316,8 +316,8 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
     locale = DEFAULT_LOCALE,
     detailAt = () => undefined,
   } = options;
-  // A time axis is drawn only for a drawing that keeps time.
-  const style = styleForPositions(graphStyle, graph.nodes, positions);
+  // A time axis is drawn only for a drawing anchored to time (`timeAnchor`).
+  const style = styleForDrawing(graphStyle, graph, positions);
   const config = graph.project;
   const messages = RENDER_MESSAGES[locale];
   const { width: W, height: H, stage, typeScale: ts } = spec;

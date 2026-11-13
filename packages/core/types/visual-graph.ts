@@ -75,6 +75,11 @@ export interface VisualGraph {
      */
     ordinal?: boolean;
   };
+  /**
+   * False when the source of a timeline declares that its coordinates are not
+   * on the time axis (`"timeAxis": false`); see `timeAnchor`.
+   */
+  timeAxis?: false;
   /** What kind of picture the graph is; selects layout, routing and labelling. */
   diagram?: import('../src/style.js').DiagramKind;
   /** Presentation declared per kind by a generic graph document. */

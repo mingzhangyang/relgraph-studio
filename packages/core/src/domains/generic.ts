@@ -19,7 +19,13 @@ import {
   type GraphKinds,
   type KindDeclaration,
 } from '../style.js';
-import { diagramStructure } from '../director/layout-engines.js';
+import {
+  diagramStructure,
+  placeInTime,
+  TIME_TOLERANCE,
+  timeAxis as axisOf,
+  timedNodes,
+} from '../director/layout-engines.js';
 import type {
   VisualEdge,
   VisualGraph,
@@ -95,6 +101,8 @@ interface Parsed {
   diagram: DiagramKind;
   /** False when the author asked for the whole diagram at once. */
   unfold: boolean;
+  /** False when a timeline's coordinates are declared to be off its time axis. */
+  timeAxis: boolean;
   /** Whether any node carries an authored weight. */
   weighted: boolean;
   kinds: GraphKinds;
@@ -660,6 +668,8 @@ function parse(doc: unknown, errors: GenericDiagnostic[], warnings: GenericDiagn
   }
   if (doc.unfold !== undefined && typeof doc.unfold !== 'boolean')
     fail('TYPE', 'unfold', '', 'unfold 必须是布尔值。', '使用 true 或 false。');
+  if (doc.timeAxis !== undefined && typeof doc.timeAxis !== 'boolean')
+    fail('TYPE', 'timeAxis', '', 'timeAxis 必须是布尔值。', '使用 true 或 false。');
   return {
     title,
     description: text(metaRecord.description, 'meta.description', ''),
@@ -667,6 +677,7 @@ function parse(doc: unknown, errors: GenericDiagnostic[], warnings: GenericDiagn
     timeline,
     diagram,
     unfold: doc.unfold !== false,
+    timeAxis: doc.timeAxis !== false,
     weighted: weights.size > 0,
     kinds,
     nodes,
@@ -923,6 +934,7 @@ export function adaptGenericDocument(input: unknown) {
     },
     timeline: parsed.timeline,
     ...(parsed.diagram === 'network' ? {} : { diagram: parsed.diagram }),
+    ...(parsed.diagram === 'timeline' && !parsed.timeAxis ? { timeAxis: false as const } : {}),
     kinds: parsed.kinds,
     groups: parsed.groups,
     nodes,
@@ -930,6 +942,28 @@ export function adaptGenericDocument(input: unknown) {
     scenes: parsed.scenes,
   };
   shapeDiagram(graph, parsed, summaries);
+  // A timeline keeps time unless it says otherwise: authored x that is not a
+  // node's place in time is redrawn there, and the author is told how to keep it.
+  if (graph.diagram === 'timeline' && graph.timeAxis !== false) {
+    const nodes = timedNodes(graph),
+      axis = axisOf(nodes);
+    const off = axis
+      ? nodes.filter((node) => {
+          const x = placeInTime(node, axis);
+          return node.position && x !== null && !(Math.abs(node.position.x - x) <= TIME_TOLERANCE);
+        }).length
+      : 0;
+    if (off)
+      warnings.push({
+        level: 'warning',
+        layer: 'graph-source',
+        code: 'OFF_TIME_AXIS',
+        path: 'nodes',
+        id: '',
+        message: `${off} 个带日期的节点横坐标不在其时间上，已按日期绘制。`,
+        fix: '如需保留这些横坐标并不显示时间轴，请设置 "timeAxis": false。',
+      });
+  }
   if (!graph.scenes.length) graph.scenes = autoStoryboard(graph, summaries);
   const check = validateVisualGraph(graph);
   if (!check.valid)

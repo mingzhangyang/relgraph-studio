@@ -2,6 +2,13 @@ import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import literature from '../examples/honglou-provisional.relgraph.json' with { type: 'json' };
 import biology from '../examples/biology-signaling-synthetic.json' with { type: 'json' };
+import dynasties from '../examples/dynasties-timeline-provisional.graph.json' with { type: 'json' };
+import { loadDocument } from '../packages/core/src/director/load.ts';
+import { layoutGraph } from '../packages/core/src/director/layout.ts';
+import {
+  computeLayout,
+  DEFAULT_LAYOUT_SETTINGS,
+} from '../packages/core/src/director/layout-strategies.ts';
 import { deferred, flush, makeStudio } from './helpers/studio-harness.mjs';
 import {
   currentStudioMode,
@@ -1944,4 +1951,105 @@ test('F2/F4: the layout panel refuses a preview that moves nothing and names the
   await viewControl(app, 'strategyCancel').click();
   assert.equal(apply.disabled, true);
   assert.doesNotMatch(note.textContent, /实际绘制/);
+});
+
+test('#40 items 4 and 5: the panel can re-anchor a timeline, and Reset restores the loaded strategy', async () => {
+  const graph = loadDocument(dynasties).graph,
+    shown = layoutGraph(graph),
+    grid = computeLayout(
+      graph,
+      { ...DEFAULT_LAYOUT_SETTINGS, type: 'grid', mode: 'rearrange' },
+      shown,
+    );
+  const project = (positions) =>
+    JSON.stringify({
+      format: 'relgraph.studio/1',
+      source: dynasties,
+      config: {
+        layout: {
+          ...DEFAULT_LAYOUT_SETTINGS,
+          type: 'grid',
+          positions: Object.fromEntries(positions),
+        },
+      },
+    });
+  const open = async (positions) => {
+    const app = makeStudio();
+    await app.ready;
+    const input = app.node('fileInput');
+    input.files = [readFile('dynasties.studio.json', project(positions))];
+    await input.dispatch('change');
+    await flush();
+    assert.equal(app.node('status').attributes['data-state'], 'ready');
+    return app;
+  };
+  const controls = (app) => ({
+    type: viewControl(app, 'strategyType'),
+    mode: viewControl(app, 'strategyMode'),
+    apply: viewControl(app, 'strategyApply'),
+    note: app.node('layoutStrategyEditor').children.find((child) => child.tagName === 'P'),
+  });
+  const choose = async (control, value) => {
+    control.value = value;
+    await control.dispatch('change');
+  };
+  const select = async (app) => {
+    const chooser = app.node('layoutNode');
+    chooser.value = chooser.children[0].value;
+    await chooser.dispatch('change');
+    return chooser.value;
+  };
+
+  // Item 4: saved as grid with the coordinates of the timeline. Nothing moves,
+  // but the drawing is put back on its axis, so the preview is not refused.
+  {
+    const app = await open(shown),
+      c = controls(app);
+    await app.node('layoutToggle').click();
+    await select(app);
+    assert.equal(app.node('layoutX').readOnly, false, 'not anchored: X is free');
+    await choose(c.type, 'timeline');
+    await choose(c.mode, 'rearrange');
+    await viewControl(app, 'strategyPreview').click();
+    assert.match(c.note.textContent, /临时预览/);
+    assert.equal(c.apply.disabled, false);
+    await c.apply.click();
+    await app.node('layoutToggle').click();
+    await select(app);
+    assert.equal(app.node('layoutX').readOnly, true, 'anchored: X is the date');
+    // The tooltip of the read-only X follows the language.
+    assert.equal(app.node('layoutX').title, '时间轴：横坐标由日期决定');
+    const language = app.node('languageSelect');
+    language.value = 'en';
+    await language.dispatch('change');
+    assert.equal(app.node('layoutX').title, 'Timeline: X is set by the dates');
+    language.value = 'zh-CN';
+    await language.dispatch('change');
+    // Reset restores the loaded strategy, even though no coordinate changed.
+    assert.equal(app.node('layoutReset').disabled, false);
+    await app.node('layoutReset').click();
+    await select(app);
+    assert.equal(app.node('layoutX').readOnly, false, 'reset takes it off the axis again');
+  }
+
+  // Item 5: saved as grid with grid coordinates; Timeline, then Reset, is the grid again.
+  {
+    const app = await open(grid),
+      c = controls(app);
+    await choose(c.type, 'timeline');
+    await choose(c.mode, 'rearrange');
+    await viewControl(app, 'strategyPreview').click();
+    await c.apply.click();
+    await app.node('layoutToggle').click();
+    const id = await select(app);
+    assert.equal(app.node('layoutX').readOnly, true);
+    await app.node('layoutReset').click();
+    await select(app);
+    assert.equal(app.node('layoutX').readOnly, false);
+    assert.deepEqual(
+      { x: Number(app.node('layoutX').value), y: Number(app.node('layoutY').value) },
+      grid.get(id),
+      'the loaded grid coordinate, not its year in a grid row',
+    );
+  }
 });

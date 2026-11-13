@@ -45,6 +45,12 @@ export function unchangedLayoutMessage(settings: Pick<LayoutSettings, 'type' | '
     return '“保留现有坐标”不会移动任何节点：请改选“重排未锁定节点”或“只填补缺失坐标”。';
   return '此布局与当前画面相同：没有可应用的变化。';
 }
+/** Why a preview was refused: the time axis would have to move locked nodes. */
+export function blockedLayoutMessage(names: readonly string[]): string {
+  return BLOCKED_PREFIX + names.join('、') + BLOCKED_SUFFIX;
+}
+export const BLOCKED_PREFIX = '时间轴会横向移动已锁定的节点：',
+  BLOCKED_SUFFIX = '。请先解锁它们，或改选其他布局。';
 const MODE_LABELS: Record<LayoutMode, string> = {
   preserve: '保留现有坐标',
   missing: '只填补缺失坐标',

@@ -166,6 +166,10 @@ const english: Record<string, string> = {
   '此布局与当前画面相同：没有可应用的变化。':
     'This layout matches the current picture: there is nothing to apply.',
   '实际绘制：': 'Drawn with: ',
+  '时间轴会横向移动已锁定的节点：': 'The time axis would move locked nodes sideways: ',
+  '。请先解锁它们，或改选其他布局。': '. Unlock them first, or choose another layout.',
+  '如需保留这些横坐标并不显示时间轴，请设置 "timeAxis": false。':
+    'To keep these x coordinates and draw no time axis, set "timeAxis": false.',
   '（保留现有坐标）': ' (existing coordinates kept)',
   '（按图的类型）': ' (follows the diagram kind)',
   '（按图的结构）': ' (chosen from the graph structure)',
@@ -513,6 +517,11 @@ export function uiDiagnostic(message: string): string {
   if (noEnd) return `Relation has no ${noEnd[1]}.`;
   const allowed = /^可用：(.+)。$/.exec(message);
   if (allowed) return `Allowed: ${allowed[1].split('、').join(', ')}.`;
+  const offAxis = /^(\d+) 个带日期的节点横坐标不在其时间上，已按日期绘制。$/.exec(message);
+  if (offAxis)
+    return offAxis[1] === '1'
+      ? '1 dated node has an x that is not its place in time; it is drawn at its date.'
+      : `${offAxis[1]} dated nodes have an x that is not their place in time; they are drawn at their dates.`;
   const implicit = /^(\d+) 个节点只在关系中出现，已按 id 自动创建。$/.exec(message);
   if (implicit)
     return implicit[1] === '1'
@@ -536,6 +545,14 @@ export function uiStatus(message: string): string {
     if (message.startsWith(prefix))
       return uiText(prefix) + uiDiagnostic(message.slice(prefix.length));
   }
+  const blockedPrefix = '时间轴会横向移动已锁定的节点：',
+    blockedSuffix = '。请先解锁它们，或改选其他布局。';
+  if (message.startsWith(blockedPrefix) && message.endsWith(blockedSuffix))
+    return (
+      uiText(blockedPrefix) +
+      message.slice(blockedPrefix.length, -blockedSuffix.length).split('、').join(', ') +
+      uiText(blockedSuffix)
+    );
   const exportPrefix = '已准备导出：';
   const exportSuffix = '。此文件仅保存源数据坐标，不代表完整项目已保存。';
   if (message.startsWith(exportPrefix) && message.endsWith(exportSuffix))

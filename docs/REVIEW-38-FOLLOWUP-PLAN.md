@@ -29,7 +29,7 @@ The repository rules in [AGENTS.md](../AGENTS.md) apply to every step:
 
 | PR | Scope | Items | Golden frames | Status |
 | --- | --- | --- | --- | --- |
-| 1 | Behaviour fixes | F1–F5 | Tree example changes (F5); others identical | ◐ implemented on `claude/awesome-dijkstra-8c428q`, awaiting PR and review |
+| 1 | Behaviour fixes | F1–F5 | Tree example changes (F5); others identical | ◐ [#40](https://github.com/mingzhangyang/relgraph-studio/pull/40) open; review findings addressed, awaiting re-review |
 | 2 | Per-frame cost and limits | P1–P3 | Must stay identical | ☐ not started |
 | 3 | Core structure | S1–S3 | Must stay identical | ☐ not started |
 | 4 | Render structure | S4–S6 | Must stay identical | ☐ not started |
@@ -265,6 +265,57 @@ frames in both themes.
   studio show no domain time for it. The 58 tree golden hashes are
   regenerated; the other 178 are unchanged.
 
+### PR 1 · review of #40 at `2319903`
+
+The review found that "is this a timeline" had two sources of truth: the
+renderer inferred it from coordinates (`styleForPositions` / `keepsTime`), the
+editor from the stored strategy (`timeAnchor`). Now `timeAnchor` is the only
+definition and every reader uses it:
+
+- **Declared state.** A timeline diagram is anchored when its stored strategy
+  is `auto` or `timeline`, or when none was applied (`manual`) and the source
+  does not declare `"timeAxis": false`. `manual` is no longer an anchoring
+  strategy of its own. The renderer reads drawings through
+  `styleForDrawing(style, graph, positions)`; coordinates can only veto the
+  axis, as a guard for callers that pass unpinned positions.
+  `styleForPositions` remains as that guard alone.
+- **Item 1 · the off-axis state survives a save.** The generic format accepts
+  `timeAxis` (boolean). `applyGraphPositions(…, { timeAxis })` writes
+  `"timeAxis": false` for a drawing off the axis and removes it for one on the
+  axis; the studio's positioned-source export passes the declared state.
+  Hand-authored off-axis x without the field is drawn at its dates with the
+  `OFF_TIME_AXIS` warning (translated in the studio), which names the field.
+  A `.studio.json` whose strategy leaves the axis does not show that warning.
+- **Item 2 · locks.** A strategy on the axis is refused (`plan.blocked`) while
+  a locked dated node is away from its date; the panel names the nodes. On an
+  anchored drawing a lock holds the lane, and x is the date.
+- **Item 3 · preview equals apply.** `planLayout` pins the result of a strategy
+  on the axis: generic collision displacement skips dated nodes, and dated
+  nodes whose bars touch a fixed bar in its lane (`crowdedBy`) are re-laned by
+  `anchorToTime`, so the stored layout is exactly the preview.
+- **Item 4 · strategy-only changes.** `LayoutPlan.anchored` and
+  `anchorChanged` report the target state; the panel refuses a preview only
+  when nothing moves and the state does not change. During a preview the
+  renderer draws under the previewed strategy (`drawnGraph`).
+- **Item 5 · Reset.** Reset restores the loaded strategy with the coordinates,
+  and is enabled when only the strategy differs.
+- **Item 6 · CLI.** `relgraph layout` fills gaps with `LAYOUT_DEFAULTS` and then
+  `anchorToTime`, so a new dated node is written at its years in a free lane;
+  what it writes is what the player draws.
+- **Item 7 · reveal steps.** `timedNodes` drops visibility from an ordinal
+  graph before any time is derived (`runLayoutEngine` for `timeline`,
+  `planLayout`'s `untimed` check, `timeAnchor`); the timeline strategy on the
+  vertebrates tree reports `tree` / `untimed`.
+- **Minor.** The X tooltip is re-translated on a language switch
+  (`refreshEditorFieldText`). `TIMELINE_LANE` and `TIMELINE_GAP` are shared by
+  the engine and `anchorToTime`; a new lane is one of the drawing's own lane
+  steps (at least half the default), and the lane index is built only when a
+  node is waiting for a lane.
+- Tests: `#40 item …` cases in `tests/layout-behaviour.test.mjs` (pure, CLI
+  through `layoutFile`) and the simulated-DOM case "#40 items 4 and 5" in
+  `tests/studio-workspace.test.mjs`. Golden frames are unchanged by these
+  fixes; browser frames match a baseline captured at `2319903`.
+
 ## Review evidence
 
 Ran locally on linux-x64, Node 22.23.4, at `73af432`: `npm run typecheck`,
@@ -280,5 +331,6 @@ rerun.
 | Date | Item | PR | Commit on `main` | Note |
 | --- | --- | --- | --- | --- |
 | 2026-11-12 | Plan | — | — | Review completed; plan written |
-| 2026-11-12 | F1–F4 | PR 1 (not yet opened) | — (branch `94a97d3`) | Golden frames unchanged |
-| 2026-11-12 | F5 | PR 1 (not yet opened) | — (branch `6034b30`) | 58 tree golden hashes regenerated |
+| 2026-11-12 | F1–F4 | #40 | — (branch `94a97d3`) | Golden frames unchanged |
+| 2026-11-12 | F5 | #40 | — (branch `6034b30`) | 58 tree golden hashes regenerated |
+| 2026-11-13 | #40 review, items 1–8 and minor | #40 | — | One anchor definition; golden frames unchanged |

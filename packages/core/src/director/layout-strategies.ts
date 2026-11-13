@@ -7,10 +7,13 @@ import {
   chooseLayoutEngine,
   LAYOUT_DEFAULTS,
   LAYOUT_ENGINES,
+  placeInTime,
   runLayoutEngine,
   timeAxis,
+  timedNodes,
   type LayoutEngine,
 } from './layout-engines.js';
+import { anchorToTime, crowdedBy, offTime, timeAnchor } from './time-anchor.js';
 
 /**
  * Every strategy a project may store: `manual` keeps coordinates as they
@@ -53,6 +56,19 @@ export interface LayoutPlan {
   reason: LayoutReason | null;
   /** How many nodes the result moves away from `current`. */
   moved: number;
+  /** Whether the result is drawn on the time axis (`timeAnchor` under this strategy). */
+  anchored: boolean;
+  /**
+   * Whether applying the strategy puts the drawing on the time axis or takes
+   * it off: a change even when no coordinate moves.
+   */
+  anchorChanged: boolean;
+  /**
+   * Locked dated nodes that the time axis would have to move sideways. A
+   * strategy never moves a locked node, so such a plan keeps every
+   * coordinate and must not be applied until they are unlocked.
+   */
+  blocked: string[];
 }
 
 /** Bounded synchronous authoring computation. Never called by playback/frame evaluation. */
@@ -70,18 +86,22 @@ export function planLayout(
   settings: LayoutSettings,
   current: ReadonlyMap<string, LayoutPoint> = layoutGraph(graph),
 ): LayoutPlan {
+  const now = Boolean(timeAnchor(graph));
   const plan = (
     positions: Map<string, LayoutPoint>,
     engine: LayoutEngine | null,
     reason: LayoutReason | null,
+    anchored = now,
+    blocked: string[] = [],
   ): LayoutPlan => {
     let moved = 0;
     for (const [id, p] of positions) {
       const before = current.get(id);
       if (!before || before.x !== p.x || before.y !== p.y) moved++;
     }
-    return { positions, engine, reason, moved };
+    return { positions, engine, reason, moved, anchored, anchorChanged: anchored !== now, blocked };
   };
+  const kept = () => new Map([...current].map(([id, p]) => [id, { ...p }]));
   const { seed, iterations, spacing, type, mode } = settings;
   if (
     !Number.isInteger(seed) ||
@@ -100,8 +120,14 @@ export function planLayout(
     !(LAYOUT_MODES as readonly string[]).includes(mode)
   )
     throw new RangeError('Invalid layout strategy');
-  if (type === 'manual' || mode === 'preserve')
-    return plan(new Map([...current].map(([id, p]) => [id, { ...p }])), null, 'kept');
+  if (type === 'manual' || mode === 'preserve') return plan(kept(), null, 'kept');
+  // A strategy whose drawing is on the time axis keeps every dated node at
+  // its years, and cannot do so while a lock holds one elsewhere.
+  const axis = timeAnchor(graph, type);
+  if (axis) {
+    const blocked = offTime(graph, axis, current, settings.locked);
+    if (blocked.length) return plan(kept(), null, null, now, blocked);
+  }
   const locks = new Set(settings.locked),
     anchors = new Map<string, LayoutPoint>();
   for (const node of graph.nodes) {
@@ -131,7 +157,7 @@ export function planLayout(
           ? 'size'
           : 'structure';
   // The timeline engine draws a tree when nothing has a date; say so.
-  if (engine === 'timeline' && !timeAxis(graph.nodes)) {
+  if (engine === 'timeline' && !timeAxis(timedNodes(graph))) {
     engine = 'tree';
     reason = 'untimed';
   }
@@ -143,21 +169,33 @@ export function planLayout(
     // Preferred spacing belongs to the solver, never to authored coordinates.
     result = extreme
       ? layoutMissingNodes({ nodes, edges: graph.edges }, { seed, iterations, spacing })
-      : runLayoutEngine({ nodes, edges: graph.edges }, 'force', {
+      : runLayoutEngine({ nodes, edges: graph.edges, timeline: graph.timeline }, 'force', {
           seed,
           iterations,
           spacing,
           fixed: anchors,
         });
   } else
-    result = runLayoutEngine({ nodes, edges: graph.edges }, engine, { seed, iterations, spacing });
+    result = runLayoutEngine({ nodes, edges: graph.edges, timeline: graph.timeline }, engine, {
+      seed,
+      iterations,
+      spacing,
+    });
   for (const [id, p] of result)
     result.set(id, { x: roundPositionCoordinate(p.x) || 0, y: roundPositionCoordinate(p.y) || 0 });
   // Retain locks exactly, then displace colliding generated points deterministically.
   if (engine !== 'force' && anchors.size) {
     const occupied = [...anchors.values()];
+    const dated = new Set(
+      axis
+        ? timedNodes(graph)
+            .filter((n) => placeInTime(n, axis) !== null)
+            .map((n) => n.id)
+        : [],
+    );
     for (const id of [...result.keys()].sort(compare)) {
-      if (anchors.has(id)) continue;
+      // On the time axis a dated node changes lane, never its years (below).
+      if (anchors.has(id) || dated.has(id)) continue;
       const original = result.get(id)!;
       let chosen = { ...original };
       for (
@@ -177,5 +215,16 @@ export function planLayout(
     }
   }
   for (const [id, p] of anchors) result.set(id, p);
-  return plan(new Map([...result].sort(([a], [b]) => compare(a, b))), engine, reason);
+  if (axis)
+    anchorToTime(graph, result, {
+      axis,
+      spacing,
+      unplaced: crowdedBy(graph, axis, result, new Set(anchors.keys()), spacing),
+    });
+  return plan(
+    new Map([...result].sort(([a], [b]) => compare(a, b))),
+    engine,
+    reason,
+    Boolean(axis),
+  );
 }

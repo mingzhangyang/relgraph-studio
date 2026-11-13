@@ -19,9 +19,11 @@ import {
   planLayout,
 } from '../../packages/core/src/director/layout-strategies.ts';
 import {
+  blockedLayoutMessage,
   createLayoutStrategyView,
   unchangedLayoutMessage,
 } from '../../apps/studio/src/layout-strategy-view.ts';
+import { displayNodeText } from '../../packages/core/src/project.ts';
 import {
   anchoredPoint,
   anchorToTime,
@@ -62,6 +64,7 @@ import {
   renderEditorNodes,
   renderEditorSelection,
   renderEditorStatus,
+  refreshEditorFieldText,
 } from '../../apps/studio/src/layout-editor-view.ts';
 
 import {
@@ -117,6 +120,8 @@ export const studioImports = {
   DEFAULT_LAYOUT_SETTINGS,
   planLayout,
   unchangedLayoutMessage,
+  blockedLayoutMessage,
+  displayNodeText,
   anchoredPoint,
   anchorToTime,
   placeInTime,
@@ -148,6 +153,7 @@ export const studioImports = {
   renderEditorNodes,
   renderEditorSelection,
   renderEditorStatus,
+  refreshEditorFieldText,
   advancePlayback,
   createPlaybackState,
   formatPlaybackTime,

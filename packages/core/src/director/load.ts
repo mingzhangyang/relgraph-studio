@@ -2,6 +2,7 @@ import { validateProjectConfig, type ProjectConfig } from '../project.js';
 import { adaptLiteratureDocument, literaryDetailsAt } from '../domains/literature.js';
 import { inspectRelGraph } from '../relgraph.js';
 import { adaptBiologyDocument, validateBiologyDocument } from '../domains/biology.js';
+import { timeAnchor } from './time-anchor.js';
 import {
   adaptGenericDocument,
   GENERIC_FORMAT,
@@ -122,7 +123,12 @@ export function loadDocument(doc: unknown): LoadResult {
           ),
           warnings: [],
         };
-      return { ...result, graph: { ...result.graph, project: doc.config as ProjectConfig } };
+      const graph = { ...result.graph, project: doc.config as ProjectConfig };
+      // A project drawn off the time axis is not redrawn on it, whatever its source says.
+      const warnings = timeAnchor(graph)
+        ? result.warnings
+        : result.warnings.filter((entry) => entry.code !== 'OFF_TIME_AXIS');
+      return { ...result, graph, warnings };
     }
     let adapted;
     let detailAt: DetailAt = () => undefined;

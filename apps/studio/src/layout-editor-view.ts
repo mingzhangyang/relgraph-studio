@@ -65,6 +65,11 @@ export function renderEditorFields(
   controls.x.title = inTime ? uiText('时间轴：横坐标由日期决定') : '';
 }
 
+/** Re-translate the field hints after a language switch, without touching values. */
+export function refreshEditorFieldText(controls: EditorControls): void {
+  controls.x.title = controls.x.readOnly ? uiText('时间轴：横坐标由日期决定') : '';
+}
+
 export function renderEditorStatus(
   controls: EditorControls,
   active: boolean,

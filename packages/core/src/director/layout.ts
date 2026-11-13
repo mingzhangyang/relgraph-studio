@@ -45,20 +45,18 @@ export function structuralLayout(
 
 /** Stable layout prepared once per document, never advanced by playback. */
 export function layoutGraph(
-  graph: Pick<VisualGraph, 'nodes' | 'edges' | 'project' | 'diagram'>,
+  graph: Pick<VisualGraph, 'nodes' | 'edges' | 'project' | 'diagram' | 'timeAxis' | 'timeline'>,
 ): Map<string, Position> {
   const positions = placeNodes(graph);
   // A timeline stays one: dates edited or added after the drawing was saved
   // move their bars to their years instead of taking the axis away.
   const authored = new Set(graph.nodes.filter((n) => n.position).map((n) => n.id));
   for (const id of Object.keys(graph.project?.layout?.positions ?? {})) authored.add(id);
-  anchorToTime(
-    graph,
-    positions,
-    authored.size
-      ? new Set(graph.nodes.filter((n) => !authored.has(n.id)).map((n) => n.id))
-      : undefined,
-  );
+  if (authored.size < graph.nodes.length && authored.size)
+    anchorToTime(graph, positions, {
+      unplaced: new Set(graph.nodes.filter((n) => !authored.has(n.id)).map((n) => n.id)),
+    });
+  else anchorToTime(graph, positions);
   return positions;
 }
 

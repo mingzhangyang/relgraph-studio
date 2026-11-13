@@ -40,7 +40,16 @@ export interface EngineOptions {
  */
 export const LAYOUT_DEFAULTS: Readonly<Pick<EngineOptions, 'spacing' | 'iterations'>> =
   Object.freeze({ spacing: 150, iterations: 300 });
-type LayoutGraph = Pick<VisualGraph, 'nodes' | 'edges'>;
+/**
+ * A timeline's lane height, as a share of the spacing, and the breathing room
+ * between two spans in one lane, as a share of the axis. The timeline engine
+ * and the anchoring of a saved timeline (`time-anchor.ts`) share them.
+ */
+export const TIMELINE_LANE = 0.42;
+export const TIMELINE_GAP = 0.012;
+type LayoutGraph = Pick<VisualGraph, 'nodes' | 'edges'> & {
+  timeline?: Pick<NonNullable<VisualGraph['timeline']>, 'ordinal'>;
+};
 /** A node's place in time; `point` when it only has a first appearance. */
 type Span = { from: number; to?: number; point: boolean };
 
@@ -1047,6 +1056,24 @@ export function timeAxis(nodes: readonly VisualNode[]): TimeAxis | null {
 }
 
 /**
+ * The nodes as the time axis sees them. The reveal steps of an unfolding tree,
+ * mind map or flowchart (`timeline.ordinal`) count order, not time, so only
+ * spans are dates there.
+ */
+export function timedNodes<N extends Pick<VisualNode, 'visibility'>>(graph: {
+  nodes: readonly N[];
+  timeline?: { ordinal?: boolean };
+}): readonly N[] {
+  if (!graph.timeline?.ordinal) return graph.nodes;
+  return graph.nodes.map((node) => {
+    if (!node.visibility) return node;
+    const copy = { ...node };
+    delete copy.visibility;
+    return copy;
+  });
+}
+
+/**
  * Where a dated node sits along the axis: the middle of its span, or its
  * first appearance when that is all it has. A node without a time has no
  * place on the axis.
@@ -1094,7 +1121,7 @@ export function keepsTime(
 function timelineLayout(p: Prepared, graph: LayoutGraph, options: EngineOptions) {
   const axis = timeAxis(graph.nodes);
   if (!axis) return treeLayout(p, options);
-  const lane = options.spacing * 0.42,
+  const lane = options.spacing * TIMELINE_LANE,
     at = new Map<string, EnginePoint>();
   // A span without an end is still going on; a mere first appearance is a point.
   const start = (id: string): number => p.span.get(id)?.from ?? axis.from,
@@ -1136,7 +1163,7 @@ function timelineLayout(p: Prepared, graph: LayoutGraph, options: EngineOptions)
   for (const members of bands.values()) {
     // First fit: the earliest lane whose last span has ended, with breathing room.
     const lanes: number[] = [],
-      gap = (axis.to - axis.from) * 0.012;
+      gap = (axis.to - axis.from) * TIMELINE_GAP;
     for (const id of [...members].sort(
       (a, b) => start(a) - start(b) || (p.order.get(a) ?? 0) - (p.order.get(b) ?? 0),
     )) {
@@ -1417,6 +1444,9 @@ export function runLayoutEngine(
   engine: LayoutEngine,
   options: EngineOptions,
 ): Map<string, EnginePoint> {
+  // Reveal steps are not dates: an unfolding drawn on a timeline has no axis.
+  if (engine === 'timeline' && graph.timeline?.ordinal)
+    graph = { nodes: timedNodes(graph) as VisualNode[], edges: graph.edges };
   const p = prepare(graph);
   const result =
     engine === 'force'

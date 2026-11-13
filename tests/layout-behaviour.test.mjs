@@ -30,6 +30,11 @@ import {
   anchorToTime,
   timeAnchor,
 } from '../packages/core/src/director/time-anchor.ts';
+import { styleForDrawing } from '../packages/core/src/style.ts';
+import { layoutFile } from '../packages/cli/src/layout.ts';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { applyGraphPositions } from '../packages/core/src/director/position-writeback.ts';
 import { directorFrameAt, frameCount } from '../packages/core/src/director/state.ts';
 import { styleForGraph } from '../packages/core/src/style.ts';
@@ -120,7 +125,7 @@ test('F1: a sideways drag cannot take a timeline off its axis', () => {
   const moved = new Map(at).set(tang, lane);
   assert.equal(keepsTime(graph.nodes, moved, styleForGraph(graph).timeAxis), true);
   assert.ok(ticks(compose(graph, moved)).length > 0);
-  // Manual and timeline strategies keep the anchor; the drawing keeps its legend bars.
+  // No strategy, auto and timeline keep the anchor; the drawing keeps its legend bars.
   for (const type of ['manual', 'auto', 'timeline'])
     assert.ok(timeAnchor({ ...graph, project: { layout: { ...DEFAULT_LAYOUT_SETTINGS, type } } }));
   assert.ok(legendGlyphs(compose(graph, moved)).every((g) => g.d[0][0] === 'RR'));
@@ -269,4 +274,203 @@ test('F5: a derived unfolding shows no domain time; real domain time still shows
   const timed = load(dynasties);
   assert.equal(timed.timeline?.ordinal, undefined);
   assert.match(compose(timed).a11y.domainTime, /^公元 -?\d+$/);
+});
+
+// Review of PR 1 (#40): the declared state is the only source of truth.
+const rearrange = (type, extra = {}) => ({
+  ...DEFAULT_LAYOUT_SETTINGS,
+  type,
+  mode: 'rearrange',
+  ...extra,
+});
+/** The graph with `layout` as its applied project layout. */
+const withLayout = (graph, layout) => ({
+  ...graph,
+  project: { ...graph.project, layout: { ...DEFAULT_LAYOUT_SETTINGS, ...layout } },
+});
+/** No two dated bars share a lane where their years overlap. */
+const lanesClear = (graph, positions) => {
+  const axis = timeAxis(graph.nodes),
+    half = (LAYOUT_DEFAULTS.spacing * 0.42) / 2,
+    bars = graph.nodes
+      .filter((n) => placeInTime(n, axis) !== null)
+      .map((n) => ({
+        label: n.label,
+        y: positions.get(n.id).y,
+        from: n.span?.from ?? n.visibility.from,
+        to: n.span ? (n.span.to ?? axis.to) : n.visibility.from,
+      }));
+  for (const a of bars)
+    for (const b of bars)
+      if (a !== b && Math.abs(a.y - b.y) < half)
+        assert.ok(a.to <= b.from || b.to <= a.from, `${a.label} overlaps ${b.label}`);
+};
+
+test('#40 item 1: a timeline taken off its axis stays off it after export and reload', () => {
+  const graph = load(dynasties),
+    grid = computeLayout(graph, rearrange('grid'), layoutGraph(graph)),
+    applied = withLayout(graph, { type: 'grid', positions: Object.fromEntries(grid) });
+  assert.equal(timeAnchor(applied), null);
+  // The studio writes the declared state with the coordinates.
+  const { document } = applyGraphPositions(dynasties, graph, grid, {
+    timeAxis: Boolean(timeAnchor(applied)),
+  });
+  assert.equal(document.timeAxis, false);
+  const result = loadDocument(document);
+  assert.equal(result.valid, true);
+  assert.equal(result.graph.timeAxis, false);
+  assert.ok(!result.warnings.some((w) => w.code === 'OFF_TIME_AXIS'));
+  assert.equal(timeAnchor(result.graph), null);
+  const reread = layoutGraph(result.graph);
+  assert.deepEqual(moved(grid, reread), [], 'every grid coordinate survives the reload');
+  assert.deepEqual(ticks(compose(result.graph, reread)), []);
+  // Putting it back on the axis and exporting again removes the declaration.
+  const back = applyGraphPositions(document, result.graph, layoutGraph(graph), { timeAxis: true });
+  assert.equal(Object.hasOwn(back.document, 'timeAxis'), false);
+  assert.ok(timeAnchor(load(back.document)));
+  // Without a declaration, hand-authored off-axis x is drawn in time and the author is told.
+  const authored = structuredClone(document);
+  delete authored.timeAxis;
+  const warned = loadDocument(authored);
+  assert.equal(warned.valid, true);
+  const notice = warned.warnings.find((w) => w.code === 'OFF_TIME_AXIS');
+  assert.match(notice.message, /^\d+ 个带日期的节点横坐标不在其时间上，已按日期绘制。$/);
+  assert.match(notice.fix, /"timeAxis": false/);
+  inTime(warned.graph, layoutGraph(warned.graph));
+  // The field is a boolean.
+  assert.equal(loadDocument({ ...dynasties, timeAxis: 'no' }).valid, false);
+});
+
+test('#40 item 2: a strategy on the axis never moves a locked node; it refuses instead', () => {
+  const graph = load(dynasties),
+    sanguo = byLabel(graph, '三国').id,
+    grid = computeLayout(graph, rearrange('grid'), layoutGraph(graph)),
+    off = withLayout(graph, {
+      type: 'grid',
+      locked: [sanguo],
+      positions: Object.fromEntries(grid),
+    });
+  for (const type of ['timeline', 'auto']) {
+    const plan = planLayout(off, rearrange(type, { locked: [sanguo] }), grid);
+    assert.deepEqual(plan.blocked, [sanguo], type);
+    assert.equal(plan.moved, 0);
+    assert.equal(plan.anchorChanged, false, 'a refused plan changes nothing');
+    assert.deepEqual(plan.positions.get(sanguo), grid.get(sanguo));
+  }
+  // Strategies off the axis keep the lock as before.
+  const circle = planLayout(off, rearrange('circle', { locked: [sanguo] }), grid);
+  assert.deepEqual(circle.blocked, []);
+  assert.deepEqual(circle.positions.get(sanguo), grid.get(sanguo));
+});
+
+test('#40 item 3: preview and apply agree when a lock crowds a lane', () => {
+  const graph = load(dynasties),
+    shown = layoutGraph(graph),
+    sui = byLabel(graph, '隋').id,
+    tang = byLabel(graph, '唐').id;
+  // Lock 隋 in time but in 唐's lane, where their bars would touch.
+  const crowded = new Map(shown).set(sui, { x: shown.get(sui).x, y: shown.get(tang).y });
+  const settings = rearrange('timeline', { locked: [sui] }),
+    current = withLayout(graph, { locked: [sui], positions: Object.fromEntries(crowded) });
+  const plan = planLayout(current, settings, crowded);
+  assert.deepEqual(plan.blocked, []);
+  assert.equal(plan.anchored, true);
+  assert.deepEqual(plan.positions.get(sui), crowded.get(sui), 'the lock holds');
+  inTime(graph, plan.positions);
+  lanesClear(graph, plan.positions);
+  // The preview is drawn with its axis, and applying stores exactly what it showed.
+  const previewed = withLayout(current, { ...settings, type: 'timeline' });
+  assert.ok(ticks(compose(previewed, plan.positions)).length > 0);
+  const applied = withLayout(graph, {
+    ...settings,
+    positions: Object.fromEntries(plan.positions),
+  });
+  assert.deepEqual(moved(plan.positions, layoutGraph(applied)), []);
+});
+
+test('#40 item 4: putting a drawing on the axis is a change even when nothing moves', () => {
+  const graph = load(dynasties),
+    shown = layoutGraph(graph),
+    // Grid applied, then the timeline coordinates restored: not anchored.
+    stale = withLayout(graph, { type: 'grid', positions: Object.fromEntries(shown) });
+  assert.equal(timeAnchor(stale), null);
+  // The renderer reads the same state: no axis, although the x happen to be in time.
+  assert.equal(styleForDrawing(styleForGraph(graph), stale, shown).timeAxis, undefined);
+  assert.deepEqual(ticks(compose(stale, shown)), []);
+  for (const type of ['timeline', 'auto']) {
+    const plan = planLayout(stale, rearrange(type), shown);
+    assert.deepEqual([plan.moved, plan.anchored, plan.anchorChanged], [0, true, true], type);
+  }
+  // Manual and "preserve" keep everything, the state included.
+  for (const settings of [rearrange('manual'), { ...rearrange('timeline'), mode: 'preserve' }]) {
+    const plan = planLayout(stale, settings, shown);
+    assert.deepEqual([plan.moved, plan.anchorChanged], [0, false], settings.type);
+  }
+  // From the axis, a strategy that leaves it is a change too.
+  const leaving = planLayout(graph, rearrange('grid'), shown);
+  assert.deepEqual([leaving.anchored, leaving.anchorChanged], [false, true]);
+});
+
+test('#40 item 6: relgraph layout puts a new dated node at its years, in a free lane', async () => {
+  const source = saved();
+  source.nodes.push({ id: '新', kind: '元明清', start: 1300, end: 1400 });
+  const folder = await mkdtemp(join(tmpdir(), 'relgraph-anchor-'));
+  try {
+    const file = join(folder, 'dynasties.json'),
+      out = join(folder, 'arranged.json');
+    await writeFile(file, JSON.stringify(source, null, 2) + '\n');
+    const summary = await layoutFile({ file, out, seed: 0, write: false });
+    assert.equal(summary.missing, 1);
+    const written = JSON.parse(await readFile(out, 'utf8')),
+      graph = load(written),
+      at = layoutGraph(graph);
+    // What the CLI wrote is what the player draws.
+    const fresh = written.nodes.find((n) => n.id === '新').position;
+    assert.deepEqual(at.get(byLabel(graph, '新').id), fresh);
+    inTime(graph, at);
+    lanesClear(graph, at);
+    // The new lane, if any, is one of the drawing's own lane steps below the others.
+    const lanes = [...new Set(source.nodes.filter((n) => n.position).map((n) => n.position.y))];
+    assert.ok(lanes.includes(fresh.y) || fresh.y > Math.max(...lanes), String(fresh.y));
+  } finally {
+    await rm(folder, { recursive: true, force: true });
+  }
+});
+
+test('#40 item 7: the reveal steps of an unfolding are not dates', () => {
+  const graph = load(tree);
+  assert.equal(graph.timeline?.ordinal, true);
+  const plan = planLayout(graph, rearrange('timeline'), layoutGraph(graph));
+  assert.deepEqual([plan.engine, plan.reason], ['tree', 'untimed']);
+  assert.deepEqual(
+    [...plan.positions].map(([id, p]) => [id, Math.round(p.x), Math.round(p.y)]),
+    [...runLayoutEngine(graph, 'tree', { seed: 0, ...LAYOUT_DEFAULTS })].map(([id, p]) => [
+      id,
+      Math.round(p.x),
+      Math.round(p.y),
+    ]),
+  );
+  // Real dates on such a graph still make a timeline.
+  const dated = structuredClone(tree);
+  dated.nodes = (dated.nodes ?? []).map((n, i) =>
+    typeof n === 'object' ? { ...n, start: 1000 + i * 10 } : { id: n, start: 1000 + i * 10 },
+  );
+  if (dated.nodes.length)
+    assert.equal(planLayout(load(dated), rearrange('timeline')).engine, 'timeline');
+});
+
+test('#40 minor: a new lane follows the drawing’s own lane height', () => {
+  const graph = load(dynasties),
+    shown = layoutGraph(graph),
+    // The same drawing with lanes twice as far apart.
+    wide = new Map([...shown].map(([id, p]) => [id, { x: p.x, y: p.y * 2 }])),
+    ys = [...new Set([...wide.values()].map((p) => p.y))].sort((a, b) => a - b),
+    step = Math.min(...ys.slice(1).map((y, i) => y - ys[i]));
+  // A node that overlaps everything: it can only go below.
+  const all = { ...dynasties, nodes: [...dynasties.nodes, { id: '全', start: -300, end: 2000 }] },
+    g = load(all),
+    positions = new Map(wide).set(byLabel(g, '全').id, { x: 0, y: 0 });
+  anchorToTime(g, positions, { unplaced: new Set([byLabel(g, '全').id]) });
+  assert.equal(positions.get(byLabel(g, '全').id).y, ys.at(-1) + step);
+  assert.ok(step > LAYOUT_DEFAULTS.spacing * 0.42, 'not the default lane');
 });

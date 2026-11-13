@@ -2,7 +2,9 @@ import { randomUUID } from 'node:crypto';
 import { chmod, stat, realpath, rename, unlink, writeFile } from 'node:fs/promises';
 import { basename, dirname, join, resolve } from 'node:path';
 import {
+  anchorToTime,
   applyGraphPositions,
+  LAYOUT_DEFAULTS,
   layoutMissingNodes,
   parseDocument,
   structuralLayout,
@@ -72,11 +74,17 @@ export async function layoutFile(request: LayoutRequest): Promise<LayoutSummary>
     const input: unknown = JSON.parse(text);
     // A document without any coordinates is arranged from its structure, as
     // the player would; otherwise only the gaps are filled around the
-    // author's own arrangement.
-    const positions =
-      missing === summary.total && summary.total > 1
-        ? structuralLayout(result.graph, request.seed)
-        : layoutMissingNodes(result.graph, { seed: request.seed });
+    // author's own arrangement, with the player's spacing. On a timeline that
+    // keeps time a new dated node goes to its years, in the first free lane.
+    let positions: Map<string, { x: number; y: number }>;
+    if (missing === summary.total && summary.total > 1)
+      positions = structuralLayout(result.graph, request.seed);
+    else {
+      positions = layoutMissingNodes(result.graph, { seed: request.seed, ...LAYOUT_DEFAULTS });
+      anchorToTime(result.graph, positions, {
+        unplaced: new Set(result.graph.nodes.filter((n) => !n.position).map((n) => n.id)),
+      });
+    }
     const output = writeBackPositions(input, result.graph, positions);
     const serialized = JSON.stringify(output.document, null, indentOf(text)) + '\n';
     // Never write a document whose round-trip validation fails.

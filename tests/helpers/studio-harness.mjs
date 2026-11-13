@@ -3,7 +3,7 @@ import { runInNewContext } from 'node:vm';
 import { createSimulatedStudioDom } from './studio-dom.mjs';
 import { parseDocument } from '../../packages/core/src/director/load.ts';
 import { layoutGraph } from '../../packages/core/src/director/layout.ts';
-import { styleForGraph, styleForPositions } from '../../packages/core/src/style.ts';
+import { styleForDrawing, styleForGraph } from '../../packages/core/src/style.ts';
 import { applyGraphPositions } from '../../packages/core/src/director/position-writeback.ts';
 import { roundPositionCoordinate } from '../../packages/core/src/director/seeded-layout.ts';
 import { DEFAULT_FRAME_SPEC } from '../../packages/render/src/frame-spec.ts';
@@ -104,7 +104,7 @@ export function makeStudio({
     parseDocument,
     layoutGraph,
     styleForGraph,
-    styleForPositions,
+    styleForDrawing,
     applyGraphPositions,
     roundPositionCoordinate,
     canvasPoint,
