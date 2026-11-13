@@ -1,7 +1,7 @@
 # Follow-up plan · review of #37 and #38
 
 Status: **open** · baseline `main` at `73af432` · reviewed 2026-11-12 ·
-PR 1 merged as `a2589bf` and PR 2 as `682dbbd` on 2026-11-13
+PR 1 merged as `a2589bf`, PR 2 as `682dbbd` and PR 1b as `a63875c` on 2026-11-13
 
 This is the tracking document for the work that came out of reviewing
 [#38](https://github.com/mingzhangyang/relgraph-studio/pull/38) (generic graphs,
@@ -31,7 +31,7 @@ The repository rules in [AGENTS.md](../AGENTS.md) apply to every step:
 | PR | Scope | Items | Golden frames | Status |
 | --- | --- | --- | --- | --- |
 | 1 | Behaviour fixes | F1–F5 | Tree example changes (F5); others identical | ☑ [#40](https://github.com/mingzhangyang/relgraph-studio/pull/40) merged as `a2589bf` (2026-11-13); leftover 3 tracked as F6 |
-| 1b | Behaviour fix | F6 | Must stay identical | ◐ implemented on branch `claude/brave-hypatia-waiyi9` from `682dbbd`; golden frames identical |
+| 1b | Behaviour fix | F6 | Must stay identical | ☑ [#42](https://github.com/mingzhangyang/relgraph-studio/pull/42) merged as `a63875c` (2026-11-13); golden frames identical |
 | 2 | Per-frame cost and limits | P1–P3 | Must stay identical | ☑ [#41](https://github.com/mingzhangyang/relgraph-studio/pull/41) merged as `682dbbd` (2026-11-13) |
 | 3 | Core structure | S1–S3 | Must stay identical | ☐ not started |
 | 4 | Render structure | S4–S6 | Must stay identical | ☐ not started |
@@ -591,4 +591,6 @@ rerun.
 | 2026-11-13 | P3 | #41 | `682dbbd` (branch `f54385b`) | `LARGE_GRAPH` above 500 nodes or 1,000 relations |
 | 2026-11-13 | #41 review, items 1–3 and minor | #41 | `682dbbd` (branch `72beefa`) | Budget lowered to 300 / 600 (D3); golden frames unchanged |
 | 2026-11-13 | PR 2 merged | #41 | `682dbbd` | Squash of `72beefa` onto `a2589bf`; tree identical to the reviewed head |
-| 2026-11-13 | F6 | — | — (branch `e29cc70`, `a8c2a80`) | Lanes only for anchored dated nodes; golden frames unchanged |
+| 2026-11-13 | F6 | #42 | `a63875c` (branch `e29cc70`, `a8c2a80`) | Lanes only for anchored dated nodes; golden frames unchanged |
+| 2026-11-13 | #42 review and follow-up review | #42 | `a63875c` (branch `ada4d09`, `1271551`) | One lane rule for writer and reader; `LANE_ONLY` warning; golden frames unchanged |
+| 2026-11-13 | PR 1b merged | #42 | `a63875c` | Squash of `1271551` onto `682dbbd`; tree identical to the reviewed head |
