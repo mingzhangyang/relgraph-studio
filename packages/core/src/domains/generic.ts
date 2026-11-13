@@ -37,17 +37,17 @@ import type {
 export const GENERIC_FORMAT = 'relgraph.graph/1';
 /**
  * Hard limits of a generic graph, and the preview budget: above
- * `previewNodes` nodes or `previewEdges` relations a frame takes longer to
- * compose than a 24 fps preview allows (about 42 ms), so loading warns.
- * Export is not affected. Measured in docs/GENERIC-GRAPH.md, "Size".
+ * `previewNodes` nodes or `previewEdges` relations, playback in the studio
+ * (compose and draw) falls below 24 fps, so loading warns. Export is not
+ * affected. Measured in docs/GENERIC-GRAPH.md, "Size".
  */
 export const GENERIC_LIMITS = Object.freeze({
   nodes: 5000,
   edges: 20000,
   text: 2000,
   id: 200,
-  previewNodes: 500,
-  previewEdges: 1000,
+  previewNodes: 300,
+  previewEdges: 600,
 });
 
 export interface GenericDiagnostic {

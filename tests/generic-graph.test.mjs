@@ -686,6 +686,8 @@ test('a graph above the preview budget loads with a warning; above the hard limi
   const refused = graph(GENERIC_LIMITS.nodes + 1);
   assert.equal(refused.valid, false);
   assert.ok(refused.errors.some((entry) => entry.code === 'TOO_LARGE'));
+  // The budget measured from playback (docs/GENERIC-GRAPH.md, "Size").
+  assert.deepEqual([GENERIC_LIMITS.previewNodes, GENERIC_LIMITS.previewEdges], [300, 600]);
   assert.ok(GENERIC_LIMITS.previewNodes < GENERIC_LIMITS.nodes);
   assert.ok(GENERIC_LIMITS.previewEdges < GENERIC_LIMITS.edges);
 });
