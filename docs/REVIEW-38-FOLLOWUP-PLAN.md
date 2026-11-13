@@ -618,6 +618,24 @@ baseline, so the baseline comparisons did not run). The comparisons against
 `a63875c` above used both commits' built packages. No GitHub Actions
 workflow was added, dispatched or rerun.
 
+### PR 3 · review of #43
+
+The [acceptance review](https://github.com/mingzhangyang/relgraph-studio/pull/43#pullrequestreview-5898806305)
+found one P2: `autoStoryboard` stepped only through `visibility`, so
+regenerating the storyboard of an unfolded graph gave one overview shot
+showing everything (a root → child → leaf tree: one shot of three nodes,
+where `a63875c` gave three shots of one, two and three). Fixed in `2569a4a`:
+a graph with reveal steps gets one shot per step, titled by what arrives and
+setting `revealStep`; a graph that also has dates keeps its domain-time
+storyboard, so no dated fact shows early. The new test fails on `1fb9bd5`.
+
+Validation on the tree of `2569a4a`, linux-x64, Node 22.23.4:
+`npm run typecheck`, `npm run check:types`, `npm run lint`,
+`npm run format:check` passed; `npm test` 402 tests in 36 files passed;
+`npm run check:export` 31/31 passed with the 236 golden frames matching (no
+`--update`); `npm run check:browser` 76/76 passed (no local baseline). No
+GitHub Actions workflow was added, dispatched or rerun.
+
 ## Review evidence
 
 Ran locally on linux-x64, Node 22.23.4, at `73af432`: `npm run typecheck`,
@@ -649,3 +667,4 @@ rerun.
 | 2026-11-13 | S2 | — | — (branch `8e49fc2`) | Parser split by section, storyboard module, one parse per load; 87 documents identical |
 | 2026-11-13 | S3 | — | — (branch `9c7ae0a`) | `revealStep` track; 5,376 frames identical; golden frames unchanged |
 | 2026-11-13 | D1, D2, D4 | #43 | — | Owner confirmed the recommendations; all four decisions closed |
+| 2026-11-13 | #43 review, P2 | #43 | — (branch `2569a4a`) | Regenerated storyboard of an unfolded graph unfolds; golden frames unchanged |
