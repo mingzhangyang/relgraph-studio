@@ -1,6 +1,7 @@
 # Follow-up plan · review of #37 and #38
 
-Status: **open** · baseline `main` at `73af432` · reviewed 2026-11-12
+Status: **open** · baseline `main` at `73af432` · reviewed 2026-11-12 ·
+PR 1 merged as `a2589bf` on 2026-11-13
 
 This is the tracking document for the work that came out of reviewing
 [#38](https://github.com/mingzhangyang/relgraph-studio/pull/38) (generic graphs,
@@ -29,7 +30,7 @@ The repository rules in [AGENTS.md](../AGENTS.md) apply to every step:
 
 | PR | Scope | Items | Golden frames | Status |
 | --- | --- | --- | --- | --- |
-| 1 | Behaviour fixes | F1–F5 | Tree example changes (F5); others identical | ◐ [#40](https://github.com/mingzhangyang/relgraph-studio/pull/40) open; re-reviewed ready to merge; leftovers 1–2 fixed, leftover 3 tracked as F6 |
+| 1 | Behaviour fixes | F1–F5 | Tree example changes (F5); others identical | ☑ [#40](https://github.com/mingzhangyang/relgraph-studio/pull/40) merged as `a2589bf` (2026-11-13); leftover 3 tracked as F6 |
 | 2 | Per-frame cost and limits | P1–P3 | Must stay identical | ☐ not started |
 | 3 | Core structure | S1–S3 | Must stay identical | ☐ not started |
 | 4 | Render structure | S4–S6 | Must stay identical | ☐ not started |
@@ -63,7 +64,7 @@ confirms them.
 
 ## PR 1 · Behaviour fixes
 
-- [ ] **F1 · A timeline collapses when one bar moves sideways.** Whether the
+- [x] **F1 · A timeline collapses when one bar moves sideways.** Whether the
   axis is drawn is inferred each frame by comparing stored coordinates with a
   recomputed axis, with a tolerance of 0.02 world units
   (`keepsTime`, `packages/core/src/director/layout-engines.ts:1064`;
@@ -78,7 +79,7 @@ confirms them.
     coordinates keeps its axis after a date is edited or a dated node is added,
     with every bar at its time; the legend glyph matches the glyph drawn; a
     pure test and a real-browser drag check cover it. Depends on D1.
-- [ ] **F2 · Preview can be a no-op that looks pending.** The coordinate policy
+- [x] **F2 · Preview can be a no-op that looks pending.** The coordinate policy
   defaults to "preserve", and `computeLayout` returns the current positions for
   any strategy in that mode
   (`packages/core/src/director/layout-strategies.ts:57`). The panel still
@@ -87,7 +88,7 @@ confirms them.
     unchanged preview without saying so. Either the policy follows the
     strategy, or the preview is refused with a message. Apply stays disabled
     when nothing moved.
-- [ ] **F3 · Two sets of layout defaults.** `structuralLayout` uses spacing 150
+- [x] **F3 · Two sets of layout defaults.** `structuralLayout` uses spacing 150
   and 300 iterations (`packages/core/src/director/layout.ts:33`);
   `DEFAULT_LAYOUT_SETTINGS` uses 160 and 160
   (`packages/core/src/director/layout-strategies.ts:24`).
@@ -98,12 +99,12 @@ confirms them.
   - Done when: one exported constant feeds both paths, and a test asserts that
     "auto + rearrange" on a freshly loaded coordinate-free document moves
     nothing. Depends on D2.
-- [ ] **F4 · Strategies that do not apply degrade silently.** Applying
+- [x] **F4 · Strategies that do not apply degrade silently.** Applying
   `timeline` to a graph without dates draws the tree instead; the two frames
   are identical and the panel says nothing.
   - Done when: `computeLayout` (or a small companion) reports the engine that
     actually ran and why, and the panel shows it.
-- [ ] **F5 · "STEP 9" appears in the film.** `shapeDiagram` unfolds a tree,
+- [x] **F5 · "STEP 9" appears in the film.** `shapeDiagram` unfolds a tree,
   mind map or flowchart by rewriting `visibility` and setting
   `timeline.unit = 'STEP'` (`packages/core/src/domains/generic.ts:880`), so the
   frame's domain-time slot shows an internal counter.
@@ -111,7 +112,15 @@ confirms them.
     tree example are regenerated and the change is listed in the PR. Depends
     on D4.
 
+F1–F5 landed in [#40](https://github.com/mingzhangyang/relgraph-studio/pull/40),
+merged to `main` as `a2589bf`. After the merge, the tree of `a2589bf` was
+compared with the reviewed head `0348d87`: identical (base `08c8e57`, which
+`main` had not moved from).
+
 ## Follow-up · from the re-review of #40
+
+F6 is a behaviour fix, so it does not travel with the cost work of PR 2 or
+the structural work of PRs 3 and 4; it gets its own fix PR from `main`.
 
 - [ ] **F6 · A date edit must not look like an off-axis drawing.** The source
   of an anchored timeline still stores each dated node's x, although D1 meant
@@ -369,7 +378,8 @@ rerun.
 | Date | Item | PR | Commit on `main` | Note |
 | --- | --- | --- | --- | --- |
 | 2026-11-12 | Plan | — | — | Review completed; plan written |
-| 2026-11-12 | F1–F4 | #40 | — (branch `94a97d3`) | Golden frames unchanged |
-| 2026-11-12 | F5 | #40 | — (branch `6034b30`) | 58 tree golden hashes regenerated |
-| 2026-11-13 | #40 review, items 1–8 and minor | #40 | — | One anchor definition; golden frames unchanged |
-| 2026-11-13 | #40 re-review, leftovers 1–2 and unsaved flag | #40 | — | Leftover 3 tracked as F6 |
+| 2026-11-12 | F1–F4 | #40 | `a2589bf` (branch `94a97d3`) | Golden frames unchanged |
+| 2026-11-12 | F5 | #40 | `a2589bf` (branch `6034b30`) | 58 tree golden hashes regenerated |
+| 2026-11-13 | #40 review, items 1–8 and minor | #40 | `a2589bf` (branch `588bb88`) | One anchor definition; golden frames unchanged |
+| 2026-11-13 | #40 re-review, leftovers 1–2 and unsaved flag | #40 | `a2589bf` (branch `0348d87`) | Leftover 3 tracked as F6 |
+| 2026-11-13 | PR 1 merged | #40 | `a2589bf` | Squash of `0348d87` onto `08c8e57`; tree identical to the reviewed head |
