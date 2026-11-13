@@ -53,15 +53,15 @@ not pass `--update` to the golden or browser baselines.
 
 These are choices for the owner. Each has a recommendation; the plan assumes
 the recommendation until it is changed here. PR 1 implements the
-recommendations of D1, D2 and D4, and PR 2 that of D3; the boxes stay open
-until the owner confirms them.
+recommendations of D1, D2 and D4, and PR 2 that of D3; the owner confirmed
+all four on 2026-11-13.
 
 | Id | Question | Recommendation | Decided |
 | --- | --- | --- | --- |
-| D1 | How does a drawing remain a timeline (F1)? | Make it a declared state instead of inferring it from coordinates every frame: while a drawing is time-anchored, a dated node's x is derived from its time and only its lane (y) is stored and editable. Leaving that state is an explicit act (applying another strategy), shown in the layout panel. | ☐ |
-| D2 | Which layout defaults are canonical (F3)? | The load-time values (spacing 150, iterations 300), exported once and used by the panel too: the golden frames and browser baselines are recorded against them. | ☐ |
+| D1 | How does a drawing remain a timeline (F1)? | Make it a declared state instead of inferring it from coordinates every frame: while a drawing is time-anchored, a dated node's x is derived from its time and only its lane (y) is stored and editable. Leaving that state is an explicit act (applying another strategy), shown in the layout panel. | ☑ as recommended (owner, 2026-11-13); implemented in #40, lanes-only storage in #42 (F6) |
+| D2 | Which layout defaults are canonical (F3)? | The load-time values (spacing 150, iterations 300), exported once and used by the panel too: the golden frames and browser baselines are recorded against them. | ☑ as recommended (owner, 2026-11-13); implemented in #40 |
 | D3 | What happens to the 5,000 / 20,000 limits (P3)? | Keep them as hard limits, add a warning diagnostic above a measured preview budget, and document both numbers. | ☑ budget 300 / 600, from measured playback (#41 review, item 3) |
-| D4 | How deep does the "STEP" fix go in PR 1 (F5 vs S3)? | PR 1 only stops showing the internal unit. Separating reveal order from domain time is S3, in PR 3. | ☐ |
+| D4 | How deep does the "STEP" fix go in PR 1 (F5 vs S3)? | PR 1 only stops showing the internal unit. Separating reveal order from domain time is S3, in PR 3. | ☑ as recommended (owner, 2026-11-13); F5 in #40, S3 in #43 |
 
 ## PR 1 · Behaviour fixes
 
@@ -648,3 +648,4 @@ rerun.
 | 2026-11-13 | S1 | — | — (branch `5e21269`) | Graph analysis, time axis and layout names in their own modules; exports unchanged |
 | 2026-11-13 | S2 | — | — (branch `8e49fc2`) | Parser split by section, storyboard module, one parse per load; 87 documents identical |
 | 2026-11-13 | S3 | — | — (branch `9c7ae0a`) | `revealStep` track; 5,376 frames identical; golden frames unchanged |
+| 2026-11-13 | D1, D2, D4 | #43 | — | Owner confirmed the recommendations; all four decisions closed |
