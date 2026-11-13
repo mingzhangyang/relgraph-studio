@@ -25,8 +25,11 @@ const joinLabels = (labels: string[], limit: number): string =>
 /**
  * A storyboard read off the graph's own structure, for documents that do not
  * author one: the whole, then each group, then the best-connected node. A
- * graph with timed facts instead grows step by step along its domain time.
- * Titles and narration reuse author text only, so no language is assumed.
+ * graph with timed facts instead grows step by step along its domain time,
+ * and an unfolded graph (`revealStep`) level by level along its reveal order.
+ * Domain time wins when a graph has both: shots without `domainAt` would
+ * show every dated fact at once. Titles and narration reuse author text
+ * only, so no language is assumed.
  */
 export function autoStoryboard(
   graph: Pick<VisualGraph, 'meta' | 'nodes' | 'edges' | 'groups' | 'timeline'>,
@@ -47,6 +50,14 @@ export function autoStoryboard(
     return timedStoryboard(graph, summaries, {
       track: 'domain',
       titles: 'time',
+      follow: false,
+      closing: false,
+    });
+  // Reveal steps are order, not time: shots are titled by what arrives.
+  if ([...nodes, ...edges].some((item) => item.revealStep !== undefined))
+    return timedStoryboard(graph, summaries, {
+      track: 'reveal',
+      titles: 'labels',
       follow: false,
       closing: false,
     });
