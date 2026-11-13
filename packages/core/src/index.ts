@@ -20,6 +20,9 @@ export * from './project.js';
 
 export * from './director/layout-strategies.js';
 export * from './director/layout-engines.js';
+export { diagramStructure } from './graph/analysis.js';
+export * from './graph/time-axis.js';
+export * from './project-layout.js';
 export * from './director/time-anchor.js';
 
 export * from './image-assets.js';

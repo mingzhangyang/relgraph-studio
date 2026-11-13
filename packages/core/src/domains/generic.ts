@@ -19,13 +19,8 @@ import {
   type GraphKinds,
   type KindDeclaration,
 } from '../style.js';
-import {
-  diagramStructure,
-  placeInTime,
-  TIME_TOLERANCE,
-  timeAxis as axisOf,
-  timedNodes,
-} from '../director/layout-engines.js';
+import { diagramStructure } from '../graph/analysis.js';
+import { placeInTime, TIME_TOLERANCE, timeAxis as axisOf, timedNodes } from '../graph/time-axis.js';
 import { lanedNodes, sourceKeepsTime, timeCoordinate } from '../director/time-anchor.js';
 import type {
   VisualEdge,

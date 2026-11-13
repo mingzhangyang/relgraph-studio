@@ -8,12 +8,7 @@ import {
   type LineStyle,
   type NodeShape,
 } from './style.js';
-import {
-  LAYOUT_MODES,
-  LAYOUT_TYPES,
-  type LayoutMode,
-  type LayoutType,
-} from './director/layout-strategies.js';
+import { LAYOUT_MODES, LAYOUT_TYPES, type LayoutMode, type LayoutType } from './project-layout.js';
 
 export interface NodeAppearance {
   image?: string | null;

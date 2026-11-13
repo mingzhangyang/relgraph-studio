@@ -22,17 +22,16 @@
  */
 import type { VisualGraph, VisualNode } from '../../types/visual-graph.js';
 import {
-  LAYOUT_DEFAULTS,
   placeInTime,
   TIME_TOLERANCE,
   TIMELINE_GAP,
   TIMELINE_LANE,
   timeAxis,
   timedNodes,
-  type EnginePoint,
   type TimeAxis,
-} from './layout-engines.js';
-import { roundPositionCoordinate } from './seeded-layout.js';
+} from '../graph/time-axis.js';
+import { LAYOUT_DEFAULTS } from '../project-layout.js';
+import { roundPositionCoordinate, type LayoutPoint } from './seeded-layout.js';
 
 /** The strategies whose drawing of a timeline diagram is on its time axis. */
 export const TIME_ANCHORED_TYPES = Object.freeze(['auto', 'timeline'] as const);
@@ -143,7 +142,7 @@ function dated(graph: AnchorGraph): Map<string, Pick<VisualNode, 'id' | 'span' |
  * The point a node may be moved to: on an anchored drawing a dated node only
  * changes lane, so its x is its place in time whatever was asked for.
  */
-export function anchoredPoint(graph: AnchorGraph, id: string, point: EnginePoint): EnginePoint {
+export function anchoredPoint(graph: AnchorGraph, id: string, point: LayoutPoint): LayoutPoint {
   const axis = timeAnchor(graph),
     node = axis ? dated(graph).get(id) : undefined;
   const x = node && axis ? pinned(node, axis, point.x) : null;
@@ -157,7 +156,7 @@ export function anchoredPoint(graph: AnchorGraph, id: string, point: EnginePoint
 export function offTime(
   graph: AnchorGraph,
   axis: TimeAxis,
-  positions: ReadonlyMap<string, EnginePoint>,
+  positions: ReadonlyMap<string, LayoutPoint>,
   ids: Iterable<string>,
 ): string[] {
   const nodes = dated(graph),
@@ -190,7 +189,7 @@ const laneHeight = (spacing: number): number => spacing * TIMELINE_LANE;
 export function crowdedBy(
   graph: AnchorGraph,
   axis: TimeAxis,
-  positions: ReadonlyMap<string, EnginePoint>,
+  positions: ReadonlyMap<string, LayoutPoint>,
   fixed: ReadonlySet<string>,
   spacing: number = LAYOUT_DEFAULTS.spacing,
 ): Set<string> {
@@ -236,7 +235,7 @@ export interface AnchorOptions {
  */
 export function anchorToTime(
   graph: AnchorGraph,
-  positions: Map<string, EnginePoint>,
+  positions: Map<string, LayoutPoint>,
   {
     unplaced = new Set(),
     axis = timeAnchor(graph),

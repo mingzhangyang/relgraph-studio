@@ -2,29 +2,16 @@ import type { VisualGraph } from '../../types/visual-graph.js';
 import type { ProjectConfig } from '../project.js';
 import { layoutMissingNodes, roundPositionCoordinate, type LayoutPoint } from './seeded-layout.js';
 import { DIAGRAM_ENGINE, layoutGraph } from './layout.js';
+import { AUTO_LAYOUT_NODE_LIMIT, chooseLayoutEngine, runLayoutEngine } from './layout-engines.js';
+import { placeInTime, timeAxis, timedNodes } from '../graph/time-axis.js';
 import {
-  AUTO_LAYOUT_NODE_LIMIT,
-  chooseLayoutEngine,
   LAYOUT_DEFAULTS,
-  LAYOUT_ENGINES,
-  placeInTime,
-  runLayoutEngine,
-  timeAxis,
-  timedNodes,
+  LAYOUT_MODES,
+  LAYOUT_TYPES,
   type LayoutEngine,
-} from './layout-engines.js';
+} from '../project-layout.js';
 import { anchorToTime, crowdedBy, offTime, timeAnchor } from './time-anchor.js';
 
-/**
- * Every strategy a project may store: `manual` keeps coordinates as they
- * are, `auto` chooses an engine, and each engine can be asked for by name.
- * The project type, its validator and the studio's menu all read this list.
- */
-export const LAYOUT_TYPES = ['manual', 'auto', ...LAYOUT_ENGINES] as const;
-export type LayoutType = (typeof LAYOUT_TYPES)[number];
-/** What a strategy may do with the coordinates that already exist. */
-export const LAYOUT_MODES = ['preserve', 'missing', 'rearrange'] as const;
-export type LayoutMode = (typeof LAYOUT_MODES)[number];
 export type LayoutSettings = NonNullable<ProjectConfig['layout']>;
 export const DEFAULT_LAYOUT_SETTINGS: LayoutSettings = {
   type: 'manual',

@@ -6,13 +6,9 @@ import mindmap from '../examples/reading-club-mindmap-synthetic.graph.json' with
 import flowchart from '../examples/order-flowchart-synthetic.graph.json' with { type: 'json' };
 import { loadDocument } from '../packages/core/src/director/load.ts';
 import { DIAGRAM_ENGINE, layoutGraph } from '../packages/core/src/director/layout.ts';
-import {
-  diagramStructure,
-  keepsTime,
-  placeInTime,
-  runLayoutEngine,
-  timeAxis,
-} from '../packages/core/src/director/layout-engines.ts';
+import { runLayoutEngine } from '../packages/core/src/director/layout-engines.ts';
+import { diagramStructure } from '../packages/core/src/graph/analysis.ts';
+import { keepsTime, placeInTime, timeAxis } from '../packages/core/src/graph/time-axis.ts';
 import {
   computeLayout,
   DEFAULT_LAYOUT_SETTINGS,

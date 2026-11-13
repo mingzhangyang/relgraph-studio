@@ -5,7 +5,7 @@ import biology from '../examples/biology-signaling-synthetic.json' with { type: 
 import { applyGraphPositions } from '../packages/core/src/director/position-writeback.ts';
 import { loadDocument } from '../packages/core/src/director/load.ts';
 import { layoutGraph } from '../packages/core/src/director/layout.ts';
-import { LAYOUT_MODES, LAYOUT_TYPES } from '../packages/core/src/director/layout-strategies.ts';
+import { LAYOUT_MODES, LAYOUT_TYPES } from '../packages/core/src/project-layout.ts';
 import { DEFAULT_FRAME_SPEC } from '../packages/render/src/frame-spec.ts';
 import { domainStyle } from '../packages/core/src/style.ts';
 import {

@@ -86,6 +86,15 @@ from text. Layout computation never runs inside a frame evaluator. A transient
 preview is applied explicitly, with document serial validation; saved coordinates
 are then the authoritative input to playback and both rendering backends.
 
+Dependencies inside `packages/core/src` point inward. Graph analysis
+(components, clusters, strongly connected components, the tree a part reads as,
+flow ranks and `diagramStructure`) lives in `graph/analysis.ts`; the time-axis
+model (`timeAxis`, `placeInTime`, `keepsTime`, lane geometry) in
+`graph/time-axis.ts`; the stored strategy, mode and engine names and
+`LAYOUT_DEFAULTS` in `project-layout.ts`, beside the project types. Adapters,
+styles, the project validator and the engines import these; none of them imports
+`director/layout-engines.ts` or `director/layout-strategies.ts`.
+
 `ProjectHistory` owns immutable sparse configuration snapshots. The coordinator
 routes style/copy, manual drag/numeric positions, locks and applied layouts through
 that history. Preview cancellation is separate from history. Document loads clear

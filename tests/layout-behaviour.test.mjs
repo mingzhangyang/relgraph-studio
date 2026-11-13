@@ -12,20 +12,19 @@ import literature from '../examples/honglou-provisional.relgraph.json' with { ty
 import { loadDocument } from '../packages/core/src/director/load.ts';
 import { validateGenericDocument } from '../packages/core/src/domains/generic.ts';
 import { layoutGraph, structuralLayout } from '../packages/core/src/director/layout.ts';
-import { LAYOUT_DEFAULTS, autoLayout } from '../packages/core/src/director/layout-engines.ts';
+import { autoLayout, runLayoutEngine } from '../packages/core/src/director/layout-engines.ts';
 import {
   computeLayout,
   DEFAULT_LAYOUT_SETTINGS,
-  LAYOUT_TYPES,
   planLayout,
 } from '../packages/core/src/director/layout-strategies.ts';
+import { LAYOUT_DEFAULTS, LAYOUT_TYPES } from '../packages/core/src/project-layout.ts';
 import {
   keepsTime,
   placeInTime,
-  runLayoutEngine,
   timeAxis,
   TIME_TOLERANCE,
-} from '../packages/core/src/director/layout-engines.ts';
+} from '../packages/core/src/graph/time-axis.ts';
 import {
   anchoredPoint,
   anchorToTime,

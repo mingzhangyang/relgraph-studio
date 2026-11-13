@@ -5,15 +5,13 @@ import {
   AUTO_LAYOUT_NODE_LIMIT,
   autoLayout,
   chooseLayoutEngine,
-  LAYOUT_ENGINES,
   runLayoutEngine,
 } from '../packages/core/src/director/layout-engines.ts';
 import {
   computeLayout,
   DEFAULT_LAYOUT_SETTINGS,
-  LAYOUT_MODES,
-  LAYOUT_TYPES,
 } from '../packages/core/src/director/layout-strategies.ts';
+import { LAYOUT_ENGINES, LAYOUT_MODES, LAYOUT_TYPES } from '../packages/core/src/project-layout.ts';
 import { layoutGraph, structuralLayout } from '../packages/core/src/director/layout.ts';
 import { loadDocument } from '../packages/core/src/director/load.ts';
 import { validateProjectConfig } from '../packages/core/src/project.ts';
