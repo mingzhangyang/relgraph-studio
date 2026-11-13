@@ -44,7 +44,12 @@ export function autoStoryboard(
     transitionMs: 900,
   });
   if ([...nodes, ...edges].some((item) => item.visibility))
-    return timedStoryboard(graph, summaries, { titles: 'time', follow: false, closing: false });
+    return timedStoryboard(graph, summaries, {
+      track: 'domain',
+      titles: 'time',
+      follow: false,
+      closing: false,
+    });
   const scenes: VisualScene[] = [overview('auto-overview', 5, graph.meta.description)];
   if (groups.length >= 2 && groups.length <= 6 && nodes.length > groups.length)
     for (const group of groups) {
@@ -92,16 +97,34 @@ export function autoStoryboard(
 }
 
 /**
- * One shot per step of domain time, each showing what has just arrived. Used
- * for graphs with timed facts, for timelines, and for diagrams that unfold
- * level by level.
+ * When an object arrives on the track a storyboard walks: its first
+ * appearance in domain time (`visibility`), or its step in an unfolding
+ * (`revealStep`).
+ */
+type Track = 'domain' | 'reveal';
+const arrival = (
+  item: { visibility?: { from?: number; to?: number }; revealStep?: number },
+  track: Track,
+): { from?: number; to?: number } | undefined =>
+  track === 'domain'
+    ? item.visibility
+    : item.revealStep === undefined
+      ? undefined
+      : { from: item.revealStep };
+
+/**
+ * One shot per step of a track, each showing what has just arrived: steps of
+ * domain time for graphs with timed facts and for timelines (each shot sets
+ * `domainAt`), steps of reveal order for diagrams that unfold level by level
+ * (each shot sets `revealStep`).
  */
 function timedStoryboard(
   graph: Pick<VisualGraph, 'meta' | 'nodes' | 'edges' | 'timeline'>,
   summaries: ReadonlyMap<string, string>,
-  options: { titles: 'time' | 'labels'; follow: boolean; closing: boolean },
+  options: { track: Track; titles: 'time' | 'labels'; follow: boolean; closing: boolean },
 ): VisualScene[] {
-  const { nodes, edges } = graph;
+  const { nodes, edges } = graph,
+    on = (item: (typeof nodes)[number] | (typeof edges)[number]) => arrival(item, options.track);
   // Principals first; peers in the order the author wrote them.
   const written = new Map(nodes.map((n, i) => [n.id, i]));
   const byImportance = [...nodes].sort(
@@ -110,7 +133,7 @@ function timedStoryboard(
   const times = [
     ...new Set(
       [...nodes, ...edges]
-        .flatMap((item) => [item.visibility?.from, item.visibility?.to])
+        .flatMap((item) => [on(item)?.from, on(item)?.to])
         .filter((value): value is number => value !== undefined),
     ),
   ].sort((a, b) => a - b);
@@ -121,12 +144,12 @@ function timedStoryboard(
       : Array.from({ length: 12 }, (_, i) => times[Math.round((i * (times.length - 1)) / 11)]);
   const scenes = steps.map((at, index): VisualScene => {
     const since = index ? steps[index - 1] : -Infinity;
-    const fresh = (item: { visibility?: { from?: number } }): boolean =>
-      item.visibility?.from !== undefined &&
-      item.visibility.from > since &&
-      item.visibility.from <= at;
+    const fresh = (item: (typeof nodes)[number] | (typeof edges)[number]): boolean => {
+      const from = on(item)?.from;
+      return from !== undefined && from > since && from <= at;
+    };
     // Untimed nodes have been there from the start.
-    const arriving = byImportance.filter((n) => fresh(n) || (!index && !n.visibility)),
+    const arriving = byImportance.filter((n) => fresh(n) || (!index && !on(n))),
       labels = arriving.map((n) => n.label),
       told = arriving.map((n) => summaries.get(n.id)).find(Boolean);
     const title =
@@ -141,7 +164,7 @@ function timedStoryboard(
           ? joinLabels(labels, 6)
           : undefined
         : (told ?? (labels.length > 3 ? joinLabels(labels.slice(3), 6) : undefined));
-    const visible = nodes.filter((n) => (n.visibility?.from ?? -Infinity) <= at);
+    const visible = nodes.filter((n) => (on(n)?.from ?? -Infinity) <= at);
     // Light what is new, once there is something older to set it against.
     const highlight =
       index && arriving.length && arriving.length < visible.length
@@ -163,7 +186,7 @@ function timedStoryboard(
       ...(narration ? { narration } : {}),
       durationSec: index === steps.length - 1 && !options.closing ? 4 : 3,
       transitionMs: 900,
-      domainAt: at,
+      ...(options.track === 'domain' ? { domainAt: at } : { revealStep: at }),
       ...(highlight ? { highlight } : {}),
       ...(company.length > 1 && company.length < visible.length
         ? { camera: { fitIds: company.map((n) => n.id) } }
@@ -217,18 +240,19 @@ export function shapeDiagram(
         const level = structure.level.get(id) ?? 0;
         return 1 + (deepest > 11 ? Math.floor((level * 11) / deepest) : level);
       };
-    for (const node of nodes) node.visibility = { from: step(node.id) };
-    for (const edge of edges)
-      edge.visibility = { from: Math.max(step(edge.source), step(edge.target)) };
-    // The steps are reveal order, not time: no frame may present them as a date.
-    graph.timeline = { unit: '', ordinal: true };
+    // Reveal order is its own track: domain time (`visibility`, `timeline`)
+    // is left as the source wrote it.
+    for (const node of nodes) node.revealStep = step(node.id);
+    for (const edge of edges) edge.revealStep = Math.max(step(edge.source), step(edge.target));
     graph.scenes = timedStoryboard(graph, summaries, {
+      track: 'reveal',
       titles: 'labels',
       follow: false,
       closing: true,
     });
   } else if (timed)
     graph.scenes = timedStoryboard(graph, summaries, {
+      track: 'domain',
       titles: 'time',
       follow: diagram === 'timeline',
       closing: true,

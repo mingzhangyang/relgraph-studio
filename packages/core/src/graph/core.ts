@@ -122,6 +122,10 @@ export function validateVisualGraph(graph: unknown): { valid: boolean; errors: G
         'Provide finite from <= to, or omit it.',
       );
   }
+  function step(v: unknown, path: string, id: unknown): void {
+    if (v !== undefined && !finite(v))
+      fail('REVEAL_STEP', path, id, 'Invalid reveal step', 'Use a finite step, or omit it.');
+  }
   collections.nodes.forEach((n, i) => {
     if (!object(n) || !n.id) return;
     if (typeof n.label !== 'string' || !n.label.trim())
@@ -158,6 +162,7 @@ export function validateVisualGraph(graph: unknown): { valid: boolean; errors: G
         'Use finite numbers.',
       );
     interval(n.visibility, 'nodes[' + i + '].visibility', n.id);
+    step(n.revealStep, 'nodes[' + i + '].revealStep', n.id);
   });
   collections.groups.forEach((g, i) => {
     if (!object(g) || !g.id) return;
@@ -197,6 +202,7 @@ export function validateVisualGraph(graph: unknown): { valid: boolean; errors: G
         'Reference existing node ids.',
       );
     interval(e.visibility, 'edges[' + i + '].visibility', e.id);
+    step(e.revealStep, 'edges[' + i + '].revealStep', e.id);
   });
   collections.scenes.forEach((s, i) => {
     if (!object(s) || !s.id) return;
@@ -227,6 +233,7 @@ export function validateVisualGraph(graph: unknown): { valid: boolean; errors: G
         'Invalid domain time',
         'Use finite domain time, separate from playback seconds.',
       );
+    step(s.revealStep, path + '.revealStep', s.id);
     if (s.camera !== undefined && !object(s.camera))
       fail(
         'SCENE_OBJECT_TYPE',
@@ -307,20 +314,30 @@ export function validateVisualGraph(graph: unknown): { valid: boolean; errors: G
   return { valid: errors.length === 0, errors };
 }
 
-const shown = (v: VisualNode | VisualEdge, at: number | null | undefined): boolean =>
-  at === null ||
-  at === undefined ||
-  ((v.visibility?.from ?? -Infinity) <= at && (v.visibility?.to ?? Infinity) >= at);
+const shown = (
+  v: VisualNode | VisualEdge,
+  at: number | null | undefined,
+  step: number | null | undefined,
+): boolean =>
+  (at === null ||
+    at === undefined ||
+    ((v.visibility?.from ?? -Infinity) <= at && (v.visibility?.to ?? Infinity) >= at)) &&
+  (step === null || step === undefined || (v.revealStep ?? -Infinity) <= step);
 
-/** Hidden groups and edges never leak future plot nodes. Does not mutate source. */
+/**
+ * The objects present at `domainAt` (domain time) and `revealStep` (how far an
+ * unfolding has gone): both must admit an object, and null admits everything.
+ * Hidden groups and edges never leak future plot nodes. Does not mutate source.
+ */
 export function projectVisualGraph(
   graph: VisualGraph,
   domainAt: number | null = null,
+  revealStep: number | null = null,
 ): ProjectedVisualGraph {
-  const nodes = graph.nodes.filter((n) => shown(n, domainAt)),
+  const nodes = graph.nodes.filter((n) => shown(n, domainAt, revealStep)),
     ids = new Set(nodes.map((n) => n.id));
   const edges = graph.edges.filter(
-    (e) => ids.has(e.source) && ids.has(e.target) && shown(e, domainAt),
+    (e) => ids.has(e.source) && ids.has(e.target) && shown(e, domainAt, revealStep),
   );
   const used = new Set(nodes.map((n) => n.groupId).filter(Boolean));
   return {
@@ -353,15 +370,18 @@ export function sceneAtSecond(graph: VisualGraph, second: number): ScenePlayback
       elapsedSec: 0,
       progress: 0,
       domainAt: null,
+      revealStep: null,
       totalSec: 0,
       startSec: 0,
     };
   const time = Math.max(0, Math.min(finite(second) ? second : 0, totalSec));
   let start = 0,
-    domainAt: number | null = null;
+    domainAt: number | null = null,
+    revealStep: number | null = null;
   for (let i = 0; i < scenes.length; i++) {
     const s = scenes[i];
     if (s.domainAt !== undefined) domainAt = s.domainAt;
+    if (s.revealStep !== undefined) revealStep = s.revealStep;
     const end = ends[i];
     // Decimal arithmetic can represent the 0.3s boundary as 0.30000000000000004.
     const tolerance = 8 * Number.EPSILON * Math.max(1, Math.abs(time), Math.abs(end));
@@ -373,6 +393,7 @@ export function sceneAtSecond(graph: VisualGraph, second: number): ScenePlayback
         elapsedSec,
         progress: Math.max(0, Math.min(1, elapsedSec / s.durationSec)),
         domainAt,
+        revealStep,
         totalSec,
         startSec: start,
       };
@@ -397,8 +418,9 @@ export function projectFrameScene(
   source: VisualScene | null,
   index: number,
   domainAt: number | null,
+  revealStep: number | null = null,
 ): Omit<FrameState, 'playback'> & { scene: FrameScene | null } {
-  const view = projectVisualGraph(graph, domainAt);
+  const view = projectVisualGraph(graph, domainAt, revealStep);
   const s = source;
   if (!s)
     return {
@@ -443,6 +465,7 @@ export function projectFrameScene(
     durationSec: s.durationSec,
     transitionMs: s.transitionMs,
     domainAt: s.domainAt,
+    ...(s.revealStep === undefined ? {} : { revealStep: s.revealStep }),
     camera,
     highlight,
     redacted: hiddenTarget,
@@ -459,6 +482,7 @@ export function frameStateAtSecond(graph: VisualGraph, second: number): FrameSta
     playback.scene,
     playback.index,
     playback.domainAt,
+    playback.revealStep,
   );
   return { ...projected, playback: { ...playback, scene } };
 }

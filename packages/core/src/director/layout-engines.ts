@@ -7,7 +7,6 @@
  * randomness is a seeded hash of node ids, and iteration counts are bounded.
  * Engines compose films for a wide stage, so they prefer landscape results.
  */
-import type { VisualNode } from '../../types/visual-graph.js';
 import {
   centreOf,
   clustersOf,
@@ -23,7 +22,7 @@ import {
   type Prepared,
   type Tree,
 } from '../graph/analysis.js';
-import { TIMELINE_GAP, TIMELINE_LANE, timeAxis, timedNodes } from '../graph/time-axis.js';
+import { TIMELINE_GAP, TIMELINE_LANE, timeAxis } from '../graph/time-axis.js';
 import { LAYOUT_DEFAULTS, type LayoutEngine } from '../project-layout.js';
 
 export type EnginePoint = { x: number; y: number };
@@ -922,9 +921,6 @@ export function runLayoutEngine(
   engine: LayoutEngine,
   options: EngineOptions,
 ): Map<string, EnginePoint> {
-  // Reveal steps are not dates: an unfolding drawn on a timeline has no axis.
-  if (engine === 'timeline' && graph.timeline?.ordinal)
-    graph = { nodes: timedNodes(graph) as VisualNode[], edges: graph.edges };
   const p = prepare(graph);
   const result =
     engine === 'force'

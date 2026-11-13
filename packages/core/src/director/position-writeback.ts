@@ -100,8 +100,8 @@ export function applyGraphPositions(
       changed++;
     }
     // Source metadata, not optional caller metadata: the nodes-only API must
-    // write the same lanes as a full graph. Generic sources have no ordinal
-    // reveal-time flag; their authored spans/visibility are domain dates.
+    // write the same lanes as a full graph. Authored spans and visibility are
+    // domain dates; reveal order is a separate field the source never holds.
     const keepsTime = sourceKeepsTime(document);
     const laned = lanedNodes(
       { nodes: graph.nodes, diagram: keepsTime ? 'timeline' : undefined },

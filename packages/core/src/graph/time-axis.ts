@@ -50,24 +50,6 @@ export function timeAxis(nodes: readonly VisualNode[]): TimeAxis | null {
 }
 
 /**
- * The nodes as the time axis sees them. The reveal steps of an unfolding tree,
- * mind map or flowchart (`timeline.ordinal`) count order, not time, so only
- * spans are dates there.
- */
-export function timedNodes<N extends Pick<VisualNode, 'visibility'>>(graph: {
-  nodes: readonly N[];
-  timeline?: { ordinal?: boolean };
-}): readonly N[] {
-  if (!graph.timeline?.ordinal) return graph.nodes;
-  return graph.nodes.map((node) => {
-    if (!node.visibility) return node;
-    const copy = { ...node };
-    delete copy.visibility;
-    return copy;
-  });
-}
-
-/**
  * Where a dated node sits along the axis: the middle of its span, or its
  * first appearance when that is all it has. A node without a time has no
  * place on the axis.

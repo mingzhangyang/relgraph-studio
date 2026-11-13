@@ -3,7 +3,7 @@ import type { ProjectConfig } from '../project.js';
 import { layoutMissingNodes, roundPositionCoordinate, type LayoutPoint } from './seeded-layout.js';
 import { DIAGRAM_ENGINE, layoutGraph } from './layout.js';
 import { AUTO_LAYOUT_NODE_LIMIT, chooseLayoutEngine, runLayoutEngine } from './layout-engines.js';
-import { placeInTime, timeAxis, timedNodes } from '../graph/time-axis.js';
+import { placeInTime, timeAxis } from '../graph/time-axis.js';
 import {
   LAYOUT_DEFAULTS,
   LAYOUT_MODES,
@@ -144,7 +144,7 @@ export function planLayout(
           ? 'size'
           : 'structure';
   // The timeline engine draws a tree when nothing has a date; say so.
-  if (engine === 'timeline' && !timeAxis(timedNodes(graph))) {
+  if (engine === 'timeline' && !timeAxis(graph.nodes)) {
     engine = 'tree';
     reason = 'untimed';
   }
@@ -156,14 +156,14 @@ export function planLayout(
     // Preferred spacing belongs to the solver, never to authored coordinates.
     result = extreme
       ? layoutMissingNodes({ nodes, edges: graph.edges }, { seed, iterations, spacing })
-      : runLayoutEngine({ nodes, edges: graph.edges, timeline: graph.timeline }, 'force', {
+      : runLayoutEngine({ nodes, edges: graph.edges }, 'force', {
           seed,
           iterations,
           spacing,
           fixed: anchors,
         });
   } else
-    result = runLayoutEngine({ nodes, edges: graph.edges, timeline: graph.timeline }, engine, {
+    result = runLayoutEngine({ nodes, edges: graph.edges }, engine, {
       seed,
       iterations,
       spacing,
@@ -174,11 +174,7 @@ export function planLayout(
   if (engine !== 'force' && anchors.size) {
     const occupied = [...anchors.values()];
     const dated = new Set(
-      axis
-        ? timedNodes(graph)
-            .filter((n) => placeInTime(n, axis) !== null)
-            .map((n) => n.id)
-        : [],
+      axis ? graph.nodes.filter((n) => placeInTime(n, axis) !== null).map((n) => n.id) : [],
     );
     for (const id of [...result.keys()].sort(compare)) {
       // On the time axis a dated node changes lane, never its years (below).

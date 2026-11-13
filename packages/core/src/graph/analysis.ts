@@ -10,9 +10,7 @@
  */
 import type { VisualGraph } from '../../types/visual-graph.js';
 
-export type LayoutGraph = Pick<VisualGraph, 'nodes' | 'edges'> & {
-  timeline?: Pick<NonNullable<VisualGraph['timeline']>, 'ordinal'>;
-};
+export type LayoutGraph = Pick<VisualGraph, 'nodes' | 'edges'>;
 /** A node's place in time; `point` when it only has a first appearance. */
 export type Span = { from: number; to?: number; point: boolean };
 

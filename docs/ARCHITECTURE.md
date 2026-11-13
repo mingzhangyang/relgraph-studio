@@ -95,6 +95,19 @@ model (`timeAxis`, `placeInTime`, `keepsTime`, lane geometry) in
 styles, the project validator and the engines import these; none of them imports
 `director/layout-engines.ts` or `director/layout-strategies.ts`.
 
+The generic adapter is three modules: `domains/generic-source.ts` parses and
+validates a source one section at a time; `domains/generic.ts` adapts it, and
+`inspectGenericDocument` lets `loadDocument` validate and adapt with one parse;
+`director/storyboard.ts` derives storyboards, hierarchy and unfolding for any
+`VisualGraph`.
+
+Reveal order and domain time are separate tracks. Domain time is
+`visibility` on nodes and relations and `domainAt` on shots; an unfolding is
+`revealStep` on both. A compiled timeline keeps one keyframe track for each
+(`domainTime`, `revealSteps`), every shot inherits each value on its own, and
+the projection admits an object only when both admit it. Only domain time is
+ever shown as a date or makes a time axis.
+
 `ProjectHistory` owns immutable sparse configuration snapshots. The coordinator
 routes style/copy, manual drag/numeric positions, locks and applied layouts through
 that history. Preview cancellation is separate from history. Document loads clear

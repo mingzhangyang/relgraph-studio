@@ -263,11 +263,13 @@ test('F4: the plan names the engine that actually ran, and why', () => {
 test('F5: a derived unfolding shows no domain time; real domain time still shows', () => {
   for (const [name, source] of Object.entries({ tree, mindmap, flowchart })) {
     const graph = load(source);
-    assert.equal(graph.timeline?.ordinal, true, name);
+    // S3: the unfolding has its own track; nothing borrows domain time.
+    assert.equal(graph.timeline, undefined, name);
     assert.ok(
-      graph.nodes.some((n) => n.visibility?.from > 1),
+      graph.nodes.some((n) => n.revealStep > 1),
       `${name} unfolds`,
     );
+    assert.ok(!graph.nodes.some((n) => n.visibility), name);
     for (let frame = 0; frame < frameCount(graph); frame += 24) {
       const list = compose(graph, layoutGraph(graph), frame);
       assert.equal(list.a11y.domainTime, '', `${name} frame ${frame}`);
@@ -275,7 +277,16 @@ test('F5: a derived unfolding shows no domain time; real domain time still shows
     }
   }
   const timed = load(dynasties);
-  assert.equal(timed.timeline?.ordinal, undefined);
+  assert.ok(!timed.nodes.some((n) => n.revealStep !== undefined));
+  // S3: an unfolding that also carries real dates shows them; the steps stay hidden.
+  const both = structuredClone(load(tree));
+  both.timeline = { unit: 'YEAR' };
+  both.scenes = both.scenes.map((scene, i) => ({ ...scene, domainAt: 1000 + i }));
+  for (let frame = 0; frame < frameCount(both); frame += 24) {
+    const list = compose(both, layoutGraph(both), frame);
+    assert.match(list.a11y.domainTime, /^YEAR 10\d\d$/, `frame ${frame}`);
+    assert.ok(!texts(list).some((t) => /STEP/.test(t)), `frame ${frame}`);
+  }
   assert.match(compose(timed).a11y.domainTime, /^公元 -?\d+$/);
 });
 
@@ -451,7 +462,7 @@ test('#40 item 6: relgraph layout puts a new dated node at its years, in a free 
 
 test('#40 item 7: the reveal steps of an unfolding are not dates', () => {
   const graph = load(tree);
-  assert.equal(graph.timeline?.ordinal, true);
+  assert.ok(graph.nodes.every((n) => n.revealStep !== undefined && !n.visibility));
   const plan = planLayout(graph, rearrange('timeline'), layoutGraph(graph));
   assert.deepEqual([plan.engine, plan.reason], ['tree', 'untimed']);
   assert.deepEqual(
@@ -635,7 +646,7 @@ test('F6 review: the nodes-only writer API uses the source diagram and state', (
   for (const supplied of [
     { nodes: graph.nodes },
     { ...graph, diagram: 'network' },
-    { ...graph, timeline: { unit: '', ordinal: true } },
+    { ...graph, nodes: graph.nodes.map((n, i) => ({ ...n, revealStep: i })) },
   ]) {
     const written = applyGraphPositions(dynasties, supplied, positions).document;
     for (const node of written.nodes) assert.deepEqual(Object.keys(node.position), ['y']);

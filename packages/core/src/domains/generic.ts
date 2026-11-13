@@ -12,7 +12,7 @@
  * `director/storyboard.ts`.
  */
 import { validateVisualGraph } from '../graph/core.js';
-import { placeInTime, TIME_TOLERANCE, timeAxis as axisOf, timedNodes } from '../graph/time-axis.js';
+import { placeInTime, TIME_TOLERANCE, timeAxis as axisOf } from '../graph/time-axis.js';
 import { autoStoryboard, shapeDiagram } from '../director/storyboard.js';
 import {
   parseGenericSource,
@@ -92,7 +92,7 @@ function adaptParsed(parsed: ParsedGenericSource, warnings: GenericDiagnostic[])
   // A timeline keeps time unless it says otherwise: authored x that is not a
   // node's place in time is redrawn there, and the author is told how to keep it.
   if (graph.diagram === 'timeline' && graph.timeAxis !== false) {
-    const nodes = timedNodes(graph),
+    const nodes = graph.nodes,
       axis = axisOf(nodes);
     const off = axis
       ? nodes.filter((node) => {

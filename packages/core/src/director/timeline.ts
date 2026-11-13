@@ -43,6 +43,8 @@ export interface CompiledShot {
   startSec: number;
   endSec: number;
   domainAt: number | null;
+  /** The unfolding step in effect; null when no shot has set one. */
+  revealStep: number | null;
   /** Includes redacted scene prose; never includes unprojected object references. */
   scene: FrameScene;
   view: ProjectedVisualGraph;
@@ -55,6 +57,11 @@ export interface FilmTimeline {
   camera: CameraKeyframe[];
   highlight: Keyframe<ResolvedHighlight>[];
   domainTime: Keyframe<number | null>[];
+  /**
+   * How far an unfolding has gone at each shot: reveal order, its own track
+   * beside domain time, never shown as a date.
+   */
+  revealSteps: Keyframe<number | null>[];
   reveal: RevealCue[];
   captions: CaptionCue[];
   /** Pre-projected, safe shot payloads; no source scenes are retained. */
@@ -81,12 +88,14 @@ export function compileTimeline(graph: VisualGraph, fps = 24): FilmTimeline {
   const camera: CameraKeyframe[] = [];
   const highlight: Keyframe<ResolvedHighlight>[] = [];
   const domainTime: Keyframe<number | null>[] = [];
+  const revealSteps: Keyframe<number | null>[] = [];
   const reveal: RevealCue[] = [];
   const captions: CaptionCue[] = [];
   const shots: CompiledShot[] = [];
   let startSec = 0;
   let correction = 0;
   let inheritedDomainAt: number | null = null;
+  let inheritedRevealStep: number | null = null;
   let previousNodes = new Set<string>();
   let previousEdges = new Set<string>();
 
@@ -96,15 +105,17 @@ export function compileTimeline(graph: VisualGraph, fps = 24): FilmTimeline {
     const endSec = startSec + adjusted;
     correction = endSec - startSec - adjusted;
     if (source.domainAt !== undefined) inheritedDomainAt = source.domainAt;
+    if (source.revealStep !== undefined) inheritedRevealStep = source.revealStep;
     // This shot and its inherited domain time are already known; do not call
     // sceneAtSecond for each shot (it would rebuild the full prefix sums).
-    const state = projectFrameScene(graph, source, index, inheritedDomainAt);
+    const state = projectFrameScene(graph, source, index, inheritedDomainAt, inheritedRevealStep);
     const scene = state.scene;
     if (!scene) throw new Error('Unable to compile a presentation shot');
     const shot: CompiledShot = {
       startSec,
       endSec,
       domainAt: inheritedDomainAt,
+      revealStep: inheritedRevealStep,
       scene,
       view: state.view,
       overlay: state.overlay,
@@ -118,6 +129,7 @@ export function compileTimeline(graph: VisualGraph, fps = 24): FilmTimeline {
     });
     highlight.push({ atSec: startSec, value: state.highlight, ease: 'smooth' });
     domainTime.push({ atSec: startSec, value: shot.domainAt, ease: 'hold' });
+    revealSteps.push({ atSec: startSec, value: shot.revealStep, ease: 'hold' });
     // Count actual frame-grid samples in the half-open shot, rather than
     // rounding its duration: a fractional start can leave just one sample.
     // With no second sample to complete a fade, display the caption in full.
@@ -183,6 +195,7 @@ export function compileTimeline(graph: VisualGraph, fps = 24): FilmTimeline {
     camera,
     highlight,
     domainTime,
+    revealSteps,
     reveal,
     captions,
     shots,
@@ -202,6 +215,7 @@ export function timelinePlaybackAt(
       elapsedSec: 0,
       progress: 0,
       domainAt: null,
+      revealStep: null,
       totalSec: 0,
       startSec: 0,
     };
@@ -216,6 +230,7 @@ export function timelinePlaybackAt(
         elapsedSec,
         progress: clamp(elapsedSec / shot.scene.durationSec),
         domainAt: timeline.domainTime[index].value,
+        revealStep: timeline.revealSteps[index].value,
         totalSec: durationSec,
         startSec: shot.startSec,
       };
