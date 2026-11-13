@@ -400,6 +400,15 @@ in the file.
   `682dbbd`; the item 6 CLI case now expects a lane-only position.
 - Golden frames are unaffected: no example stores timeline coordinates.
 
+Validation, run locally on linux-x64, Node 22.23.4: `npm run typecheck`,
+`npm run check:types`, `npm run lint`, `npm run format:check` passed and
+`npm test` 395 tests in 36 files passed, on the tree of `a8c2a80`;
+`npm run check:export` 31/31 passed with the 236 golden frames matching (no
+`--update`) and `npm run check:browser` 76/76 passed (no local baseline, so
+the two baseline comparisons did not run), on the sources of `e29cc70`,
+which `a8c2a80` changes only by a test. No GitHub Actions workflow was added,
+dispatched or rerun.
+
 ### PR 2 · as implemented
 
 - **P1** · `composeFrame` no longer scans the whole view per item.
