@@ -1,5 +1,6 @@
 import type { VisualGraph } from '../../types/visual-graph.js';
 import { GENERIC_FORMAT, internalIds } from '../domains/generic.js';
+import { lanedNodes } from './time-anchor.js';
 
 // Node 20+ and modern browsers provide this host API. Keep its declaration
 // local so the ES-only core build needs neither DOM nor Node ambient types.
@@ -21,10 +22,16 @@ const record = (value: unknown): value is RecordValue =>
  * (`timeAnchor`), so that a drawing taken off the axis stays off it when the
  * file is read again: false writes `"timeAxis": false`, true removes it.
  * Only the generic format has timelines; omitted, the field is left as is.
+ *
+ * On a timeline that keeps time (`timeAxis`, or when omitted the state the
+ * graph declares), a dated node's x is its date, so only its lane is written:
+ * `"position": { "y": … }`. The adapter derives x again on load, so an edited
+ * date or a rescaled axis cannot leave a stale x in the file.
  */
 export function applyGraphPositions(
   input: unknown,
-  graph: Pick<VisualGraph, 'nodes'>,
+  graph: Pick<VisualGraph, 'nodes'> &
+    Partial<Pick<VisualGraph, 'diagram' | 'project' | 'timeAxis' | 'timeline'>>,
   positions: ReadonlyMap<string, Point>,
   { onlyMissing = false, timeAxis }: { onlyMissing?: boolean; timeAxis?: boolean } = {},
 ): { document: unknown; changed: number } {
@@ -77,6 +84,7 @@ export function applyGraphPositions(
           }
         }
     const ids = internalIds([...present].filter((id): id is string => id !== null));
+    const laned = timeAxis === undefined ? lanedNodes(graph) : lanedNodes(graph, timeAxis);
     for (const entry of entries) {
       const raw = author(entry.id),
         id = raw === null ? undefined : ids.get(raw);
@@ -86,9 +94,21 @@ export function applyGraphPositions(
       const point = positions.get(id);
       if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y))
         throw new TypeError('No finite position for ' + String(entry.id));
-      if (record(entry.position) && entry.position.x === point.x && entry.position.y === point.y)
+      if (laned.has(id)) {
+        if (
+          record(entry.position) &&
+          entry.position.x === undefined &&
+          entry.position.y === point.y
+        )
+          continue;
+        entry.position = { y: point.y };
+      } else if (
+        record(entry.position) &&
+        entry.position.x === point.x &&
+        entry.position.y === point.y
+      )
         continue;
-      entry.position = { x: point.x, y: point.y };
+      else entry.position = { x: point.x, y: point.y };
       changed++;
     }
     document.nodes = entries;

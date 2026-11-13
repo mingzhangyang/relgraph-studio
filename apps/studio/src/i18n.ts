@@ -171,8 +171,8 @@ const english: Record<string, string> = {
   '。请先解锁它们，再重置。': '. Unlock them first, then reset.',
   '预览可能卡顿，导出的影片不受影响；如需流畅预览，请先筛选或聚合数据。':
     'The preview may stutter; exported films are not affected. For a smooth preview, filter or aggregate the data first.',
-  '如需保留这些横坐标并不显示时间轴，请设置 "timeAxis": false。':
-    'To keep these x coordinates and draw no time axis, set "timeAxis": false.',
+  '带日期节点的横坐标由日期决定：删除其 x，只保留 y（重新导出带坐标的数据会这样写）；如需保留这些横坐标并不显示时间轴，请设置 "timeAxis": false。':
+    'A dated node\'s x is set by its date: remove the x and keep only y (re-exporting the positioned data writes it that way). To keep these x coordinates and draw no time axis, set "timeAxis": false.',
   '（保留现有坐标）': ' (existing coordinates kept)',
   '（按图的类型）': ' (follows the diagram kind)',
   '（按图的结构）': ' (chosen from the graph structure)',
@@ -407,6 +407,9 @@ const english: Record<string, string> = {
   '填写分组 id，或删除该字段。': 'Enter a group id, or remove the field.',
   '坐标无效。': 'Invalid coordinates.',
   '使用 { "x": 数字, "y": 数字 }。': 'Use { "x": number, "y": number }.',
+  '只有在时间轴上的带日期节点可以省略 x。':
+    'Only a dated node on a timeline that keeps time may leave out x.',
+  '补充 x，使用 { "x": 数字, "y": 数字 }。': 'Add x: use { "x": number, "y": number }.',
   '权重不能为负。': 'Weight cannot be negative.',
   '使用非负数。': 'Use a non-negative number.',
   'end 需要同时提供 start。': 'end requires start.',

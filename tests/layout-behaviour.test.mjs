@@ -425,9 +425,11 @@ test('#40 item 6: relgraph layout puts a new dated node at its years, in a free 
     const written = JSON.parse(await readFile(out, 'utf8')),
       graph = load(written),
       at = layoutGraph(graph);
-    // What the CLI wrote is what the player draws.
+    // What the CLI wrote is what the player draws: the lane, with x from the dates (F6).
     const fresh = written.nodes.find((n) => n.id === '新').position;
-    assert.deepEqual(at.get(byLabel(graph, '新').id), fresh);
+    assert.deepEqual(Object.keys(fresh), ['y']);
+    assert.deepEqual(at.get(byLabel(graph, '新').id), byLabel(graph, '新').position);
+    assert.equal(at.get(byLabel(graph, '新').id).y, fresh.y);
     inTime(graph, at);
     lanesClear(graph, at);
     // The new lane, if any, is one of the drawing's own lane steps below the others.
@@ -500,4 +502,142 @@ test('#40 re-review: an undated timeline is exported as declared, not as off its
   // A strategy that leaves the axis is still declared off it, dates or not.
   assert.equal(declaresTimeAxis(withLayout(graph, { type: 'grid' })), false);
   assert.equal(declaresTimeAxis({ ...graph, diagram: undefined }), false);
+});
+
+// F6 (re-review of #40, leftover 3): an anchored timeline's x is not authored data.
+/** The dynasties example exported as the studio does: positions and the declared state. */
+const exported = () => {
+  const graph = load(dynasties);
+  return applyGraphPositions(dynasties, graph, layoutGraph(graph), {
+    timeAxis: declaresTimeAxis(graph),
+  }).document;
+};
+const offAxis = (doc) => {
+  const result = loadDocument(doc);
+  assert.equal(result.valid, true, JSON.stringify(result.errors));
+  return result.warnings.filter((w) => w.code === 'OFF_TIME_AXIS');
+};
+
+test('F6: an anchored timeline stores lanes, and a date edit does not read as off the axis', () => {
+  const source = exported();
+  // Only lanes are written for dated nodes; the drawing reads back exactly.
+  for (const node of source.nodes) assert.deepEqual(Object.keys(node.position), ['y'], node.id);
+  const graph = load(dynasties),
+    drawn = layoutGraph(graph),
+    reread = load(source);
+  assert.deepEqual(layoutGraph(reread), drawn);
+  assert.deepEqual(offAxis(source), []);
+  // Exporting again changes nothing.
+  assert.equal(
+    applyGraphPositions(source, reread, layoutGraph(reread), { timeAxis: true }).changed,
+    0,
+  );
+
+  // One end changed: one bar, before F6 one warning.
+  const one = structuredClone(source);
+  one.nodes.find((n) => n.id === '唐').end += 30;
+  // The end of the axis moved: the axis rescales, before F6 all 18 warned.
+  const axisEnd = structuredClone(source);
+  axisEnd.nodes.find((n) => n.id === '清').end += 100;
+  // A dated node added: the axis is wider by one node's share.
+  const added = structuredClone(source);
+  added.nodes.push({ id: '新', kind: '元明清', start: 1300, end: 1400 });
+  for (const doc of [one, axisEnd, added]) {
+    assert.deepEqual(offAxis(doc), []);
+    const g = load(doc),
+      at = layoutGraph(g);
+    inTime(g, at);
+    assert.ok(ticks(compose(g, at)).length > 0);
+    // The lanes are the author's.
+    for (const node of source.nodes)
+      assert.equal(at.get(byLabel(g, node.id).id).y, node.position.y, node.id);
+  }
+});
+
+test('F6: x written by hand, or by an earlier export, is still told apart and can be re-exported', () => {
+  // A file written before F6 stores x as well; after a date edit that x is stale.
+  const graph = load(dynasties),
+    legacy = applyGraphPositions(dynasties, graph, layoutGraph(graph), {
+      timeAxis: false,
+    }).document;
+  delete legacy.timeAxis;
+  assert.deepEqual(offAxis(legacy), []);
+  legacy.nodes.find((n) => n.id === '清').end += 100;
+  const [notice] = offAxis(legacy);
+  assert.match(notice.message, /^18 个带日期的节点横坐标不在其时间上，已按日期绘制。$/);
+  assert.match(notice.fix, /只保留 y/);
+  assert.match(notice.fix, /"timeAxis": false/);
+  // Re-exporting the positioned source keeps the lanes and drops the stale x.
+  const stale = load(legacy),
+    shown = layoutGraph(stale),
+    fixed = applyGraphPositions(legacy, stale, shown, { timeAxis: declaresTimeAxis(stale) });
+  assert.equal(fixed.changed, 18);
+  assert.deepEqual(offAxis(fixed.document), []);
+  assert.deepEqual(layoutGraph(load(fixed.document)), shown);
+});
+
+test('F6: a lane-only position is accepted only for a dated node on a timeline that keeps time', () => {
+  const lane = (doc, id) => {
+    const copy = structuredClone(doc),
+      node = copy.nodes.find((n) => n.id === id);
+    node.position = { y: 40 };
+    return copy;
+  };
+  const errorAt = (doc) => {
+    const result = loadDocument(doc);
+    assert.equal(result.valid, false);
+    const [error] = result.errors;
+    assert.equal(error.code, 'POSITION');
+    assert.match(error.path, /position\.x$/);
+    assert.equal(error.message, '只有在时间轴上的带日期节点可以省略 x。');
+  };
+  // An undated node on a timeline has no x to derive.
+  const undated = structuredClone(dynasties);
+  undated.nodes.push({ id: '无', position: { y: 0 } });
+  errorAt(undated);
+  // A timeline declared off its axis keeps x as written.
+  errorAt({ ...lane(dynasties, '唐'), timeAxis: false });
+  // Other diagram kinds have no axis.
+  const network = lane(dynasties, '唐');
+  delete network.diagram;
+  errorAt(network);
+  // x present but not a number is still invalid, as before.
+  const broken = structuredClone(dynasties);
+  broken.nodes[0].position = { x: null, y: 0 };
+  assert.equal(loadDocument(broken).errors[0].message, '坐标无效。');
+  // One time for every node: there is no axis, and lane-only nodes stand at x 0.
+  const flat = {
+    format: 'relgraph.graph/1',
+    diagram: 'timeline',
+    nodes: [
+      { id: 'a', start: 1900, position: { y: 0 } },
+      { id: 'b', start: 1900, position: { y: 80 } },
+    ],
+    presentation: [{ id: 's', domainAt: 1900 }],
+  };
+  const g = load(flat);
+  assert.deepEqual(
+    g.nodes.map((n) => n.position),
+    [
+      { x: 0, y: 0 },
+      { x: 0, y: 80 },
+    ],
+  );
+});
+
+test('F6: a timeline off its axis, and other formats, still store x', () => {
+  const graph = load(dynasties),
+    grid = computeLayout(graph, rearrange('grid'), layoutGraph(graph));
+  const off = applyGraphPositions(dynasties, graph, grid, { timeAxis: false }).document;
+  for (const node of off.nodes) assert.deepEqual(Object.keys(node.position), ['x', 'y']);
+  // Without the option the graph's declared state decides: the CLI's case.
+  const declared = applyGraphPositions(dynasties, graph, layoutGraph(graph)).document;
+  for (const node of declared.nodes) assert.deepEqual(Object.keys(node.position), ['y']);
+  const left = applyGraphPositions(dynasties, withLayout(graph, { type: 'grid' }), grid).document;
+  for (const node of left.nodes) assert.deepEqual(Object.keys(node.position), ['x', 'y']);
+  for (const doc of [bookshop, tree]) {
+    const g = load(doc),
+      written = applyGraphPositions(doc, g, layoutGraph(g)).document;
+    for (const node of written.nodes) assert.deepEqual(Object.keys(node.position), ['x', 'y']);
+  }
 });

@@ -13,7 +13,10 @@
  * survives a reload and the CLI.
  *
  * While a drawing is anchored, every dated node's x is its place in time and
- * only its lane (y) is stored and edited. A lock holds a dated node's lane;
+ * only its lane (y) is stored and edited: a positioned source writes such a
+ * node as `"position": { "y": … }` (`lanedNodes`) and the adapter derives x
+ * from its dates (`timeCoordinate`), so a date edit or a rescaled axis
+ * leaves no stale x behind. A lock holds a dated node's lane;
  * its x is its date, which is data, not layout. Leaving the anchored state is
  * an explicit act: applying another strategy.
  */
@@ -83,6 +86,34 @@ function pinned(
   // A coordinate already in time stays exactly as authored.
   if (x !== undefined && Math.abs(x - exact) <= TIME_TOLERANCE) return x;
   return roundPositionCoordinate(exact) || 0;
+}
+
+/**
+ * The x a dated node has on `axis`, rounded as stored coordinates are, or
+ * null when it has no date: what a lane-only position (`{ "y": … }`) stands for.
+ */
+export function timeCoordinate(
+  node: Pick<VisualNode, 'span' | 'visibility'>,
+  axis: TimeAxis,
+): number | null {
+  return pinned(node, axis);
+}
+
+/**
+ * The nodes whose stored position is their lane alone: the dated nodes of a
+ * timeline that is `anchored` (by default, as declared) and has an axis. On
+ * such a drawing x is derived from the dates, so it is not authored data.
+ */
+export function lanedNodes(
+  graph: AnchorGraph,
+  anchored: boolean = declaresTimeAxis(graph),
+): Set<string> {
+  if (!anchored || graph.diagram !== 'timeline') return new Set();
+  const nodes = timedNodes(graph),
+    axis = timeAxis(nodes);
+  return axis
+    ? new Set(nodes.filter((node) => placeInTime(node, axis) !== null).map((node) => node.id))
+    : new Set();
 }
 
 /** Dated nodes as the axis sees them, by id. */

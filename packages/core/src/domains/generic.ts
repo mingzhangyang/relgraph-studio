@@ -26,6 +26,7 @@ import {
   timeAxis as axisOf,
   timedNodes,
 } from '../director/layout-engines.js';
+import { timeCoordinate } from '../director/time-anchor.js';
 import type {
   VisualEdge,
   VisualGraph,
@@ -125,6 +126,8 @@ interface Parsed {
   scenes: VisualScene[];
   /** Internal node id → the id written in the source. */
   sourceIds: Map<string, string>;
+  /** Dated timeline nodes whose position is their lane alone (`{ "y": … }`). */
+  lanes: Set<string>;
 }
 
 function parse(doc: unknown, errors: GenericDiagnostic[], warnings: GenericDiagnostic[]) {
@@ -373,7 +376,8 @@ function parse(doc: unknown, errors: GenericDiagnostic[], warnings: GenericDiagn
   const nodes: Parsed['nodes'] = [];
   const nodeSeen = new Set<string>(),
     weights = new Map<string, number>(),
-    sourceIds = new Map<string, string>();
+    sourceIds = new Map<string, string>(),
+    lanes = new Set<string>();
   rawNodes.forEach((n, i) => {
     const raw = object(n) ? rawId(n.id) : rawId(n);
     if (raw === null || nodeSeen.has(raw)) return;
@@ -385,13 +389,6 @@ function parse(doc: unknown, errors: GenericDiagnostic[], warnings: GenericDiagn
     const group = rawId(record.group);
     if (record.group !== undefined && record.group !== null && group === null)
       fail('GROUP_REF', path + '.group', raw, '分组引用无效。', '填写分组 id，或删除该字段。');
-    let position: { x: number; y: number } | undefined;
-    if (record.position !== undefined && record.position !== null) {
-      if (object(record.position) && finite(record.position.x) && finite(record.position.y))
-        position = { x: record.position.x, y: record.position.y };
-      else
-        fail('POSITION', path + '.position', raw, '坐标无效。', '使用 { "x": 数字, "y": 数字 }。');
-    }
     const weight = number(record.weight, path + '.weight', raw);
     if (weight !== undefined) {
       if (weight < 0) fail('WEIGHT', path + '.weight', raw, '权重不能为负。', '使用非负数。');
@@ -423,6 +420,28 @@ function parse(doc: unknown, errors: GenericDiagnostic[], warnings: GenericDiagn
         '可见区间无效。',
         '确保 start 不大于 visibleTo，或用 visibleFrom 指定首次出现的时间。',
       );
+    // On a timeline that keeps time a dated node's x is its date, so its
+    // position may be its lane alone; the adapter derives x (`timeCoordinate`).
+    let position: { x: number; y: number } | undefined;
+    if (record.position !== undefined && record.position !== null) {
+      const at = record.position;
+      if (object(at) && finite(at.x) && finite(at.y)) position = { x: at.x, y: at.y };
+      else if (object(at) && at.x === undefined && finite(at.y)) {
+        const dated = start !== undefined || shown?.from !== undefined;
+        if (doc.diagram === 'timeline' && doc.timeAxis !== false && dated) {
+          position = { x: 0, y: at.y };
+          lanes.add(id);
+        } else
+          fail(
+            'POSITION',
+            path + '.position.x',
+            raw,
+            '只有在时间轴上的带日期节点可以省略 x。',
+            '补充 x，使用 { "x": 数字, "y": 数字 }。',
+          );
+      } else
+        fail('POSITION', path + '.position', raw, '坐标无效。', '使用 { "x": 数字, "y": 数字 }。');
+    }
     nodes.push({
       id,
       label: text(record.label, path + '.label', raw) ?? raw,
@@ -706,6 +725,7 @@ function parse(doc: unknown, errors: GenericDiagnostic[], warnings: GenericDiagn
     groups,
     scenes,
     sourceIds,
+    lanes,
   } satisfies Parsed;
 }
 
@@ -968,6 +988,12 @@ export function adaptGenericDocument(input: unknown) {
   if (graph.diagram === 'timeline' && graph.timeAxis !== false) {
     const nodes = timedNodes(graph),
       axis = axisOf(nodes);
+    // A lane-only position takes its x from the dates; without an axis (one
+    // date for every node) all of them stand at one time.
+    graph.nodes.forEach(({ id, position }, i) => {
+      if (position && parsed.lanes.has(id))
+        position.x = (axis && timeCoordinate(nodes[i], axis)) ?? 0;
+    });
     const off = axis
       ? nodes.filter((node) => {
           const x = placeInTime(node, axis);
@@ -982,7 +1008,7 @@ export function adaptGenericDocument(input: unknown) {
         path: 'nodes',
         id: '',
         message: `${off} 个带日期的节点横坐标不在其时间上，已按日期绘制。`,
-        fix: '如需保留这些横坐标并不显示时间轴，请设置 "timeAxis": false。',
+        fix: '带日期节点的横坐标由日期决定：删除其 x，只保留 y（重新导出带坐标的数据会这样写）；如需保留这些横坐标并不显示时间轴，请设置 "timeAxis": false。',
       });
   }
   if (!graph.scenes.length) graph.scenes = autoStoryboard(graph, summaries);

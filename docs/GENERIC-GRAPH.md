@@ -54,19 +54,19 @@ The smallest valid document:
 
 Everything else is optional.
 
-| Field          | Meaning                                                                                                                                                                                                                                                                                |
-| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `meta`         | `title`, `description`, `sourceNote`. The title defaults to `关系图`.                                                                                                                                                                                                                  |
-| `directed`     | Default direction of relations (`false`). A kind or a single relation may override it.                                                                                                                                                                                                 |
-| `diagram`      | What kind of picture this is: `network` (default), `tree`, `mindmap`, `flowchart` or `timeline`. See [Diagram kinds](#diagram-kinds).                                                                                                                                                  |
-| `unfold`       | `false` shows a tree, mind map or flowchart whole instead of revealing it level by level.                                                                                                                                                                                              |
-| `nodes[]`      | `id` (required), `label`, `kind`, `group`, `weight` (≥ 0), `color` (`#RRGGBB`), `summary` (detail card text), `position` `{x, y}`, `visibleFrom`, `visibleTo`, `start`, `end` (a span on the time axis; it never hides the node). A bare string or number is a node with that id.      |
-| `edges[]`      | `source`, `target` (required), `id`, `kind`, `label`, `directed`, `weight` (≥ 0), `visibleFrom`, `visibleTo`. Endpoints that are not declared become nodes labelled by their id. `source === target` is a self-relation.                                                               |
-| `groups[]`     | `id` (required), `label`, `kind`, `color`. Groups referenced only by nodes are created.                                                                                                                                                                                                |
-| `kinds`        | `nodes.<kind>`: `label`, `color`, `shape` (`circle`, `pill`, `diamond`, `square`, `hexagon`, or the label-holding `box`, `capsule`, `decision`). `edges.<kind>`: `label`, `color`, `line` (`solid`, `dashed`, `dotted`), `head` (`arrow`, `bar`, `hollow-circle`, `none`), `directed`. |
-| `timeline`     | `unit` and optional `total` of the domain time used by `visibleFrom` / `visibleTo`.                                                                                                                                                                                                    |
-| `timeAxis`     | `false` declares that a timeline's coordinates are not on its time axis: x is kept as written and no axis is drawn. Written by the studio when it exports a timeline drawn with another strategy. See [Diagram kinds](#diagram-kinds).                                                 |
-| `presentation` | Shots, as in the biology format: `id`, `title`, `narration`, `durationSec` (default 4), `transitionMs`, `domainAt`, `camera` (`focusNodeId` \| `fitIds`, `zoom`), `highlight` (`nodeIds`, `edgeIds`, `groupId`), `openDetailNodeId`.                                                   |
+| Field          | Meaning                                                                                                                                                                                                                                                                                                                                                                                   |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `meta`         | `title`, `description`, `sourceNote`. The title defaults to `关系图`.                                                                                                                                                                                                                                                                                                                     |
+| `directed`     | Default direction of relations (`false`). A kind or a single relation may override it.                                                                                                                                                                                                                                                                                                    |
+| `diagram`      | What kind of picture this is: `network` (default), `tree`, `mindmap`, `flowchart` or `timeline`. See [Diagram kinds](#diagram-kinds).                                                                                                                                                                                                                                                     |
+| `unfold`       | `false` shows a tree, mind map or flowchart whole instead of revealing it level by level.                                                                                                                                                                                                                                                                                                 |
+| `nodes[]`      | `id` (required), `label`, `kind`, `group`, `weight` (≥ 0), `color` (`#RRGGBB`), `summary` (detail card text), `position` `{x, y}` (on a timeline that keeps time, a dated node may give `{y}` alone; see [Diagram kinds](#diagram-kinds)), `visibleFrom`, `visibleTo`, `start`, `end` (a span on the time axis; it never hides the node). A bare string or number is a node with that id. |
+| `edges[]`      | `source`, `target` (required), `id`, `kind`, `label`, `directed`, `weight` (≥ 0), `visibleFrom`, `visibleTo`. Endpoints that are not declared become nodes labelled by their id. `source === target` is a self-relation.                                                                                                                                                                  |
+| `groups[]`     | `id` (required), `label`, `kind`, `color`. Groups referenced only by nodes are created.                                                                                                                                                                                                                                                                                                   |
+| `kinds`        | `nodes.<kind>`: `label`, `color`, `shape` (`circle`, `pill`, `diamond`, `square`, `hexagon`, or the label-holding `box`, `capsule`, `decision`). `edges.<kind>`: `label`, `color`, `line` (`solid`, `dashed`, `dotted`), `head` (`arrow`, `bar`, `hollow-circle`, `none`), `directed`.                                                                                                    |
+| `timeline`     | `unit` and optional `total` of the domain time used by `visibleFrom` / `visibleTo`.                                                                                                                                                                                                                                                                                                       |
+| `timeAxis`     | `false` declares that a timeline's coordinates are not on its time axis: x is kept as written and no axis is drawn. Written by the studio when it exports a timeline drawn with another strategy. See [Diagram kinds](#diagram-kinds).                                                                                                                                                    |
+| `presentation` | Shots, as in the biology format: `id`, `title`, `narration`, `durationSec` (default 4), `transitionMs`, `domainAt`, `camera` (`focusNodeId` \| `fitIds`, `zoom`), `highlight` (`nodeIds`, `edgeIds`, `groupId`), `openDetailNodeId`.                                                                                                                                                      |
 
 Rules worth knowing:
 
@@ -185,13 +185,25 @@ years, and a dated node added without coordinates (in the player or by
 steps below the others when none is free. A lock holds a dated node's lane;
 its x is its date.
 
+Because x is derived, the file stores the lane alone. A positioned source
+exported from the studio, and a node added by `relgraph layout`, write a dated
+node of such a timeline as `"position": { "y": 126 }`, and loading derives x
+from its dates. Editing a date, moving the end of the axis or adding a dated
+node (both rescale the axis) therefore leaves nothing stale in the file. A
+lane-only position is accepted only for a dated node, on a timeline that does
+not say `"timeAxis": false`; anywhere else it is a `POSITION` error. When every
+node has the same time there is no axis, and lane-only nodes stand at x 0.
+
 Applying another strategy in the layout panel is the explicit way off the
 axis; the spans are then drawn as points, in the legend as well. Exporting the
 positioned source writes `"timeAxis": false` for such a drawing, so it stays
 off the axis when the file is read again; applying `timeline` or `auto` puts
 it back, and the next export removes the field. Coordinates written by hand
-that are off the axis, without that field, are drawn at their dates with a
-warning that says how to keep them.
+that are off the axis, without that field, are drawn at their dates with an
+`OFF_TIME_AXIS` warning. It names both ways out: remove the x and keep the
+lane (re-exporting the positioned source does this, which also repairs a file
+written with x before lanes were stored alone), or declare `"timeAxis": false`
+to keep x and draw no axis.
 
 The layout panel previews a strategy only when it changes something: a
 coordinate, or whether the drawing is on its axis. A strategy on the axis is
