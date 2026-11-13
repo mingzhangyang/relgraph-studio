@@ -1,7 +1,7 @@
 # Follow-up plan · review of #37 and #38
 
 Status: **open** · baseline `main` at `73af432` · reviewed 2026-11-12 ·
-PR 1 merged as `a2589bf` on 2026-11-13
+PR 1 merged as `a2589bf` and PR 2 as `682dbbd` on 2026-11-13
 
 This is the tracking document for the work that came out of reviewing
 [#38](https://github.com/mingzhangyang/relgraph-studio/pull/38) (generic graphs,
@@ -31,7 +31,7 @@ The repository rules in [AGENTS.md](../AGENTS.md) apply to every step:
 | PR | Scope | Items | Golden frames | Status |
 | --- | --- | --- | --- | --- |
 | 1 | Behaviour fixes | F1–F5 | Tree example changes (F5); others identical | ☑ [#40](https://github.com/mingzhangyang/relgraph-studio/pull/40) merged as `a2589bf` (2026-11-13); leftover 3 tracked as F6 |
-| 2 | Per-frame cost and limits | P1–P3 | Must stay identical | ◐ implemented on branch `claude/dreamy-euler-7o0lcl` from `a2589bf`; golden frames identical |
+| 2 | Per-frame cost and limits | P1–P3 | Must stay identical | ☑ [#41](https://github.com/mingzhangyang/relgraph-studio/pull/41) merged as `682dbbd` (2026-11-13) |
 | 3 | Core structure | S1–S3 | Must stay identical | ☐ not started |
 | 4 | Render structure | S4–S6 | Must stay identical | ☐ not started |
 | 5 | Tooling and docs | T1–T4 | Not affected | ☐ not started |
@@ -152,7 +152,7 @@ frames are slower. Synthetic graph, six groups, three relation kinds.
 
 The preview budget at 24 fps is about 42 ms.
 
-- [ ] **P1 · Remove quadratic work from `composeFrame`.** Known sites: the
+- [x] **P1 · Remove quadratic work from `composeFrame`.** Known sites: the
   label ambiguity check scans every other label per candidate
   (`packages/render/src/compose.ts:1361`); `shotAttention` scans all nodes per
   edge when a group is highlighted (`compose.ts:180`); self-loop ordering and
@@ -160,13 +160,18 @@ The preview budget at 24 fps is about 42 ms.
   array copy.
   - Done when: lookups go through maps built once per frame, a spatial bucket
     serves the label check, and every golden hash is unchanged.
-- [ ] **P2 · A cost test.** A pure test composes a fixed synthetic graph and
+- [x] **P2 · A cost test.** A pure test composes a fixed synthetic graph and
   fails on a regression in operation count (not wall time), so it is stable on
   any machine.
-- [ ] **P3 · Limits that mean something.** Depends on D3.
+- [x] **P3 · Limits that mean something.** Depends on D3.
   - Done when: `GENERIC_LIMITS` and `docs/GENERIC-GRAPH.md` state the hard
     limit and the measured preview budget, and loading a graph above the budget
     produces a warning diagnostic.
+
+P1–P3 landed in [#41](https://github.com/mingzhangyang/relgraph-studio/pull/41),
+merged to `main` as `682dbbd`. After the merge, the tree of `682dbbd` was
+compared with the reviewed head `72beefa`: identical (base `a2589bf`, which
+`main` had not moved from).
 
 ## PR 3 · Core structure
 
@@ -482,6 +487,7 @@ rerun.
 | 2026-11-13 | #40 review, items 1–8 and minor | #40 | `a2589bf` (branch `588bb88`) | One anchor definition; golden frames unchanged |
 | 2026-11-13 | #40 re-review, leftovers 1–2 and unsaved flag | #40 | `a2589bf` (branch `0348d87`) | Leftover 3 tracked as F6 |
 | 2026-11-13 | PR 1 merged | #40 | `a2589bf` | Squash of `0348d87` onto `08c8e57`; tree identical to the reviewed head |
-| 2026-11-13 | P1, P2 | — | — (branch `dd2fa58`) | Display lists and golden frames identical |
-| 2026-11-13 | P3 | — | — (branch `f54385b`) | `LARGE_GRAPH` above 500 nodes or 1,000 relations |
-| 2026-11-13 | #41 review, items 1–3 and minor | #41 | — (branch, see "PR 2 · review of #41") | Budget lowered to 300 / 600 (D3); golden frames unchanged |
+| 2026-11-13 | P1, P2 | #41 | `682dbbd` (branch `dd2fa58`) | Display lists and golden frames identical |
+| 2026-11-13 | P3 | #41 | `682dbbd` (branch `f54385b`) | `LARGE_GRAPH` above 500 nodes or 1,000 relations |
+| 2026-11-13 | #41 review, items 1–3 and minor | #41 | `682dbbd` (branch `72beefa`) | Budget lowered to 300 / 600 (D3); golden frames unchanged |
+| 2026-11-13 | PR 2 merged | #41 | `682dbbd` | Squash of `72beefa` onto `a2589bf`; tree identical to the reviewed head |
