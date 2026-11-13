@@ -51,6 +51,11 @@ export function blockedLayoutMessage(names: readonly string[]): string {
 }
 export const BLOCKED_PREFIX = '时间轴会横向移动已锁定的节点：',
   BLOCKED_SUFFIX = '。请先解锁它们，或改选其他布局。';
+/** Why Reset was refused: the loaded time axis would have to move locked nodes. */
+export function blockedResetMessage(names: readonly string[]): string {
+  return BLOCKED_PREFIX + names.join('、') + RESET_BLOCKED_SUFFIX;
+}
+export const RESET_BLOCKED_SUFFIX = '。请先解锁它们，再重置。';
 const MODE_LABELS: Record<LayoutMode, string> = {
   preserve: '保留现有坐标',
   missing: '只填补缺失坐标',
@@ -165,7 +170,13 @@ export function createLayoutStrategyView(doc: Document, host: HTMLElement, actio
     const message = uiStatus(validationMessage ?? hintMessage) + outcomeText();
     if (note.textContent !== message) note.textContent = message;
   };
+  // The inputs of a preview refused because it would change nothing: such a
+  // draft has nothing to lose, so it is not an unsaved change.
+  let inertDraft: string | null = null;
+  const draftKey = () =>
+    JSON.stringify([type.value, mode.value, seed.value, spacing.value, iterations.value]);
   const clearValidation = () => {
+    inertDraft = null;
     if (validationMessage !== null) {
       validationMessage = null;
       refreshNote();
@@ -213,6 +224,7 @@ export function createLayoutStrategyView(doc: Document, host: HTMLElement, actio
     hasPendingDraft() {
       return (
         enabled &&
+        inertDraft !== draftKey() &&
         (type.value !== settings.type ||
           mode.value !== settings.mode ||
           seed.value !== String(settings.seed) ||
@@ -270,6 +282,12 @@ export function createLayoutStrategyView(doc: Document, host: HTMLElement, actio
     },
     error(message: string) {
       validationMessage = message;
+      refreshNote();
+    },
+    /** Refuse a preview that would change nothing; its inputs are not a pending draft. */
+    unchanged(message: string) {
+      validationMessage = message;
+      inertDraft = draftKey();
       refreshNote();
     },
     /** Name the engine that drew the preview being shown. */

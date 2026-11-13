@@ -168,6 +168,7 @@ const english: Record<string, string> = {
   '实际绘制：': 'Drawn with: ',
   '时间轴会横向移动已锁定的节点：': 'The time axis would move locked nodes sideways: ',
   '。请先解锁它们，或改选其他布局。': '. Unlock them first, or choose another layout.',
+  '。请先解锁它们，再重置。': '. Unlock them first, then reset.',
   '如需保留这些横坐标并不显示时间轴，请设置 "timeAxis": false。':
     'To keep these x coordinates and draw no time axis, set "timeAxis": false.',
   '（保留现有坐标）': ' (existing coordinates kept)',
@@ -545,14 +546,14 @@ export function uiStatus(message: string): string {
     if (message.startsWith(prefix))
       return uiText(prefix) + uiDiagnostic(message.slice(prefix.length));
   }
-  const blockedPrefix = '时间轴会横向移动已锁定的节点：',
-    blockedSuffix = '。请先解锁它们，或改选其他布局。';
-  if (message.startsWith(blockedPrefix) && message.endsWith(blockedSuffix))
-    return (
-      uiText(blockedPrefix) +
-      message.slice(blockedPrefix.length, -blockedSuffix.length).split('、').join(', ') +
-      uiText(blockedSuffix)
-    );
+  const blockedPrefix = '时间轴会横向移动已锁定的节点：';
+  for (const blockedSuffix of ['。请先解锁它们，或改选其他布局。', '。请先解锁它们，再重置。'])
+    if (message.startsWith(blockedPrefix) && message.endsWith(blockedSuffix))
+      return (
+        uiText(blockedPrefix) +
+        message.slice(blockedPrefix.length, -blockedSuffix.length).split('、').join(', ') +
+        uiText(blockedSuffix)
+      );
   const exportPrefix = '已准备导出：';
   const exportSuffix = '。此文件仅保存源数据坐标，不代表完整项目已保存。';
   if (message.startsWith(exportPrefix) && message.endsWith(exportSuffix))

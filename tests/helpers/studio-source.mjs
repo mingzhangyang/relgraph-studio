@@ -20,6 +20,7 @@ import {
 } from '../../packages/core/src/director/layout-strategies.ts';
 import {
   blockedLayoutMessage,
+  blockedResetMessage,
   createLayoutStrategyView,
   unchangedLayoutMessage,
 } from '../../apps/studio/src/layout-strategy-view.ts';
@@ -27,6 +28,8 @@ import { displayNodeText } from '../../packages/core/src/project.ts';
 import {
   anchoredPoint,
   anchorToTime,
+  declaresTimeAxis,
+  offTime,
   timeAnchor,
 } from '../../packages/core/src/director/time-anchor.ts';
 import { placeInTime } from '../../packages/core/src/director/layout-engines.ts';
@@ -121,9 +124,12 @@ export const studioImports = {
   planLayout,
   unchangedLayoutMessage,
   blockedLayoutMessage,
+  blockedResetMessage,
   displayNodeText,
   anchoredPoint,
   anchorToTime,
+  declaresTimeAxis,
+  offTime,
   placeInTime,
   timeAnchor,
   createLayoutStrategyView,

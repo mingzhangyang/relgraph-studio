@@ -141,7 +141,9 @@ coordinate, or whether the drawing is on its axis. A strategy on the axis is
 refused while a locked dated node sits away from its date, since applying it
 would have to move that node; unlock it or choose another strategy. Reset
 restores the loaded coordinates together with the strategy they were loaded
-with.
+with, and is refused in the same way when the loaded axis would move a locked
+node. Exporting a timeline that has no dates yet does not write
+`"timeAxis": false`: once dates are added, it is drawn on its axis.
 
 The unfolding of a tree, mind map or flowchart counts reveal order, not time,
 so its frames show no domain time.

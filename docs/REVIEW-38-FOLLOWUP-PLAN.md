@@ -29,7 +29,7 @@ The repository rules in [AGENTS.md](../AGENTS.md) apply to every step:
 
 | PR | Scope | Items | Golden frames | Status |
 | --- | --- | --- | --- | --- |
-| 1 | Behaviour fixes | F1–F5 | Tree example changes (F5); others identical | ◐ [#40](https://github.com/mingzhangyang/relgraph-studio/pull/40) open; review findings addressed, awaiting re-review |
+| 1 | Behaviour fixes | F1–F5 | Tree example changes (F5); others identical | ◐ [#40](https://github.com/mingzhangyang/relgraph-studio/pull/40) open; re-reviewed ready to merge; leftovers 1–2 fixed, leftover 3 tracked as F6 |
 | 2 | Per-frame cost and limits | P1–P3 | Must stay identical | ☐ not started |
 | 3 | Core structure | S1–S3 | Must stay identical | ☐ not started |
 | 4 | Render structure | S4–S6 | Must stay identical | ☐ not started |
@@ -110,6 +110,24 @@ confirms them.
   - Done when: a derived unfolding shows no domain time. Golden frames of the
     tree example are regenerated and the change is listed in the PR. Depends
     on D4.
+
+## Follow-up · from the re-review of #40
+
+- [ ] **F6 · A date edit must not look like an off-axis drawing.** The source
+  of an anchored timeline still stores each dated node's x, although D1 meant
+  to store only its lane. After an ordinary date edit the stored x no longer
+  matches the date, so loading reports `OFF_TIME_AXIS`: one node when one
+  `end` changes, all 18 of the dynasties example when the end of the axis
+  moves (the axis rescales). The only fix the warning offers is
+  `"timeAxis": false`, which is the wrong advice here.
+  - Evidence: re-review of #40 at `588bb88`, leftover 3, reproduced with a
+    script.
+  - Done when: an anchored timeline's x is not authored data. Either the
+    positioned source stores only lanes for dated nodes (x derived on load),
+    or the warning distinguishes "the axis moved since the coordinates were
+    written" from "the author placed x by hand" and offers re-exporting the
+    coordinates. A pure test covers a changed `end` and a moved axis end.
+    Golden frames unchanged.
 
 ## PR 2 · Per-frame cost and limits
 
@@ -316,6 +334,26 @@ definition and every reader uses it:
   `tests/studio-workspace.test.mjs`. Golden frames are unchanged by these
   fixes; browser frames match a baseline captured at `2319903`.
 
+### PR 1 · re-review of #40 at `588bb88`
+
+Verdict: ready to merge, with three leftovers. Two are fixed here, the third
+is tracked as F6.
+
+- **Leftover 1 · export of an undated timeline.** The positioned-source export
+  wrote `"timeAxis": false` whenever no axis existed, including for a timeline
+  that simply had no dates yet. It now records the declared state
+  (`declaresTimeAxis`), so dates added later draw the axis.
+- **Leftover 2 · Reset and locks.** Reset restored the loaded timeline and then
+  pinned a locked node to its year, moving it sideways. Reset now applies the
+  same rule as a strategy: it is refused before anything is discarded while
+  the loaded axis would move a locked dated node, and it names the nodes.
+- **Unsaved flag.** A preview refused because it would change nothing no
+  longer leaves its strategy inputs counted as an unsaved draft; any further
+  edit makes them a draft again.
+- **Leftover 3** · tracked as F6 above, as the re-review suggested.
+- Tests: "#40 re-review" cases in `tests/layout-behaviour.test.mjs` and
+  `tests/studio-workspace.test.mjs`.
+
 ## Review evidence
 
 Ran locally on linux-x64, Node 22.23.4, at `73af432`: `npm run typecheck`,
@@ -334,3 +372,4 @@ rerun.
 | 2026-11-12 | F1–F4 | #40 | — (branch `94a97d3`) | Golden frames unchanged |
 | 2026-11-12 | F5 | #40 | — (branch `6034b30`) | 58 tree golden hashes regenerated |
 | 2026-11-13 | #40 review, items 1–8 and minor | #40 | — | One anchor definition; golden frames unchanged |
+| 2026-11-13 | #40 re-review, leftovers 1–2 and unsaved flag | #40 | — | Leftover 3 tracked as F6 |

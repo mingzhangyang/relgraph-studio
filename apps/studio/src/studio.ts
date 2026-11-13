@@ -23,6 +23,7 @@ import {
 } from '@relgraph/core';
 import {
   blockedLayoutMessage,
+  blockedResetMessage,
   createLayoutStrategyView,
   unchangedLayoutMessage,
 } from './layout-strategy-view.js';
@@ -46,7 +47,9 @@ import { parseDocument, applyGraphPositions, type LoadResult } from '@relgraph/c
 import {
   anchoredPoint,
   anchorToTime,
+  declaresTimeAxis,
   layoutGraph,
+  offTime,
   placeInTime,
   styleForDrawing,
   styleForGraph,
@@ -321,7 +324,8 @@ const strategyView = createLayoutStrategyView(document, $('layoutStrategyEditor'
       // Putting the drawing on the time axis, or taking it off, is a change
       // even when no coordinate moves.
       if (!plan.moved && !plan.anchorChanged) {
-        strategyView.error(unchangedLayoutMessage(settings));
+        strategyView.unchanged(unchangedLayoutMessage(settings));
+        refreshUnsavedState();
         return;
       }
       layoutPreview = { settings, before, serial: requestSerial };
@@ -1140,6 +1144,26 @@ layoutReset.addEventListener('click', () => {
   if (!currentLayout || !originalLayout) return;
   const restoredDragPreview = cancelActiveLayoutDrag();
   const changedPositions = layoutChanged();
+  // The loaded picture is its coordinates and the strategy it was drawn with,
+  // which decides whether it is on the time axis.
+  const settings = {
+    ...(projectHistory.value.layout ?? DEFAULT_LAYOUT_SETTINGS),
+    type: originalLayoutType,
+  };
+  // Like a strategy, Reset never moves a locked node: on the loaded time axis
+  // it would have to move a locked dated node that sits away from its date.
+  // Refuse before anything is discarded. Locked nodes are not restored, so
+  // their current coordinates are the ones the axis would see.
+  const axis =
+    graph && changedPositions ? timeAnchor({ ...graph, project: { layout: settings } }) : null;
+  const blocked = graph && axis ? offTime(graph, axis, currentLayout, settings.locked) : [];
+  if (blocked.length) {
+    if (restoredDragPreview) setFrame(playback.frame, false);
+    coordinateValidationMessage = blockedResetMessage(blocked.map(nodeName));
+    updateLayoutFields();
+    updateLayoutControls();
+    return;
+  }
   // Reset is an explicit discard of all pending coordinate inputs, not a
   // new authored layout commit when only unsubmitted drafts existed.
   coordinateDrafts.clear();
@@ -1154,13 +1178,7 @@ layoutReset.addEventListener('click', () => {
     return;
   }
   for (const [id, p] of originalLayout)
-    if (!projectHistory.value.layout?.locked.includes(id)) currentLayout.set(id, { ...p });
-  // The loaded picture is its coordinates and the strategy it was drawn with,
-  // which decides whether it is on the time axis.
-  const settings = {
-    ...(projectHistory.value.layout ?? DEFAULT_LAYOUT_SETTINGS),
-    type: originalLayoutType,
-  };
+    if (!settings.locked.includes(id)) currentLayout.set(id, { ...p });
   if (graph) {
     graph.project = { ...projectHistory.value, layout: { ...settings } };
     anchorToTime(graph, currentLayout);
@@ -1271,7 +1289,8 @@ function exportPositionedSource(): void {
   try {
     // A timeline taken off its axis says so in the file, or it would be redrawn on it.
     const output = applyGraphPositions(sourceDocument, graph, currentLayout, {
-      ...(graph.diagram === 'timeline' ? { timeAxis: Boolean(timeAnchor(graph)) } : {}),
+      // The declared state, not whether an axis exists: dates added later still draw one.
+      ...(graph.diagram === 'timeline' ? { timeAxis: declaresTimeAxis(graph) } : {}),
     });
     const text = JSON.stringify(output.document, null, 2) + '\n';
     const check = parseDocument(text);

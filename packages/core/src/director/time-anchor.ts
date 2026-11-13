@@ -48,6 +48,19 @@ function declared(graph: AnchorGraph, type: string): boolean {
 }
 
 /**
+ * Whether the drawing of a timeline diagram declares itself on its time axis,
+ * whether or not any node has a date yet. This, not the presence of an axis,
+ * is the state a positioned source records: a timeline without dates that
+ * gains them later must be drawn on its axis.
+ */
+export function declaresTimeAxis(
+  graph: AnchorGraph,
+  type: string = graph.project?.layout?.type ?? 'manual',
+): boolean {
+  return declared(graph, type);
+}
+
+/**
  * The time axis a drawing is anchored to, or null when it is not anchored:
  * the graph is not a timeline, has no dates, or is drawn with a strategy that
  * leaves the axis. `type` defaults to the strategy stored in the project.

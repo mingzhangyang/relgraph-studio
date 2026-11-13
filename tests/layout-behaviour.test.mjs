@@ -28,6 +28,7 @@ import {
 import {
   anchoredPoint,
   anchorToTime,
+  declaresTimeAxis,
   timeAnchor,
 } from '../packages/core/src/director/time-anchor.ts';
 import { styleForDrawing } from '../packages/core/src/style.ts';
@@ -473,4 +474,30 @@ test('#40 minor: a new lane follows the drawing’s own lane height', () => {
   anchorToTime(g, positions, { unplaced: new Set([byLabel(g, '全').id]) });
   assert.equal(positions.get(byLabel(g, '全').id).y, ys.at(-1) + step);
   assert.ok(step > LAYOUT_DEFAULTS.spacing * 0.42, 'not the default lane');
+});
+
+test('#40 re-review: an undated timeline is exported as declared, not as off its axis', () => {
+  const undated = structuredClone(dynasties);
+  for (const node of undated.nodes) {
+    delete node.start;
+    delete node.end;
+  }
+  const graph = load(undated);
+  assert.equal(timeAnchor(graph), null, 'no dates, no axis');
+  assert.equal(declaresTimeAxis(graph), true, 'but nothing took it off the axis');
+  const { document } = applyGraphPositions(undated, graph, layoutGraph(graph), {
+    timeAxis: declaresTimeAxis(graph),
+  });
+  assert.equal(Object.hasOwn(document, 'timeAxis'), false);
+  // Dates added later draw the axis.
+  document.nodes.forEach((node, i) =>
+    Object.assign(node, { start: 600 + i * 40, end: 640 + i * 40 }),
+  );
+  const dated = load(document);
+  assert.ok(timeAnchor(dated));
+  inTime(dated, layoutGraph(dated));
+  assert.ok(ticks(compose(dated)).length > 0);
+  // A strategy that leaves the axis is still declared off it, dates or not.
+  assert.equal(declaresTimeAxis(withLayout(graph, { type: 'grid' })), false);
+  assert.equal(declaresTimeAxis({ ...graph, diagram: undefined }), false);
 });
