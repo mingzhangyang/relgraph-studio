@@ -122,6 +122,8 @@ export function makeStudio({
     frameCount,
     createCanvasRenderer: (_canvas, graph, layout, options) => {
       themes.push(options.theme);
+      // As createCanvasRenderer: the given style, else the graph's own sheet.
+      const resolvedStyle = options.style ?? styleForGraph(graph);
       const renderFrameWithList = (frame) => {
         const evaluated = directorFrameAt(graph, layout, frame, options.fps);
         const state = options.cameraOverride
@@ -133,11 +135,11 @@ export function makeStudio({
           frame,
           fps: options.fps,
           measure,
-          style: options.style,
+          style: resolvedStyle,
           detailAt: options.detailAt,
         });
         if (transformFrameText) list.a11y = transformFrameText(list.a11y, frame, graph);
-        onRenderFrame?.({ frame, state, list });
+        onRenderFrame?.({ frame, state, list, graph, positions: layout });
         return { state, list };
       };
       return {
@@ -146,7 +148,7 @@ export function makeStudio({
         frameSpec: DEFAULT_FRAME_SPEC,
         // As the real renderer: the style of the drawing at its current positions.
         get style() {
-          return drawingStyle({ graph, positions: layout, style: options.style });
+          return drawingStyle({ graph, positions: layout, style: resolvedStyle });
         },
       };
     },

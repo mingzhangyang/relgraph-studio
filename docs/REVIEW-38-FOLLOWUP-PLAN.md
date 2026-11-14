@@ -713,6 +713,27 @@ with the 236 golden frames matching (no `--update`); `npm run check:browser`
 comparisons did not run). No GitHub Actions workflow was added, dispatched
 or rerun.
 
+### PR 4 · review of #44
+
+The [review at `9b01211`](https://github.com/mingzhangyang/relgraph-studio/pull/44#pullrequestreview-5905625208)
+found one P2: S6 made the simulated-DOM harness's renderer stub forward
+`options.style` to the composer, but the studio creates the first renderer
+of each document without a `style` (`studio.ts:765`). The production
+renderer then resolves `styleForGraph(graph)`; the stub drew under the
+neutral style, so first-load DOM tests exercised other shapes, captions and
+legends than the UI. Fixed: the stub resolves `options.style ??
+styleForGraph(graph)` once, as `createCanvasRenderer` does, for both
+composition and its `style` getter. A new simulated-DOM case loads the
+literature, biology, generic and timeline examples and requires each drawn
+frame to equal a recomposition under `styleForGraph(graph)`, and to differ
+from one under the neutral style. It fails with the stub of `9b01211`.
+
+Validation of the fix, linux-x64, Node 22.23.4: `npm run typecheck`,
+`npm run lint`, `npm run format:check` passed; `npm test` 417 tests in 38
+files passed. Only test files changed, so `check:types`, `check:export` and
+`check:browser` were not rerun. No GitHub Actions workflow was added,
+dispatched or rerun.
+
 ## Review evidence
 
 Ran locally on linux-x64, Node 22.23.4, at `73af432`: `npm run typecheck`,
@@ -749,3 +770,4 @@ rerun.
 | 2026-11-14 | S4 | — | — (branch `6882f62`) | `composeFrame` in passes over a frame context; 50,832 display lists identical |
 | 2026-11-14 | S5 | — | — (branch `9d13310`) | One source for line rhythms, shape proportions and the importance scale; display lists identical |
 | 2026-11-14 | S6 | — | — (branch `87e4354`) | The renderer owns the drawn style; hit tests have no default; display lists identical |
+| 2026-11-14 | #44 review, P2 | #44 | — | Harness renderer resolves the graph's style on first load, as production does |
