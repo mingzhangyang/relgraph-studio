@@ -2,7 +2,7 @@ import { materializeImages, browserImageFactory, type ImageFactory } from './ima
 import { compileTimeline, directorFrameAt, styleForGraph, localeFor } from '@relgraph/core';
 import type { DirectorFrameState, DomainStyle, VisualGraph } from '@relgraph/core';
 import { canvasTextMeasurer, drawDisplayList, type Canvas2D } from './backends/canvas2d.js';
-import { composeFrame, type DetailLookup } from './compose.js';
+import { composeFrame, drawingStyle, type DetailLookup } from './compose.js';
 import type { DisplayList } from './display-list.js';
 import {
   cameraFitFor,
@@ -41,6 +41,12 @@ export interface CanvasRenderer {
   displayListAt(frame: number): DisplayList;
   theme: 'dark' | 'light';
   frameSpec: Readonly<FrameSpec>;
+  /**
+   * The style the frames are drawn with, at the positions as they are now
+   * (`drawingStyle`). Hit tests and overlays read glyphs through this, so
+   * they see the shapes the picture shows: spans only while it keeps time.
+   */
+  readonly style: DomainStyle;
 }
 
 /**
@@ -132,5 +138,9 @@ export function createCanvasRenderer(
     displayListAt: (frame) => compose(frame).list,
     theme: palette.name,
     frameSpec: spec,
+    // Read on demand: an authoring drag moves the positions in place.
+    get style() {
+      return drawingStyle({ graph, positions, style: resolvedStyle });
+    },
   };
 }

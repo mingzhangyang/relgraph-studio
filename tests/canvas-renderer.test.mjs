@@ -2,6 +2,12 @@ import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { createCanvasRenderer, themeFor, VIDEO_THEMES } from '../packages/render/src/canvas.ts';
 import { layoutGraph } from '../packages/core/src/director/layout.ts';
+import { loadDocument } from '../packages/core/src/director/load.ts';
+import { directorFrameAt, frameCount } from '../packages/core/src/director/state.ts';
+import { styleForGraph } from '../packages/core/src/style.ts';
+import { cameraFitFor, projectCameraPoint } from '../packages/render/src/frame-spec.ts';
+import { nodeGlyphBounds } from '../packages/render/src/node-geometry.ts';
+import dynasties from '../examples/dynasties-timeline-provisional.graph.json' with { type: 'json' };
 import { measuringCanvas, paths, readable, texts } from './helpers/display-list.mjs';
 
 function timedGraph() {
@@ -202,3 +208,47 @@ function recordingCanvas() {
   );
   return { canvas: { getContext: () => context }, commands };
 }
+
+test('the renderer owns the style it draws with; hit tests read glyphs through it (S6)', () => {
+  const { graph } = loadDocument(dynasties);
+  const positions = layoutGraph(graph);
+  const renderer = createCanvasRenderer(measuringCanvas(), graph, positions, {
+    style: styleForGraph(graph),
+  });
+  assert.ok(renderer.style.timeAxis, 'an anchored timeline is drawn with its axis');
+  const spec = renderer.frameSpec;
+  /** Each drawn node's selection box, and the box a hit test computes with `style`. */
+  const boxes = (style) => {
+    const frame = frameCount(graph, spec.fps) - 1;
+    const camera = directorFrameAt(graph, positions, frame, spec.fps, {
+      fit: cameraFitFor(spec),
+    }).cameraResolved;
+    return renderer
+      .displayListAt(frame)
+      .selection.filter((target) => target.kind === 'node')
+      .map((target) => {
+        const node = graph.nodes.find((n) => n.id === target.id);
+        const point = projectCameraPoint(positions.get(node.id), camera, spec);
+        return [target.box, nodeGlyphBounds(node, point, camera.scale, spec, style)];
+      });
+  };
+  const drawnBoxes = boxes(renderer.style);
+  assert.ok(drawnBoxes.length >= 3);
+  for (const [drawn, tested] of drawnBoxes) {
+    assert.ok(Math.abs(drawn.w - tested.w) < 1e-9 && Math.abs(drawn.h - tested.h) < 1e-9);
+  }
+  // Bars are wider than they are high on the axis.
+  assert.ok(drawnBoxes.some(([drawn]) => drawn.w > drawn.h * 2));
+
+  // Positions move in place during a drag. One bar pushed off its years
+  // takes the axis away; the renderer's style follows at once, and so do the
+  // glyphs it draws: spans become points.
+  const [first] = graph.nodes.filter((node) => node.span);
+  const p = positions.get(first.id);
+  positions.set(first.id, { x: p.x + 50, y: p.y });
+  assert.equal(renderer.style.timeAxis, undefined);
+  for (const [drawn, tested] of boxes(renderer.style)) {
+    assert.ok(Math.abs(drawn.w - tested.w) < 1e-9 && Math.abs(drawn.h - tested.h) < 1e-9);
+    assert.ok(drawn.w < drawn.h * 1.5, 'a span off the axis is drawn as a point');
+  }
+});

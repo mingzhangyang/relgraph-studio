@@ -1,6 +1,7 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { DEFAULT_FRAME_SPEC } from '../packages/render/src/frame-spec.ts';
+import { NEUTRAL_STYLE } from '../packages/core/src/style.ts';
 import { screenPosition } from '../apps/studio/src/position-tool.ts';
 import {
   editableNodes,
@@ -37,7 +38,10 @@ test('pure policy excludes unrevealed nodes from both keyboard and drag paths', 
   assert.equal(updateEditableNodePosition(positions, frame, 'partial', { x: 77, y: 77 }), false);
   assert.equal(positions.get('future').x, 180);
   const hidden = screenPosition(positions.get('future'), frame.cameraResolved, DEFAULT_FRAME_SPEC);
-  assert.equal(startPositionDrag(frame, positions, DEFAULT_FRAME_SPEC, hidden, 20, 5), null);
+  assert.equal(
+    startPositionDrag(frame, positions, DEFAULT_FRAME_SPEC, hidden, 20, 5, NEUTRAL_STYLE),
+    null,
+  );
   assert.equal(updateEditableNodePosition(positions, frame, 'early', { x: 77, y: 77 }), true);
 });
 
@@ -45,7 +49,7 @@ test('drag mathematics preserves grab offset and rejects invalid or overflowing 
   const { frame, positions } = model();
   const center = screenPosition(positions.get('early'), frame.cameraResolved, DEFAULT_FRAME_SPEC);
   const start = { x: center.x + 8, y: center.y - 5 };
-  const drag = startPositionDrag(frame, positions, DEFAULT_FRAME_SPEC, start, 24, 1);
+  const drag = startPositionDrag(frame, positions, DEFAULT_FRAME_SPEC, start, 24, 1, NEUTRAL_STYLE);
   assert.equal(drag.id, 'early');
   assert.deepEqual(positionForDrag(drag, start, frame.cameraResolved, DEFAULT_FRAME_SPEC), {
     x: 0,

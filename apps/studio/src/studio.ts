@@ -51,7 +51,6 @@ import {
   layoutGraph,
   offTime,
   placeInTime,
-  styleForDrawing,
   styleForGraph,
   timeAnchor,
 } from '@relgraph/core';
@@ -1208,9 +1207,9 @@ canvas.addEventListener('pointerdown', (event) => {
     point,
     radius,
     event.pointerId,
-    graph?.project,
     // Hit the glyphs as they are drawn: spans only while the drawing keeps time.
-    graph ? styleForDrawing(styleForGraph(graph), graph, currentLayout) : undefined,
+    renderer.style,
+    graph?.project,
   );
   if (!nextDrag || projectHistory.value.layout?.locked.includes(nextDrag.id)) return;
   dragging = nextDrag;

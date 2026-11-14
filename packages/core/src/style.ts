@@ -304,8 +304,9 @@ function withoutAxis(style: DomainStyle): DomainStyle {
  * and the layout panel use too. Positions can only take the axis away, as a
  * guard for callers that pass coordinates no anchoring has pinned: rules and
  * bars must never point at the wrong years. Without an axis spans are drawn
- * as points and no rule or cursor is drawn. Glyph outlines, hit tests and the
- * composer must all read a drawing through this.
+ * as points and no rule or cursor is drawn. The renderer reads every frame
+ * through this (`drawingStyle`) and exposes the result as its `style`; glyph
+ * outlines, hit tests and overlays take the style from there.
  */
 export function styleForDrawing(
   style: DomainStyle,

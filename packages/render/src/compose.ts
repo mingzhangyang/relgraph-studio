@@ -15,7 +15,7 @@ import { composeNodes, drawnNodes, nodeObstacles } from './compose/nodes.js';
 import { composeRelations, relationLayout } from './compose/relations.js';
 import { composeTimeAxis } from './compose/time-axis.js';
 
-export type { ComposeOptions, DetailLookup } from './compose/context.js';
+export { drawingStyle, type ComposeOptions, type DetailLookup } from './compose/context.js';
 export { quadraticPrefix } from './compose/geometry.js';
 export { hullOutline } from './compose/groups.js';
 
