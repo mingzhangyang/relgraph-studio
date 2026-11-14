@@ -1,5 +1,6 @@
 import type { DisplayItem } from '../display-list.js';
 import type { Rect } from '../frame-spec.js';
+import { importanceStep } from '../importance.js';
 import { PointIndex, type RectIndex } from '../spatial.js';
 import type { FrameContext } from './context.js';
 import type { Point } from './geometry.js';
@@ -47,13 +48,9 @@ export function composeNodeLabels(
   for (const { node, custom, p, r, alpha: active } of sorted) {
     const obstacle = obstacles.get(node.id);
     if (!obstacle) continue;
-    const importance = node.importance ?? 0;
     // Type follows the same hierarchy as the glyphs: principals speak loudest.
-    const font = sans(
-      custom.fontSize ??
-        (importance >= 5 ? 19 : importance >= 4 ? 17 : importance >= 1 && importance < 3 ? 14 : 16),
-      custom.fontWeight ?? (importance >= 4 ? 600 : 500),
-    );
+    const scale = importanceStep(node.importance);
+    const font = sans(custom.fontSize ?? scale.label, custom.fontWeight ?? scale.weight);
     const lines = wrapText(measure, ctx.nodeLabel(node), font, u(170), 2);
     const width = Math.max(0, ...lines.map((line) => measure(line, font))),
       height = lines.length * font.size * 1.3;

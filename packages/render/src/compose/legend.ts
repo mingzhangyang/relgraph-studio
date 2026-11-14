@@ -1,6 +1,6 @@
 import { edgeStyleFor, localize, nodeStyleFor } from '@relgraph/core';
 import type { DisplayItem } from '../display-list.js';
-import { nodeOutline, type GlyphGeometry } from '../node-geometry.js';
+import { miniatureGeometry, nodeOutline } from '../node-geometry.js';
 import type { RectIndex } from '../spatial.js';
 import { edgePaint, mixHex, toneOf } from '../theme.js';
 import { color, type FrameContext } from './context.js';
@@ -58,32 +58,9 @@ export function composeLegend(ctx: FrameContext, occupied: RectIndex): DisplayIt
         half = u(5.2),
         // The miniature is the glyph as drawn: off the time axis a span is a point.
         shape = kindStyle.shape === 'span' && !style.timeAxis ? 'circle' : kindStyle.shape;
-      // A miniature of the kind's shape: [half width, half height, corner].
-      const [w, h, corner] =
-        shape === 'pill' || shape === 'capsule'
-          ? [1.25, 0.78, 0.62]
-          : shape === 'square'
-            ? [0.9, 0.9, 0.26]
-            : shape === 'box'
-              ? [1.25, 0.82, 0.3]
-              : shape === 'span'
-                ? [1.3, 0.55, 0.25]
-                : shape === 'hexagon'
-                  ? [1.08, 1.08 * (Math.sqrt(3) / 2), 0]
-                  : shape === 'decision'
-                    ? [1.25, 0.9, 0]
-                    : [1, 1, 0];
-      const g: GlyphGeometry = {
-        shape,
-        radius: half,
-        halfWidth: half * w,
-        halfHeight: half * h,
-        cornerRadius: half * corner,
-        halfStroke: 0,
-      };
       row.push({
         type: 'path',
-        d: nodeOutline({ x: x + u(6), y: cy }, g),
+        d: nodeOutline({ x: x + u(6), y: cy }, miniatureGeometry(shape, half)),
         fill: mixHex(color(c, P.fallbackNode), P.nodeFill, P.nodeTint),
         stroke: c,
         width: u(1.5),

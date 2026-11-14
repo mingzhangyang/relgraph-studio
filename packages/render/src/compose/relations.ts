@@ -1,4 +1,4 @@
-import { edgeAppearance, edgeStyleFor, localize } from '@relgraph/core';
+import { edgeAppearance, edgeStyleFor, LINE_DASH, localize } from '@relgraph/core';
 import type { ProjectedVisualGraph } from '@relgraph/core';
 import type { DisplayItem, FontRef, Paint } from '../display-list.js';
 import { nodeGlyphRayDistance } from '../node-geometry.js';
@@ -165,14 +165,7 @@ export function composeRelations(
     const head = view.domain === 'biology' ? edgeStyle.head : (custom.head ?? edgeStyle.head);
     const arrow = Boolean(edge.directed) && head === 'arrow',
       arrowLength = u(8) + width * 1.3;
-    const dash =
-      custom.dash === undefined
-        ? edgeStyle.dash
-        : custom.dash === 'dashed'
-          ? [7, 5]
-          : custom.dash === 'dotted'
-            ? [2, 4]
-            : [];
+    const dash = custom.dash === undefined ? edgeStyle.dash : LINE_DASH[custom.dash];
     const parts: DisplayItem[] = [];
     let labelAt: Point, labelPush: Point | undefined, labelAside: Point | undefined;
     if (edge.source === edge.target) {

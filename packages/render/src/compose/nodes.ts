@@ -12,6 +12,7 @@ import {
   DEFAULT_BORDER_WIDTH,
   type GlyphGeometry,
 } from '../node-geometry.js';
+import { importanceStep } from '../importance.js';
 import type { RectIndex } from '../spatial.js';
 import { mixHex, toneOf } from '../theme.js';
 import { alphaHex, color, type FrameContext, type Selection } from './context.js';
@@ -165,12 +166,12 @@ export function composeNodes(
       waist = Math.min(geometry.halfWidth, geometry.halfHeight);
     const glyph: DisplayItem[] = [],
       aura: DisplayItem[] = [];
-    const importance = node.importance ?? 0;
+    const principal = importanceStep(node.importance).principal;
     // Shapes that are as wide as their words or their years keep their own
     // outline for the focus ring; compact glyphs are ringed by a circle.
     const wide = geometry.inside !== undefined || geometry.shape === 'span';
     // Light gathers behind the nodes a shot names, and behind the principals.
-    const glow = Math.max(focus, importance >= 5 && alpha > 0.8 ? 0.55 : 0);
+    const glow = Math.max(focus, principal && alpha > 0.8 ? 0.55 : 0);
     if (glow > 0)
       aura.push(
         ellipseGlow(
@@ -200,7 +201,7 @@ export function composeNodes(
       });
     }
     // The topic of a mind map, or the first step, is set in solid colour.
-    const solid = geometry.inside !== undefined && importance >= 5 && !custom.fill;
+    const solid = geometry.inside !== undefined && principal && !custom.fill;
     if (asset && custom.image)
       glyph.push(
         { type: 'path', d: outline, fill: custom.fill ?? P.nodeFill },
