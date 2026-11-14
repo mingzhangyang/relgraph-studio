@@ -8,6 +8,7 @@ import {
   type VisualNode,
 } from '@relgraph/core';
 import type { FrameSpec, Rect } from './frame-spec.js';
+import { importanceStep } from './importance.js';
 
 type GeometryNode = Pick<VisualNode, 'kind' | 'importance'> &
   Partial<Pick<VisualNode, 'id' | 'label' | 'span'>>;
@@ -50,8 +51,9 @@ export function insideLabel(
   unit: number,
   authored?: { fontSize?: number; fontWeight?: number },
 ): InsideLabel {
-  const size = (authored?.fontSize ?? (importance >= 5 ? 17 : importance >= 4 ? 16 : 15)) * unit,
-    weight = authored?.fontWeight ?? (importance >= 4 ? 600 : 500),
+  const scale = importanceStep(importance);
+  const size = (authored?.fontSize ?? scale.inside) * unit,
+    weight = authored?.fontWeight ?? scale.weight,
     limit = size * 9.5;
   // The shape is asked for many times in one frame (outline, bounds, hit
   // test, both ends of every relation) and wrapping measures every prefix of
@@ -109,12 +111,9 @@ export function nodeRadius(
 ): number {
   const custom = nodeAppearance(config, { ...node, id: node.id ?? '', label: '' });
   if (custom.size !== undefined) return custom.size * spec.typeScale;
-  const importance = node.importance ?? 0;
   // A real scale: principals are visibly larger than supporting nodes, so
   // hierarchy reads from across the room. Unrated nodes use the base size.
-  const base =
-    nodeStyleFor(style, node.kind).baseRadius ??
-    (importance >= 5 ? 20 : importance >= 4 ? 16.5 : importance >= 3 ? 13.5 : 11);
+  const base = nodeStyleFor(style, node.kind).baseRadius ?? importanceStep(node.importance).radius;
   return Math.min(26, Math.max(8, base * Math.sqrt(cameraScale))) * spec.typeScale;
 }
 
@@ -185,7 +184,7 @@ export function glyphGeometry(
       axis.scale *
       cameraScale *
       unit;
-    const halfHeight = (importance >= 4 ? 12 : 10) * unit;
+    const halfHeight = importanceStep(importance).bar * unit;
     return {
       shape: 'span',
       radius: radius * revealScale,
@@ -197,17 +196,10 @@ export function glyphGeometry(
   }
   // A span without a place in time is drawn as a point.
   const shape = wanted === 'span' ? 'circle' : wanted;
-  // Half extents chosen so every shape carries about the optical weight of
-  // the circle: a square or hexagon of the same radius would look larger.
-  const round = radius + 3 * unit;
   const [halfWidth, halfHeight, cornerRadius] =
     shape === 'pill'
       ? [radius + 4 * unit, radius * 0.75, radius * 0.65]
-      : shape === 'square'
-        ? [round * 0.9, round * 0.9, round * 0.26]
-        : shape === 'hexagon'
-          ? [round * 1.08, round * 1.08 * (Math.sqrt(3) / 2), 0]
-          : [round, round, 0];
+      : compactExtents(shape, radius + 3 * unit);
   return {
     shape,
     radius: radius * revealScale,
@@ -216,6 +208,43 @@ export function glyphGeometry(
     cornerRadius: cornerRadius * revealScale,
     halfStroke,
   };
+}
+
+/**
+ * Half width, half height and corner radius of a compact shape of the given
+ * size. The proportions are chosen so every shape carries about the optical
+ * weight of the circle: a square or hexagon of the same radius would look
+ * larger. Glyphs and their legend miniatures both read them.
+ */
+function compactExtents(shape: NodeShape, size: number): [number, number, number] {
+  if (shape === 'square') return [size * 0.9, size * 0.9, size * 0.26];
+  if (shape === 'hexagon') {
+    // A flat-topped regular hexagon is √3/2 as high as it is wide.
+    const halfWidth = size * 1.08;
+    return [halfWidth, halfWidth * (Math.sqrt(3) / 2), 0];
+  }
+  return [size, size, 0];
+}
+
+/**
+ * Legend proportions of the shapes a glyph sizes to its words or its years,
+ * which a miniature cannot: [half width, half height, corner] per half size.
+ */
+const MINIATURE: Partial<Record<NodeShape, readonly [number, number, number]>> = Object.freeze({
+  pill: [1.25, 0.78, 0.62],
+  capsule: [1.25, 0.78, 0.62],
+  box: [1.25, 0.82, 0.3],
+  span: [1.3, 0.55, 0.25],
+  decision: [1.25, 0.9, 0],
+});
+
+/** A shape's legend miniature, `half` across from its centre to its side. */
+export function miniatureGeometry(shape: NodeShape, half: number): GlyphGeometry {
+  const ratios = MINIATURE[shape];
+  const [halfWidth, halfHeight, cornerRadius] = ratios
+    ? [half * ratios[0], half * ratios[1], half * ratios[2]]
+    : compactExtents(shape, half);
+  return { shape, radius: half, halfWidth, halfHeight, cornerRadius, halfStroke: 0 };
 }
 
 /** A flat-topped hexagon's slanted edge: unit normal and distance from the centre. */

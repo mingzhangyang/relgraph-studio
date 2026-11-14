@@ -1,6 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import literature from '../examples/honglou-provisional.relgraph.json' with { type: 'json' };
 import biology from '../examples/biology-signaling-synthetic.json' with { type: 'json' };
 import bookshop from '../examples/bookshop-systems-synthetic.graph.json' with { type: 'json' };
@@ -323,7 +323,15 @@ test('captions follow the locale and a third domain needs only a style sheet', (
 test('renderer sources hold no domain vocabulary or 720p pixel positions', () => {
   const read = (path) =>
     readFileSync(new URL(`../packages/render/src/${path}`, import.meta.url), 'utf8');
-  const sources = ['compose.ts', 'canvas.ts', 'backends/canvas2d.ts', 'theme.ts', 'locale.ts']
+  // The composer is compose.ts and its passes under compose/.
+  const composer = [
+    'compose.ts',
+    ...readdirSync(new URL('../packages/render/src/compose/', import.meta.url))
+      .filter((name) => name.endsWith('.ts'))
+      .map((name) => `compose/${name}`),
+  ];
+  assert.ok(composer.length >= 10, composer.join());
+  const sources = [...composer, 'canvas.ts', 'backends/canvas2d.ts', 'theme.ts', 'locale.ts']
     .map(read)
     .join('\n');
   for (const word of [
@@ -337,7 +345,8 @@ test('renderer sources hold no domain vocabulary or 720p pixel positions', () =>
     '抑制',
   ])
     assert.ok(!sources.includes(word), word);
-  assert.doesNotMatch(read('compose.ts'), /\b(640|330|1218|1228|1250|1152|1120|434|540|548|704)\b/);
+  for (const path of composer)
+    assert.doesNotMatch(read(path), /\b(640|330|1218|1228|1250|1152|1120|434|540|548|704)\b/, path);
 });
 
 test('scaled frame specs always contain their rectangles and pass validation', () => {

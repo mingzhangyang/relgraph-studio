@@ -3,14 +3,13 @@ import { runInNewContext } from 'node:vm';
 import { createSimulatedStudioDom } from './studio-dom.mjs';
 import { parseDocument } from '../../packages/core/src/director/load.ts';
 import { layoutGraph } from '../../packages/core/src/director/layout.ts';
-import { styleForDrawing, styleForGraph } from '../../packages/core/src/style.ts';
+import { styleForGraph } from '../../packages/core/src/style.ts';
 import { applyGraphPositions } from '../../packages/core/src/director/position-writeback.ts';
 import { roundPositionCoordinate } from '../../packages/core/src/director/seeded-layout.ts';
 import { DEFAULT_FRAME_SPEC } from '../../packages/render/src/frame-spec.ts';
 import { canvasPoint, graphPosition, hitVisibleNode } from '../../apps/studio/src/position-tool.ts';
 import { directorFrameAt, frameCount } from '../../packages/core/src/director/state.ts';
-import { domainStyle } from '../../packages/core/src/style.ts';
-import { composeFrame } from '../../packages/render/src/compose.ts';
+import { composeFrame, drawingStyle } from '../../packages/render/src/compose.ts';
 import { measure } from './display-list.mjs';
 import literature from '../../examples/honglou-provisional.relgraph.json' with { type: 'json' };
 import biology from '../../examples/biology-signaling-synthetic.json' with { type: 'json' };
@@ -104,7 +103,6 @@ export function makeStudio({
     parseDocument,
     layoutGraph,
     styleForGraph,
-    styleForDrawing,
     applyGraphPositions,
     roundPositionCoordinate,
     canvasPoint,
@@ -124,6 +122,8 @@ export function makeStudio({
     frameCount,
     createCanvasRenderer: (_canvas, graph, layout, options) => {
       themes.push(options.theme);
+      // As createCanvasRenderer: the given style, else the graph's own sheet.
+      const resolvedStyle = options.style ?? styleForGraph(graph);
       const renderFrameWithList = (frame) => {
         const evaluated = directorFrameAt(graph, layout, frame, options.fps);
         const state = options.cameraOverride
@@ -135,17 +135,21 @@ export function makeStudio({
           frame,
           fps: options.fps,
           measure,
-          style: domainStyle(graph.domain),
+          style: resolvedStyle,
           detailAt: options.detailAt,
         });
         if (transformFrameText) list.a11y = transformFrameText(list.a11y, frame, graph);
-        onRenderFrame?.({ frame, state, list });
+        onRenderFrame?.({ frame, state, list, graph, positions: layout });
         return { state, list };
       };
       return {
         renderFrame: (frame) => renderFrameWithList(frame).state,
         renderFrameWithList,
         frameSpec: DEFAULT_FRAME_SPEC,
+        // As the real renderer: the style of the drawing at its current positions.
+        get style() {
+          return drawingStyle({ graph, positions: layout, style: resolvedStyle });
+        },
       };
     },
     fetch: fetcher ?? defaultFetcher,

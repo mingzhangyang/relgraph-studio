@@ -1,3 +1,4 @@
+import { LINE_DASH } from '../line-styles.js';
 import type { DomainStyle, EdgeStyle, LocalizedText, NodeStyle } from '../style.js';
 
 const captions = {
@@ -16,8 +17,11 @@ const flow = (caption: LocalizedText): EdgeStyle =>
   Object.freeze({ stroke: 'plain', head: 'arrow', caption });
 // Regulatory dashes separate influence from mass flow; the catalyst's short
 // dash and hollow marker separate it from activation.
-const regulatory = (head: EdgeStyle['head'], caption: LocalizedText, dash = [7, 5]): EdgeStyle =>
-  Object.freeze({ stroke: 'regulatory', dash: Object.freeze(dash), head, caption });
+const regulatory = (
+  head: EdgeStyle['head'],
+  caption: LocalizedText,
+  dash: readonly number[] = LINE_DASH.dashed,
+): EdgeStyle => Object.freeze({ stroke: 'regulatory', dash: Object.freeze(dash), head, caption });
 const molecule: NodeStyle = Object.freeze({ shape: 'pill' });
 
 /** Process-description roles and molecular interaction kinds of relgraph.bio/0.1-draft. */

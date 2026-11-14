@@ -19,9 +19,8 @@ export type EdgeStroke = 'plain' | 'physical' | 'regulatory';
 /** How a relation ends at its target. */
 export const EDGE_HEADS = ['arrow', 'bar', 'hollow-circle', 'none'] as const;
 export type EdgeHead = (typeof EDGE_HEADS)[number];
-/** The line rhythms an author may ask for by name. */
-export const LINE_STYLES = ['solid', 'dashed', 'dotted'] as const;
-export type LineStyle = (typeof LINE_STYLES)[number];
+import { LINE_DASH, type LineStyle } from './line-styles.js';
+export { LINE_DASH, LINE_STYLES, type LineStyle } from './line-styles.js';
 /**
  * Number of categorical tones every video theme provides. A tone is an index
  * into the theme's validated palette, so the same kind keeps one identity in
@@ -147,18 +146,13 @@ export interface GraphKinds {
   edges?: Readonly<Record<string, KindDeclaration>>;
 }
 
-const LINE_DASH: Readonly<Record<LineStyle, readonly number[] | undefined>> = Object.freeze({
-  solid: undefined,
-  dashed: Object.freeze([7, 5]),
-  dotted: Object.freeze([2, 4]),
-});
 // Redundant with hue: the first kinds stay solid, later ones also change rhythm.
 const AUTO_DASH: readonly (readonly number[] | undefined)[] = Object.freeze([
   undefined,
   undefined,
   undefined,
-  Object.freeze([7, 5]),
-  Object.freeze([2, 4]),
+  LINE_DASH.dashed,
+  LINE_DASH.dotted,
   Object.freeze([11, 4, 2, 4]),
   Object.freeze([4, 4]),
   Object.freeze([14, 6]),
@@ -310,8 +304,9 @@ function withoutAxis(style: DomainStyle): DomainStyle {
  * and the layout panel use too. Positions can only take the axis away, as a
  * guard for callers that pass coordinates no anchoring has pinned: rules and
  * bars must never point at the wrong years. Without an axis spans are drawn
- * as points and no rule or cursor is drawn. Glyph outlines, hit tests and the
- * composer must all read a drawing through this.
+ * as points and no rule or cursor is drawn. The renderer reads every frame
+ * through this (`drawingStyle`) and exposes the result as its `style`; glyph
+ * outlines, hit tests and overlays take the style from there.
  */
 export function styleForDrawing(
   style: DomainStyle,

@@ -1,7 +1,8 @@
+import { LINE_DASH } from '../line-styles.js';
 import type { DomainStyle, EdgeStyle } from '../style.js';
 
-const DASHED = Object.freeze([7, 5]),
-  DOTTED = Object.freeze([2, 4]);
+const DASHED = LINE_DASH.dashed,
+  DOTTED = LINE_DASH.dotted;
 const relation = (tone?: number, dash?: readonly number[]): EdgeStyle =>
   Object.freeze({
     stroke: 'plain',

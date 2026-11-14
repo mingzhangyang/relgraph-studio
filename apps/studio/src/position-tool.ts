@@ -7,7 +7,6 @@ import {
   type FrameSpec,
 } from '@relgraph/render';
 import {
-  NEUTRAL_STYLE,
   type DirectorFrameState,
   type DomainStyle,
   type VisualNode,
@@ -67,7 +66,7 @@ export function hitVisibleNode(
   spec: FrameSpec,
   point: Point,
   radius: number,
-  style: DomainStyle = NEUTRAL_STYLE,
+  style: DomainStyle,
   config?: ProjectConfig,
 ): string | null {
   // The composer clips all graph drawing to this stage. Without the same

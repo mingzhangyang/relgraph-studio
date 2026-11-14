@@ -10,6 +10,9 @@ import {
   computeLayout,
   DEFAULT_LAYOUT_SETTINGS,
 } from '../packages/core/src/director/layout-strategies.ts';
+import { NEUTRAL_STYLE, styleForGraph } from '../packages/core/src/style.ts';
+import { composeFrame } from '../packages/render/src/compose.ts';
+import { measure } from './helpers/display-list.mjs';
 import { deferred, flush, makeStudio } from './helpers/studio-harness.mjs';
 import {
   currentStudioMode,
@@ -2147,4 +2150,24 @@ test('F6: the positioned export of a timeline stores lanes, so a date edit loads
   await flush();
   assert.doesNotMatch(app.node('warnings').textContent, /OFF_TIME_AXIS/);
   assert.equal(app.node('layoutExport').disabled, false);
+});
+
+test('#44 review: a first load draws with the graph style, as the production renderer does', async () => {
+  // studio.ts creates the first renderer of a document without a `style`;
+  // createCanvasRenderer then resolves styleForGraph(graph). The simulated
+  // renderer must draw the same frame, not one under the neutral style.
+  let last = null;
+  const app = makeStudio({ onRenderFrame: (rendered) => (last = rendered) });
+  await app.ready;
+  for (const button of ['exampleLiterature', 'exampleBiology', 'exampleGraph', 'exampleTimeline']) {
+    await app.node(button).click();
+    await flush();
+    const at = app.window.studioFrame().playback;
+    assert.ok(app.window.renderAt(Math.floor(at.totalSec * 24) - 1), button);
+    const { frame, state, list, graph, positions } = last;
+    const recompose = (style) =>
+      composeFrame(state, { graph, positions, frame, fps: 24, measure, style });
+    assert.deepEqual(list, recompose(styleForGraph(graph)), button);
+    assert.notDeepEqual(list, recompose(NEUTRAL_STYLE), `${button} has a style of its own`);
+  }
 });

@@ -7,7 +7,7 @@ import { loadDocument } from '../packages/core/src/director/load.ts';
 import { layoutGraph } from '../packages/core/src/director/layout.ts';
 import { LAYOUT_MODES, LAYOUT_TYPES } from '../packages/core/src/project-layout.ts';
 import { DEFAULT_FRAME_SPEC } from '../packages/render/src/frame-spec.ts';
-import { domainStyle } from '../packages/core/src/style.ts';
+import { domainStyle, NEUTRAL_STYLE } from '../packages/core/src/style.ts';
 import {
   nodeGlyphBounds,
   nodeGlyphIntersectsStage,
@@ -55,6 +55,7 @@ test('hit-testing excludes hidden nodes even when their IDs match Object prototy
       DEFAULT_FRAME_SPEC,
       point,
       24,
+      NEUTRAL_STYLE,
     ),
     'visible',
   );
@@ -566,6 +567,7 @@ test('hit-testing uses the renderer camera projection for enormous finite distan
       DEFAULT_FRAME_SPEC,
       point,
       24,
+      NEUTRAL_STYLE,
     ),
     'a',
   );
@@ -627,8 +629,14 @@ test('hit testing ignores caption and title bands outside the renderer stage', (
   const outside = new Map([['outside', { x: 0, y: 270 }]]);
   const pixel = screenPosition(outside.get('outside'), camera, spec);
   assert.equal(pixel.y, 600, 'node is in caption band below the clipped stage');
-  assert.equal(hitVisibleNode(nodes, outside, reveal, camera, spec, pixel, 24), null);
-  assert.equal(hitVisibleNode(nodes, outside, reveal, camera, spec, { x: 640, y: 40 }, 600), null);
+  assert.equal(
+    hitVisibleNode(nodes, outside, reveal, camera, spec, pixel, 24, NEUTRAL_STYLE),
+    null,
+  );
+  assert.equal(
+    hitVisibleNode(nodes, outside, reveal, camera, spec, { x: 640, y: 40 }, 600, NEUTRAL_STYLE),
+    null,
+  );
   const inside = new Map([['outside', { x: 0, y: 0 }]]);
   assert.equal(
     hitVisibleNode(
@@ -639,6 +647,7 @@ test('hit testing ignores caption and title bands outside the renderer stage', (
       spec,
       screenPosition(inside.get('outside'), camera, spec),
       24,
+      NEUTRAL_STYLE,
     ),
     'outside',
   );
@@ -656,7 +665,7 @@ test('hit testing excludes fully clipped glyphs near the stage edge', () => {
     y: 562,
   });
   assert.equal(
-    hitVisibleNode(nodes, outsidePosition, reveal, camera, spec, insideStage, 24),
+    hitVisibleNode(nodes, outsidePosition, reveal, camera, spec, insideStage, 24, NEUTRAL_STYLE),
     null,
     'a click within hit radius must not select a fully clipped circle',
   );
@@ -664,7 +673,7 @@ test('hit testing excludes fully clipped glyphs near the stage edge', () => {
   // Move the glyph just enough for its outline to overlap the clipped stage.
   const partlyVisible = new Map([['clipped', { x: 0, y: 220 }]]);
   assert.equal(
-    hitVisibleNode(nodes, partlyVisible, reveal, camera, spec, insideStage, 24),
+    hitVisibleNode(nodes, partlyVisible, reveal, camera, spec, insideStage, 24, NEUTRAL_STYLE),
     'clipped',
     'a partly visible glyph remains selectable at the same pointer location',
   );
@@ -677,6 +686,7 @@ test('hit testing excludes fully clipped glyphs near the stage edge', () => {
       spec,
       insideStage,
       24,
+      NEUTRAL_STYLE,
     ),
     null,
     'a node below the reveal threshold cannot be selected',
