@@ -704,6 +704,15 @@ Public API: core adds `LINE_DASH` (`LINE_STYLES` and `LineStyle` move to
 `miniatureGeometry` and `CanvasRenderer.style`. In the studio,
 `startPositionDrag` takes the style before the optional config.
 
+Validation, run locally on linux-x64, Node 22.23.4, on the tree of
+`87e4354` (later commits are docs only): `npm run typecheck`,
+`npm run check:types`, `npm run lint`, `npm run format:check` passed;
+`npm test` 416 tests in 38 files passed; `npm run check:export` 31/31 passed
+with the 236 golden frames matching (no `--update`); `npm run check:browser`
+76/76 passed in Chromium 153.0.8010.12 (no local baseline, so the baseline
+comparisons did not run). No GitHub Actions workflow was added, dispatched
+or rerun.
+
 ## Review evidence
 
 Ran locally on linux-x64, Node 22.23.4, at `73af432`: `npm run typecheck`,
