@@ -1,10 +1,6 @@
 import type { VisualGraph } from '../../types/visual-graph.js';
-import {
-  autoLayout,
-  LAYOUT_DEFAULTS,
-  runLayoutEngine,
-  type LayoutEngine,
-} from './layout-engines.js';
+import { autoLayout, runLayoutEngine } from './layout-engines.js';
+import { LAYOUT_DEFAULTS, type LayoutEngine } from '../project-layout.js';
 import type { DiagramKind } from '../style.js';
 
 /** The layout a kind of diagram is drawn with; a network chooses by structure. */

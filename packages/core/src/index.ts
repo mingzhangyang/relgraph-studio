@@ -8,6 +8,7 @@ export * from './director/timeline.js';
 export * from './domains/biology.js';
 export * from './domains/biology.style.js';
 export * from './domains/generic.js';
+export { autoStoryboard } from './director/storyboard.js';
 export * from './domains/literature.js';
 export * from './domains/literature.style.js';
 export * from './graph/core.js';
@@ -20,6 +21,9 @@ export * from './project.js';
 
 export * from './director/layout-strategies.js';
 export * from './director/layout-engines.js';
+export { diagramStructure } from './graph/analysis.js';
+export * from './graph/time-axis.js';
+export * from './project-layout.js';
 export * from './director/time-anchor.js';
 
 export * from './image-assets.js';

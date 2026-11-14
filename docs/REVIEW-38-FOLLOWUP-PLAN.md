@@ -1,7 +1,7 @@
 # Follow-up plan · review of #37 and #38
 
 Status: **open** · baseline `main` at `73af432` · reviewed 2026-11-12 ·
-PR 1 merged as `a2589bf` and PR 2 as `682dbbd` on 2026-11-13
+PR 1 merged as `a2589bf`, PR 2 as `682dbbd` and PR 1b as `a63875c` on 2026-11-13
 
 This is the tracking document for the work that came out of reviewing
 [#38](https://github.com/mingzhangyang/relgraph-studio/pull/38) (generic graphs,
@@ -31,9 +31,9 @@ The repository rules in [AGENTS.md](../AGENTS.md) apply to every step:
 | PR | Scope | Items | Golden frames | Status |
 | --- | --- | --- | --- | --- |
 | 1 | Behaviour fixes | F1–F5 | Tree example changes (F5); others identical | ☑ [#40](https://github.com/mingzhangyang/relgraph-studio/pull/40) merged as `a2589bf` (2026-11-13); leftover 3 tracked as F6 |
-| 1b | Behaviour fix | F6 | Must stay identical | ◐ implemented on branch `claude/brave-hypatia-waiyi9` from `682dbbd`; golden frames identical |
+| 1b | Behaviour fix | F6 | Must stay identical | ☑ [#42](https://github.com/mingzhangyang/relgraph-studio/pull/42) merged as `a63875c` (2026-11-13); golden frames identical |
 | 2 | Per-frame cost and limits | P1–P3 | Must stay identical | ☑ [#41](https://github.com/mingzhangyang/relgraph-studio/pull/41) merged as `682dbbd` (2026-11-13) |
-| 3 | Core structure | S1–S3 | Must stay identical | ☐ not started |
+| 3 | Core structure | S1–S3 | Must stay identical | ◐ implemented on branch `claude/eloquent-feynman-qhxjit` from `a63875c`; golden frames identical |
 | 4 | Render structure | S4–S6 | Must stay identical | ☐ not started |
 | 5 | Tooling and docs | T1–T4 | Not affected | ☐ not started |
 | 6 | Workspace UI | W1–W5 | Not affected | ☐ not started |
@@ -53,15 +53,15 @@ not pass `--update` to the golden or browser baselines.
 
 These are choices for the owner. Each has a recommendation; the plan assumes
 the recommendation until it is changed here. PR 1 implements the
-recommendations of D1, D2 and D4, and PR 2 that of D3; the boxes stay open
-until the owner confirms them.
+recommendations of D1, D2 and D4, and PR 2 that of D3; the owner confirmed
+all four on 2026-11-13.
 
 | Id | Question | Recommendation | Decided |
 | --- | --- | --- | --- |
-| D1 | How does a drawing remain a timeline (F1)? | Make it a declared state instead of inferring it from coordinates every frame: while a drawing is time-anchored, a dated node's x is derived from its time and only its lane (y) is stored and editable. Leaving that state is an explicit act (applying another strategy), shown in the layout panel. | ☐ |
-| D2 | Which layout defaults are canonical (F3)? | The load-time values (spacing 150, iterations 300), exported once and used by the panel too: the golden frames and browser baselines are recorded against them. | ☐ |
+| D1 | How does a drawing remain a timeline (F1)? | Make it a declared state instead of inferring it from coordinates every frame: while a drawing is time-anchored, a dated node's x is derived from its time and only its lane (y) is stored and editable. Leaving that state is an explicit act (applying another strategy), shown in the layout panel. | ☑ as recommended (owner, 2026-11-13); implemented in #40, lanes-only storage in #42 (F6) |
+| D2 | Which layout defaults are canonical (F3)? | The load-time values (spacing 150, iterations 300), exported once and used by the panel too: the golden frames and browser baselines are recorded against them. | ☑ as recommended (owner, 2026-11-13); implemented in #40 |
 | D3 | What happens to the 5,000 / 20,000 limits (P3)? | Keep them as hard limits, add a warning diagnostic above a measured preview budget, and document both numbers. | ☑ budget 300 / 600, from measured playback (#41 review, item 3) |
-| D4 | How deep does the "STEP" fix go in PR 1 (F5 vs S3)? | PR 1 only stops showing the internal unit. Separating reveal order from domain time is S3, in PR 3. | ☐ |
+| D4 | How deep does the "STEP" fix go in PR 1 (F5 vs S3)? | PR 1 only stops showing the internal unit. Separating reveal order from domain time is S3, in PR 3. | ☑ as recommended (owner, 2026-11-13); F5 in #40, S3 in #43 |
 
 ## PR 1 · Behaviour fixes
 
@@ -178,7 +178,7 @@ compared with the reviewed head `72beefa`: identical (base `a2589bf`, which
 
 No behaviour change; golden hashes and browser baselines identical.
 
-- [ ] **S1 · Dependencies point inward.** Today `style.ts` imports
+- [x] **S1 · Dependencies point inward.** Today `style.ts` imports
   `timeAxis` / `keepsTime` from `director/layout-engines.ts`,
   `domains/generic.ts` imports `diagramStructure` from it, and `project.ts`
   imports the strategy lists from `director/layout-strategies.ts`.
@@ -187,14 +187,14 @@ No behaviour change; golden hashes and browser baselines identical.
     time-axis model lives in its own module, and the strategy and mode name
     lists live beside the project types. Adapters, styles and engines import
     those; none of them imports an engine.
-- [ ] **S2 · `generic.ts` does one job per module.** It currently holds the
+- [x] **S2 · `generic.ts` does one job per module.** It currently holds the
   parser and validator (one 570-line `parse`), the id mapping, the visual
   hierarchy and the storyboard derivation.
   - Done when: storyboard derivation (`autoStoryboard`, `timedStoryboard`,
     `shapeDiagram`) is a module that works on any `VisualGraph`; `parse` is
     split by section; `loadDocument` parses a document once instead of twice
     (`packages/core/src/director/load.ts:141` and `:148`).
-- [ ] **S3 · Reveal order is not domain time.** Completes F5: unfolding has its
+- [x] **S3 · Reveal order is not domain time.** Completes F5: unfolding has its
   own track in the compiled timeline instead of borrowing `visibility` and
   `timeline.unit`.
   - Done when: a graph can both unfold and carry real domain time, and the
@@ -567,6 +567,75 @@ two baseline comparisons did not run). The playback figures of item 3 are
 the reviewer's and were not re-measured. No GitHub Actions workflow was
 added, dispatched or rerun.
 
+### PR 3 · as implemented
+
+- **S1** · Three modules that import no engine:
+  `packages/core/src/graph/analysis.ts` (`prepare`, components, clusters,
+  hub and centre, spanning and reading trees, strongly connected components,
+  ranks, flow ranks, `diagramStructure`), `packages/core/src/graph/time-axis.ts`
+  (`TimeAxis`, `timeAxis`, `placeInTime`, `TIME_TOLERANCE`, `keepsTime`, the
+  lane geometry) and `packages/core/src/project-layout.ts`, beside the project
+  types (`LAYOUT_ENGINES`, `LAYOUT_TYPES`, `LAYOUT_MODES`, `LAYOUT_DEFAULTS`).
+  `style.ts`, `domains/generic.ts`, `project.ts`, `director/time-anchor.ts`,
+  the engines and the strategies import them. `time-anchor.ts` stays in
+  `director/`: it imports no engine, and the adapter and the styles read the
+  anchored state from it. The built package exports the same 113 names.
+- **S2** · `domains/generic-source.ts` is the parser and validator: one
+  function per section over a shared `Reader`, called in the order the old
+  `parse` read the file, so diagnostics keep their order.
+  `director/storyboard.ts` holds `autoStoryboard`, `timedStoryboard` and
+  `shapeDiagram`, which now reads the kind from the graph and works on any
+  `VisualGraph`. `domains/generic.ts` adapts; `inspectGenericDocument`
+  validates and adapts with one parse, and `loadDocument` uses it. On 87
+  documents (every example and dataset, 16 malformed or edge-case sources and
+  each generic example with one top-level field removed or broken),
+  `loadDocument`, `validateGenericDocument` and `adaptGenericDocument` return
+  the same results as `a63875c`. A test counts reads of the source; it fails
+  on `a63875c`.
+- **S3** · Reveal order is `revealStep` on nodes, relations and shots, a
+  track of its own: `compileTimeline` keeps `revealSteps` beside `domainTime`,
+  each shot inherits each value separately, and `projectVisualGraph(graph,
+  domainAt, revealStep)` admits an object only when both admit it.
+  `timeline.ordinal` and `timedNodes` are gone, with the checks in the
+  timeline engine, the composer and the studio: `visibility` is always domain
+  time. Every frame of every example (5,376 frames, 8 films) composes to the
+  same display list as `a63875c`; for the three unfolding examples the old
+  `domainTime` values are now the `revealSteps` values. A test builds a graph
+  that unfolds and has dates and checks both tracks; it fails on `a63875c`.
+  Public API: `inspectGenericDocument` is added, `timedNodes` is removed.
+
+Not done here: the generic adapter still unfolds only graphs without timed
+facts, so a tree with dates is revealed by its dates, as before. Unfolding a
+dated tree level by level is now possible in the model, but choosing it for
+a source is a behaviour change for a later PR.
+
+Validation, run locally on linux-x64, Node 22.23.4, on the tree of
+`9c7ae0a`: `npm run typecheck`, `npm run check:types`, `npm run lint`,
+`npm run format:check` passed; `npm test` 401 tests in 36 files passed;
+`npm run check:export` 31/31 passed with the 236 golden frames matching (no
+`--update`); `npm run check:browser` 76/76 passed in real Chromium (no local
+baseline, so the baseline comparisons did not run). The comparisons against
+`a63875c` above used both commits' built packages. No GitHub Actions
+workflow was added, dispatched or rerun.
+
+### PR 3 · review of #43
+
+The [acceptance review](https://github.com/mingzhangyang/relgraph-studio/pull/43#pullrequestreview-5898806305)
+found one P2: `autoStoryboard` stepped only through `visibility`, so
+regenerating the storyboard of an unfolded graph gave one overview shot
+showing everything (a root → child → leaf tree: one shot of three nodes,
+where `a63875c` gave three shots of one, two and three). Fixed in `2569a4a`:
+a graph with reveal steps gets one shot per step, titled by what arrives and
+setting `revealStep`; a graph that also has dates keeps its domain-time
+storyboard, so no dated fact shows early. The new test fails on `1fb9bd5`.
+
+Validation on the tree of `2569a4a`, linux-x64, Node 22.23.4:
+`npm run typecheck`, `npm run check:types`, `npm run lint`,
+`npm run format:check` passed; `npm test` 402 tests in 36 files passed;
+`npm run check:export` 31/31 passed with the 236 golden frames matching (no
+`--update`); `npm run check:browser` 76/76 passed (no local baseline). No
+GitHub Actions workflow was added, dispatched or rerun.
+
 ## Review evidence
 
 Ran locally on linux-x64, Node 22.23.4, at `73af432`: `npm run typecheck`,
@@ -591,4 +660,11 @@ rerun.
 | 2026-11-13 | P3 | #41 | `682dbbd` (branch `f54385b`) | `LARGE_GRAPH` above 500 nodes or 1,000 relations |
 | 2026-11-13 | #41 review, items 1–3 and minor | #41 | `682dbbd` (branch `72beefa`) | Budget lowered to 300 / 600 (D3); golden frames unchanged |
 | 2026-11-13 | PR 2 merged | #41 | `682dbbd` | Squash of `72beefa` onto `a2589bf`; tree identical to the reviewed head |
-| 2026-11-13 | F6 | — | — (branch `e29cc70`, `a8c2a80`) | Lanes only for anchored dated nodes; golden frames unchanged |
+| 2026-11-13 | F6 | #42 | `a63875c` (branch `e29cc70`, `a8c2a80`) | Lanes only for anchored dated nodes; golden frames unchanged |
+| 2026-11-13 | #42 review and follow-up review | #42 | `a63875c` (branch `ada4d09`, `1271551`) | One lane rule for writer and reader; `LANE_ONLY` warning; golden frames unchanged |
+| 2026-11-13 | PR 1b merged | #42 | `a63875c` | Squash of `1271551` onto `682dbbd`; tree identical to the reviewed head |
+| 2026-11-13 | S1 | — | — (branch `5e21269`) | Graph analysis, time axis and layout names in their own modules; exports unchanged |
+| 2026-11-13 | S2 | — | — (branch `8e49fc2`) | Parser split by section, storyboard module, one parse per load; 87 documents identical |
+| 2026-11-13 | S3 | — | — (branch `9c7ae0a`) | `revealStep` track; 5,376 frames identical; golden frames unchanged |
+| 2026-11-13 | D1, D2, D4 | #43 | — | Owner confirmed the recommendations; all four decisions closed |
+| 2026-11-13 | #43 review, P2 | #43 | — (branch `2569a4a`) | Regenerated storyboard of an unfolded graph unfolds; golden frames unchanged |

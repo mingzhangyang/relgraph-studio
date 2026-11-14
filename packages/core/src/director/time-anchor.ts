@@ -22,17 +22,15 @@
  */
 import type { VisualGraph, VisualNode } from '../../types/visual-graph.js';
 import {
-  LAYOUT_DEFAULTS,
   placeInTime,
   TIME_TOLERANCE,
   TIMELINE_GAP,
   TIMELINE_LANE,
   timeAxis,
-  timedNodes,
-  type EnginePoint,
   type TimeAxis,
-} from './layout-engines.js';
-import { roundPositionCoordinate } from './seeded-layout.js';
+} from '../graph/time-axis.js';
+import { LAYOUT_DEFAULTS } from '../project-layout.js';
+import { roundPositionCoordinate, type LayoutPoint } from './seeded-layout.js';
 
 /** The strategies whose drawing of a timeline diagram is on its time axis. */
 export const TIME_ANCHORED_TYPES = Object.freeze(['auto', 'timeline'] as const);
@@ -82,7 +80,7 @@ export function timeAnchor(
   graph: AnchorGraph,
   type: string = graph.project?.layout?.type ?? 'manual',
 ): TimeAxis | null {
-  return declared(graph, type) ? timeAxis(timedNodes(graph)) : null;
+  return declared(graph, type) ? timeAxis(graph.nodes) : null;
 }
 
 /** Where an anchored node's x must be, rounded as stored coordinates are; null if undated. */
@@ -127,7 +125,7 @@ export function lanedNodes(
   anchored: boolean = declaresTimeAxis(graph),
 ): Set<string> {
   if (!anchored || graph.diagram !== 'timeline') return new Set();
-  const nodes = timedNodes(graph),
+  const nodes = graph.nodes,
     axis = timeAxis(nodes);
   return axis
     ? new Set(nodes.filter((node) => placeInTime(node, axis) !== null).map((node) => node.id))
@@ -136,14 +134,14 @@ export function lanedNodes(
 
 /** Dated nodes as the axis sees them, by id. */
 function dated(graph: AnchorGraph): Map<string, Pick<VisualNode, 'id' | 'span' | 'visibility'>> {
-  return new Map(timedNodes(graph).map((node) => [node.id, node]));
+  return new Map(graph.nodes.map((node) => [node.id, node]));
 }
 
 /**
  * The point a node may be moved to: on an anchored drawing a dated node only
  * changes lane, so its x is its place in time whatever was asked for.
  */
-export function anchoredPoint(graph: AnchorGraph, id: string, point: EnginePoint): EnginePoint {
+export function anchoredPoint(graph: AnchorGraph, id: string, point: LayoutPoint): LayoutPoint {
   const axis = timeAnchor(graph),
     node = axis ? dated(graph).get(id) : undefined;
   const x = node && axis ? pinned(node, axis, point.x) : null;
@@ -157,7 +155,7 @@ export function anchoredPoint(graph: AnchorGraph, id: string, point: EnginePoint
 export function offTime(
   graph: AnchorGraph,
   axis: TimeAxis,
-  positions: ReadonlyMap<string, EnginePoint>,
+  positions: ReadonlyMap<string, LayoutPoint>,
   ids: Iterable<string>,
 ): string[] {
   const nodes = dated(graph),
@@ -190,14 +188,14 @@ const laneHeight = (spacing: number): number => spacing * TIMELINE_LANE;
 export function crowdedBy(
   graph: AnchorGraph,
   axis: TimeAxis,
-  positions: ReadonlyMap<string, EnginePoint>,
+  positions: ReadonlyMap<string, LayoutPoint>,
   fixed: ReadonlySet<string>,
   spacing: number = LAYOUT_DEFAULTS.spacing,
 ): Set<string> {
   const gap = (axis.to - axis.from) * TIMELINE_GAP,
     half = laneHeight(spacing) / 2,
     bars: { id: string; y: number; from: number; to: number }[] = [];
-  for (const node of timedNodes(graph)) {
+  for (const node of graph.nodes) {
     const p = positions.get(node.id);
     if (!p || placeInTime(node, axis) === null) continue;
     const [from, to] = extentOf(node, axis);
@@ -236,7 +234,7 @@ export interface AnchorOptions {
  */
 export function anchorToTime(
   graph: AnchorGraph,
-  positions: Map<string, EnginePoint>,
+  positions: Map<string, LayoutPoint>,
   {
     unplaced = new Set(),
     axis = timeAnchor(graph),
@@ -245,7 +243,7 @@ export function anchorToTime(
 ): boolean {
   if (!axis) return false;
   let changed = false;
-  const nodes = timedNodes(graph),
+  const nodes = graph.nodes,
     waiting: (typeof nodes)[number][] = [];
   for (const node of nodes) {
     const p = positions.get(node.id);

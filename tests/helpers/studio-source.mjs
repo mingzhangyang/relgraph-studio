@@ -32,7 +32,7 @@ import {
   offTime,
   timeAnchor,
 } from '../../packages/core/src/director/time-anchor.ts';
-import { placeInTime } from '../../packages/core/src/director/layout-engines.ts';
+import { placeInTime } from '../../packages/core/src/graph/time-axis.ts';
 import {
   currentStudioMode,
   planStudioModeTransition,

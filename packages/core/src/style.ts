@@ -5,7 +5,7 @@
 import { biologyStyle } from './domains/biology.style.js';
 import { literatureStyle } from './domains/literature.style.js';
 import type { VisualGraph } from '../types/visual-graph.js';
-import { keepsTime, timeAxis } from './director/layout-engines.js';
+import { keepsTime, timeAxis } from './graph/time-axis.js';
 import { timeAnchor } from './director/time-anchor.js';
 
 export const LOCALES = ['zh-CN', 'en'] as const;

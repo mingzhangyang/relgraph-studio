@@ -697,10 +697,7 @@ function setFrame(next: number, updatePosition = true): DirectorFrameState | und
   projectEditor.render(state, projectHistory.value);
   renderDocumentToolbar();
   refreshSelectionFeedback();
-  shellView.renderDomainTime(
-    state.view.timeline?.ordinal ? null : p.domainAt,
-    state.view.timeline?.unit,
-  );
+  shellView.renderDomainTime(p.domainAt, state.view.timeline?.unit);
   shotsView.render(p.index, list.a11y.scene.title, p.progress);
   return state;
 }
@@ -1342,10 +1339,7 @@ function applyLanguage(next: StudioLanguage): void {
     transcriptView.render(lastDisplayList.a11y);
     shotsView.refreshLanguage();
     shotsView.render(frame.index, lastDisplayList.a11y.scene.title, frame.progress);
-    shellView.renderDomainTime(
-      currentFrameState.view.timeline?.ordinal ? null : frame.domainAt,
-      currentFrameState.view.timeline?.unit,
-    );
+    shellView.renderDomainTime(frame.domainAt, currentFrameState.view.timeline?.unit);
     // Refresh the scrubber's localized aria-valuetext from the existing
     // playback model, without seeking or repainting the movie.
     renderPlaybackFrame(playbackControls, playbackDisplay(playback, frame.index, frame.totalSec));

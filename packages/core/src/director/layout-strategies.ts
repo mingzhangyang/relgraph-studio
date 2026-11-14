@@ -2,29 +2,16 @@ import type { VisualGraph } from '../../types/visual-graph.js';
 import type { ProjectConfig } from '../project.js';
 import { layoutMissingNodes, roundPositionCoordinate, type LayoutPoint } from './seeded-layout.js';
 import { DIAGRAM_ENGINE, layoutGraph } from './layout.js';
+import { AUTO_LAYOUT_NODE_LIMIT, chooseLayoutEngine, runLayoutEngine } from './layout-engines.js';
+import { placeInTime, timeAxis } from '../graph/time-axis.js';
 import {
-  AUTO_LAYOUT_NODE_LIMIT,
-  chooseLayoutEngine,
   LAYOUT_DEFAULTS,
-  LAYOUT_ENGINES,
-  placeInTime,
-  runLayoutEngine,
-  timeAxis,
-  timedNodes,
+  LAYOUT_MODES,
+  LAYOUT_TYPES,
   type LayoutEngine,
-} from './layout-engines.js';
+} from '../project-layout.js';
 import { anchorToTime, crowdedBy, offTime, timeAnchor } from './time-anchor.js';
 
-/**
- * Every strategy a project may store: `manual` keeps coordinates as they
- * are, `auto` chooses an engine, and each engine can be asked for by name.
- * The project type, its validator and the studio's menu all read this list.
- */
-export const LAYOUT_TYPES = ['manual', 'auto', ...LAYOUT_ENGINES] as const;
-export type LayoutType = (typeof LAYOUT_TYPES)[number];
-/** What a strategy may do with the coordinates that already exist. */
-export const LAYOUT_MODES = ['preserve', 'missing', 'rearrange'] as const;
-export type LayoutMode = (typeof LAYOUT_MODES)[number];
 export type LayoutSettings = NonNullable<ProjectConfig['layout']>;
 export const DEFAULT_LAYOUT_SETTINGS: LayoutSettings = {
   type: 'manual',
@@ -157,7 +144,7 @@ export function planLayout(
           ? 'size'
           : 'structure';
   // The timeline engine draws a tree when nothing has a date; say so.
-  if (engine === 'timeline' && !timeAxis(timedNodes(graph))) {
+  if (engine === 'timeline' && !timeAxis(graph.nodes)) {
     engine = 'tree';
     reason = 'untimed';
   }
@@ -169,14 +156,14 @@ export function planLayout(
     // Preferred spacing belongs to the solver, never to authored coordinates.
     result = extreme
       ? layoutMissingNodes({ nodes, edges: graph.edges }, { seed, iterations, spacing })
-      : runLayoutEngine({ nodes, edges: graph.edges, timeline: graph.timeline }, 'force', {
+      : runLayoutEngine({ nodes, edges: graph.edges }, 'force', {
           seed,
           iterations,
           spacing,
           fixed: anchors,
         });
   } else
-    result = runLayoutEngine({ nodes, edges: graph.edges, timeline: graph.timeline }, engine, {
+    result = runLayoutEngine({ nodes, edges: graph.edges }, engine, {
       seed,
       iterations,
       spacing,
@@ -187,11 +174,7 @@ export function planLayout(
   if (engine !== 'force' && anchors.size) {
     const occupied = [...anchors.values()];
     const dated = new Set(
-      axis
-        ? timedNodes(graph)
-            .filter((n) => placeInTime(n, axis) !== null)
-            .map((n) => n.id)
-        : [],
+      axis ? graph.nodes.filter((n) => placeInTime(n, axis) !== null).map((n) => n.id) : [],
     );
     for (const id of [...result.keys()].sort(compare)) {
       // On the time axis a dated node changes lane, never its years (below).

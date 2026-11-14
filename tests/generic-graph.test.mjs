@@ -6,8 +6,9 @@ import { loadDocument } from '../packages/core/src/director/load.ts';
 import { layoutGraph } from '../packages/core/src/director/layout.ts';
 import { directorFrameAt, frameCount } from '../packages/core/src/director/state.ts';
 import { applyGraphPositions } from '../packages/core/src/director/position-writeback.ts';
+import { autoStoryboard } from '../packages/core/src/director/storyboard.ts';
+import { compileTimeline } from '../packages/core/src/director/timeline.ts';
 import {
-  autoStoryboard,
   GENERIC_FORMAT,
   GENERIC_LIMITS,
   internalIds,
@@ -690,4 +691,76 @@ test('a graph above the preview budget loads with a warning; above the hard limi
   assert.deepEqual([GENERIC_LIMITS.previewNodes, GENERIC_LIMITS.previewEdges], [300, 600]);
   assert.ok(GENERIC_LIMITS.previewNodes < GENERIC_LIMITS.nodes);
   assert.ok(GENERIC_LIMITS.previewEdges < GENERIC_LIMITS.edges);
+});
+
+test('S2: loading a generic source parses it once, with the same diagnostics as validation', () => {
+  // Every parse reads each list of the source once; count the reads.
+  const reads = new Map();
+  const counted = (doc) =>
+    new Proxy(doc, {
+      get(target, key, receiver) {
+        if (typeof key === 'string') reads.set(key, (reads.get(key) ?? 0) + 1);
+        return Reflect.get(target, key, receiver);
+      },
+    });
+  const loaded = loadDocument(counted(structuredClone(bookshop)));
+  assert.equal(loaded.valid, true);
+  assert.equal(reads.get('nodes'), 1, 'nodes read by one parse');
+  assert.equal(reads.get('presentation'), 1, 'presentation read by one parse');
+
+  // An invalid source reports what validation reports, and is read once too.
+  reads.clear();
+  const broken = { ...structuredClone(bookshop), diagram: 'pie', directed: 'no' };
+  const failed = loadDocument(counted(broken));
+  assert.equal(failed.valid, false);
+  assert.equal(reads.get('nodes'), 1);
+  assert.deepEqual(
+    failed.errors.map((e) => [e.code, e.path]),
+    validateGenericDocument(broken).errors.map((e) => [e.code, e.path]),
+  );
+});
+
+test('#43 review: a storyboard regenerated from an unfolded graph still unfolds', () => {
+  const loaded = loadDocument({
+    format: GENERIC_FORMAT,
+    diagram: 'tree',
+    nodes: ['root', 'child', 'leaf'],
+    edges: [
+      { source: 'root', target: 'child' },
+      { source: 'child', target: 'leaf' },
+    ],
+  });
+  assert.equal(loaded.valid, true);
+  const graph = structuredClone(loaded.graph);
+  assert.deepEqual(
+    graph.nodes.map((n) => n.revealStep),
+    [1, 2, 3],
+  );
+  graph.scenes = autoStoryboard(graph);
+  // One shot per step, each showing what has unfolded so far.
+  assert.deepEqual(
+    graph.scenes.map((s) => s.revealStep),
+    [1, 2, 3],
+  );
+  assert.deepEqual(
+    compileTimeline(graph).shots.map((shot) => shot.view.nodes.length),
+    [1, 2, 3],
+  );
+  // Reveal order is not time: no domain time, and no step number as a title.
+  assert.ok(graph.scenes.every((s) => s.domainAt === undefined));
+  assert.deepEqual(
+    graph.scenes.map((s) => s.title),
+    ['root', 'child', 'leaf'],
+  );
+
+  // A graph with real dates as well keeps its storyboard on domain time, so
+  // no dated fact is shown before its time.
+  const dated = structuredClone(graph);
+  dated.nodes[2].visibility = { from: 5 };
+  const scenes = autoStoryboard(dated);
+  assert.deepEqual(
+    scenes.map((s) => s.domainAt),
+    [5],
+  );
+  assert.ok(scenes.every((s) => s.revealStep === undefined));
 });

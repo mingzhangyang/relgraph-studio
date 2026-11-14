@@ -163,10 +163,12 @@ test('every generic graph diagnostic has an English message and repair', async (
   const { loadDocument } = await import('../packages/core/src/director/load.ts');
   const { GENERIC_FORMAT, GENERIC_LIMITS } =
     await import('../packages/core/src/domains/generic.ts');
-  const source = readFileSync(
-    new URL('../packages/core/src/domains/generic.ts', import.meta.url),
-    'utf8',
-  );
+  // The parser and validator, and the adapter's own warnings.
+  const source = ['generic-source.ts', 'generic.ts']
+    .map((file) =>
+      readFileSync(new URL('../packages/core/src/domains/' + file, import.meta.url), 'utf8'),
+    )
+    .join('\n');
   // Every message and repair the validator can emit: the Chinese literals in
   // its fail(…) and warn(…) calls, with a sample in place of each interpolation.
   const sample = (expression) =>

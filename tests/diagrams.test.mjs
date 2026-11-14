@@ -6,13 +6,9 @@ import mindmap from '../examples/reading-club-mindmap-synthetic.graph.json' with
 import flowchart from '../examples/order-flowchart-synthetic.graph.json' with { type: 'json' };
 import { loadDocument } from '../packages/core/src/director/load.ts';
 import { DIAGRAM_ENGINE, layoutGraph } from '../packages/core/src/director/layout.ts';
-import {
-  diagramStructure,
-  keepsTime,
-  placeInTime,
-  runLayoutEngine,
-  timeAxis,
-} from '../packages/core/src/director/layout-engines.ts';
+import { runLayoutEngine } from '../packages/core/src/director/layout-engines.ts';
+import { diagramStructure } from '../packages/core/src/graph/analysis.ts';
+import { keepsTime, placeInTime, timeAxis } from '../packages/core/src/graph/time-axis.ts';
 import {
   computeLayout,
   DEFAULT_LAYOUT_SETTINGS,
@@ -97,17 +93,22 @@ test('a tree unfolds one level at a time from its root', () => {
   assert.equal(levels.get(root.id), 0);
   assert.equal(levels.get(byLabel(graph, 'Aves').id), 8);
   // One step per level, each node arriving at its depth, then the whole tree.
-  for (const node of graph.nodes) assert.equal(node.visibility.from, levels.get(node.id) + 1);
-  for (const edge of graph.edges)
-    assert.equal(
-      edge.visibility.from,
-      Math.max(levels.get(edge.source), levels.get(edge.target)) + 1,
-    );
+  // Reveal order is its own track: no domain time is invented (S3).
+  for (const node of graph.nodes) {
+    assert.equal(node.revealStep, levels.get(node.id) + 1);
+    assert.equal(node.visibility, undefined);
+  }
+  for (const edge of graph.edges) {
+    assert.equal(edge.revealStep, Math.max(levels.get(edge.source), levels.get(edge.target)) + 1);
+    assert.equal(edge.visibility, undefined);
+  }
+  assert.equal(graph.timeline, undefined);
   assert.equal(graph.scenes.length, 10);
   assert.deepEqual(
-    graph.scenes.slice(0, 9).map((s) => s.domainAt),
+    graph.scenes.slice(0, 9).map((s) => s.revealStep),
     [1, 2, 3, 4, 5, 6, 7, 8, 9],
   );
+  assert.ok(graph.scenes.every((s) => s.domainAt === undefined));
   assert.equal(graph.scenes.at(-1).id, 'auto-closing');
   assert.equal(graph.scenes[0].title, 'Vertebrata');
   assert.equal(graph.scenes[1].title, 'Cyclostomata · Gnathostomata', 'siblings in written order');
@@ -236,9 +237,10 @@ test('a mind map grows from its topic to both sides, with words inside every sha
   // The film opens on the topic alone and unfolds two more levels.
   assert.deepEqual(compose(result, 12).list.a11y.nodes, ['读书会']);
   assert.deepEqual(
-    graph.scenes.map((s) => s.domainAt),
+    graph.scenes.map((s) => s.revealStep),
     [1, 2, 3, undefined],
   );
+  assert.ok(graph.scenes.every((s) => s.domainAt === undefined));
 });
 
 test('a flowchart reads as a sequence: conventional shapes, labelled branches, loops that return', () => {

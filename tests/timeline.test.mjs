@@ -4,7 +4,14 @@ import literature from '../examples/honglou-provisional.relgraph.json' with { ty
 import biology from '../examples/biology-signaling-synthetic.json' with { type: 'json' };
 import { loadDocument } from '../packages/core/src/director/load.ts';
 import { layoutGraph } from '../packages/core/src/director/layout.ts';
-import { frameStateAt, frameStateAtSecond } from '../packages/core/src/graph/core.ts';
+import {
+  frameStateAt,
+  frameStateAtSecond,
+  projectVisualGraph,
+  validateVisualGraph,
+} from '../packages/core/src/graph/core.ts';
+import { timeAxis } from '../packages/core/src/graph/time-axis.ts';
+import tree from '../examples/vertebrates-tree-provisional.graph.json' with { type: 'json' };
 import {
   compileTimeline,
   captionOpacity,
@@ -448,4 +455,71 @@ test('hidden targets with inherited Object property names have zero reveal progr
   }
   assert.equal(revealProgress(timeline, 'node', 'constructor', 1.9), 1);
   assert.equal(revealProgress(timeline, 'edge', 'toString', 1.9), 1);
+});
+
+test('S3: a graph can unfold and carry domain time, each on its own track', () => {
+  // A derived unfolding, given real dates as well: the first two levels exist
+  // from year 0, everything deeper from year 10.
+  const unfolded = loadDocument(tree).graph;
+  const graph = structuredClone(unfolded);
+  for (const node of graph.nodes) node.visibility = { from: node.revealStep <= 2 ? 0 : 10 };
+  graph.timeline = { unit: 'YEAR' };
+  graph.scenes = [
+    { id: 'a', title: 'a', durationSec: 2, domainAt: 0, revealStep: 1 },
+    { id: 'b', title: 'b', durationSec: 2, revealStep: 3 },
+    { id: 'c', title: 'c', durationSec: 2, domainAt: 10 },
+    { id: 'd', title: 'd', durationSec: 2, revealStep: 12 },
+  ];
+  assert.equal(validateVisualGraph(graph).valid, true);
+  const ids = (view) => view.nodes.map((n) => n.id).sort();
+  const expected = (at, step) =>
+    graph.nodes
+      .filter((n) => n.visibility.from <= at && n.revealStep <= step)
+      .map((n) => n.id)
+      .sort();
+
+  // Each track is inherited on its own; the projection admits what both admit.
+  const timeline = compileTimeline(graph, 24);
+  assert.deepEqual(
+    timeline.domainTime.map((k) => k.value),
+    [0, 0, 10, 10],
+  );
+  assert.deepEqual(
+    timeline.revealSteps.map((k) => k.value),
+    [1, 3, 3, 12],
+  );
+  const cases = [
+    [0, 1],
+    [0, 3],
+    [10, 3],
+    [10, 12],
+  ];
+  cases.forEach(([at, step], i) => {
+    assert.deepEqual(ids(timeline.shots[i].view), expected(at, step), `shot ${i}`);
+    assert.deepEqual(ids(projectVisualGraph(graph, at, step)), expected(at, step));
+    // Random access agrees with the compiled film, and keeps both values.
+    const state = frameStateAtSecond(graph, i * 2 + 1);
+    assert.deepEqual(ids(state.view), expected(at, step));
+    assert.deepEqual([state.playback.domainAt, state.playback.revealStep], [at, step]);
+    assert.deepEqual(
+      [
+        timelinePlaybackAt(timeline, i * 2 + 1).domainAt,
+        timelinePlaybackAt(timeline, i * 2 + 1).revealStep,
+      ],
+      [at, step],
+    );
+  });
+  // Shot b is still at year 0: unfolding further reveals nothing from year 10.
+  assert.ok(ids(timeline.shots[1].view).length < ids(timeline.shots[3].view).length);
+
+  // Reveal steps are never dates: they make no time axis, and only the real
+  // dates make one.
+  assert.equal(timeAxis(unfolded.nodes), null);
+  assert.deepEqual([timeAxis(graph.nodes).from, timeAxis(graph.nodes).to], [0, 10]);
+  // A still graph (no step set yet) shows everything, as with domain time.
+  assert.equal(projectVisualGraph(graph).nodes.length, graph.nodes.length);
+  assert.equal(
+    validateVisualGraph({ ...graph, scenes: [{ ...graph.scenes[0], revealStep: NaN }] }).valid,
+    false,
+  );
 });

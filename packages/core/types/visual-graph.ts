@@ -1,5 +1,6 @@
 /** Internal presentation contract, not a replacement for domain exchange formats. */
 export type NodeId = string;
+/** When an object exists in domain time: dates, never reveal order. */
 export interface Visibility {
   from?: number;
   to?: number;
@@ -21,6 +22,11 @@ export interface VisualNode {
    * `visibility` it never hides the node: what has ended stays on screen.
    */
   span?: { from: number; to?: number };
+  /**
+   * The step of an unfolding at which the node appears: reveal order, not
+   * domain time (`visibility`). Nothing presents it as a date.
+   */
+  revealStep?: number;
 }
 export interface VisualEdge {
   id: string;
@@ -32,6 +38,8 @@ export interface VisualEdge {
   strength?: number;
   polarity?: string;
   visibility?: Visibility;
+  /** The step of an unfolding at which the relation appears; see `VisualNode.revealStep`. */
+  revealStep?: number;
 }
 export interface VisualGroup {
   id: string;
@@ -58,6 +66,12 @@ export interface VisualScene {
   durationSec: number;
   transitionMs?: number;
   domainAt?: number;
+  /**
+   * The unfolding step this shot shows: objects with a later `revealStep` are
+   * not yet projected. Inherited by later shots, like `domainAt`, and
+   * independent of it.
+   */
+  revealStep?: number;
   camera?: VisualCamera;
   highlight?: VisualHighlight;
   openDetailNodeId?: NodeId;
@@ -66,14 +80,10 @@ export interface VisualGraph {
   project?: import('../src/project.js').ProjectConfig;
   domain: string;
   meta: { title: string; description?: string; sourceNote?: string };
+  /** The unit of domain time, as authored. Reveal order has no unit. */
   timeline?: {
     unit: string;
     total?: number;
-    /**
-     * The steps count reveal order, not domain time: a tree, mind map or
-     * flowchart unfolded one level at a time. Nothing shows them as a date.
-     */
-    ordinal?: boolean;
   };
   /**
    * False when the source of a timeline declares that its coordinates are not
@@ -107,6 +117,7 @@ export interface FrameScene {
   durationSec: number;
   transitionMs?: number;
   domainAt?: number;
+  revealStep?: number;
   camera: VisualCamera;
   highlight: ResolvedHighlight;
   redacted: boolean;
@@ -119,6 +130,8 @@ export interface ScenePlayback<TScene> {
   elapsedSec: number;
   progress: number;
   domainAt: number | null;
+  /** The unfolding step in effect, or null when no shot has set one: everything is revealed. */
+  revealStep: number | null;
   totalSec: number;
   startSec: number;
 }

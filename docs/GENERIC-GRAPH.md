@@ -227,8 +227,10 @@ with, and is refused in the same way when the loaded axis would move a locked
 node. Exporting a timeline that has no dates yet does not write
 `"timeAxis": false`: once dates are added, it is drawn on its axis.
 
-The unfolding of a tree, mind map or flowchart counts reveal order, not time,
-so its frames show no domain time.
+The unfolding of a tree, mind map or flowchart counts reveal order, not time.
+It is a track of its own (each node's and relation's `revealStep`, each
+shot's `revealStep`), separate from domain time (`visibility`, `domainAt`), so
+its frames show no domain time unless the graph also has real dates.
 
 An evolutionary tree that unfolds needs nothing but its branches:
 
@@ -280,8 +282,8 @@ How the conventions are derived, and how to override them:
   drawing is on its time axis (see above); lanes (y) remain yours to choose.
   A drawing taken off the axis is shown without it and with spans as points,
   rather than with rules that point at the wrong years. The reveal steps of
-  an unfolding tree, mind map or flowchart are not dates: the timeline
-  strategy draws such a graph as a tree, and says so.
+  an unfolding tree, mind map or flowchart are not dates and make no axis:
+  the timeline strategy draws such a graph as a tree, and says so.
 - **Shapes.** In a flowchart, kinds named like `开始`, `结束`, `start`, `end`
   become capsules and kinds named like `判断`, `条件`, `decision` become
   diamonds; everything else is a box. `kinds.nodes.<kind>.shape` overrides.
