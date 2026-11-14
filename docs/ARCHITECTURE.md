@@ -108,6 +108,27 @@ Reveal order and domain time are separate tracks. Domain time is
 the projection admits an object only when both admit it. Only domain time is
 ever shown as a date or makes a time axis.
 
+`composeFrame` (`packages/render/src/compose.ts`) runs passes over one frame
+context. `compose/context.ts` builds the read-only `FrameContext` once per frame:
+options, scaled units and fonts, label bounds, projected node points and the
+attention of every item. The passes are separate functions in
+`packages/render/src/compose/`: background, the nodes' shared geometry and label
+obstacles, time axis, group hulls, relations, glyphs, legend, node labels,
+relation tags, detail card, frame furniture and accessible text. Each returns its
+own items. The one state they share is label space: a pass that places text or a
+plate takes its room in an explicit `occupied` index, so a later pass can only
+use what the earlier ones left free. `tests/compose-passes.test.mjs` runs each
+pass alone and checks that a frame is exactly its passes in order.
+
+Constants that several readers must agree on have one source: line rhythms in
+`packages/core/src/line-styles.ts` (`LINE_DASH`), compact shape proportions and
+legend miniatures in `node-geometry.ts` (`miniatureGeometry`), and the
+importance scale for glyph radius, bar height, held words and labels in
+`packages/render/src/importance.ts`. The renderer owns the style a drawing is
+read with: `drawingStyle` resolves it (through `styleForDrawing`) and
+`CanvasRenderer.style` returns it for the current positions. Hit tests and
+overlays take it from there and have no default of their own.
+
 `ProjectHistory` owns immutable sparse configuration snapshots. The coordinator
 routes style/copy, manual drag/numeric positions, locks and applied layouts through
 that history. Preview cancellation is separate from history. Document loads clear

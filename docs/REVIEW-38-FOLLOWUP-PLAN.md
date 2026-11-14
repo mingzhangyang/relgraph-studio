@@ -1,7 +1,8 @@
 # Follow-up plan · review of #37 and #38
 
 Status: **open** · baseline `main` at `73af432` · reviewed 2026-11-12 ·
-PR 1 merged as `a2589bf`, PR 2 as `682dbbd` and PR 1b as `a63875c` on 2026-11-13
+PR 1 merged as `a2589bf`, PR 2 as `682dbbd` and PR 1b as `a63875c` on 2026-11-13,
+PR 3 as `ca0edd8` on 2026-11-14
 
 This is the tracking document for the work that came out of reviewing
 [#38](https://github.com/mingzhangyang/relgraph-studio/pull/38) (generic graphs,
@@ -33,8 +34,8 @@ The repository rules in [AGENTS.md](../AGENTS.md) apply to every step:
 | 1 | Behaviour fixes | F1–F5 | Tree example changes (F5); others identical | ☑ [#40](https://github.com/mingzhangyang/relgraph-studio/pull/40) merged as `a2589bf` (2026-11-13); leftover 3 tracked as F6 |
 | 1b | Behaviour fix | F6 | Must stay identical | ☑ [#42](https://github.com/mingzhangyang/relgraph-studio/pull/42) merged as `a63875c` (2026-11-13); golden frames identical |
 | 2 | Per-frame cost and limits | P1–P3 | Must stay identical | ☑ [#41](https://github.com/mingzhangyang/relgraph-studio/pull/41) merged as `682dbbd` (2026-11-13) |
-| 3 | Core structure | S1–S3 | Must stay identical | ◐ implemented on branch `claude/eloquent-feynman-qhxjit` from `a63875c`; golden frames identical |
-| 4 | Render structure | S4–S6 | Must stay identical | ☐ not started |
+| 3 | Core structure | S1–S3 | Must stay identical | ☑ [#43](https://github.com/mingzhangyang/relgraph-studio/pull/43) merged as `ca0edd8` (2026-11-14); golden frames identical |
+| 4 | Render structure | S4–S6 | Must stay identical | ◐ implemented on branch `claude/funny-dijkstra-4ok2of` from `ca0edd8`; display lists identical |
 | 5 | Tooling and docs | T1–T4 | Not affected | ☐ not started |
 | 6 | Workspace UI | W1–W5 | Not affected | ☐ not started |
 | 7 | Film frame refinement | V1–V4 | Regenerated, with before/after frames | ☐ not started |
@@ -200,20 +201,25 @@ No behaviour change; golden hashes and browser baselines identical.
   - Done when: a graph can both unfold and carry real domain time, and the
     spoiler projection is unchanged for timed documents.
 
+S1–S3 landed in [#43](https://github.com/mingzhangyang/relgraph-studio/pull/43),
+merged to `main` as `ca0edd8`. After the merge, the tree of `ca0edd8` was
+compared with the reviewed head `54f5f98`: identical (base `a63875c`, which
+`main` had not moved from).
+
 ## PR 4 · Render structure
 
 No behaviour change; golden hashes and browser baselines identical.
 
-- [ ] **S4 · `composeFrame` in passes.** It is one closure of about 1,300
+- [x] **S4 · `composeFrame` in passes.** It is one closure of about 1,300
   lines (`packages/render/src/compose.ts:306`–`1609`).
   - Done when: background, time axis, hulls, relations, nodes, legend, labels
     and frame furniture are separate functions over a shared frame context,
     each testable alone.
-- [ ] **S5 · One source for repeated constants.** Dash rhythms are defined in
+- [x] **S5 · One source for repeated constants.** Dash rhythms are defined in
   `style.ts`, `literature.style.ts` and `compose.ts:748`; shape proportions in
   `node-geometry.ts` and again for legend miniatures at `compose.ts:1211`; the
   importance scale for radius and type in three places.
-- [ ] **S6 · The resolved style has one owner.** "Read a drawing through
+- [x] **S6 · The resolved style has one owner.** "Read a drawing through
   `styleForPositions`" is a comment, not a contract:
   `apps/studio/src/position-tool.ts:70` defaults to the neutral style,
   `apps/studio/src/layout-editor-model.ts:85` defaults to the domain lookup
@@ -636,6 +642,68 @@ Validation on the tree of `2569a4a`, linux-x64, Node 22.23.4:
 `--update`); `npm run check:browser` 76/76 passed (no local baseline). No
 GitHub Actions workflow was added, dispatched or rerun.
 
+### PR 4 · as implemented
+
+One commit per item, on a branch from `ca0edd8`. No behaviour change.
+
+- **S4** · `composeFrame` (`packages/render/src/compose.ts`) runs passes over
+  one read-only `FrameContext` (`compose/context.ts`), each a function in
+  `packages/render/src/compose/`: `composeBackground`, `drawnNodes` and
+  `nodeObstacles`, `composeTimeAxis`, `composeGroups`, `relationLayout` and
+  `composeRelations`, `composeNodes`, `composeLegend`, `composeNodeLabels`,
+  `composeRelationLabels`, `composeDetailCard`, `composeFurniture` and
+  `frameText`. Each returns its own items. Label space is the one state they
+  share: a pass that places text or a plate takes its room in an explicit
+  `occupied` index, in the order the closure did. Code is moved, not
+  rewritten. `tests/compose-passes.test.mjs` runs each pass alone and checks
+  that a frame is exactly its passes in order. The source guard in
+  `tests/render-pipeline.test.mjs` (no domain vocabulary, no 720p pixel
+  positions) now reads every pass module; it read only `compose.ts`, which
+  would have left it checking a few lines.
+- **S5** · Line rhythms: `packages/core/src/line-styles.ts` (`LINE_STYLES`,
+  `LINE_DASH`), a leaf module so the domain sheets that `style.ts` imports
+  can read it. The derived sheets, the literature and biology sheets and the
+  composer's authored dashes use it; the catalyst's `[2, 5]` stays its own
+  rhythm. Shape proportions: `compactExtents` in `node-geometry.ts` defines
+  the square, hexagon and circle for both the glyph and its legend miniature
+  (`miniatureGeometry`); the miniature-only proportions of shapes sized by
+  their words or years sit beside it. Importance:
+  `packages/render/src/importance.ts` is the one scale for glyph radius, span
+  bar, held words, the label beside a node and the principal's glow and
+  solid fill. `tests/style-constants.test.mjs` checks each reader against
+  the one source.
+- **S6** · `drawingStyle` (exported) is how the composer resolves the style
+  of a drawing, and `CanvasRenderer.style` returns it for the positions as
+  they are now (a getter: an authoring drag moves them in place).
+  `hitVisibleNode` and `startPositionDrag` require the style and have no
+  default; the studio passes `renderer.style`. Before, the studio's pointer
+  handler recomputed the style from the stored graph, not from the graph
+  being drawn under a previewed strategy; drags are not blocked during a
+  preview, so the two could differ, though this was not reproduced as a
+  visible defect. The simulated-DOM harness's renderer stub composes with the
+  style the studio gives it, not `domainStyle` (neutral for generic graphs),
+  and has the same getter. D1 did not make `styleForPositions` unnecessary:
+  it remains the coordinate guard inside `styleForDrawing`. A new case in
+  `tests/canvas-renderer.test.mjs` checks that the boxes a hit test computes
+  with `renderer.style` are the boxes drawn, and that moving a bar off its
+  years takes the axis away from `renderer.style` at once.
+
+Regression evidence: every frame of every example, of the Honglou dataset and
+of the dynasties timeline with one bar pushed off its years, plus every 37th
+frame of a 300-node synthetic graph, in both themes, both locales, at 720p
+and 1080p (50,832 frames), composes to a byte-identical display list against
+the built packages of `ca0edd8`, after each of the three commits. Each build
+runs its own core and render packages. A change of one part per million to
+the legend glyph size is caught at once. The hexagon miniature now computes
+its height as width × √3/2, as the glyph does; no example puts a hexagon in
+its legend, and where one does the height can differ in the last bit at
+some type scales (1080p, for example).
+
+Public API: core adds `LINE_DASH` (`LINE_STYLES` and `LineStyle` move to
+`line-styles.ts` and are re-exported); render adds `drawingStyle`,
+`miniatureGeometry` and `CanvasRenderer.style`. In the studio,
+`startPositionDrag` takes the style before the optional config.
+
 ## Review evidence
 
 Ran locally on linux-x64, Node 22.23.4, at `73af432`: `npm run typecheck`,
@@ -668,3 +736,7 @@ rerun.
 | 2026-11-13 | S3 | — | — (branch `9c7ae0a`) | `revealStep` track; 5,376 frames identical; golden frames unchanged |
 | 2026-11-13 | D1, D2, D4 | #43 | — | Owner confirmed the recommendations; all four decisions closed |
 | 2026-11-13 | #43 review, P2 | #43 | — (branch `2569a4a`) | Regenerated storyboard of an unfolded graph unfolds; golden frames unchanged |
+| 2026-11-14 | PR 3 merged | #43 | `ca0edd8` | Squash of `54f5f98` onto `a63875c`; tree identical to the reviewed head |
+| 2026-11-14 | S4 | — | — (branch `6882f62`) | `composeFrame` in passes over a frame context; 50,832 display lists identical |
+| 2026-11-14 | S5 | — | — (branch `9d13310`) | One source for line rhythms, shape proportions and the importance scale; display lists identical |
+| 2026-11-14 | S6 | — | — (branch `87e4354`) | The renderer owns the drawn style; hit tests have no default; display lists identical |
