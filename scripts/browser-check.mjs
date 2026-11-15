@@ -2186,6 +2186,58 @@ for (const theme of ['dark', 'light']) {
   await context.close();
 }
 
+// W5: stacked on a narrow screen, the data source comes first; example
+// buttons share one height in both interface languages.
+{
+  const { context, page, problems } = await openStudio({ colorScheme: 'light' });
+  await check('data source first on narrow screens; example buttons of one height', async () => {
+    for (const language of ['zh-CN', 'en']) {
+      await page.selectOption('#languageSelect', language);
+      for (const width of [1440, 840, 390]) {
+        await page.setViewportSize({ width, height: 844 });
+        const geometry = await page.evaluate(() => {
+          const box = (element) => {
+            const r = element.getBoundingClientRect();
+            return { top: r.top + scrollY, left: r.left, right: r.right, height: r.height };
+          };
+          return {
+            source: box(document.querySelector('.source-card')),
+            stage: box(document.querySelector('.stage-shell')),
+            buttons: [...document.querySelectorAll('.source-buttons button')].map(
+              (button) => box(button).height,
+            ),
+            overflow: document.documentElement.scrollWidth - window.innerWidth,
+          };
+        });
+        const where = `${language} at ${width}px`;
+        assert.ok(geometry.buttons.length >= 2, where);
+        assert.ok(
+          Math.max(...geometry.buttons) - Math.min(...geometry.buttons) < 1,
+          `example buttons share one height, ${where}: ${geometry.buttons.join(', ')}`,
+        );
+        if (width > 840)
+          assert.ok(
+            geometry.source.left >= geometry.stage.right,
+            `source in the sidebar, ${where}`,
+          );
+        else
+          assert.ok(
+            geometry.source.top + geometry.source.height <= geometry.stage.top,
+            `source above the preview, ${where}`,
+          );
+        assert.ok(geometry.overflow <= 2, `no horizontal overflow, ${where}`);
+        // The sidebar stays a landmark when its cards join the page grid.
+        assert.equal(await page.getByRole('complementary').count(), 1, where);
+        await page.screenshot({
+          path: join(outputDir, `workspace-source-${language}-${width}.png`),
+        });
+      }
+    }
+    assert.deepEqual(problems, []);
+  });
+  await context.close();
+}
+
 // Added or removed shots change the frame inventory; both need an explicit
 // baseline refresh instead of passing on the frames that remain.
 if (reference)

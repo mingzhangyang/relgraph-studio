@@ -607,9 +607,11 @@ kbd {
 .card-body { margin: 0; color: var(--text-2); font-size: 13px; line-height: 1.7; white-space: pre-line; overflow-wrap: anywhere; }
 .muted { margin: 8px 0 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
 
-.source-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+/* Every row as tall as the tallest button, in either language (W5). */
+.source-buttons { display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; gap: 8px; }
 .source-buttons button {
   display: grid;
+  align-content: start;
   gap: 3px;
   padding: 10px 11px;
   border: 1px solid var(--line-strong);
@@ -708,20 +710,22 @@ footer span { color: var(--gold); }
   .layout { grid-template-columns: minmax(0, 1fr) 300px; gap: 20px; padding: 22px 20px 32px; }
   .topbar { padding: 12px 20px; }
 }
+/*
+ * Stacked, the data source comes first (W5): the sidebar's cards join the
+ * page grid, the source card moves above the preview and the rest follow
+ * it. Keyboard order still follows the document: preview, then sidebar.
+ */
 @media (max-width: 840px) {
-  .layout { grid-template-columns: minmax(0, 1fr); }
+  .layout { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .workspace { grid-column: 1 / -1; }
   .rightbar {
     position: static;
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    max-height: none;
-    overflow: visible;
-    padding: 0;
+    display: contents;
   }
+  .source-card { order: -1; grid-column: 1 / -1; }
 }
 @media (max-width: 640px) {
-  .layout { padding: 16px 16px 28px; gap: 24px; }
-  .rightbar { display: flex; }
+  .layout { grid-template-columns: minmax(0, 1fr); padding: 16px 16px 28px; gap: 24px; }
   .topbar { position: static; flex-wrap: wrap; }
   .top-meta { flex-wrap: wrap; justify-content: flex-end; gap: 8px; max-width: 100%; }
   .top-note, .brand small, .hint-note, .pill, .language-picker span { display: none; }
