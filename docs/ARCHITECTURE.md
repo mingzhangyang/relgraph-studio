@@ -79,9 +79,11 @@ The overlay is never sent to the renderer or export pipeline, and the sidebar
 scrolls independently on desktop/medium layouts.
 
 `layout-strategies.ts` is a synchronous DOM-free authoring step over stable IDs.
-It supports generic layered SCC/distance packing, the existing seeded force
-solver, circle and manual strategies. Coordinate intent (preserve, fill missing,
-rearrange) and locks are explicit. No generation or reaction meaning is inferred
+It plans the eleven strategies of `LAYOUT_TYPES` (`project-layout.ts`):
+`manual`, `auto`, and the nine engines of `director/layout-engines.ts` (force,
+layered, flow, tree, mindmap, timeline, radial, circle, grid); see
+[layout strategies](GENERIC-GRAPH.md#layout-strategies). Coordinate intent
+(preserve, fill missing, rearrange) and locks are explicit. No generation or reaction meaning is inferred
 from text. Layout computation never runs inside a frame evaluator. A transient
 preview is applied explicitly, with document serial validation; saved coordinates
 are then the authoritative input to playback and both rendering backends.
@@ -107,6 +109,22 @@ Reveal order and domain time are separate tracks. Domain time is
 (`domainTime`, `revealSteps`), every shot inherits each value on its own, and
 the projection admits an object only when both admit it. Only domain time is
 ever shown as a date or makes a time axis.
+
+Diagnostics are worded from tables, not written at each check.
+`packages/core/src/diagnostic-wording.ts` holds the wording of every layer core
+writes in Chinese or with Chinese fixes (`structure`, `semantic`,
+`graph-source`, `studio`), keyed by code, or `CODE.variant` where one code has
+several wordings. A diagnostic carries its `variant` and the values its wording
+names as `params`, so the studio's `ENGLISH_DIAGNOSTICS`
+(`apps/studio/src/diagnostic-text.ts`) translates it by key without reading
+the sentence; its type requires an entry for every key core defines. The
+`biology` and `graph` layers write English only and are shown as written.
+
+The shipped examples are listed once, in `examples/manifest.json`: each
+example's button id, file, source name and button text. `vite.config.mjs`
+renders the buttons into the page's one example slot and copies the files into
+the build; the studio binds one handler per entry and opens the first. Tests and
+the browser scripts read the same file.
 
 `composeFrame` (`packages/render/src/compose.ts`) runs passes over one frame
 context. `compose/context.ts` builds the read-only `FrameContext` once per frame:
