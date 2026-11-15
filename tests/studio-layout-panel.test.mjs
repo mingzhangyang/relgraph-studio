@@ -114,3 +114,53 @@ test('W1: a hidden setting is neither validated, previewed nor counted as a draf
   await control(app, 'strategyPreview').click();
   assert.equal(note.textContent, '参数不能为空。');
 });
+
+test('W2: the panel says what drew the picture, through edits, Apply, undo and Reset', async () => {
+  const app = makeStudio();
+  await app.ready;
+  const drawn = () => control(app, 'strategyDrawn');
+  // The novel stores its coordinates.
+  assert.equal(drawn().textContent, '当前画面：文档保存的坐标');
+  await openExample(app, 'exampleGraph');
+  const automatic = '当前画面：载入时自动排布：流向 · 从左到右（按图的结构）';
+  assert.equal(drawn().textContent, automatic);
+  assert.equal(drawn().hidden, false);
+  // The strategy that keeps the picture is not named as if it drew it.
+  assert.equal(control(app, 'strategyType').value, 'manual');
+  assert.doesNotMatch(drawn().textContent, /保留当前画面/);
+
+  const language = app.node('languageSelect');
+  language.value = 'en';
+  await language.dispatch('change');
+  assert.equal(
+    drawn().textContent,
+    'Current picture: Arranged on load: Flow · Left to right (chosen from the graph structure)',
+  );
+  language.value = 'zh-CN';
+  await language.dispatch('change');
+
+  // Moving a node by hand is said; Reset takes it back.
+  assert.equal(app.window.renderAt(84), true);
+  await app.node('layoutToggle').click();
+  const x = app.node('layoutX');
+  x.value = String(Number(x.value) + 40);
+  await x.dispatch('input');
+  await app.node('layoutApply').click();
+  assert.equal(drawn().textContent, automatic + '，并有手动微调');
+  await app.node('layoutReset').click();
+  assert.equal(drawn().textContent, automatic);
+  await app.node('layoutToggle').click();
+
+  // A preview does not change the line; Apply does, and undo restores it.
+  await choose(app, 'strategyType', 'grid');
+  await choose(app, 'strategyMode', 'rearrange');
+  await control(app, 'strategyPreview').click();
+  assert.equal(control(app, 'strategyApply').disabled, false);
+  assert.equal(drawn().textContent, automatic);
+  await control(app, 'strategyApply').click();
+  assert.equal(drawn().textContent, '当前画面：已应用：网格 · 保持顺序');
+  await app.node('visualUndo').click();
+  assert.equal(drawn().textContent, automatic);
+  await app.node('visualRedo').click();
+  assert.equal(drawn().textContent, '当前画面：已应用：网格 · 保持顺序');
+});

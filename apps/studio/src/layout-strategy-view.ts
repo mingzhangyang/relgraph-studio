@@ -12,13 +12,15 @@ import {
   type LayoutSettings,
   type LayoutType,
   type DirectorFrameState,
+  type DrawingOrigin,
   type ProjectConfig,
   type VisualGraph,
 } from '@relgraph/core';
 // One label per strategy and policy the core knows: adding one there without
 // naming it here does not compile, and the menus cannot offer what it lacks.
 const TYPE_LABELS: Record<LayoutType, string> = {
-  manual: '手动 · 保留微调',
+  // Not a description of the picture (W2): the strategy that keeps it.
+  manual: '保留当前画面 · 手动微调',
   auto: '自动 · 按结构选择',
   force: '力导向 · 聚类',
   layered: '分层 · 自上而下',
@@ -59,6 +61,20 @@ export function blockedResetMessage(names: readonly string[]): string {
   return BLOCKED_PREFIX + names.join('、') + RESET_BLOCKED_SUFFIX;
 }
 export const RESET_BLOCKED_SUFFIX = '。请先解锁它们，再重置。';
+/** What drew the picture on screen, in the workspace's words (W2). */
+function originText(origin: DrawingOrigin, adjusted: boolean): string {
+  const body =
+    origin.kind === 'strategy'
+      ? uiText('已应用：') + uiText(TYPE_LABELS[origin.type])
+      : origin.kind === 'structure'
+        ? uiText('载入时自动排布：') +
+          uiText(TYPE_LABELS[origin.engine]) +
+          uiText(REASON_LABELS[origin.reason])
+        : origin.kind === 'partial'
+          ? uiText('文档保存的坐标；') + origin.missing + uiText(' 个没有坐标的节点排在旁边')
+          : uiText('文档保存的坐标');
+  return uiText('当前画面：') + body + (adjusted ? uiText('，并有手动微调') : '');
+}
 const MODE_LABELS: Record<LayoutMode, string> = {
   preserve: '保留现有坐标',
   missing: '只填补缺失坐标',
@@ -94,6 +110,18 @@ export function createLayoutStrategyView(doc: Document, host: HTMLElement, actio
   };
   // The disclosure's summary ("布局策略 · 预览后应用") is the panel's one
   // heading: the panel adds none of its own.
+  // First, what drew the picture now on screen (W2).
+  const drawnLine = el('p');
+  drawnLine.id = 'strategyDrawn';
+  drawnLine.className = 'muted strategy-drawn';
+  drawnLine.hidden = true;
+  host.append(drawnLine);
+  let drawn: { origin: DrawingOrigin; adjusted: boolean } | null = null;
+  const refreshDrawn = () => {
+    const text = drawn ? originText(drawn.origin, drawn.adjusted) : '';
+    if (drawnLine.textContent !== text) drawnLine.textContent = text;
+    if (drawnLine.hidden !== !drawn) drawnLine.hidden = !drawn;
+  };
   // The label around each control, so a setting the chosen strategy does not
   // read can be hidden with its control.
   const labels = new Map<HTMLElement, HTMLLabelElement>();
@@ -316,6 +344,7 @@ export function createLayoutStrategyView(doc: Document, host: HTMLElement, actio
       preview.disabled = !enabled;
       apply.disabled = !enabled || !pending;
       cancel.disabled = !enabled || !pending;
+      refreshDrawn();
       hintMessage = pending
         ? '临时预览 · 尚未保存。请应用或取消；可撤销已应用布局。'
         : '静态确定性布局 · 保留 = 不移动；填补 = 仅缺失；重排 = 移动未锁定节点。自动 = 按图的结构选择策略。';
@@ -331,6 +360,14 @@ export function createLayoutStrategyView(doc: Document, host: HTMLElement, actio
       iterations.value = String(settings.iterations);
       syncFields();
       refreshNote();
+    },
+    /**
+     * What drew the picture on screen: how the document was drawn, or the
+     * strategy last applied, and whether nodes were moved by hand since.
+     */
+    drawn(origin: DrawingOrigin | null, adjusted = false) {
+      drawn = origin && { origin, adjusted };
+      refreshDrawn();
     },
     /** What the panel knows about the loaded graph; null when none is loaded. */
     describe(next: LayoutPanelContext | null) {

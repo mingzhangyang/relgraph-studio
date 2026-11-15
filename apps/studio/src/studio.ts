@@ -50,6 +50,7 @@ import {
   anchoredPoint,
   anchorToTime,
   declaresTimeAxis,
+  drawingOrigin,
   layoutGraph,
   offTime,
   placeInTime,
@@ -58,7 +59,7 @@ import {
 } from '@relgraph/core';
 import { frameCount } from '@relgraph/core';
 import type { Bio } from '@relgraph/core';
-import type { DirectorFrameState, VisualGraph } from '@relgraph/core';
+import type { DirectorFrameState, DrawingOrigin, VisualGraph } from '@relgraph/core';
 import {
   createCanvasRenderer,
   FILM_FONT_FACES,
@@ -521,6 +522,8 @@ let currentLayout: ReturnType<typeof layoutGraph> | null = null;
 let originalLayout: ReturnType<typeof layoutGraph> | null = null;
 // The strategy the document was loaded with: Reset restores it with the coordinates.
 let originalLayoutType: LayoutType = 'manual';
+// How the document was drawn when it loaded, for the layout panel (W2).
+let loadedOrigin: DrawingOrigin | null = null;
 let sourceDocument: unknown = null;
 let sourceFilename = 'relgraph.json';
 let activeSourceName = '尚未加载';
@@ -589,7 +592,23 @@ function renderDocumentToolbar(): void {
     canRedo: projectHistory.canRedo,
   });
 }
+/**
+ * Tell the layout panel what drew the picture (W2): the strategy applied,
+ * else how the document was drawn when it loaded, and whether nodes were
+ * moved by hand since. A pending preview is described by the panel itself.
+ */
+function refreshDrawnOrigin(): void {
+  if (layoutPreview) return;
+  if (!graph || !currentLayout || !originalLayout || !loadedOrigin) {
+    strategyView.drawn(null);
+    return;
+  }
+  const type = projectHistory.value.layout?.type ?? 'manual';
+  if (type !== 'manual') strategyView.drawn({ kind: 'strategy', type });
+  else strategyView.drawn(loadedOrigin, layoutHasChanges(currentLayout, originalLayout));
+}
 function refreshUnsavedState(): void {
+  refreshDrawnOrigin();
   const dirty = hasUnsavedChanges();
   if (lastDirtyStatus === dirty) return;
   lastDirtyStatus = dirty;
@@ -706,6 +725,7 @@ function clearStudio(): void {
   lastDisplayList = null;
   currentLayout = null;
   originalLayout = null;
+  loadedOrigin = null;
   sourceDocument = null;
   selectedLayoutNode = null;
   dragging = null;
@@ -751,6 +771,7 @@ function applyResult(result: LoadResult, name: string, sourceText?: string, exam
   currentLayout = layoutGraph(graph);
   originalLayout = new Map([...currentLayout].map(([id, point]) => [id, { ...point }]));
   originalLayoutType = graph.project?.layout?.type ?? 'manual';
+  loadedOrigin = drawingOrigin(graph);
   projectSavepoint.markClean(projectHistory.value, currentLayout);
   renderEditorAvailability(layoutControls, sourceDocument !== null);
   renderer = createCanvasRenderer(canvas, graph, currentLayout, {

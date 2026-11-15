@@ -1,6 +1,6 @@
 import type { VisualGraph } from '../../types/visual-graph.js';
 import { AUTO_LAYOUT_NODE_LIMIT, chooseLayoutEngine, runLayoutEngine } from './layout-engines.js';
-import { LAYOUT_DEFAULTS, type LayoutEngine } from '../project-layout.js';
+import { LAYOUT_DEFAULTS, type LayoutEngine, type LayoutType } from '../project-layout.js';
 import type { DiagramKind } from '../style.js';
 
 /** The layout a kind of diagram is drawn with; a network chooses by structure. */
@@ -12,6 +12,7 @@ export const DIAGRAM_ENGINE: Readonly<Record<DiagramKind, LayoutEngine | null>> 
   timeline: 'timeline',
 });
 import { roundPositionCoordinate } from './seeded-layout.js';
+import { timeAxis } from '../graph/time-axis.js';
 
 /**
  * The engine an automatic drawing uses, and why: the engine of the declared
@@ -53,6 +54,41 @@ export function structuralLayout(
       { x: roundPositionCoordinate(p.x) || 0, y: roundPositionCoordinate(p.y) || 0 },
     ]),
   );
+}
+
+/**
+ * How `layoutGraph` arrives at a document's drawing, so the workspace can say
+ * what drew the picture:
+ * - `strategy`: the project stores a strategy it applied, with its coordinates;
+ * - `structure`: there are no coordinates, so `autoEngine` drew it (an
+ *   undated timeline as a tree, `untimed`, as the timeline engine does);
+ * - `coordinates`: every node has stored coordinates (source or project);
+ * - `partial`: some nodes have coordinates and `missing` are placed beside them.
+ */
+export type DrawingOrigin =
+  | { kind: 'strategy'; type: Exclude<LayoutType, 'manual'> }
+  | {
+      kind: 'structure';
+      engine: LayoutEngine;
+      reason: ReturnType<typeof autoEngine>['reason'] | 'untimed';
+    }
+  | { kind: 'coordinates' }
+  | { kind: 'partial'; missing: number };
+export function drawingOrigin(
+  graph: Pick<VisualGraph, 'nodes' | 'edges' | 'project' | 'diagram'>,
+): DrawingOrigin {
+  const type = graph.project?.layout?.type ?? 'manual';
+  if (type !== 'manual') return { kind: 'strategy', type };
+  const stored = graph.project?.layout?.positions ?? {};
+  const missing = graph.nodes.filter((n) => !n.position && !Object.hasOwn(stored, n.id)).length;
+  // The same test as placeNodes: no coordinates at all, and more than one node.
+  if (missing === graph.nodes.length && !Object.keys(stored).length && graph.nodes.length > 1) {
+    const auto = autoEngine(graph);
+    return auto.engine === 'timeline' && !timeAxis(graph.nodes)
+      ? { kind: 'structure', engine: 'tree', reason: 'untimed' }
+      : { kind: 'structure', ...auto };
+  }
+  return missing ? { kind: 'partial', missing } : { kind: 'coordinates' };
 }
 
 /** Stable layout prepared once per document, never advanced by playback. */

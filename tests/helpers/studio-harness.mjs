@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import { createSimulatedStudioDom } from './studio-dom.mjs';
 import { parseDocument } from '../../packages/core/src/director/load.ts';
-import { layoutGraph } from '../../packages/core/src/director/layout.ts';
+import { drawingOrigin, layoutGraph } from '../../packages/core/src/director/layout.ts';
 import { styleForGraph } from '../../packages/core/src/style.ts';
 import { applyGraphPositions } from '../../packages/core/src/director/position-writeback.ts';
 import { roundPositionCoordinate } from '../../packages/core/src/director/seeded-layout.ts';
@@ -101,6 +101,7 @@ export function makeStudio({
     Error,
     structuredClone,
     parseDocument,
+    drawingOrigin,
     layoutGraph,
     styleForGraph,
     applyGraphPositions,

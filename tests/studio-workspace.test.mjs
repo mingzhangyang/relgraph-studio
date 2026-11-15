@@ -1824,7 +1824,7 @@ test('strategy validation feedback survives locale and frame-only rerenders unti
   const app = makeStudio();
   await app.ready;
   const strategy = app.node('layoutStrategyEditor');
-  const note = strategy.children.find((child) => child.tagName === 'P');
+  const note = strategy.children.find((child) => child.id === 'strategyNote');
   assert.ok(note);
   // Spacing is a setting of every strategy but manual (W1).
   const type = viewControl(app, 'strategyType');
@@ -1925,7 +1925,7 @@ test('F2/F4: the layout panel refuses a preview that moves nothing and names the
   await flush();
   assert.equal(app.node('status').attributes['data-state'], 'ready');
   const strategy = app.node('layoutStrategyEditor'),
-    note = strategy.children.find((child) => child.tagName === 'P'),
+    note = strategy.children.find((child) => child.id === 'strategyNote'),
     type = viewControl(app, 'strategyType'),
     mode = viewControl(app, 'strategyMode'),
     apply = viewControl(app, 'strategyApply'),
@@ -1997,7 +1997,7 @@ test('#40 items 4 and 5: the panel can re-anchor a timeline, and Reset restores 
     type: viewControl(app, 'strategyType'),
     mode: viewControl(app, 'strategyMode'),
     apply: viewControl(app, 'strategyApply'),
-    note: app.node('layoutStrategyEditor').children.find((child) => child.tagName === 'P'),
+    note: app.node('layoutStrategyEditor').children.find((child) => child.id === 'strategyNote'),
   });
   const choose = async (control, value) => {
     control.value = value;
