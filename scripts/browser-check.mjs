@@ -2186,8 +2186,9 @@ for (const theme of ['dark', 'light']) {
   await context.close();
 }
 
-// W5: stacked on a narrow screen, the data source comes first; example
-// buttons share one height in both interface languages.
+// W5: stacked on a narrow screen, the data source comes first, in the
+// document and so in focus order too; example buttons share one height in
+// both interface languages.
 {
   const { context, page, problems } = await openStudio({ colorScheme: 'light' });
   await check('data source first on narrow screens; example buttons of one height', async () => {
@@ -2233,6 +2234,59 @@ for (const theme of ['dark', 'light']) {
         });
       }
     }
+    // Visual, reading and focus order agree (#46 review): from the top of
+    // the page, Tab reaches every example button and the file input before
+    // any control of the preview, and moves down the page.
+    await page.selectOption('#languageSelect', 'zh-CN');
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.evaluate(() => {
+      document.activeElement?.blur();
+      scrollTo(0, 0);
+    });
+    const visited = [];
+    for (let i = 0; i < 80; i++) {
+      await page.keyboard.press('Tab');
+      visited.push(
+        await page.evaluate(() => {
+          const element = document.activeElement;
+          return {
+            id: element.id,
+            area: element.closest('.source-card')
+              ? 'source'
+              : element.closest('.workspace')
+                ? 'workspace'
+                : element.closest('.rightbar')
+                  ? 'sidebar'
+                  : 'other',
+            top: element.getBoundingClientRect().top + scrollY,
+          };
+        }),
+      );
+    }
+    const firstWorkspace = visited.findIndex((entry) => entry.area === 'workspace');
+    assert.ok(firstWorkspace > 0, 'Tab reaches the preview');
+    const sourceIds = examples.map((entry) => entry.id).concat('fileInput');
+    for (const id of sourceIds) {
+      const at = visited.findIndex((entry) => entry.id === id);
+      assert.ok(at >= 0 && at < firstWorkspace, `${id} is focused before the preview`);
+    }
+    // One pass down the page: stop where Tab wraps back to the top.
+    const wrap = visited.findIndex(
+      (entry, i) => entry.id && visited.slice(0, i).some((earlier) => earlier.id === entry.id),
+    );
+    const sourceAndPreview = visited
+      .slice(0, wrap < 0 ? visited.length : wrap)
+      .filter((entry) => entry.area !== 'other');
+    assert.ok(
+      sourceAndPreview.some((entry) => entry.area === 'sidebar'),
+      'one pass reaches the sidebar',
+    );
+    for (let i = 1; i < sourceAndPreview.length; i++)
+      if (sourceAndPreview[i].area !== sourceAndPreview[i - 1].area)
+        assert.ok(
+          sourceAndPreview[i].top >= sourceAndPreview[i - 1].top,
+          `focus moves down the page from ${sourceAndPreview[i - 1].id} to ${sourceAndPreview[i].id}`,
+        );
     assert.deepEqual(problems, []);
   });
   await context.close();
