@@ -152,6 +152,8 @@ const english: Record<string, string> = {
   '适合：节点带有日期，按时间排开。': 'Suits this graph: nodes have dates and are placed in time.',
   '不适合：没有节点带日期，将改画为树。':
     'Does not suit this graph: no node has a date, so it is drawn as a tree.',
+  '不适合：所有日期都在同一时间，没有可排开的时间范围，将改画为树。':
+    'Does not suit this graph: every date is at the same time, so there is no range to place nodes along and it is drawn as a tree.',
   '适合：关系构成树，没有环。': 'Suits this graph: the relations form a tree, without cycles.',
   '不适合：关系有环，将沿生成树排布，其余关系不参与定位。':
     'Does not suit this graph: the relations have cycles, so nodes follow a spanning tree and the other relations place nothing.',
@@ -212,6 +214,8 @@ const english: Record<string, string> = {
   '（节点过多，改用网格）': ' (too many nodes; grid instead)',
   '（没有节点带日期，时间轴退回为树）':
     ' (no node has a date, so the timeline falls back to a tree)',
+  '（所有日期都在同一时间，没有时间范围，时间轴退回为树）':
+    ' (every date is at the same time, so there is no time range and the timeline falls back to a tree)',
   '临时预览 · 尚未保存。请应用或取消；可撤销已应用布局。':
     'Temporary preview · Not saved. Apply or cancel; applied layouts can be undone.',
   '静态确定性布局 · 保留 = 不移动；填补 = 仅缺失；重排 = 移动未锁定节点。自动 = 按图的结构选择策略。':

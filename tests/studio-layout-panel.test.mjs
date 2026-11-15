@@ -222,3 +222,76 @@ test('W3: the panel shows which strategies suit the graph before anything is app
     assert.deepEqual(chinese, [], `English panel under ${type}`);
   }
 });
+
+const example = (file) =>
+  JSON.parse(readFileSync(new URL(`../examples/${file}`, import.meta.url), 'utf8'));
+async function openFile(app, name, value) {
+  const input = app.node('fileInput');
+  input.files = [{ name, text: () => Promise.resolve(JSON.stringify(value)) }];
+  await input.dispatch('change');
+  await flush();
+  assert.equal(app.node('status').attributes['data-state'], 'ready');
+}
+
+test('#46 review, P2: a project that stores a type without its coordinates is not "applied"', async () => {
+  const app = makeStudio();
+  await app.ready;
+  await openFile(app, 'bookshop.studio.json', {
+    format: 'relgraph.studio/1',
+    source: example('bookshop-systems-synthetic.graph.json'),
+    config: {
+      layout: {
+        type: 'grid',
+        mode: 'rearrange',
+        seed: 0,
+        spacing: 150,
+        iterations: 300,
+        locked: [],
+        positions: {},
+      },
+    },
+  });
+  const drawn = () => control(app, 'strategyDrawn').textContent,
+    automatic = '当前画面：载入时自动排布：流向 · 从左到右（按图的结构）';
+  assert.equal(control(app, 'strategyType').value, 'grid');
+  assert.equal(drawn(), automatic, 'grid never drew this picture');
+  // A hand edit stores one coordinate: still the automatic picture, adjusted.
+  assert.equal(app.window.renderAt(84), true);
+  await app.node('layoutToggle').click();
+  const x = app.node('layoutX');
+  x.value = String(Number(x.value) + 40);
+  await x.dispatch('input');
+  await app.node('layoutApply').click();
+  assert.equal(drawn(), automatic + '，并有手动微调');
+  await app.node('layoutToggle').click();
+  // Applying grid writes every coordinate: now grid drew it.
+  await control(app, 'strategyPreview').click();
+  await control(app, 'strategyApply').click();
+  assert.equal(drawn(), '当前画面：已应用：网格 · 保持顺序');
+});
+
+test('#46 review, P2: dates all at one time are worded as such, not as "no dates"', async () => {
+  const app = makeStudio();
+  await app.ready;
+  const source = example('dynasties-timeline-provisional.graph.json');
+  for (const node of source.nodes) {
+    node.start = 2020;
+    delete node.end;
+  }
+  await openFile(app, 'same-year.graph.json', source);
+  await choose(app, 'strategyType', 'timeline');
+  const fit = control(app, 'strategyFit');
+  assert.equal(fit.textContent, '不适合：所有日期都在同一时间，没有可排开的时间范围，将改画为树。');
+  assert.doesNotMatch(fit.textContent, /没有节点带日期/);
+  assert.equal(
+    control(app, 'strategyDrawn').textContent,
+    '当前画面：载入时自动排布：树 · 向右展开（所有日期都在同一时间，没有时间范围，时间轴退回为树）',
+  );
+  const language = app.node('languageSelect');
+  language.value = 'en';
+  await language.dispatch('change');
+  assert.equal(
+    fit.textContent,
+    'Does not suit this graph: every date is at the same time, so there is no range to place nodes along and it is drawn as a tree.',
+  );
+});

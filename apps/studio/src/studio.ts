@@ -593,9 +593,11 @@ function renderDocumentToolbar(): void {
   });
 }
 /**
- * Tell the layout panel what drew the picture (W2): the strategy applied,
+ * Tell the layout panel what drew the picture (W2): a strategy whose
+ * coordinates the project now holds for every node (as Apply writes them),
  * else how the document was drawn when it loaded, and whether nodes were
- * moved by hand since. A pending preview is described by the panel itself.
+ * moved by hand since. A stored type without those coordinates drew nothing
+ * (#46 review). A pending preview is described by the panel itself.
  */
 function refreshDrawnOrigin(): void {
   if (layoutPreview) return;
@@ -603,8 +605,8 @@ function refreshDrawnOrigin(): void {
     strategyView.drawn(null);
     return;
   }
-  const type = projectHistory.value.layout?.type ?? 'manual';
-  if (type !== 'manual') strategyView.drawn({ kind: 'strategy', type });
+  const now = drawingOrigin({ ...graph, project: projectHistory.value });
+  if (now.kind === 'strategy') strategyView.drawn(now);
   else strategyView.drawn(loadedOrigin, layoutHasChanges(currentLayout, originalLayout));
 }
 function refreshUnsavedState(): void {

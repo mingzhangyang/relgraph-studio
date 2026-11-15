@@ -42,6 +42,7 @@ const REASON_LABELS: Record<LayoutReason, string> = {
   structure: '（按图的结构）',
   size: '（节点过多，改用网格）',
   untimed: '（没有节点带日期，时间轴退回为树）',
+  instant: '（所有日期都在同一时间，没有时间范围，时间轴退回为树）',
 };
 /**
  * Why a preview was refused: a strategy that moves nothing must not look
@@ -72,6 +73,7 @@ const FIT_LABELS: Record<LayoutFitNote, string> = {
   order: '适合任何图：按节点在文件中的顺序排列，不看关系。',
   dated: '适合：节点带有日期，按时间排开。',
   untimed: '不适合：没有节点带日期，将改画为树。',
+  instant: '不适合：所有日期都在同一时间，没有可排开的时间范围，将改画为树。',
   forest: '适合：关系构成树，没有环。',
   cycles: '不适合：关系有环，将沿生成树排布，其余关系不参与定位。',
   acyclic: '适合：关系有方向且没有回路。',

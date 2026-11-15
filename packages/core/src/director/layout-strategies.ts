@@ -1,9 +1,9 @@
 import type { VisualGraph } from '../../types/visual-graph.js';
 import type { ProjectConfig } from '../project.js';
 import { layoutMissingNodes, roundPositionCoordinate, type LayoutPoint } from './seeded-layout.js';
-import { autoEngine, layoutGraph } from './layout.js';
+import { autoEngine, drawnEngine, layoutGraph } from './layout.js';
 import { ENGINE_PARAMETERS, runLayoutEngine, type LayoutParameter } from './layout-engines.js';
-import { placeInTime, timeAxis } from '../graph/time-axis.js';
+import { hasTimes, placeInTime, timeAxis } from '../graph/time-axis.js';
 import { componentsOf, prepare, stronglyConnected } from '../graph/analysis.js';
 import {
   LAYOUT_DEFAULTS,
@@ -33,9 +33,18 @@ const compare = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
  * - `structure`: `auto` chose from the graph's structure;
  * - `size`: `auto` chose a grid because the graph is too large to arrange;
  * - `untimed`: a timeline was asked for, but no node has a date, so the
- *   timeline engine drew a tree.
+ *   timeline engine drew a tree;
+ * - `instant`: a timeline was asked for and nodes have dates, but all at one
+ *   time, so there is no axis and the timeline engine drew a tree.
  */
-export const LAYOUT_REASONS = ['kept', 'diagram', 'structure', 'size', 'untimed'] as const;
+export const LAYOUT_REASONS = [
+  'kept',
+  'diagram',
+  'structure',
+  'size',
+  'untimed',
+  'instant',
+] as const;
 export type LayoutReason = (typeof LAYOUT_REASONS)[number];
 /** What a strategy did, so that a preview never looks pending when nothing happened. */
 export interface LayoutPlan {
@@ -63,7 +72,7 @@ export interface LayoutPlan {
 /**
  * The engine a strategy other than `manual` draws with, and why when that is
  * not simply the engine asked for: `auto` follows `autoEngine`, and a
- * timeline of a graph without dates is drawn as a tree. Depends only on the
+ * timeline without a time axis is drawn as a tree (`drawnEngine`). Depends only on the
  * graph's structure, dates and diagram kind, never on coordinates, so the
  * workspace can say what a strategy will do before it runs.
  */
@@ -73,10 +82,7 @@ export function strategyEngine(
 ): { engine: LayoutEngine; reason: LayoutReason | null } {
   const chosen: { engine: LayoutEngine; reason: LayoutReason | null } =
     type === 'auto' ? autoEngine(graph) : { engine: type, reason: null };
-  // The timeline engine draws a tree when nothing has a date; say so.
-  if (chosen.engine === 'timeline' && !timeAxis(graph.nodes))
-    return { engine: 'tree', reason: 'untimed' };
-  return chosen;
+  return drawnEngine(graph.nodes, chosen);
 }
 
 /**
@@ -98,7 +104,8 @@ export function strategyParameters(
  * - `auto`: `auto` names the engine it will use;
  * - `any`, `order`: force and circle suit any graph; the grid too, in the
  *   authors' order and without reading relations;
- * - `dated` / `untimed`: a timeline needs dates, else it draws a tree;
+ * - `dated` / `untimed` / `instant`: a timeline needs dates that span some
+ *   time; without dates, or with all of them at one time, it draws a tree;
  * - `forest` / `cycles`: tree, mind map and radial read a forest; with
  *   cycles they follow a spanning tree and the other relations place nothing;
  * - `acyclic` / `cyclic` / `feedback` / `undirected`: layers need directed
@@ -114,6 +121,7 @@ export const LAYOUT_FIT_NOTES = [
   'order',
   'dated',
   'untimed',
+  'instant',
   'forest',
   'cycles',
   'acyclic',
@@ -125,8 +133,10 @@ export const LAYOUT_FIT_NOTES = [
 export type LayoutFitNote = (typeof LAYOUT_FIT_NOTES)[number];
 /** The facts about a graph that decide which strategies suit it. */
 export interface GraphTraits {
-  /** At least two distinct times: a time axis exists. */
+  /** Some node has a time (a span or a first appearance). */
   dated: boolean;
+  /** The times differ, so a time axis exists (`timeAxis`). */
+  ranged: boolean;
   /** At least one relation between two different nodes. */
   related: boolean;
   /** At least 70% of the relations are directed, the rule `auto` uses. */
@@ -157,7 +167,14 @@ export function graphTraits(graph: Pick<VisualGraph, 'nodes' | 'edges'>): GraphT
   }
   const connected = p.ids.filter((id) => p.degree.get(id));
   const forest = related && p.pairs.length === connected.length - componentsOf(p, connected).length;
-  return { dated: Boolean(timeAxis(graph.nodes)), related, directed, acyclic, forest };
+  return {
+    dated: hasTimes(graph.nodes),
+    ranged: Boolean(timeAxis(graph.nodes)),
+    related,
+    directed,
+    acyclic,
+    forest,
+  };
 }
 /**
  * Which strategies suit a graph and what the others will do, before any of
@@ -196,7 +213,9 @@ export function layoutFit(graph: Pick<VisualGraph, 'nodes' | 'edges' | 'diagram'
         : fit('flow', false, 'undirected'),
     tree: treeLike('tree'),
     mindmap: treeLike('mindmap'),
-    timeline: traits.dated ? fit('timeline', true, 'dated') : fit('timeline', false, 'untimed'),
+    timeline: traits.ranged
+      ? fit('timeline', true, 'dated')
+      : fit('timeline', false, traits.dated ? 'instant' : 'untimed'),
     radial: treeLike('radial'),
     circle: fit('circle', true, 'any'),
     grid: fit('grid', true, 'order'),

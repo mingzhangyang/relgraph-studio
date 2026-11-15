@@ -24,6 +24,13 @@ export interface TimeAxis {
   x(time: number): number;
 }
 /**
+ * Whether any node carries a time (a span or a first appearance), even when
+ * all of them carry the same one and so make no axis (`timeAxis` is null).
+ */
+export function hasTimes(nodes: readonly VisualNode[]): boolean {
+  return nodes.some((node) => Number.isFinite(node.span?.from ?? node.visibility?.from));
+}
+/**
  * The time axis of a graph whose nodes carry a span or a first appearance.
  * It depends on the nodes alone, so the layout that places them and the
  * renderer that draws their extent and the axis always agree.

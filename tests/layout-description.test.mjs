@@ -131,7 +131,9 @@ test('W2: drawingOrigin says how layoutGraph drew each document', () => {
   assert.deepEqual(
     drawingOrigin({
       ...bookshop,
-      project: { layout: { ...DEFAULT_LAYOUT_SETTINGS, type: 'grid' } },
+      project: {
+        layout: { ...DEFAULT_LAYOUT_SETTINGS, type: 'grid', positions: Object.fromEntries(shown) },
+      },
     }),
     { kind: 'strategy', type: 'grid' },
   );
@@ -159,6 +161,7 @@ test('W3: layoutFit says which strategies suit each example and what the others 
   const byId = Object.fromEntries(graphs);
   assert.deepEqual(graphTraits(byId.exampleGraph), {
     dated: false,
+    ranged: false,
     related: true,
     directed: true,
     acyclic: true,
@@ -208,5 +211,78 @@ test('W3: what layoutFit says a strategy draws with is what planLayout draws wit
         id,
       );
     }
+  }
+});
+
+test('#46 review, P2: a stored type without coordinates for every node did not draw the picture', () => {
+  const bookshop = Object.fromEntries(graphs).exampleGraph,
+    shown = layoutGraph(bookshop),
+    [first, second] = bookshop.nodes.map((n) => n.id),
+    origin = (positions) =>
+      drawingOrigin({
+        ...bookshop,
+        project: { layout: { ...DEFAULT_LAYOUT_SETTINGS, type: 'grid', positions } },
+      });
+  // A valid project may store a type with no positions: placeNodes ignores
+  // the type and the structure draws, exactly as for manual.
+  const automatic = { kind: 'structure', engine: 'flow', reason: 'structure' };
+  assert.deepEqual(origin({}), automatic);
+  const project = (positions) => ({
+    ...bookshop,
+    project: { layout: { ...DEFAULT_LAYOUT_SETTINGS, type: 'grid', positions } },
+  });
+  assert.deepEqual(
+    [...layoutGraph(project({}))],
+    [...shown],
+    'the picture is the structural one, not a grid',
+  );
+  // Partial positions: placed beside, whatever the type says.
+  const partial = { [first]: shown.get(first), [second]: shown.get(second) };
+  assert.deepEqual(origin(partial), { kind: 'partial', missing: bookshop.nodes.length - 2 });
+  // What Apply writes: a coordinate for every node.
+  assert.deepEqual(origin(Object.fromEntries(shown)), { kind: 'strategy', type: 'grid' });
+});
+
+test('#46 review, P2: dates at one time are not "no dates"', () => {
+  const timeline = example(examples.find((e) => e.id === 'exampleTimeline').file);
+  const variant = (keep) => {
+    const source = structuredClone(timeline);
+    source.nodes.forEach((node, i) => {
+      delete node.end;
+      if (keep(i)) node.start = 2020;
+      else delete node.start;
+    });
+    return loadDocument(source).graph;
+  };
+  const undated = variant(() => false),
+    single = variant((i) => i === 0),
+    same = variant(() => true);
+  assert.deepEqual(
+    [undated, single, same].map((graph) => {
+      const { dated, ranged } = graphTraits(graph);
+      return [dated, ranged];
+    }),
+    [
+      [false, false],
+      [true, false],
+      [true, false],
+    ],
+  );
+  for (const [graph, reason] of [
+    [undated, 'untimed'],
+    [single, 'instant'],
+    [same, 'instant'],
+  ]) {
+    assert.equal(layoutFit(graph).strategies.timeline.note, reason);
+    assert.equal(layoutFit(graph).strategies.timeline.suits, false);
+    assert.deepEqual(strategyEngine(graph, 'timeline'), { engine: 'tree', reason });
+    assert.deepEqual(strategyEngine(graph, 'auto'), { engine: 'tree', reason });
+    const plan = planLayout(
+      graph,
+      { ...DEFAULT_LAYOUT_SETTINGS, type: 'timeline', mode: 'rearrange' },
+      layoutGraph(graph),
+    );
+    assert.deepEqual([plan.engine, plan.reason], ['tree', reason]);
+    assert.deepEqual(drawingOrigin(graph), { kind: 'structure', engine: 'tree', reason });
   }
 });

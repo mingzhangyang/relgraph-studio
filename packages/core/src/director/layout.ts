@@ -12,7 +12,7 @@ export const DIAGRAM_ENGINE: Readonly<Record<DiagramKind, LayoutEngine | null>> 
   timeline: 'timeline',
 });
 import { roundPositionCoordinate } from './seeded-layout.js';
-import { timeAxis } from '../graph/time-axis.js';
+import { hasTimes, timeAxis } from '../graph/time-axis.js';
 
 /**
  * The engine an automatic drawing uses, and why: the engine of the declared
@@ -57,11 +57,26 @@ export function structuralLayout(
 }
 
 /**
+ * The engine that actually draws when `chosen` is asked for: the timeline
+ * engine draws a tree when the nodes make no time axis, either because none
+ * has a time (`untimed`) or because all share one (`instant`).
+ */
+export function drawnEngine<R extends string | null>(
+  nodes: Pick<VisualGraph, 'nodes'>['nodes'],
+  chosen: { engine: LayoutEngine; reason: R },
+): { engine: LayoutEngine; reason: R | 'untimed' | 'instant' } {
+  if (chosen.engine !== 'timeline' || timeAxis(nodes)) return chosen;
+  return { engine: 'tree', reason: hasTimes(nodes) ? 'instant' : 'untimed' };
+}
+
+/**
  * How `layoutGraph` arrives at a document's drawing, so the workspace can say
  * what drew the picture:
- * - `strategy`: the project stores a strategy it applied, with its coordinates;
- * - `structure`: there are no coordinates, so `autoEngine` drew it (an
- *   undated timeline as a tree, `untimed`, as the timeline engine does);
+ * - `strategy`: the project stores a strategy other than `manual` and a
+ *   coordinate for every node, which is what applying a strategy writes; a
+ *   stored type without those coordinates did not draw the picture;
+ * - `structure`: there are no coordinates, so `autoEngine` drew it (a
+ *   timeline without an axis as a tree, as `drawnEngine` says);
  * - `coordinates`: every node has stored coordinates (source or project);
  * - `partial`: some nodes have coordinates and `missing` are placed beside them.
  */
@@ -70,7 +85,7 @@ export type DrawingOrigin =
   | {
       kind: 'structure';
       engine: LayoutEngine;
-      reason: ReturnType<typeof autoEngine>['reason'] | 'untimed';
+      reason: ReturnType<typeof autoEngine>['reason'] | 'untimed' | 'instant';
     }
   | { kind: 'coordinates' }
   | { kind: 'partial'; missing: number };
@@ -78,16 +93,19 @@ export function drawingOrigin(
   graph: Pick<VisualGraph, 'nodes' | 'edges' | 'project' | 'diagram'>,
 ): DrawingOrigin {
   const type = graph.project?.layout?.type ?? 'manual';
-  if (type !== 'manual') return { kind: 'strategy', type };
   const stored = graph.project?.layout?.positions ?? {};
+  // placeNodes ignores the stored type: only the coordinates draw. They are
+  // the strategy's drawing when it wrote one for every node.
+  if (
+    type !== 'manual' &&
+    graph.nodes.length &&
+    graph.nodes.every((n) => Object.hasOwn(stored, n.id))
+  )
+    return { kind: 'strategy', type };
   const missing = graph.nodes.filter((n) => !n.position && !Object.hasOwn(stored, n.id)).length;
   // The same test as placeNodes: no coordinates at all, and more than one node.
-  if (missing === graph.nodes.length && !Object.keys(stored).length && graph.nodes.length > 1) {
-    const auto = autoEngine(graph);
-    return auto.engine === 'timeline' && !timeAxis(graph.nodes)
-      ? { kind: 'structure', engine: 'tree', reason: 'untimed' }
-      : { kind: 'structure', ...auto };
-  }
+  if (missing === graph.nodes.length && !Object.keys(stored).length && graph.nodes.length > 1)
+    return { kind: 'structure', ...drawnEngine(graph.nodes, autoEngine(graph)) };
   return missing ? { kind: 'partial', missing } : { kind: 'coordinates' };
 }
 
