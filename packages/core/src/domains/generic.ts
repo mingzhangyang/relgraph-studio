@@ -14,6 +14,7 @@
 import { validateVisualGraph } from '../graph/core.js';
 import { placeInTime, TIME_TOLERANCE, timeAxis as axisOf } from '../graph/time-axis.js';
 import { autoStoryboard, shapeDiagram } from '../director/storyboard.js';
+import { GENERIC_WORDING, worded } from '../diagnostic-wording.js';
 import {
   parseGenericSource,
   type GenericDiagnostic,
@@ -104,11 +105,9 @@ function adaptParsed(parsed: ParsedGenericSource, warnings: GenericDiagnostic[])
       warnings.push({
         level: 'warning',
         layer: 'graph-source',
-        code: 'OFF_TIME_AXIS',
         path: 'nodes',
         id: '',
-        message: `${off} 个带日期的节点横坐标不在其时间上，已按日期绘制。`,
-        fix: '带日期节点的横坐标由日期决定：删除其 x，只保留 y（重新导出带坐标的数据会这样写）；如需保留这些横坐标并不显示时间轴，请设置 "timeAxis": false。',
+        ...worded(GENERIC_WORDING, 'OFF_TIME_AXIS', { count: off }),
       });
   }
   if (!graph.scenes.length) graph.scenes = autoStoryboard(graph, summaries);

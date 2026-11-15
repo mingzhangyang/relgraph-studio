@@ -43,7 +43,8 @@ import { ProjectSavepoint } from './unsaved-changes-model.js';
 import { createProjectEditor } from './project-editor-view.js';
 import { createDocumentToolbarView } from './document-toolbar-view.js';
 import { documentCommandFromShortcut } from './document-command-model.js';
-import { parseDocument, applyGraphPositions, type LoadResult } from '@relgraph/core';
+import { parseDocument, applyGraphPositions, worded, type LoadResult } from '@relgraph/core';
+import { WORKSPACE_WORDING } from './diagnostic-text.js';
 import {
   anchoredPoint,
   anchorToTime,
@@ -781,22 +782,17 @@ function beginLoad(): number {
   return serial;
 }
 
-function loadFailure(code: 'LOAD' | 'FILE', error: unknown): LoadResult {
-  const message = error instanceof Error ? error.message : String(error);
+function loadFailure(code: keyof typeof WORKSPACE_WORDING, error: unknown): LoadResult {
+  const detail = error instanceof Error ? error.message : String(error);
   return {
     valid: false,
     errors: [
       {
         level: 'error',
         layer: 'studio',
-        code,
         path: '$',
         id: '',
-        message: `${code === 'LOAD' ? '无法读取示例' : '无法读取文件'}：${message}`,
-        fix:
-          code === 'LOAD'
-            ? '从仓库根目录运行 npm run dev 或 npm run preview 后重新打开工作台。'
-            : '请选择可读取的 JSON 文件。',
+        ...worded(WORKSPACE_WORDING, code, { detail }),
       },
     ],
     warnings: [],

@@ -5,6 +5,15 @@
  * Chinese is the existing default. Language preference is independent from
  * project savepoints, and storage failures must not block the workspace.
  */
+import {
+  diagnosticKey,
+  diagnosticText,
+  type Diagnostic,
+  type DiagnosticText,
+  type DiagnosticWording,
+} from '@relgraph/core';
+import { ENGLISH_DIAGNOSTICS } from './diagnostic-text.js';
+
 export type StudioLanguage = 'zh-CN' | 'en';
 export const STUDIO_LANGUAGE_KEY = 'relgraph-studio-language';
 
@@ -169,10 +178,6 @@ const english: Record<string, string> = {
   '时间轴会横向移动已锁定的节点：': 'The time axis would move locked nodes sideways: ',
   '。请先解锁它们，或改选其他布局。': '. Unlock them first, or choose another layout.',
   '。请先解锁它们，再重置。': '. Unlock them first, then reset.',
-  '预览可能卡顿，导出的影片不受影响；如需流畅预览，请先筛选或聚合数据。':
-    'The preview may stutter; exported films are not affected. For a smooth preview, filter or aggregate the data first.',
-  '带日期节点的横坐标由日期决定：删除其 x，只保留 y（重新导出带坐标的数据会这样写）；如需保留这些横坐标并不显示时间轴，请设置 "timeAxis": false。':
-    'A dated node\'s x is set by its date: remove the x and keep only y (re-exporting the positioned data writes it that way). To keep these x coordinates and draw no time axis, set "timeAxis": false.',
   '（保留现有坐标）': ' (existing coordinates kept)',
   '（按图的类型）': ' (follows the diagram kind)',
   '（按图的结构）': ' (chosen from the graph structure)',
@@ -294,11 +299,6 @@ const english: Record<string, string> = {
   '。此文件仅保存源数据坐标，不代表完整项目已保存。':
     '. This file only saves source coordinates; the full project is not saved.',
   '导出失败：': 'Export failed: ',
-  无法读取示例: 'Cannot load example',
-  无法读取文件: 'Cannot read file',
-  '从仓库根目录运行 npm run dev 或 npm run preview 后重新打开工作台。':
-    'Run npm run dev or npm run preview from the repository root, then reopen the workspace.',
-  '请选择可读取的 JSON 文件。': 'Select a readable JSON file.',
   '红楼梦 · 未经原著核实的技术演示': 'Dream of the Red Chamber · Unverified technical demo',
   '生物信号 · EGFR–MAPK 经典通路': 'Biological signaling · EGFR–MAPK canonical pathway',
   '线上书店 · 通用关系合成示例': 'Online bookshop · Synthetic generic-graph example',
@@ -320,127 +320,6 @@ const english: Record<string, string> = {
   ' 个节点，': ' nodes, ',
   ' 条关系。': ' relationships. ',
   ' 当前 ': ' Currently: ',
-  '修复 Schema。': 'Fix the schema.',
-  '更新 Schema 校验器。': 'Update the schema validator.',
-  '修正字段类型。': 'Correct the field type.',
-  '请使用 0.1 数据，或升级播放器。': 'Use version 0.1 data or upgrade the player.',
-  '使用规范中的枚举值。': 'Use an allowed enum value.',
-  'id 使用小写 ASCII、数字与连字符；颜色使用 #RRGGBB。':
-    'Use lowercase ASCII, digits, and hyphens for IDs; use #RRGGBB colors.',
-  '提高数值。': 'Increase the value.',
-  '降低数值。': 'Decrease the value.',
-  '增加必填数组项。': 'Add the required array items.',
-  '补全必填字段。': 'Add the required fields.',
-  '移到允许的 extra 对象或删除。': 'Move it to an allowed extra object or remove it.',
-  '使用未占用的稳定 id。': 'Use an unused stable ID.',
-  '调整为有效时点。': 'Use a valid time point.',
-  '在 factions 中添加阵营或修改引用。': 'Add the faction to factions or fix the reference.',
-  '缩短摘要。': 'Shorten the summary.',
-  '改为已有的人物 id。': 'Reference an existing character ID.',
-  '改写到人物小传。': 'Move it to the character biography.',
-  '提供关系短标签。': 'Provide a short relationship label.',
-  '合并相同人物对、type、label 的关系。':
-    'Merge duplicate relations with matching characters, type, and label.',
-  '修正生效区间。': 'Correct the effective interval.',
-  '设置正数秒数。': 'Set a positive duration in seconds.',
-  '改为非负毫秒数。': 'Use a nonnegative number of milliseconds.',
-  '选择一种镜头目标。': 'Choose one camera target.',
-  '替换为对应集合中的有效 id。': 'Use a valid ID from the corresponding collection.',
-  '建议最多两个绝对主角。': 'Prefer at most two central protagonists.',
-  '只保留最核心的关系。': 'Keep only the most important relationships.',
-  '核实关系或标为仅提及。': 'Verify the relationship or mark the character as mentioned only.',
-  '为随时间变化的关系添加章节区间。': 'Add chapter ranges to time-dependent relations.',
-  '给关键人物预置坐标，避免开场布局跳动。':
-    'Set initial positions for key characters to prevent opening layout jumps.',
-  '项目配置无效。': 'Invalid project configuration.',
-  '修正该配置字段或移除覆盖。': 'Correct the field or remove the override.',
-  '检查对象引用与样式范围。': 'Check object references and style scope.',
-  '无法识别数据格式。': 'Unrecognized data format.',
-  '通用关系图使用 format: "relgraph.graph/1"；文学数据需要 schemaVersion: "0.1"；生物学数据需要 format: "relgraph.bio/0.1-draft"。':
-    'Generic graphs use format: "relgraph.graph/1"; literature requires schemaVersion: "0.1"; biology requires format: "relgraph.bio/0.1-draft".',
-  '图谱中没有任何节点或关系。': 'The graph has no nodes or relations.',
-  '至少添加一个节点或一条关系。': 'Add at least one node or relation.',
-  '不是通用关系图文档。': 'Not a generic graph document.',
-  '节点 id 重复。': 'Duplicate node id.',
-  '每个节点使用唯一 id。': 'Give every node a unique id.',
-  '引用了不存在的对象。': 'References an object that does not exist.',
-  '使用已有 id。': 'Use an existing id.',
-  '颜色无效。': 'Invalid colour.',
-  '可见区间无效。': 'Invalid visibility interval.',
-  '确保 start 不大于 visibleTo，或用 visibleFrom 指定首次出现的时间。':
-    'Keep start at or before visibleTo, or set visibleFrom to say when it first appears.',
-  '分镜 id 重复。': 'Duplicate shot id.',
-  '每个分镜使用唯一 id，或省略 id。': 'Give every shot a unique id, or leave the id out.',
-  '镜头缩放无效。': 'Invalid camera zoom.',
-  '使用大于 0 的数值，或删除 zoom。': 'Use a number greater than 0, or remove zoom.',
-  '转场时长无效。': 'Invalid transition duration.',
-  '使用不小于 0 的毫秒数。': 'Use zero or more milliseconds.',
-  '镜头目标冲突。': 'Conflicting camera targets.',
-  'focusNodeId 与 fitIds 只保留一个。': 'Keep either focusNodeId or fitIds, not both.',
-  '使用 format: "relgraph.graph/1"。': 'Use format: "relgraph.graph/1".',
-  '改为数组，或删除该字段。': 'Change it to an array, or remove the field.',
-  '文本字段无效。': 'Invalid text field.',
-  '需要有限数值。': 'A finite number is required.',
-  '改为数字，或删除该字段。': 'Change it to a number, or remove the field.',
-  '确保 visibleFrom 不大于 visibleTo。': 'Keep visibleFrom at or before visibleTo.',
-  '类别名无效。': 'Invalid kind name.',
-  '先筛选或聚合数据，再制作影片。': 'Filter or aggregate the data before making a film.',
-  '节点缺少有效 id。': 'Node has no valid id.',
-  '提供非空文本或数字 id。': 'Provide a non-empty text or numeric id.',
-  '关系必须是对象。': 'A relation must be an object.',
-  '使用 { "source": …, "target": … }。': 'Use { "source": …, "target": … }.',
-  '填写节点 id。': 'Enter a node id.',
-  '分组缺少有效 id。': 'Group has no valid id.',
-  '分组 id 重复。': 'Duplicate group id.',
-  '每个分组使用唯一 id。': 'Give every group a unique id.',
-  '节点数量超过上限。': 'Too many nodes.',
-  '使用 { nodes, edges }。': 'Use { nodes, edges }.',
-  '类别表必须是对象。': 'A kind table must be an object.',
-  '以类别名为键。': 'Key it by kind name.',
-  '类别声明无效。': 'Invalid kind declaration.',
-  '使用 { "label": …, "color": … } 对象。': 'Use a { "label": …, "color": … } object.',
-  '形状无效。': 'Invalid shape.',
-  '线型无效。': 'Invalid line style.',
-  '端点无效。': 'Invalid line end.',
-  '使用 true 或 false。': 'Use true or false.',
-  '分组引用无效。': 'Invalid group reference.',
-  '填写分组 id，或删除该字段。': 'Enter a group id, or remove the field.',
-  '坐标无效。': 'Invalid coordinates.',
-  '坐标只有 y，无法由日期得出 x；布局将重新摆放此节点，原有 y 不会保留。':
-    'The position gives y alone, but x cannot be derived from dates; layout will place this node again and will not keep its original y.',
-  '使用 { "x": 数字, "y": 数字 }。': 'Use { "x": number, "y": number }.',
-  '只有在保持时间轴、且至少有两个不同时间的时间线上，带日期节点才能只写 y；否则补充 x，使用 { "x": 数字, "y": 数字 }。':
-    'Only a dated node on a timeline that keeps time, with at least two distinct times, may give y alone; otherwise add x: use { "x": number, "y": number }.',
-  '权重不能为负。': 'Weight cannot be negative.',
-  '使用非负数。': 'Use a non-negative number.',
-  'end 需要同时提供 start。': 'end requires start.',
-  '补充 start，或删除 end。': 'Add start, or remove end.',
-  '时间跨度无效。': 'Invalid time span.',
-  '确保 start 不大于 end。': 'Keep start at or before end.',
-  '关系 id 重复。': 'Duplicate relation id.',
-  '每条关系使用唯一 id，或省略 id。': 'Give every relation a unique id, or leave the id out.',
-  '使用 { "title": … }。': 'Use { "title": … }.',
-  'timeline 无效。': 'Invalid timeline.',
-  '使用 { "unit": "步骤" }。': 'Use { "unit": "step" }.',
-  '分镜必须是对象。': 'A shot must be an object.',
-  '使用 { "title": …, "durationSec": … }。': 'Use { "title": …, "durationSec": … }.',
-  '改为 id 数组。': 'Change it to an array of ids.',
-  '使用 { "fitIds": […] }。': 'Use { "fitIds": […] }.',
-  '使用 { "nodeIds": […] }。': 'Use { "nodeIds": […] }.',
-  '时长无效。': 'Invalid duration.',
-  '使用 0 到 600 之间的秒数。': 'Use a number of seconds between 0 and 600.',
-  '如需名称、类别或分组，请在 nodes 中声明它们。':
-    'Declare them in nodes to give them a name, kind, or group.',
-  '图的类型无效。': 'Invalid diagram kind.',
-  '使用 #RRGGBB 六位十六进制颜色。': 'Use a six-digit #RRGGBB colour.',
-  '没有可播放的分镜。': 'No playable shots found.',
-  '请在 presentation 中至少添加一个分镜。': 'Add at least one shot to presentation.',
-  '数据包含时间范围，但首个分镜没有指定领域时间。':
-    'Data has a time range, but the first shot has no domain time.',
-  '数据无法转换为图谱。': 'Could not convert data into a graph.',
-  '检查文件格式、字段类型和必填字段后重试。': 'Check the format, field types, and required fields.',
-  'JSON 语法错误：': 'JSON syntax error: ',
-  '检查引号、逗号和括号后重试。': 'Check quotes, commas, and brackets.',
 };
 export function hasUiText(text: string): boolean {
   return Object.hasOwn(english, text);
@@ -494,53 +373,28 @@ export function uiMessage(message: string): string {
   return uiText(message);
 }
 
-/** Diagnostic strings are produced by core in Chinese but displayed by the
- * workspace. Convert only known templates and leave identifiers untouched.
+/**
+ * A diagnostic as the workspace shows it. In English, core's diagnostics are
+ * worded by their layer, code and variant with their parameters
+ * (ENGLISH_DIAGNOSTICS); only text that no table words, such as the English-
+ * only biology checks, is shown as written.
  */
-export function uiDiagnostic(message: string): string {
-  if (selectedLanguage !== 'en') return message;
-  if (message.startsWith('建议：'))
-    return uiText('建议：') + uiDiagnostic(message.slice('建议：'.length));
-  if (message.startsWith('JSON 语法错误：'))
-    return uiText('JSON 语法错误：') + message.slice('JSON 语法错误：'.length);
-  for (const prefix of ['无法读取示例', '无法读取文件']) {
-    if (message.startsWith(prefix + '：'))
-      return uiText(prefix) + ': ' + message.slice((prefix + '：').length);
-  }
-  const firstScene = /^为首个分镜设置 (.+)，以避免提前显示未来对象。$/.exec(message);
-  if (firstScene)
-    return `Set ${firstScene[1]} for the first shot to avoid revealing future objects.`;
-  // Generic graph diagnostics that name a field, a limit or the allowed values.
-  const mustBe = /^(\S+) 必须是(数组|对象|布尔值)。$/.exec(message);
-  if (mustBe)
-    return `${mustBe[1]} must be ${{ 数组: 'an array', 对象: 'an object', 布尔值: 'a boolean' }[mustBe[2]]}.`;
-  const textLimit = /^使用不超过 (\d+) 个字符的(非空)?文本。$/.exec(message);
-  if (textLimit)
-    return `Use ${textLimit[2] ? 'non-empty ' : ''}text of at most ${textLimit[1]} characters.`;
-  const tooLarge = /^图谱过大（上限 (\d+) 个节点、(\d+) 条关系）。$/.exec(message);
-  if (tooLarge)
-    return `The graph is too large (limit: ${tooLarge[1]} nodes, ${tooLarge[2]} relations).`;
-  const large =
-    /^图谱较大（(\d+) 个节点、(\d+) 条关系），超出流畅预览的范围（约 (\d+) 个节点、(\d+) 条关系）。$/.exec(
-      message,
-    );
-  if (large)
-    return `The graph is large (${large[1]} nodes, ${large[2]} relations), beyond what previews smoothly (about ${large[3]} nodes, ${large[4]} relations).`;
-  const noEnd = /^关系缺少 (source|target)。$/.exec(message);
-  if (noEnd) return `Relation has no ${noEnd[1]}.`;
-  const allowed = /^可用：(.+)。$/.exec(message);
-  if (allowed) return `Allowed: ${allowed[1].split('、').join(', ')}.`;
-  const offAxis = /^(\d+) 个带日期的节点横坐标不在其时间上，已按日期绘制。$/.exec(message);
-  if (offAxis)
-    return offAxis[1] === '1'
-      ? '1 dated node has an x that is not its place in time; it is drawn at its date.'
-      : `${offAxis[1]} dated nodes have an x that is not their place in time; they are drawn at their dates.`;
-  const implicit = /^(\d+) 个节点只在关系中出现，已按 id 自动创建。$/.exec(message);
-  if (implicit)
-    return implicit[1] === '1'
-      ? '1 node appears only in relations and was created from its id.'
-      : `${implicit[1]} nodes appear only in relations and were created from their ids.`;
-  return uiText(message);
+export function uiDiagnosticText(entry: Diagnostic): DiagnosticText {
+  const text = diagnosticText(entry);
+  if (selectedLanguage !== 'en') return text;
+  const tables: Readonly<Record<string, Readonly<Record<string, DiagnosticWording>>>> =
+    ENGLISH_DIAGNOSTICS;
+  const table = Object.hasOwn(tables, entry.layer) ? tables[entry.layer] : undefined,
+    key = diagnosticKey(entry),
+    english = table && Object.hasOwn(table, key) ? table[key] : undefined,
+    params = entry.params ?? {};
+  return {
+    title: text.title.replace(/^提示(?= ·|$)/, uiText('提示')),
+    path: text.path,
+    message: english ? english.message(params) : uiText(text.message),
+    fix:
+      uiText('建议：') + (english ? english.fix(params) : uiText(entry.fix || '检查数据并重试。')),
+  };
 }
 
 /** Translate the known prefixes of UI action messages while retaining
@@ -555,8 +409,7 @@ export function uiStatus(message: string): string {
     '保存失败：',
     '导出失败：',
   ]) {
-    if (message.startsWith(prefix))
-      return uiText(prefix) + uiDiagnostic(message.slice(prefix.length));
+    if (message.startsWith(prefix)) return uiText(prefix) + uiText(message.slice(prefix.length));
   }
   const blockedPrefix = '时间轴会横向移动已锁定的节点：';
   for (const blockedSuffix of ['。请先解锁它们，或改选其他布局。', '。请先解锁它们，再重置。'])
@@ -574,7 +427,7 @@ export function uiStatus(message: string): string {
       message.slice(exportPrefix.length, -exportSuffix.length) +
       uiText(exportSuffix)
     );
-  return uiDiagnostic(message);
+  return uiText(message);
 }
 
 /**
