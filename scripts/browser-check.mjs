@@ -25,6 +25,7 @@ import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 import { build, preview } from 'vite';
 import { encodedSizeFixtures } from '../tests/helpers/encoded-image-fixtures.mjs';
+import examples from '../examples/manifest.json' with { type: 'json' };
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const referenceDir = join(root, 'output/browser-reference');
@@ -37,19 +38,16 @@ const FPS = 24;
 const CHANNEL_TOLERANCE = 16;
 const MAX_DIFF_RATIO = 0.005;
 
+/** A shipped example's button, file and source name, from examples/manifest.json. */
+function example(id) {
+  const entry = examples.find((e) => e.id === id);
+  if (!entry) throw new Error(`No example ${id} in examples/manifest.json`);
+  return { button: `#${id}`, file: entry.file, name: entry.name };
+}
+
 const EXAMPLES = [
-  {
-    key: 'literature',
-    button: '#exampleLiterature',
-    file: 'honglou-provisional.relgraph.json',
-    name: '红楼梦 · 未经原著核实的技术演示',
-  },
-  {
-    key: 'biology',
-    button: '#exampleBiology',
-    file: 'biology-egfr-mapk.json',
-    name: '生物信号 · EGFR–MAPK 经典通路',
-  },
+  { key: 'literature', ...example('exampleLiterature') },
+  { key: 'biology', ...example('exampleBiology') },
 ];
 
 // ---------------------------------------------------------------- utilities
@@ -885,12 +883,7 @@ for (const theme of ['light', 'dark'])
 // The generic format in a real browser: a document that only lists things and
 // relations must load, derive its layout, shots and legend, and accept every
 // layout strategy with pixel-identical repeats.
-const GENERIC_EXAMPLE = {
-  key: 'graph',
-  button: '#exampleGraph',
-  file: 'bookshop-systems-synthetic.graph.json',
-  name: '线上书店 · 通用关系合成示例',
-};
+const GENERIC_EXAMPLE = { key: 'graph', ...example('exampleGraph') };
 for (const theme of ['light', 'dark']) {
   const { context, page, problems } = await openStudio({ colorScheme: theme });
   await check(
@@ -971,30 +964,10 @@ for (const theme of ['light', 'dark']) {
 // The diagram kinds in a real browser: each example loads from its button,
 // plays the film derived for its kind and draws identical frames on revisit.
 const DIAGRAM_EXAMPLES = [
-  {
-    key: 'tree',
-    button: '#exampleTree',
-    file: 'vertebrates-tree-provisional.graph.json',
-    name: '进化树 · 逐层展开的简化示例',
-  },
-  {
-    key: 'timeline',
-    button: '#exampleTimeline',
-    file: 'dynasties-timeline-provisional.graph.json',
-    name: '朝代更替 · 时间轴简化示例',
-  },
-  {
-    key: 'mindmap',
-    button: '#exampleMindmap',
-    file: 'reading-club-mindmap-synthetic.graph.json',
-    name: '读书会 · 思维导图合成示例',
-  },
-  {
-    key: 'flowchart',
-    button: '#exampleFlowchart',
-    file: 'order-flowchart-synthetic.graph.json',
-    name: '订单流程 · 流程图合成示例',
-  },
+  { key: 'tree', ...example('exampleTree') },
+  { key: 'timeline', ...example('exampleTimeline') },
+  { key: 'mindmap', ...example('exampleMindmap') },
+  { key: 'flowchart', ...example('exampleFlowchart') },
 ];
 for (const theme of ['light', 'dark']) {
   const { context, page, problems } = await openStudio({ colorScheme: theme });

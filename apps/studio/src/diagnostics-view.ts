@@ -1,10 +1,5 @@
-import { uiDiagnostic, uiText } from './i18n.js';
-import {
-  diagnosticText,
-  NO_DIAGNOSTICS_TEXT,
-  type Diagnostic,
-  type LoadResult,
-} from '@relgraph/core';
+import { uiDiagnosticText, uiText } from './i18n.js';
+import { NO_DIAGNOSTICS_TEXT, type Diagnostic, type LoadResult } from '@relgraph/core';
 
 /**
  * DOM-only diagnostic rendering. The loader owns validation and error wording;
@@ -45,18 +40,18 @@ export function createDiagnosticsView(
     heading.textContent = uiText(kind === 'errors' ? '错误' : '警告') + ' · ' + entries.length;
     container.append(heading);
     for (const entry of entries) {
-      const text = diagnosticText(entry);
+      const text = uiDiagnosticText(entry);
       const item = document.createElement('div');
       item.className = 'diagnostic-item ' + (kind === 'warnings' ? 'warning' : 'error');
       const title = document.createElement('strong');
-      title.textContent = text.title.replace(/^提示(?= ·|$)/, uiText('提示'));
+      title.textContent = text.title;
       const path = document.createElement('code');
       path.textContent = text.path;
       const message = document.createElement('p');
-      message.textContent = uiDiagnostic(text.message);
+      message.textContent = text.message;
       const fix = document.createElement('p');
       fix.className = 'fix';
-      fix.textContent = uiDiagnostic(text.fix);
+      fix.textContent = text.fix;
       item.append(title, path, message, fix);
       container.append(item);
     }

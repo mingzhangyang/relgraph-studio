@@ -4,6 +4,7 @@ import { inspectRelGraph } from '../relgraph.js';
 import { adaptBiologyDocument, validateBiologyDocument } from '../domains/biology.js';
 import { timeAnchor } from './time-anchor.js';
 import { GENERIC_FORMAT, inspectGenericDocument } from '../domains/generic.js';
+import { LOAD_WORDING, worded, type DiagnosticParams } from '../diagnostic-wording.js';
 import type { Bio } from '../../types/relationship-graph.js';
 import type { VisualGraph } from '../../types/visual-graph.js';
 
@@ -11,6 +12,13 @@ export interface Diagnostic {
   level: 'error' | 'warning';
   layer: string;
   code: string;
+  /**
+   * Which wording of the code, where one code has several; with `code` it
+   * names the diagnostic's entry in DIAGNOSTIC_WORDING (see diagnosticKey).
+   */
+  variant?: string;
+  /** The values the wording names: fields, limits, counts, allowed values. */
+  params?: DiagnosticParams;
   path: string;
   id: unknown;
   message: string;
@@ -56,14 +64,17 @@ export type LoadResult =
   | { valid: false; errors: Diagnostic[]; warnings: Diagnostic[] };
 const object = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
-const issue = (code: string, path: string, message: string, fix: string, id = ''): Diagnostic => ({
+const issue = (
+  key: keyof typeof LOAD_WORDING,
+  path: string,
+  params?: DiagnosticParams,
+  id = '',
+): Diagnostic => ({
   level: 'error',
   layer: 'studio',
-  code,
   path,
   id,
-  message,
-  fix,
+  ...worded(LOAD_WORDING, key, params),
 });
 const isDiagnostic = (value: unknown): value is Diagnostic =>
   object(value) &&
@@ -103,9 +114,7 @@ export function loadDocument(doc: unknown): LoadResult {
       if (errors.length)
         return {
           valid: false,
-          errors: errors.map((path) =>
-            issue('PROJECT_CONFIG', path, '项目配置无效。', '修正该配置字段或移除覆盖。'),
-          ),
+          errors: errors.map((path) => issue('PROJECT_CONFIG.field', path)),
           warnings: [],
         };
       const result = loadDocument(doc.source);
@@ -114,9 +123,7 @@ export function loadDocument(doc: unknown): LoadResult {
       if (checked.length)
         return {
           valid: false,
-          errors: checked.map((path) =>
-            issue('PROJECT_CONFIG', path, '项目配置无效。', '检查对象引用与样式范围。'),
-          ),
+          errors: checked.map((path) => issue('PROJECT_CONFIG.reference', path)),
           warnings: [],
         };
       const graph = { ...result.graph, project: doc.config as ProjectConfig };
@@ -163,28 +170,13 @@ export function loadDocument(doc: unknown): LoadResult {
     } else {
       return {
         valid: false,
-        errors: [
-          issue(
-            'FORMAT',
-            '$',
-            '无法识别数据格式。',
-            '通用关系图使用 format: "relgraph.graph/1"；文学数据需要 schemaVersion: "0.1"；生物学数据需要 format: "relgraph.bio/0.1-draft"。',
-          ),
-        ],
+        errors: [issue('FORMAT', '$')],
         warnings: [],
       };
     }
     const { graph, diagnostics } = adapted;
     const errors: Diagnostic[] = [];
-    if (!graph.scenes.length)
-      errors.push(
-        issue(
-          'NO_SCENES',
-          '$.presentation',
-          '没有可播放的分镜。',
-          '请在 presentation 中至少添加一个分镜。',
-        ),
-      );
+    if (!graph.scenes.length) errors.push(issue('NO_SCENES', '$.presentation'));
     // Timed facts must not be revealed before the first explicit domain time.
     const hasTimedFacts = [...graph.nodes, ...graph.edges].some(
       (item) =>
@@ -193,13 +185,7 @@ export function loadDocument(doc: unknown): LoadResult {
     if (hasTimedFacts && graph.scenes.length && graph.scenes[0].domainAt === undefined) {
       const field = graph.domain === 'literature' ? 'chapterAt' : 'domainAt';
       errors.push(
-        issue(
-          'INITIAL_DOMAIN_TIME',
-          `$.presentation[0].${field}`,
-          '数据包含时间范围，但首个分镜没有指定领域时间。',
-          `为首个分镜设置 ${field}，以避免提前显示未来对象。`,
-          graph.scenes[0].id,
-        ),
+        issue('INITIAL_DOMAIN_TIME', `$.presentation[0].${field}`, { field }, graph.scenes[0].id),
       );
     }
     const warnings = diagnostics.warnings.map((entry) => withOwner(doc, entry));
@@ -210,14 +196,7 @@ export function loadDocument(doc: unknown): LoadResult {
     const entries: Diagnostic[] =
       Array.isArray(issues) && issues.length && issues.every(isDiagnostic)
         ? issues
-        : [
-            issue(
-              'INVALID_DATA',
-              '$',
-              '数据无法转换为图谱。',
-              '检查文件格式、字段类型和必填字段后重试。',
-            ),
-          ];
+        : [issue('INVALID_DATA', '$')];
     return { valid: false, errors: entries.map((entry) => withOwner(doc, entry)), warnings: [] };
   }
 }
@@ -229,7 +208,7 @@ export function parseDocument(text: string): LoadResult {
     const message = error instanceof Error ? error.message : String(error);
     return {
       valid: false,
-      errors: [issue('JSON', '$', `JSON 语法错误：${message}`, '检查引号、逗号和括号后重试。')],
+      errors: [issue('JSON', '$', { detail: message })],
       warnings: [],
     };
   }

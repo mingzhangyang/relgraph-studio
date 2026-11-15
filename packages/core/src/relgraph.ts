@@ -1,5 +1,11 @@
 /* RelGraph draft v0.1 validation & spoiler-safe projections. No dependencies. */
 import schema from '../schema/relationship-graph.schema.json' with { type: 'json' };
+import {
+  SEMANTIC_WORDING,
+  STRUCTURE_WORDING,
+  worded,
+  type DiagnosticParams,
+} from './diagnostic-wording.js';
 import type {
   Bio,
   Character,
@@ -13,6 +19,10 @@ export interface LiteraryDiagnostic {
   level: 'error' | 'warning';
   layer: 'structure' | 'semantic';
   code: string;
+  /** Which wording of the code, where it has several (see STRUCTURE_WORDING). */
+  variant?: string;
+  /** The values the wording names. */
+  params?: DiagnosticParams;
   path: string;
   id: string;
   message: string;
@@ -65,8 +75,14 @@ const schemaKeywords = new Set([
 
 /** The schema is also the source of GraphDoc. This guard scans that same schema. */
 function scanStructure(doc: unknown, errors: LiteraryDiagnostic[]): doc is GraphDoc {
-  const fail = (code: string, path: string, message: string, fix: string) =>
-    errors.push({ level: 'error', layer: 'structure', code, path, id: '', message, fix });
+  const fail = (key: keyof typeof STRUCTURE_WORDING, path: string, params?: DiagnosticParams) =>
+    errors.push({
+      level: 'error',
+      layer: 'structure',
+      path,
+      id: '',
+      ...worded(STRUCTURE_WORDING, key, params),
+    });
   const typeOK = (v: unknown, type: string): boolean =>
     type === 'object'
       ? object(v)
@@ -79,18 +95,13 @@ function scanStructure(doc: unknown, errors: LiteraryDiagnostic[]): doc is Graph
             : typeof v === type;
   const scan = (v: unknown, rawRule: unknown, path: string): void => {
     if (!object(rawRule)) {
-      fail('BROKEN_REF', path, 'Schema rule is invalid', '修复 Schema。');
+      fail('BROKEN_REF.rule', path);
       return;
     }
     const rule = rawRule;
     for (const keyword of Object.keys(rule)) {
       if (!schemaKeywords.has(keyword)) {
-        fail(
-          'UNSUPPORTED_SCHEMA',
-          path,
-          `Unsupported schema keyword ${keyword}`,
-          '更新 Schema 校验器。',
-        );
+        fail('UNSUPPORTED_SCHEMA.keyword', path, { keyword });
         return;
       }
     }
@@ -100,76 +111,55 @@ function scanStructure(doc: unknown, errors: LiteraryDiagnostic[]): doc is Graph
           !['object', 'array', 'integer', 'number', 'string', 'boolean'].includes(rule.type))) ||
       (rule.additionalProperties !== undefined && typeof rule.additionalProperties !== 'boolean')
     ) {
-      fail('UNSUPPORTED_SCHEMA', path, 'Unsupported schema rule', '更新 Schema 校验器。');
+      fail('UNSUPPORTED_SCHEMA.rule', path);
       return;
     }
     if (typeof rule.$ref === 'string') {
       if (Object.keys(rule).some((key) => !['$ref', 'title', 'description'].includes(key))) {
-        fail(
-          'UNSUPPORTED_SCHEMA',
-          path,
-          'Schema reference has unsupported siblings',
-          '更新 Schema 校验器。',
-        );
+        fail('UNSUPPORTED_SCHEMA.siblings', path);
         return;
       }
       let ref: unknown = schema;
       for (const k of rule.$ref.split('/').slice(1)) ref = object(ref) ? ref[k] : undefined;
       if (ref) scan(v, ref, path);
-      else fail('BROKEN_REF', path, `Schema reference ${rule.$ref} is invalid`, '修复 Schema。');
+      else fail('BROKEN_REF.ref', path, { ref: rule.$ref });
       return;
     }
     if (typeof rule.type === 'string' && !typeOK(v, rule.type)) {
-      fail('TYPE', path, `Expected ${rule.type}`, '修正字段类型。');
+      fail('TYPE', path, { type: rule.type });
       return;
     }
     if (Object.hasOwn(rule, 'const') && v !== rule.const)
-      fail(
-        'VERSION',
-        path,
-        `Unsupported schemaVersion ${describe(v)}; supported: 0.1`,
-        '请使用 0.1 数据，或升级播放器。',
-      );
+      fail('VERSION', path, { value: describe(v) });
     if (Array.isArray(rule.enum) && !rule.enum.includes(v))
-      fail('ENUM', path, `Invalid value ${describe(v)}`, '使用规范中的枚举值。');
+      fail('ENUM', path, { value: describe(v) });
     if (
       typeof v === 'string' &&
       typeof rule.pattern === 'string' &&
       !new RegExp(rule.pattern).test(v)
     )
-      fail(
-        'PATTERN',
-        path,
-        `Invalid value ${v}`,
-        'id 使用小写 ASCII、数字与连字符；颜色使用 #RRGGBB。',
-      );
+      fail('PATTERN', path, { value: v });
     if (typeof v === 'number') {
       if (typeof rule.minimum === 'number' && v < rule.minimum)
-        fail('MIN', path, `Must be >= ${rule.minimum}`, '提高数值。');
+        fail('MIN', path, { minimum: rule.minimum });
       if (typeof rule.maximum === 'number' && v > rule.maximum)
-        fail('MAX', path, `Must be <= ${rule.maximum}`, '降低数值。');
+        fail('MAX', path, { maximum: rule.maximum });
     }
     if (Array.isArray(v)) {
       if (typeof rule.minItems === 'number' && v.length < rule.minItems)
-        fail('ARRAY_SIZE', path, `Expected at least ${rule.minItems} item(s)`, '增加必填数组项。');
+        fail('ARRAY_SIZE', path, { minItems: rule.minItems });
       if (rule.items)
         v.forEach((item: unknown, i: number) => scan(item, rule.items, `${path}[${i}]`));
     } else if (object(v)) {
       if (Array.isArray(rule.required))
         for (const k of rule.required) {
           if (typeof k === 'string' && !Object.hasOwn(v, k))
-            fail('REQUIRED', `${path}.${k}`, `Missing required property ${k}`, '补全必填字段。');
+            fail('REQUIRED', `${path}.${k}`, { property: k });
         }
       const properties = object(rule.properties) ? rule.properties : {};
       if (rule.additionalProperties === false)
         for (const k of Object.keys(v)) {
-          if (!Object.hasOwn(properties, k))
-            fail(
-              'UNKNOWN_FIELD',
-              `${path}.${k}`,
-              `Unknown property ${k}`,
-              '移到允许的 extra 对象或删除。',
-            );
+          if (!Object.hasOwn(properties, k)) fail('UNKNOWN_FIELD', `${path}.${k}`, { property: k });
         }
       for (const [k, sub] of Object.entries(properties))
         if (Object.hasOwn(v, k)) scan(v[k], sub, `${path}.${k}`);
@@ -182,33 +172,24 @@ function scanStructure(doc: unknown, errors: LiteraryDiagnostic[]): doc is Graph
 export function inspectRelGraph(doc: unknown): LiteraryInspection {
   const errors: LiteraryDiagnostic[] = [],
     warnings: LiteraryDiagnostic[] = [];
+  type Key = keyof typeof SEMANTIC_WORDING;
   const issue = (
     level: LiteraryDiagnostic['level'],
-    layer: LiteraryDiagnostic['layer'],
-    code: string,
+    key: Key,
     path: string,
     id: string,
-    message: string,
-    fix: string,
+    params?: DiagnosticParams,
   ): LiteraryDiagnostic => ({
     level,
-    layer,
-    code,
+    layer: 'semantic',
     path,
     id: id || '',
-    message,
-    fix,
+    ...worded(SEMANTIC_WORDING, key, params),
   });
-  const fail = (
-    layer: LiteraryDiagnostic['layer'],
-    code: string,
-    path: string,
-    id: string,
-    message: string,
-    fix: string,
-  ) => errors.push(issue('error', layer, code, path, id, message, fix));
-  const warn = (code: string, path: string, id: string, message: string, fix: string) =>
-    warnings.push(issue('warning', 'semantic', code, path, id, message, fix));
+  const fail = (key: Key, path: string, id: string, params?: DiagnosticParams) =>
+    errors.push(issue('error', key, path, id, params));
+  const warn = (key: Key, path: string, id: string, params?: DiagnosticParams) =>
+    warnings.push(issue('warning', key, path, id, params));
   if (!scanStructure(doc, errors)) return { valid: false, errors, warnings };
   const collections: [string, ReadonlyArray<{ id: string }>][] = [
     ['factions', doc.factions || []],
@@ -219,15 +200,7 @@ export function inspectRelGraph(doc: unknown): LiteraryInspection {
   for (const [kind, items] of collections) {
     const seen = new Set();
     items.forEach((x, i) => {
-      if (seen.has(x.id))
-        fail(
-          'semantic',
-          'DUPLICATE_ID',
-          `${kind}[${i}].id`,
-          x.id,
-          `Duplicate id: ${x.id}`,
-          '使用未占用的稳定 id。',
-        );
+      if (seen.has(x.id)) fail('DUPLICATE_ID', `${kind}[${i}].id`, x.id, { id: x.id });
       seen.add(x.id);
     });
   }
@@ -237,81 +210,28 @@ export function inspectRelGraph(doc: unknown): LiteraryInspection {
   const limit = doc.timeline?.total;
   const time = (v: number | undefined, path: string, who: string) => {
     if (v !== undefined && (v < 1 || (limit !== undefined && v > limit)))
-      fail(
-        'semantic',
-        'TIME_RANGE',
-        path,
-        who,
-        `Time point ${v} outside [1, ${limit ?? '∞'}]`,
-        '调整为有效时点。',
-      );
+      fail('TIME_RANGE', path, who, { value: v, limit: limit ?? '∞' });
   };
   const degree = Object.fromEntries(doc.characters.map((c) => [c.id, 0]));
   doc.characters.forEach((c, i) => {
     const path = `characters[${i}]`;
     if (c.factionId && !factions.has(c.factionId))
-      fail(
-        'semantic',
-        'UNKNOWN_FACTION',
-        `${path}.factionId`,
-        c.id,
-        `Unknown faction ${c.factionId}`,
-        '在 factions 中添加阵营或修改引用。',
-      );
+      fail('UNKNOWN_FACTION', `${path}.factionId`, c.id, { faction: c.factionId });
     time(c.firstAppearance, `${path}.firstAppearance`, c.id);
-    if (Array.from(c.bio.summary).length > 120)
-      warn(
-        'BIO_LENGTH',
-        `${path}.bio.summary`,
-        c.id,
-        'Biography summary exceeds 120 characters',
-        '缩短摘要。',
-      );
+    if (Array.from(c.bio.summary).length > 120) warn('BIO_LENGTH', `${path}.bio.summary`, c.id);
     (c.bio.quotes || []).forEach((q, j) => time(q.at, `${path}.bio.quotes[${j}].at`, c.id));
   });
   const signatures = new Map<string, string>();
   doc.relations.forEach((r, i) => {
     const path = `relations[${i}]`;
-    if (!chars.has(r.source))
-      fail(
-        'semantic',
-        'UNKNOWN_SOURCE',
-        `${path}.source`,
-        r.id,
-        `Unknown source ${r.source}`,
-        '改为已有的人物 id。',
-      );
-    if (!chars.has(r.target))
-      fail(
-        'semantic',
-        'UNKNOWN_TARGET',
-        `${path}.target`,
-        r.id,
-        `Unknown target ${r.target}`,
-        '改为已有的人物 id。',
-      );
-    if (r.source === r.target)
-      fail('semantic', 'SELF_LOOP', path, r.id, 'Self-loop forbidden', '改写到人物小传。');
-    if (r.type === 'other' && !r.label)
-      fail(
-        'semantic',
-        'OTHER_LABEL',
-        `${path}.label`,
-        r.id,
-        'other requires a label',
-        '提供关系短标签。',
-      );
+    if (!chars.has(r.source)) fail('UNKNOWN_SOURCE', `${path}.source`, r.id, { ref: r.source });
+    if (!chars.has(r.target)) fail('UNKNOWN_TARGET', `${path}.target`, r.id, { ref: r.target });
+    if (r.source === r.target) fail('SELF_LOOP', path, r.id);
+    if (r.type === 'other' && !r.label) fail('OTHER_LABEL', `${path}.label`, r.id);
     const endpoints = r.directed === true ? [r.source, r.target] : [r.source, r.target].sort();
     const signature = JSON.stringify([r.directed === true, ...endpoints, r.type, r.label || '']);
     if (signatures.has(signature))
-      fail(
-        'semantic',
-        'DUPLICATE_RELATION',
-        path,
-        r.id,
-        `Duplicate of ${signatures.get(signature)}`,
-        '合并相同人物对、type、label 的关系。',
-      );
+      fail('DUPLICATE_RELATION', path, r.id, { relation: signatures.get(signature)! });
     signatures.set(signature, r.id);
     if (chars.has(r.source)) degree[r.source]++;
     if (chars.has(r.target)) degree[r.target]++;
@@ -322,57 +242,19 @@ export function inspectRelGraph(doc: unknown): LiteraryInspection {
       r.chapters?.to !== undefined &&
       r.chapters.from > r.chapters.to
     )
-      fail(
-        'semantic',
-        'INVERTED_INTERVAL',
-        `${path}.chapters`,
-        r.id,
-        'chapters.from exceeds chapters.to',
-        '修正生效区间。',
-      );
+      fail('INVERTED_INTERVAL', `${path}.chapters`, r.id);
     (r.evidence || []).forEach((q, j) => time(q.at, `${path}.evidence[${j}].at`, r.id));
   });
   (doc.presentation || []).forEach((s, i) => {
     const path = `presentation[${i}]`;
-    if (s.durationSec <= 0)
-      fail(
-        'semantic',
-        'DURATION',
-        `${path}.durationSec`,
-        s.id,
-        'durationSec must be positive',
-        '设置正数秒数。',
-      );
+    if (s.durationSec <= 0) fail('DURATION', `${path}.durationSec`, s.id);
     if (s.transitionMs !== undefined && s.transitionMs < 0)
-      fail(
-        'semantic',
-        'TRANSITION',
-        `${path}.transitionMs`,
-        s.id,
-        'transitionMs must not be negative',
-        '改为非负毫秒数。',
-      );
+      fail('TRANSITION', `${path}.transitionMs`, s.id);
     const c = s.camera || {},
       h = s.highlight || {};
-    if (c.focusNodeId && c.fitIds?.length)
-      fail(
-        'semantic',
-        'CAMERA_CONFLICT',
-        `${path}.camera`,
-        s.id,
-        'focusNodeId and fitIds are mutually exclusive',
-        '选择一种镜头目标。',
-      );
+    if (c.focusNodeId && c.fitIds?.length) fail('CAMERA_CONFLICT', `${path}.camera`, s.id);
     const testRef = (value: string | undefined, set: Set<string>, path: string, kind: string) => {
-      if (value && !set.has(value))
-        fail(
-          'semantic',
-          'UNKNOWN_REF',
-          path,
-          s.id,
-          `Unknown ${kind}: ${value}`,
-          '替换为对应集合中的有效 id。',
-        );
+      if (value && !set.has(value)) fail('UNKNOWN_REF', path, s.id, { kind, ref: value });
     };
     testRef(c.focusNodeId, chars, `${path}.camera.focusNodeId`, 'character');
     (c.fitIds || []).forEach((x, j) =>
@@ -389,48 +271,23 @@ export function inspectRelGraph(doc: unknown): LiteraryInspection {
     time(s.chapterAt, `${path}.chapterAt`, s.id);
   });
   if (doc.characters.filter((c) => c.importance === 5).length > 2)
-    warn(
-      'TOO_MANY_LEADS',
-      '$.characters',
-      '',
-      'More than two importance 5 characters',
-      '建议最多两个绝对主角。',
-    );
+    warn('TOO_MANY_LEADS', '$.characters', '');
   if (
     doc.relations.length &&
     doc.relations.filter((r) => r.strength === 5).length / doc.relations.length > 0.15
   )
-    warn(
-      'TOO_MANY_STRONG',
-      '$.relations',
-      '',
-      'More than 15% of edges have strength 5',
-      '只保留最核心的关系。',
-    );
+    warn('TOO_MANY_STRONG', '$.relations', '');
   doc.characters.forEach((c, i) => {
-    if (degree[c.id] === 0 && c.status !== 'mentioned')
-      warn('ORPHAN', `characters[${i}]`, c.id, 'Unconnected character', '核实关系或标为仅提及。');
+    if (degree[c.id] === 0 && c.status !== 'mentioned') warn('ORPHAN', `characters[${i}]`, c.id);
   });
   if (
     doc.timeline &&
     (doc.presentation || []).some((s) => s.chapterAt !== undefined) &&
     doc.relations.every((r) => r.chapters === undefined)
   )
-    warn(
-      'UNTIMED_EDGES',
-      '$.relations',
-      '',
-      'Timeline scenes exist but no relation has chapters',
-      '为随时间变化的关系添加章节区间。',
-    );
+    warn('UNTIMED_EDGES', '$.relations', '');
   if (doc.characters.filter((c) => !c.position).length / doc.characters.length > 0.5)
-    warn(
-      'MISSING_POSITIONS',
-      '$.characters',
-      '',
-      'More than half of characters lack positions',
-      '给关键人物预置坐标，避免开场布局跳动。',
-    );
+    warn('MISSING_POSITIONS', '$.characters', '');
   return errors.length
     ? { valid: false, errors, warnings }
     : { valid: true, document: doc, errors, warnings };

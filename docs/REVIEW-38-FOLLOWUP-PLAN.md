@@ -2,7 +2,7 @@
 
 Status: **open** · baseline `main` at `73af432` · reviewed 2026-11-12 ·
 PR 1 merged as `a2589bf`, PR 2 as `682dbbd` and PR 1b as `a63875c` on 2026-11-13,
-PR 3 as `ca0edd8` on 2026-11-14
+PR 3 as `ca0edd8` and PR 4 as `ad49ba5` on 2026-11-14
 
 This is the tracking document for the work that came out of reviewing
 [#38](https://github.com/mingzhangyang/relgraph-studio/pull/38) (generic graphs,
@@ -29,16 +29,16 @@ The repository rules in [AGENTS.md](../AGENTS.md) apply to every step:
 - No GitHub Actions workflow is added, dispatched or rerun. Every PR states
   which local validations actually ran.
 
-| PR | Scope | Items | Golden frames | Status |
-| --- | --- | --- | --- | --- |
-| 1 | Behaviour fixes | F1–F5 | Tree example changes (F5); others identical | ☑ [#40](https://github.com/mingzhangyang/relgraph-studio/pull/40) merged as `a2589bf` (2026-11-13); leftover 3 tracked as F6 |
-| 1b | Behaviour fix | F6 | Must stay identical | ☑ [#42](https://github.com/mingzhangyang/relgraph-studio/pull/42) merged as `a63875c` (2026-11-13); golden frames identical |
-| 2 | Per-frame cost and limits | P1–P3 | Must stay identical | ☑ [#41](https://github.com/mingzhangyang/relgraph-studio/pull/41) merged as `682dbbd` (2026-11-13) |
-| 3 | Core structure | S1–S3 | Must stay identical | ☑ [#43](https://github.com/mingzhangyang/relgraph-studio/pull/43) merged as `ca0edd8` (2026-11-14); golden frames identical |
-| 4 | Render structure | S4–S6 | Must stay identical | ◐ implemented on branch `claude/funny-dijkstra-4ok2of` from `ca0edd8`; display lists identical |
-| 5 | Tooling and docs | T1–T4 | Not affected | ☐ not started |
-| 6 | Workspace UI | W1–W5 | Not affected | ☐ not started |
-| 7 | Film frame refinement | V1–V4 | Regenerated, with before/after frames | ☐ not started |
+| PR  | Scope                     | Items | Golden frames                               | Status                                                                                                                       |
+| --- | ------------------------- | ----- | ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Behaviour fixes           | F1–F5 | Tree example changes (F5); others identical | ☑ [#40](https://github.com/mingzhangyang/relgraph-studio/pull/40) merged as `a2589bf` (2026-11-13); leftover 3 tracked as F6 |
+| 1b  | Behaviour fix             | F6    | Must stay identical                         | ☑ [#42](https://github.com/mingzhangyang/relgraph-studio/pull/42) merged as `a63875c` (2026-11-13); golden frames identical  |
+| 2   | Per-frame cost and limits | P1–P3 | Must stay identical                         | ☑ [#41](https://github.com/mingzhangyang/relgraph-studio/pull/41) merged as `682dbbd` (2026-11-13)                           |
+| 3   | Core structure            | S1–S3 | Must stay identical                         | ☑ [#43](https://github.com/mingzhangyang/relgraph-studio/pull/43) merged as `ca0edd8` (2026-11-14); golden frames identical  |
+| 4   | Render structure          | S4–S6 | Must stay identical                         | ☑ [#44](https://github.com/mingzhangyang/relgraph-studio/pull/44) merged as `ad49ba5` (2026-11-14); display lists identical  |
+| 5   | Tooling and docs          | T1–T4 | Not affected                                | ◐ implemented on branch `claude/funny-planck-lbzpcv` from `ad49ba5`; golden frames identical                                 |
+| 6   | Workspace UI              | W1–W5 | Not affected                                | ☐ not started                                                                                                                |
+| 7   | Film frame refinement     | V1–V4 | Regenerated, with before/after frames       | ☐ not started                                                                                                                |
 
 PR 1 comes first because its items are user-visible defects. PRs 3 and 4 come
 before the UI work so that PR 6 and PR 7 build on the split modules instead of
@@ -57,20 +57,20 @@ the recommendation until it is changed here. PR 1 implements the
 recommendations of D1, D2 and D4, and PR 2 that of D3; the owner confirmed
 all four on 2026-11-13.
 
-| Id | Question | Recommendation | Decided |
-| --- | --- | --- | --- |
-| D1 | How does a drawing remain a timeline (F1)? | Make it a declared state instead of inferring it from coordinates every frame: while a drawing is time-anchored, a dated node's x is derived from its time and only its lane (y) is stored and editable. Leaving that state is an explicit act (applying another strategy), shown in the layout panel. | ☑ as recommended (owner, 2026-11-13); implemented in #40, lanes-only storage in #42 (F6) |
-| D2 | Which layout defaults are canonical (F3)? | The load-time values (spacing 150, iterations 300), exported once and used by the panel too: the golden frames and browser baselines are recorded against them. | ☑ as recommended (owner, 2026-11-13); implemented in #40 |
-| D3 | What happens to the 5,000 / 20,000 limits (P3)? | Keep them as hard limits, add a warning diagnostic above a measured preview budget, and document both numbers. | ☑ budget 300 / 600, from measured playback (#41 review, item 3) |
-| D4 | How deep does the "STEP" fix go in PR 1 (F5 vs S3)? | PR 1 only stops showing the internal unit. Separating reveal order from domain time is S3, in PR 3. | ☑ as recommended (owner, 2026-11-13); F5 in #40, S3 in #43 |
+| Id  | Question                                            | Recommendation                                                                                                                                                                                                                                                                                         | Decided                                                                                  |
+| --- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| D1  | How does a drawing remain a timeline (F1)?          | Make it a declared state instead of inferring it from coordinates every frame: while a drawing is time-anchored, a dated node's x is derived from its time and only its lane (y) is stored and editable. Leaving that state is an explicit act (applying another strategy), shown in the layout panel. | ☑ as recommended (owner, 2026-11-13); implemented in #40, lanes-only storage in #42 (F6) |
+| D2  | Which layout defaults are canonical (F3)?           | The load-time values (spacing 150, iterations 300), exported once and used by the panel too: the golden frames and browser baselines are recorded against them.                                                                                                                                        | ☑ as recommended (owner, 2026-11-13); implemented in #40                                 |
+| D3  | What happens to the 5,000 / 20,000 limits (P3)?     | Keep them as hard limits, add a warning diagnostic above a measured preview budget, and document both numbers.                                                                                                                                                                                         | ☑ budget 300 / 600, from measured playback (#41 review, item 3)                          |
+| D4  | How deep does the "STEP" fix go in PR 1 (F5 vs S3)? | PR 1 only stops showing the internal unit. Separating reveal order from domain time is S3, in PR 3.                                                                                                                                                                                                    | ☑ as recommended (owner, 2026-11-13); F5 in #40, S3 in #43                               |
 
 ## PR 1 · Behaviour fixes
 
 - [x] **F1 · A timeline collapses when one bar moves sideways.** Whether the
-  axis is drawn is inferred each frame by comparing stored coordinates with a
-  recomputed axis, with a tolerance of 0.02 world units
-  (`keepsTime`, `packages/core/src/director/layout-engines.ts:1064`;
-  `styleForPositions`, `packages/core/src/style.ts`).
+      axis is drawn is inferred each frame by comparing stored coordinates with a
+      recomputed axis, with a tolerance of 0.02 world units
+      (`keepsTime`, `packages/core/src/director/layout-engines.ts:1064`;
+      `styleForPositions`, `packages/core/src/style.ts`).
   - Evidence (real Chromium): in the dynasties example, entering position
     editing and dragging 唐 about 12 px to the right removes the axis and turns
     all 18 bars into circles. The legend still shows bars.
@@ -82,18 +82,18 @@ all four on 2026-11-13.
     with every bar at its time; the legend glyph matches the glyph drawn; a
     pure test and a real-browser drag check cover it. Depends on D1.
 - [x] **F2 · Preview can be a no-op that looks pending.** The coordinate policy
-  defaults to "preserve", and `computeLayout` returns the current positions for
-  any strategy in that mode
-  (`packages/core/src/director/layout-strategies.ts:57`). The panel still
-  reports "临时预览 · 尚未保存" and enables Apply.
+      defaults to "preserve", and `computeLayout` returns the current positions for
+      any strategy in that mode
+      (`packages/core/src/director/layout-strategies.ts:57`). The panel still
+      reports "临时预览 · 尚未保存" and enables Apply.
   - Done when: choosing a strategy other than manual cannot produce an
     unchanged preview without saying so. Either the policy follows the
     strategy, or the preview is refused with a message. Apply stays disabled
     when nothing moved.
 - [x] **F3 · Two sets of layout defaults.** `structuralLayout` uses spacing 150
-  and 300 iterations (`packages/core/src/director/layout.ts:33`);
-  `DEFAULT_LAYOUT_SETTINGS` uses 160 and 160
-  (`packages/core/src/director/layout-strategies.ts:24`).
+      and 300 iterations (`packages/core/src/director/layout.ts:33`);
+      `DEFAULT_LAYOUT_SETTINGS` uses 160 and 160
+      (`packages/core/src/director/layout-strategies.ts:24`).
   - Evidence: "auto + rearrange" with the panel defaults moves every node of
     the bookshop (15/15), tree (22/22) and flowchart (8/8) examples, and 10 of
     18 in the dynasties example, although the document was already arranged by
@@ -102,14 +102,14 @@ all four on 2026-11-13.
     "auto + rearrange" on a freshly loaded coordinate-free document moves
     nothing. Depends on D2.
 - [x] **F4 · Strategies that do not apply degrade silently.** Applying
-  `timeline` to a graph without dates draws the tree instead; the two frames
-  are identical and the panel says nothing.
+      `timeline` to a graph without dates draws the tree instead; the two frames
+      are identical and the panel says nothing.
   - Done when: `computeLayout` (or a small companion) reports the engine that
     actually ran and why, and the panel shows it.
 - [x] **F5 · "STEP 9" appears in the film.** `shapeDiagram` unfolds a tree,
-  mind map or flowchart by rewriting `visibility` and setting
-  `timeline.unit = 'STEP'` (`packages/core/src/domains/generic.ts:880`), so the
-  frame's domain-time slot shows an internal counter.
+      mind map or flowchart by rewriting `visibility` and setting
+      `timeline.unit = 'STEP'` (`packages/core/src/domains/generic.ts:880`), so the
+      frame's domain-time slot shows an internal counter.
   - Done when: a derived unfolding shows no domain time. Golden frames of the
     tree example are regenerated and the change is listed in the PR. Depends
     on D4.
@@ -125,12 +125,12 @@ F6 is a behaviour fix, so it does not travel with the cost work of PR 2 or
 the structural work of PRs 3 and 4; it gets its own fix PR from `main`.
 
 - [x] **F6 · A date edit must not look like an off-axis drawing.** The source
-  of an anchored timeline still stores each dated node's x, although D1 meant
-  to store only its lane. After an ordinary date edit the stored x no longer
-  matches the date, so loading reports `OFF_TIME_AXIS`: one node when one
-  `end` changes, all 18 of the dynasties example when the end of the axis
-  moves (the axis rescales). The only fix the warning offers is
-  `"timeAxis": false`, which is the wrong advice here.
+      of an anchored timeline still stores each dated node's x, although D1 meant
+      to store only its lane. After an ordinary date edit the stored x no longer
+      matches the date, so loading reports `OFF_TIME_AXIS`: one node when one
+      `end` changes, all 18 of the dynasties example when the end of the axis
+      moves (the axis rescales). The only fix the warning offers is
+      `"timeAxis": false`, which is the wrong advice here.
   - Evidence: re-review of #40 at `588bb88`, leftover 3, reproduced with a
     script.
   - Done when: an anchored timeline's x is not authored data. Either the
@@ -146,25 +146,25 @@ Measured on the built packages with a constant-time text measurer, so real
 frames are slower. Synthetic graph, six groups, three relation kinds.
 
 | Nodes / relations | Compose time per frame |
-| --- | --- |
-| 200 / 400 | 18–33 ms |
-| 500 / 1,000 | 35–67 ms |
-| 1,500 / 3,000 | 128–277 ms |
-| 5,000 / 20,000 | 1.4–4.5 s |
+| ----------------- | ---------------------- |
+| 200 / 400         | 18–33 ms               |
+| 500 / 1,000       | 35–67 ms               |
+| 1,500 / 3,000     | 128–277 ms             |
+| 5,000 / 20,000    | 1.4–4.5 s              |
 
 The preview budget at 24 fps is about 42 ms.
 
 - [x] **P1 · Remove quadratic work from `composeFrame`.** Known sites: the
-  label ambiguity check scans every other label per candidate
-  (`packages/render/src/compose.ts:1361`); `shotAttention` scans all nodes per
-  edge when a group is highlighted (`compose.ts:180`); self-loop ordering and
-  legend progress filter the whole view per item; spoke angles are rebuilt by
-  array copy.
+      label ambiguity check scans every other label per candidate
+      (`packages/render/src/compose.ts:1361`); `shotAttention` scans all nodes per
+      edge when a group is highlighted (`compose.ts:180`); self-loop ordering and
+      legend progress filter the whole view per item; spoke angles are rebuilt by
+      array copy.
   - Done when: lookups go through maps built once per frame, a spatial bucket
     serves the label check, and every golden hash is unchanged.
 - [x] **P2 · A cost test.** A pure test composes a fixed synthetic graph and
-  fails on a regression in operation count (not wall time), so it is stable on
-  any machine.
+      fails on a regression in operation count (not wall time), so it is stable on
+      any machine.
 - [x] **P3 · Limits that mean something.** Depends on D3.
   - Done when: `GENERIC_LIMITS` and `docs/GENERIC-GRAPH.md` state the hard
     limit and the measured preview budget, and loading a graph above the budget
@@ -180,24 +180,24 @@ compared with the reviewed head `72beefa`: identical (base `a2589bf`, which
 No behaviour change; golden hashes and browser baselines identical.
 
 - [x] **S1 · Dependencies point inward.** Today `style.ts` imports
-  `timeAxis` / `keepsTime` from `director/layout-engines.ts`,
-  `domains/generic.ts` imports `diagramStructure` from it, and `project.ts`
-  imports the strategy lists from `director/layout-strategies.ts`.
+      `timeAxis` / `keepsTime` from `director/layout-engines.ts`,
+      `domains/generic.ts` imports `diagramStructure` from it, and `project.ts`
+      imports the strategy lists from `director/layout-strategies.ts`.
   - Done when: graph analysis (components, strongly connected components, tree
     and flow levels) lives in a module under `packages/core/src/graph/`, the
     time-axis model lives in its own module, and the strategy and mode name
     lists live beside the project types. Adapters, styles and engines import
     those; none of them imports an engine.
 - [x] **S2 · `generic.ts` does one job per module.** It currently holds the
-  parser and validator (one 570-line `parse`), the id mapping, the visual
-  hierarchy and the storyboard derivation.
+      parser and validator (one 570-line `parse`), the id mapping, the visual
+      hierarchy and the storyboard derivation.
   - Done when: storyboard derivation (`autoStoryboard`, `timedStoryboard`,
     `shapeDiagram`) is a module that works on any `VisualGraph`; `parse` is
     split by section; `loadDocument` parses a document once instead of twice
     (`packages/core/src/director/load.ts:141` and `:148`).
 - [x] **S3 · Reveal order is not domain time.** Completes F5: unfolding has its
-  own track in the compiled timeline instead of borrowing `visibility` and
-  `timeline.unit`.
+      own track in the compiled timeline instead of borrowing `visibility` and
+      `timeline.unit`.
   - Done when: a graph can both unfold and carry real domain time, and the
     spoiler projection is unchanged for timed documents.
 
@@ -211,54 +211,54 @@ compared with the reviewed head `54f5f98`: identical (base `a63875c`, which
 No behaviour change; golden hashes and browser baselines identical.
 
 - [x] **S4 · `composeFrame` in passes.** It is one closure of about 1,300
-  lines (`packages/render/src/compose.ts:306`–`1609`).
+      lines (`packages/render/src/compose.ts:306`–`1609`).
   - Done when: background, time axis, hulls, relations, nodes, legend, labels
     and frame furniture are separate functions over a shared frame context,
     each testable alone.
 - [x] **S5 · One source for repeated constants.** Dash rhythms are defined in
-  `style.ts`, `literature.style.ts` and `compose.ts:748`; shape proportions in
-  `node-geometry.ts` and again for legend miniatures at `compose.ts:1211`; the
-  importance scale for radius and type in three places.
+      `style.ts`, `literature.style.ts` and `compose.ts:748`; shape proportions in
+      `node-geometry.ts` and again for legend miniatures at `compose.ts:1211`; the
+      importance scale for radius and type in three places.
 - [x] **S6 · The resolved style has one owner.** "Read a drawing through
-  `styleForPositions`" is a comment, not a contract:
-  `apps/studio/src/position-tool.ts:70` defaults to the neutral style,
-  `apps/studio/src/layout-editor-model.ts:85` defaults to the domain lookup
-  (neutral for generic graphs), and only `apps/studio/src/studio.ts:1125`
-  passes the right one.
+      `styleForPositions`" is a comment, not a contract:
+      `apps/studio/src/position-tool.ts:70` defaults to the neutral style,
+      `apps/studio/src/layout-editor-model.ts:85` defaults to the domain lookup
+      (neutral for generic graphs), and only `apps/studio/src/studio.ts:1125`
+      passes the right one.
   - Done when: the renderer exposes the style it drew with, hit tests and
     overlays take it from there, and the defaults are removed. D1 may make
     `styleForPositions` unnecessary.
 
 ## PR 5 · Tooling and docs
 
-- [ ] **T1 · One example manifest.** The list is kept in `demo/index.html`,
-  `apps/studio/src/studio.ts:128` and `vite.config.mjs`.
-- [ ] **T2 · Lint and format by glob.** `package.json` names every test file
-  by hand in three scripts.
-- [ ] **T3 · Translate diagnostics by code.** `apps/studio/src/i18n.ts:473`
-  parses core's Chinese sentences with regular expressions; a reworded message
-  silently falls back to Chinese.
+- [x] **T1 · One example manifest.** The list is kept in `demo/index.html`,
+      `apps/studio/src/studio.ts:128` and `vite.config.mjs`.
+- [x] **T2 · Lint and format by glob.** `package.json` names every test file
+      by hand in three scripts.
+- [x] **T3 · Translate diagnostics by code.** `apps/studio/src/i18n.ts:473`
+      parses core's Chinese sentences with regular expressions; a reworded message
+      silently falls back to Chinese.
   - Done when: diagnostics carry their parameters, the studio translates by
     `code`, and a test fails when a code has no English text.
-- [ ] **T4 · Repair `docs/GENERIC-GRAPH.md`.** The "Diagram kinds" table has
-  rows from the layout table merged into it; update `docs/ARCHITECTURE.md`
-  after PRs 3 and 4.
+- [x] **T4 · Repair `docs/GENERIC-GRAPH.md`.** The "Diagram kinds" table has
+      rows from the layout table merged into it; update `docs/ARCHITECTURE.md`
+      after PRs 3 and 4.
 
 ## PR 6 · Workspace UI
 
 - [ ] **W1 · The layout panel follows the strategy.** Seed, spacing and
-  iterations are shown for all eleven strategies although most ignore one or
-  more of them.
+      iterations are shown for all eleven strategies although most ignore one or
+      more of them.
 - [ ] **W2 · The panel says what drew the picture.** A document arranged
-  automatically on load shows "手动 · 保留微调".
+      automatically on load shows "手动 · 保留微调".
 - [ ] **W3 · Applicability before applying.** Show which strategies suit the
-  graph (dates present, forest, directed and acyclic) and what the others will
-  do. Builds on F4.
+      graph (dates present, forest, directed and acyclic) and what the others will
+      do. Builds on F4.
 - [ ] **W4 · One heading.** The disclosure "布局策略 · 预览后应用" is followed
-  by a second heading "布局 · 预览后应用".
+      by a second heading "布局 · 预览后应用".
 - [ ] **W5 · Data source first on narrow screens.** At 390 px wide it sits at
-  the bottom of a page about 6,000 px long. Example buttons have uneven
-  heights in both languages.
+      the bottom of a page about 6,000 px long. Example buttons have uneven
+      heights in both languages.
 
 ## PR 7 · Film frame refinement
 
@@ -266,16 +266,16 @@ Each item changes pixels: regenerate the baselines and include before/after
 frames in both themes.
 
 - [ ] **V1 · Label rules per diagram kind.** In a tree, inner labels land left
-  of some nodes and below others because they use the network's free-side
-  search.
+      of some nodes and below others because they use the network's free-side
+      search.
 - [ ] **V2 · Timeline label scale.** Labels inside bars are 13 px; labels that
-  do not fit are set outside at 16–19 px and bold, so the shortest spans read
-  loudest.
+      do not fit are set outside at 16–19 px and bold, so the shortest spans read
+      loudest.
 - [ ] **V3 · Flowchart relations.** Neutral grey strokes have low contrast,
-  the "否，重试" tag sits away from its relation, and a long return passes
-  under an unrelated step.
+      the "否，重试" tag sits away from its relation, and a long return passes
+      under an unrelated step.
 - [ ] **V4 · Legend size.** At 12 px it is the smallest text in the frame
-  (about 9 px in the workspace preview).
+      (about 9 px in the workspace preview).
 
 ### PR 1 · as implemented
 
@@ -507,12 +507,12 @@ that sandbox. No GitHub Actions workflow was added, dispatched or rerun.
 Compose time per frame at 1080p, means of seven frames, same machine and
 method as the table above (`scripts/bench-compose.mjs --baseline`):
 
-| Nodes / relations | Before (`a2589bf`) | After |
-| --- | --- | --- |
-| 200 / 400 | 23 ms | 14 ms |
-| 500 / 1,000 | 65 ms | 34 ms |
-| 1,500 / 3,000 | 281 ms | 93 ms |
-| 5,000 / 20,000 | 3.2 s | 0.53 s |
+| Nodes / relations | Before (`a2589bf`) | After  |
+| ----------------- | ------------------ | ------ |
+| 200 / 400         | 23 ms              | 14 ms  |
+| 500 / 1,000       | 65 ms              | 34 ms  |
+| 1,500 / 3,000     | 281 ms             | 93 ms  |
+| 5,000 / 20,000    | 3.2 s              | 0.53 s |
 
 Under a camera that shows part of the graph, what remains is linear:
 selection outlines (33 samples per relation), hull sampling and garbage
@@ -601,7 +601,7 @@ added, dispatched or rerun.
 - **S3** · Reveal order is `revealStep` on nodes, relations and shots, a
   track of its own: `compileTimeline` keeps `revealSteps` beside `domainTime`,
   each shot inherits each value separately, and `projectVisualGraph(graph,
-  domainAt, revealStep)` admits an object only when both admit it.
+domainAt, revealStep)` admits an object only when both admit it.
   `timeline.ordinal` and `timedNodes` are gone, with the checks in the
   timeline engine, the composer and the studio: `visibility` is always domain
   time. Every frame of every example (5,376 frames, 8 films) composes to the
@@ -734,6 +734,64 @@ files passed. Only test files changed, so `check:types`, `check:export` and
 `check:browser` were not rerun. No GitHub Actions workflow was added,
 dispatched or rerun.
 
+### PR 4 · merged
+
+#44 merged as `ad49ba5` on 2026-11-14: a squash onto `ca0edd8`, which `main`
+had not moved from. Its tree (`1f57935`) is identical to that of the reviewed
+head `277eac0`.
+
+### PR 5 · as implemented
+
+Branch `claude/funny-planck-lbzpcv` from `ad49ba5`, one commit per item:
+
+- **T2 · Lint and format by glob.** `package.json` and `eslint.config.mjs`
+  read `tests/**/*.mjs` and `tests/**/*.ts` instead of test files listed by
+  hand: 29 in each of the three scripts, 20 in the ESLint config. Nine older
+  test files were in neither list; a preceding commit formats them with
+  Prettier and drops the one unused import ESLint then reports.
+- **T1 · One example manifest.** `examples/manifest.json` gives each example
+  its button id, file, source name, button title and subtitle. The page keeps
+  one `<!-- relgraph:examples -->` slot, which a plugin in `vite.config.mjs`
+  fills in dev and build (it fails the build unless there is exactly one); the
+  same plugin file copies the listed files into the build. The studio binds
+  one handler per entry and opens the first, and the workspace shell takes the
+  buttons as one map. The simulated DOM, the production-build test and both
+  browser scripts read the file too, so the list is no longer repeated in
+  seven places. `tests/studio-examples.test.mjs` requires unique ids and
+  files, a valid document per file and an English text for every name, title
+  and subtitle.
+- **T3 · Translate diagnostics by code.** One code often has several wordings
+  (`TYPE` alone has seventeen sites in the generic parser), so translation is keyed by the code, or
+  `CODE.variant` where it has several. `packages/core/src/diagnostic-wording.ts`
+  words every diagnostic of the `structure`, `semantic`, `graph-source` and
+  `studio` layers from a table; a diagnostic carries its `variant` and the
+  values the wording names as `params` (fields, limits, counts, allowed
+  values), and codes, paths, messages and fixes are unchanged. The studio's
+  `ENGLISH_DIAGNOSTICS` is typed against those tables, so a key without
+  English fails typecheck; `uiDiagnosticText` replaces the regular expressions
+  of `uiDiagnostic`, and 118 sentence entries leave the English string table.
+  The workspace's own `LOAD` and `FILE` diagnostics are worded the same way.
+  The `biology` and `graph` layers write English only and are shown as
+  written. `tests/diagnostic-wording.test.mjs` fails when a key has no English
+  text, when the English names other values than the original, when a produced
+  diagnostic is not worded from its key and parameters, or when a validator
+  writes Chinese text outside the tables; both the missing-key and the
+  Chinese-literal cases were planted and caught.
+- **T4 · Docs.** The "Diagram kinds" table of `docs/GENERIC-GRAPH.md` had held
+  three rows of the layout table since #38 and had lost its flowchart row. The
+  flowchart row is rewritten from `style.ts` and `storyboard.ts`, the `tree`,
+  `mindmap` and `timeline` strategy rows return to the layout table, and `flow`
+  gets back its sentence about feedback relations. `docs/ARCHITECTURE.md` lists
+  the eleven layout strategies instead of four, and describes the diagnostic
+  tables and the example manifest.
+
+Regression evidence: every message and fix of 7,926 diagnostics is
+byte-identical before and after T3. They come from each example with every
+field (first two array items, six levels deep) replaced by sixteen kinds of
+value, two invalid projects per example and 24 hand-made invalid documents.
+
+Validation, linux-x64, Node 22.23.4: see the PR.
+
 ## Review evidence
 
 Ran locally on linux-x64, Node 22.23.4, at `73af432`: `npm run typecheck`,
@@ -746,28 +804,33 @@ rerun.
 
 ## Progress log
 
-| Date | Item | PR | Commit on `main` | Note |
-| --- | --- | --- | --- | --- |
-| 2026-11-12 | Plan | — | — | Review completed; plan written |
-| 2026-11-12 | F1–F4 | #40 | `a2589bf` (branch `94a97d3`) | Golden frames unchanged |
-| 2026-11-12 | F5 | #40 | `a2589bf` (branch `6034b30`) | 58 tree golden hashes regenerated |
-| 2026-11-13 | #40 review, items 1–8 and minor | #40 | `a2589bf` (branch `588bb88`) | One anchor definition; golden frames unchanged |
-| 2026-11-13 | #40 re-review, leftovers 1–2 and unsaved flag | #40 | `a2589bf` (branch `0348d87`) | Leftover 3 tracked as F6 |
-| 2026-11-13 | PR 1 merged | #40 | `a2589bf` | Squash of `0348d87` onto `08c8e57`; tree identical to the reviewed head |
-| 2026-11-13 | P1, P2 | #41 | `682dbbd` (branch `dd2fa58`) | Display lists and golden frames identical |
-| 2026-11-13 | P3 | #41 | `682dbbd` (branch `f54385b`) | `LARGE_GRAPH` above 500 nodes or 1,000 relations |
-| 2026-11-13 | #41 review, items 1–3 and minor | #41 | `682dbbd` (branch `72beefa`) | Budget lowered to 300 / 600 (D3); golden frames unchanged |
-| 2026-11-13 | PR 2 merged | #41 | `682dbbd` | Squash of `72beefa` onto `a2589bf`; tree identical to the reviewed head |
-| 2026-11-13 | F6 | #42 | `a63875c` (branch `e29cc70`, `a8c2a80`) | Lanes only for anchored dated nodes; golden frames unchanged |
-| 2026-11-13 | #42 review and follow-up review | #42 | `a63875c` (branch `ada4d09`, `1271551`) | One lane rule for writer and reader; `LANE_ONLY` warning; golden frames unchanged |
-| 2026-11-13 | PR 1b merged | #42 | `a63875c` | Squash of `1271551` onto `682dbbd`; tree identical to the reviewed head |
-| 2026-11-13 | S1 | — | — (branch `5e21269`) | Graph analysis, time axis and layout names in their own modules; exports unchanged |
-| 2026-11-13 | S2 | — | — (branch `8e49fc2`) | Parser split by section, storyboard module, one parse per load; 87 documents identical |
-| 2026-11-13 | S3 | — | — (branch `9c7ae0a`) | `revealStep` track; 5,376 frames identical; golden frames unchanged |
-| 2026-11-13 | D1, D2, D4 | #43 | — | Owner confirmed the recommendations; all four decisions closed |
-| 2026-11-13 | #43 review, P2 | #43 | — (branch `2569a4a`) | Regenerated storyboard of an unfolded graph unfolds; golden frames unchanged |
-| 2026-11-14 | PR 3 merged | #43 | `ca0edd8` | Squash of `54f5f98` onto `a63875c`; tree identical to the reviewed head |
-| 2026-11-14 | S4 | — | — (branch `6882f62`) | `composeFrame` in passes over a frame context; 50,832 display lists identical |
-| 2026-11-14 | S5 | — | — (branch `9d13310`) | One source for line rhythms, shape proportions and the importance scale; display lists identical |
-| 2026-11-14 | S6 | — | — (branch `87e4354`) | The renderer owns the drawn style; hit tests have no default; display lists identical |
-| 2026-11-14 | #44 review, P2 | #44 | — | Harness renderer resolves the graph's style on first load, as production does |
+| Date       | Item                                          | PR  | Commit on `main`                        | Note                                                                                             |
+| ---------- | --------------------------------------------- | --- | --------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| 2026-11-12 | Plan                                          | —   | —                                       | Review completed; plan written                                                                   |
+| 2026-11-12 | F1–F4                                         | #40 | `a2589bf` (branch `94a97d3`)            | Golden frames unchanged                                                                          |
+| 2026-11-12 | F5                                            | #40 | `a2589bf` (branch `6034b30`)            | 58 tree golden hashes regenerated                                                                |
+| 2026-11-13 | #40 review, items 1–8 and minor               | #40 | `a2589bf` (branch `588bb88`)            | One anchor definition; golden frames unchanged                                                   |
+| 2026-11-13 | #40 re-review, leftovers 1–2 and unsaved flag | #40 | `a2589bf` (branch `0348d87`)            | Leftover 3 tracked as F6                                                                         |
+| 2026-11-13 | PR 1 merged                                   | #40 | `a2589bf`                               | Squash of `0348d87` onto `08c8e57`; tree identical to the reviewed head                          |
+| 2026-11-13 | P1, P2                                        | #41 | `682dbbd` (branch `dd2fa58`)            | Display lists and golden frames identical                                                        |
+| 2026-11-13 | P3                                            | #41 | `682dbbd` (branch `f54385b`)            | `LARGE_GRAPH` above 500 nodes or 1,000 relations                                                 |
+| 2026-11-13 | #41 review, items 1–3 and minor               | #41 | `682dbbd` (branch `72beefa`)            | Budget lowered to 300 / 600 (D3); golden frames unchanged                                        |
+| 2026-11-13 | PR 2 merged                                   | #41 | `682dbbd`                               | Squash of `72beefa` onto `a2589bf`; tree identical to the reviewed head                          |
+| 2026-11-13 | F6                                            | #42 | `a63875c` (branch `e29cc70`, `a8c2a80`) | Lanes only for anchored dated nodes; golden frames unchanged                                     |
+| 2026-11-13 | #42 review and follow-up review               | #42 | `a63875c` (branch `ada4d09`, `1271551`) | One lane rule for writer and reader; `LANE_ONLY` warning; golden frames unchanged                |
+| 2026-11-13 | PR 1b merged                                  | #42 | `a63875c`                               | Squash of `1271551` onto `682dbbd`; tree identical to the reviewed head                          |
+| 2026-11-13 | S1                                            | —   | — (branch `5e21269`)                    | Graph analysis, time axis and layout names in their own modules; exports unchanged               |
+| 2026-11-13 | S2                                            | —   | — (branch `8e49fc2`)                    | Parser split by section, storyboard module, one parse per load; 87 documents identical           |
+| 2026-11-13 | S3                                            | —   | — (branch `9c7ae0a`)                    | `revealStep` track; 5,376 frames identical; golden frames unchanged                              |
+| 2026-11-13 | D1, D2, D4                                    | #43 | —                                       | Owner confirmed the recommendations; all four decisions closed                                   |
+| 2026-11-13 | #43 review, P2                                | #43 | — (branch `2569a4a`)                    | Regenerated storyboard of an unfolded graph unfolds; golden frames unchanged                     |
+| 2026-11-14 | PR 3 merged                                   | #43 | `ca0edd8`                               | Squash of `54f5f98` onto `a63875c`; tree identical to the reviewed head                          |
+| 2026-11-14 | S4                                            | —   | — (branch `6882f62`)                    | `composeFrame` in passes over a frame context; 50,832 display lists identical                    |
+| 2026-11-14 | S5                                            | —   | — (branch `9d13310`)                    | One source for line rhythms, shape proportions and the importance scale; display lists identical |
+| 2026-11-14 | S6                                            | —   | — (branch `87e4354`)                    | The renderer owns the drawn style; hit tests have no default; display lists identical            |
+| 2026-11-14 | #44 review, P2                                | #44 | —                                       | Harness renderer resolves the graph's style on first load, as production does                    |
+| 2026-11-14 | PR 4 merged                                   | #44 | `ad49ba5`                               | Squash of `277eac0` onto `ca0edd8`; tree identical to the reviewed head                          |
+| 2026-11-15 | T2                                            | —   | — (branch `3939a8c`, `a298444`)         | Tests linted and formatted by glob                                                               |
+| 2026-11-15 | T1                                            | —   | — (branch `8c14f13`)                    | `examples/manifest.json`; buttons rendered from it                                               |
+| 2026-11-15 | T3                                            | —   | — (branch `9117a8b`)                    | Diagnostics worded by key; 7,926 messages and fixes identical                                    |
+| 2026-11-15 | T4                                            | —   | —                                       | Diagram kinds and layout tables repaired; architecture updated                                   |

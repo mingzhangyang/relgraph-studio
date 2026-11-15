@@ -19,6 +19,7 @@ import {
   type KindDeclaration,
 } from '../style.js';
 import { timeAxis as axisOf } from '../graph/time-axis.js';
+import { GENERIC_WORDING, worded, type DiagnosticParams } from '../diagnostic-wording.js';
 import { lanedNodes, sourceKeepsTime, timeCoordinate } from '../director/time-anchor.js';
 import type {
   VisualEdge,
@@ -48,6 +49,10 @@ export interface GenericDiagnostic {
   level: 'error' | 'warning';
   layer: 'graph-source';
   code: string;
+  /** Which wording of the code, where it has several (see GENERIC_WORDING). */
+  variant?: string;
+  /** The values the wording names. */
+  params?: DiagnosticParams;
   path: string;
   id: unknown;
   message: string;
@@ -122,7 +127,8 @@ export interface ParsedGenericSource {
   sourceIds: Map<string, string>;
 }
 
-type Report = (code: string, path: string, id: unknown, message: string, fix: string) => void;
+type GenericKey = keyof typeof GENERIC_WORDING;
+type Report = (key: GenericKey, path: string, id: unknown, params?: DiagnosticParams) => void;
 /** Diagnostics and the field readers every section shares. */
 interface Reader {
   fail: Report;
@@ -135,24 +141,18 @@ interface Reader {
 }
 
 function reader(errors: GenericDiagnostic[], warnings: GenericDiagnostic[]): Reader {
-  const fail: Report = (code, path, id, message, fix) => {
-    errors.push({ level: 'error', layer: 'graph-source', code, path, id: id ?? '', message, fix });
-  };
-  const warn: Report = (code, path, id, message, fix) => {
-    warnings.push({
-      level: 'warning',
-      layer: 'graph-source',
-      code,
-      path,
-      id: id ?? '',
-      message,
-      fix,
-    });
-  };
+  const report =
+    (level: GenericDiagnostic['level'], list: GenericDiagnostic[]): Report =>
+    (key, path, id, params) => {
+      const { code, ...text } = worded(GENERIC_WORDING, key, params);
+      list.push({ level, layer: 'graph-source', code, path, id: id ?? '', ...text });
+    };
+  const fail = report('error', errors),
+    warn = report('warning', warnings);
   const number: Reader['number'] = (value, path, id) => {
     if (value === undefined || value === null) return undefined;
     if (finite(value)) return value;
-    fail('TYPE', path, id, '需要有限数值。', '改为数字，或删除该字段。');
+    fail('TYPE.number', path, id);
     return undefined;
   };
   return {
@@ -163,13 +163,7 @@ function reader(errors: GenericDiagnostic[], warnings: GenericDiagnostic[]): Rea
       if (value === undefined || value === null) return undefined;
       if (finite(value)) return String(value);
       if (typeof value !== 'string' || value.length > GENERIC_LIMITS.text) {
-        fail(
-          'TYPE',
-          path,
-          id,
-          '文本字段无效。',
-          `使用不超过 ${GENERIC_LIMITS.text} 个字符的文本。`,
-        );
+        fail('TYPE.text', path, id, { limit: GENERIC_LIMITS.text });
         return undefined;
       }
       return value.trim() || undefined;
@@ -177,14 +171,13 @@ function reader(errors: GenericDiagnostic[], warnings: GenericDiagnostic[]): Rea
     colour(value, path, id) {
       if (value === undefined || value === null) return undefined;
       if (typeof value === 'string' && hex.test(value)) return value.toLowerCase();
-      fail('COLOR', path, id, '颜色无效。', '使用 #RRGGBB 六位十六进制颜色。');
+      fail('COLOR', path, id);
       return undefined;
     },
     visibility(item, path, id) {
       const from = number(item.visibleFrom, path + '.visibleFrom', id),
         to = number(item.visibleTo, path + '.visibleTo', id);
-      if (from !== undefined && to !== undefined && from > to)
-        fail('INTERVAL', path, id, '可见区间无效。', '确保 visibleFrom 不大于 visibleTo。');
+      if (from !== undefined && to !== undefined && from > to) fail('INTERVAL.visible', path, id);
       return from === undefined && to === undefined
         ? undefined
         : { ...(from === undefined ? {} : { from }), ...(to === undefined ? {} : { to }) };
@@ -193,7 +186,7 @@ function reader(errors: GenericDiagnostic[], warnings: GenericDiagnostic[]): Rea
       if (value === undefined || value === null) return fallback;
       const name = finite(value) ? String(value) : typeof value === 'string' ? value.trim() : '';
       if (name && name.length <= 80) return name;
-      fail('KIND', path, id, '类别名无效。', '使用不超过 80 个字符的非空文本。');
+      fail('KIND.name', path, id, { limit: 80 });
       return fallback;
     },
   };
@@ -211,7 +204,7 @@ function sections(doc: Raw, r: Reader): Sections {
     const value = doc[key];
     if (value === undefined) return [];
     if (Array.isArray(value)) return value;
-    r.fail('TYPE', key, '', `${key} 必须是数组。`, '改为数组，或删除该字段。');
+    r.fail('TYPE.array', key, '', { field: key });
     return [];
   };
   return {
@@ -239,11 +232,10 @@ function collectIds(raw: Sections, r: Reader): Ids {
   raw.nodes.forEach((n, i) => {
     const id = object(n) ? rawId(n.id) : rawId(n);
     if (id === null) {
-      r.fail('ID', `nodes[${i}].id`, '', '节点缺少有效 id。', '提供非空文本或数字 id。');
+      r.fail('ID.node', `nodes[${i}].id`, '');
       return;
     }
-    if (declared.has(id))
-      r.fail('DUPLICATE_ID', `nodes[${i}].id`, id, '节点 id 重复。', '每个节点使用唯一 id。');
+    if (declared.has(id)) r.fail('DUPLICATE_ID.node', `nodes[${i}].id`, id);
     declared.add(id);
     nodeRaw.push(id);
     if (object(n)) {
@@ -253,19 +245,12 @@ function collectIds(raw: Sections, r: Reader): Ids {
   });
   raw.edges.forEach((e, i) => {
     if (!object(e)) {
-      r.fail('TYPE', `edges[${i}]`, '', '关系必须是对象。', '使用 { "source": …, "target": … }。');
+      r.fail('TYPE.edge', `edges[${i}]`, '');
       return;
     }
     for (const end of ['source', 'target'] as const) {
       const id = rawId(e[end]);
-      if (id === null)
-        r.fail(
-          'EDGE_REF',
-          `edges[${i}].${end}`,
-          rawId(e.id) ?? '',
-          `关系缺少 ${end}。`,
-          '填写节点 id。',
-        );
+      if (id === null) r.fail('EDGE_REF', `edges[${i}].${end}`, rawId(e.id) ?? '', { end });
       else nodeRaw.push(id);
     }
   });
@@ -273,11 +258,10 @@ function collectIds(raw: Sections, r: Reader): Ids {
   raw.groups.forEach((g, i) => {
     const id = object(g) ? rawId(g.id) : rawId(g);
     if (id === null) {
-      r.fail('ID', `groups[${i}].id`, '', '分组缺少有效 id。', '提供非空文本或数字 id。');
+      r.fail('ID.group', `groups[${i}].id`, '');
       return;
     }
-    if (declaredGroups.has(id))
-      r.fail('DUPLICATE_ID', `groups[${i}].id`, id, '分组 id 重复。', '每个分组使用唯一 id。');
+    if (declaredGroups.has(id)) r.fail('DUPLICATE_ID.group', `groups[${i}].id`, id);
     declaredGroups.add(id);
   });
   return {
@@ -295,20 +279,20 @@ function parseKinds(doc: Raw, r: Reader) {
   const directed = new Map<string, boolean>();
   if (doc.kinds === undefined) return { kinds, directed };
   if (!object(doc.kinds)) {
-    r.fail('TYPE', 'kinds', '', 'kinds 必须是对象。', '使用 { nodes, edges }。');
+    r.fail('TYPE.object', 'kinds', '', { field: 'kinds', shape: '{ nodes, edges }' });
     return { kinds, directed };
   }
   for (const scope of ['nodes', 'edges'] as const) {
     const table = doc.kinds[scope];
     if (table === undefined) continue;
     if (!object(table)) {
-      r.fail('TYPE', `kinds.${scope}`, '', '类别表必须是对象。', '以类别名为键。');
+      r.fail('TYPE.kindTable', `kinds.${scope}`, '');
       continue;
     }
     for (const [name, value] of Object.entries(table)) {
       const path = `kinds.${scope}.${name}`;
       if (!name.trim() || name.length > 80 || !object(value)) {
-        r.fail('KIND', path, '', '类别声明无效。', '使用 { "label": …, "color": … } 对象。');
+        r.fail('KIND.declaration', path, '');
         continue;
       }
       const entry: KindDeclaration = {};
@@ -319,23 +303,22 @@ function parseKinds(doc: Raw, r: Reader) {
       if (scope === 'nodes' && value.shape !== undefined) {
         if ((NODE_SHAPES as readonly unknown[]).includes(value.shape))
           entry.shape = value.shape as KindDeclaration['shape'];
-        else r.fail('ENUM', path + '.shape', '', '形状无效。', `可用：${NODE_SHAPES.join('、')}。`);
+        else r.fail('ENUM.shape', path + '.shape', '', { allowed: NODE_SHAPES });
       }
       if (scope === 'edges') {
         if (value.line !== undefined) {
           if ((LINE_STYLES as readonly unknown[]).includes(value.line))
             entry.line = value.line as KindDeclaration['line'];
-          else
-            r.fail('ENUM', path + '.line', '', '线型无效。', `可用：${LINE_STYLES.join('、')}。`);
+          else r.fail('ENUM.line', path + '.line', '', { allowed: LINE_STYLES });
         }
         if (value.head !== undefined) {
           if ((EDGE_HEADS as readonly unknown[]).includes(value.head))
             entry.head = value.head as KindDeclaration['head'];
-          else r.fail('ENUM', path + '.head', '', '端点无效。', `可用：${EDGE_HEADS.join('、')}。`);
+          else r.fail('ENUM.head', path + '.head', '', { allowed: EDGE_HEADS });
         }
         if (typeof value.directed === 'boolean') directed.set(name.trim(), value.directed);
         else if (value.directed !== undefined)
-          r.fail('TYPE', path + '.directed', '', 'directed 必须是布尔值。', '使用 true 或 false。');
+          r.fail('TYPE.boolean', path + '.directed', '', { field: 'directed' });
       }
       kinds[scope][name.trim()] = entry;
     }
@@ -350,7 +333,7 @@ function parseKinds(doc: Raw, r: Reader) {
  */
 function defaultDirection(doc: Raw, r: Reader): boolean {
   if (doc.directed !== undefined && typeof doc.directed !== 'boolean')
-    r.fail('TYPE', 'directed', '', 'directed 必须是布尔值。', '使用 true 或 false。');
+    r.fail('TYPE.boolean', 'directed', '', { field: 'directed' });
   return typeof doc.directed === 'boolean'
     ? doc.directed
     : doc.diagram === 'tree' || doc.diagram === 'mindmap' || doc.diagram === 'flowchart';
@@ -414,10 +397,10 @@ function parseNodes(rawNodes: unknown[], ids: Ids, r: Reader): ParsedNodes {
     sourceIds.set(id, raw);
     const group = rawId(record.group);
     if (record.group !== undefined && record.group !== null && group === null)
-      r.fail('GROUP_REF', path + '.group', raw, '分组引用无效。', '填写分组 id，或删除该字段。');
+      r.fail('GROUP_REF', path + '.group', raw);
     const weight = r.number(record.weight, path + '.weight', raw);
     if (weight !== undefined) {
-      if (weight < 0) r.fail('WEIGHT', path + '.weight', raw, '权重不能为负。', '使用非负数。');
+      if (weight < 0) r.fail('WEIGHT', path + '.weight', raw);
       else weights.set(id, weight);
     }
     const summary = r.text(record.summary, path + '.summary', raw);
@@ -425,16 +408,8 @@ function parseNodes(rawNodes: unknown[], ids: Ids, r: Reader): ParsedNodes {
     // node first appears unless visibleFrom says otherwise.
     const start = r.number(record.start, path + '.start', raw),
       end = r.number(record.end, path + '.end', raw);
-    if (end !== undefined && start === undefined)
-      r.fail(
-        'INTERVAL',
-        path + '.end',
-        raw,
-        'end 需要同时提供 start。',
-        '补充 start，或删除 end。',
-      );
-    if (start !== undefined && end !== undefined && start > end)
-      r.fail('INTERVAL', path, raw, '时间跨度无效。', '确保 start 不大于 end。');
+    if (end !== undefined && start === undefined) r.fail('INTERVAL.end', path + '.end', raw);
+    if (start !== undefined && end !== undefined && start > end) r.fail('INTERVAL.span', path, raw);
     const shown = r.visibility(record, path, raw);
     // Without visibleFrom the node first appears at its start, so the start
     // is one end of the interval the kernel will be given.
@@ -445,13 +420,7 @@ function parseNodes(rawNodes: unknown[], ids: Ids, r: Reader): ParsedNodes {
       shown.to !== undefined &&
       start > shown.to
     )
-      r.fail(
-        'INTERVAL',
-        path,
-        raw,
-        '可见区间无效。',
-        '确保 start 不大于 visibleTo，或用 visibleFrom 指定首次出现的时间。',
-      );
+      r.fail('INTERVAL.visibleTo', path, raw);
     // On a timeline that keeps time a dated node's x is its date, so its
     // position may be its lane alone. Whether x can be derived is decided by
     // the complete source (`lanedNodes`), with the rule the writer uses.
@@ -461,14 +430,7 @@ function parseNodes(rawNodes: unknown[], ids: Ids, r: Reader): ParsedNodes {
       if (object(at) && finite(at.x) && finite(at.y)) position = { x: at.x, y: at.y };
       else if (object(at) && at.x === undefined && finite(at.y))
         lanes.set(id, { y: at.y, index: i });
-      else
-        r.fail(
-          'POSITION',
-          path + '.position',
-          raw,
-          '坐标无效。',
-          '使用 { "x": 数字, "y": 数字 }。',
-        );
+      else r.fail('POSITION', path + '.position', raw);
     }
     nodes.push({
       id,
@@ -529,13 +491,7 @@ function parseEdges(
     let id: string;
     if (raw !== null) {
       if (edgeSeen.has(raw)) {
-        r.fail(
-          'DUPLICATE_ID',
-          path + '.id',
-          raw,
-          '关系 id 重复。',
-          '每条关系使用唯一 id，或省略 id。',
-        );
+        r.fail('DUPLICATE_ID.relation', path + '.id', raw);
         return;
       }
       edgeSeen.add(raw);
@@ -549,17 +505,10 @@ function parseEdges(
     }
     const kind = r.kindName(e.kind, 'link', path + '.kind', raw ?? '');
     if (e.directed !== undefined && typeof e.directed !== 'boolean')
-      r.fail(
-        'TYPE',
-        path + '.directed',
-        raw ?? '',
-        'directed 必须是布尔值。',
-        '使用 true 或 false。',
-      );
+      r.fail('TYPE.boolean', path + '.directed', raw ?? '', { field: 'directed' });
     const weight = r.number(e.weight, path + '.weight', raw ?? '');
     if (weight !== undefined) {
-      if (weight < 0)
-        r.fail('WEIGHT', path + '.weight', raw ?? '', '权重不能为负。', '使用非负数。');
+      if (weight < 0) r.fail('WEIGHT', path + '.weight', raw ?? '');
       else strengths.set(id, weight);
     }
     edges.push({
@@ -622,7 +571,7 @@ function rankHierarchy(
 /** `meta`, as a record, and the declared `timeline`. */
 function parseMeta(doc: Raw, r: Reader) {
   const meta = doc.meta === undefined ? {} : doc.meta;
-  if (!object(meta)) r.fail('TYPE', 'meta', '', 'meta 必须是对象。', '使用 { "title": … }。');
+  if (!object(meta)) r.fail('TYPE.object', 'meta', '', { field: 'meta', shape: '{ "title": … }' });
   const record = object(meta) ? meta : {};
   let timeline: ParsedGenericSource['timeline'];
   if (doc.timeline !== undefined) {
@@ -631,7 +580,7 @@ function parseMeta(doc: Raw, r: Reader) {
         unit: doc.timeline.unit.trim(),
         ...(finite(doc.timeline.total) ? { total: doc.timeline.total } : {}),
       };
-    else r.fail('TYPE', 'timeline', '', 'timeline 无效。', '使用 { "unit": "步骤" }。');
+    else r.fail('TYPE.timeline', 'timeline', '');
   }
   return { meta: record, timeline };
 }
@@ -663,18 +612,12 @@ function parseScenes(
   rawScenes.forEach((s, i) => {
     const path = `presentation[${i}]`;
     if (!object(s)) {
-      r.fail('TYPE', path, '', '分镜必须是对象。', '使用 { "title": …, "durationSec": … }。');
+      r.fail('TYPE.shot', path, '');
       return;
     }
     const raw = sceneNames[i];
     if (sceneSeen.has(raw)) {
-      r.fail(
-        'DUPLICATE_ID',
-        path + '.id',
-        raw,
-        '分镜 id 重复。',
-        '每个分镜使用唯一 id，或省略 id。',
-      );
+      r.fail('DUPLICATE_ID.shot', path + '.id', raw);
       return;
     }
     sceneSeen.add(raw);
@@ -685,7 +628,7 @@ function parseScenes(
     ): string[] | undefined => {
       if (value === undefined || value === null) return undefined;
       if (!Array.isArray(value)) {
-        r.fail('TYPE', `${path}.${field}`, raw, `${field} 必须是数组。`, '改为 id 数组。');
+        r.fail('TYPE.ids', `${path}.${field}`, raw, { field });
         return undefined;
       }
       const out: string[] = [];
@@ -693,14 +636,7 @@ function parseScenes(
         const id = rawId(entry),
           mapped = id === null ? undefined : table.get(id);
         if (mapped) out.push(mapped);
-        else
-          r.fail(
-            'SCENE_REF',
-            `${path}.${field}[${j}]`,
-            raw,
-            '引用了不存在的对象。',
-            '使用已有 id。',
-          );
+        else r.fail('SCENE_REF', `${path}.${field}[${j}]`, raw);
       });
       return out;
     };
@@ -712,54 +648,30 @@ function parseScenes(
       if (value === undefined || value === null) return undefined;
       const id = rawId(value),
         mapped = id === null ? undefined : table.get(id);
-      if (!mapped)
-        r.fail('SCENE_REF', `${path}.${field}`, raw, '引用了不存在的对象。', '使用已有 id。');
+      if (!mapped) r.fail('SCENE_REF', `${path}.${field}`, raw);
       return mapped;
     };
     const camera = object(s.camera) ? s.camera : undefined,
       highlight = object(s.highlight) ? s.highlight : undefined;
     if (s.camera !== undefined && !camera)
-      r.fail('TYPE', path + '.camera', raw, 'camera 必须是对象。', '使用 { "fitIds": […] }。');
+      r.fail('TYPE.object', path + '.camera', raw, { field: 'camera', shape: '{ "fitIds": […] }' });
     if (s.highlight !== undefined && !highlight)
-      r.fail(
-        'TYPE',
-        path + '.highlight',
-        raw,
-        'highlight 必须是对象。',
-        '使用 { "nodeIds": […] }。',
-      );
+      r.fail('TYPE.object', path + '.highlight', raw, {
+        field: 'highlight',
+        shape: '{ "nodeIds": […] }',
+      });
     const duration = s.durationSec === undefined ? 4 : s.durationSec;
     if (!finite(duration) || duration <= 0 || duration > 600)
-      r.fail('DURATION', path + '.durationSec', raw, '时长无效。', '使用 0 到 600 之间的秒数。');
+      r.fail('DURATION', path + '.durationSec', raw);
     const zoom = r.number(camera?.zoom, path + '.camera.zoom', raw);
-    if (zoom !== undefined && zoom <= 0)
-      r.fail(
-        'CAMERA_ZOOM',
-        path + '.camera.zoom',
-        raw,
-        '镜头缩放无效。',
-        '使用大于 0 的数值，或删除 zoom。',
-      );
+    if (zoom !== undefined && zoom <= 0) r.fail('CAMERA_ZOOM', path + '.camera.zoom', raw);
     const transition = r.number(s.transitionMs, path + '.transitionMs', raw);
     if (transition !== undefined && transition < 0)
-      r.fail(
-        'TRANSITION',
-        path + '.transitionMs',
-        raw,
-        '转场时长无效。',
-        '使用不小于 0 的毫秒数。',
-      );
+      r.fail('TRANSITION', path + '.transitionMs', raw);
     const focus = camera ? ref(camera.focusNodeId, ids.nodes, 'camera.focusNodeId') : undefined,
       fit = camera ? refs(camera.fitIds, ids.nodes, 'camera.fitIds') : undefined;
     // One shot looks at one thing: a node, or the frame around several.
-    if (focus !== undefined && fit?.length)
-      r.fail(
-        'CAMERA_CONFLICT',
-        path + '.camera',
-        raw,
-        '镜头目标冲突。',
-        'focusNodeId 与 fitIds 只保留一个。',
-      );
+    if (focus !== undefined && fit?.length) r.fail('CAMERA_CONFLICT', path + '.camera', raw);
     scenes.push({
       id: sceneIds.get(raw)!,
       title: r.text(s.title, path + '.title', raw) ?? `${i + 1}`,
@@ -789,12 +701,12 @@ function parseDiagram(doc: Raw, r: Reader): DiagramKind {
   if (doc.diagram !== undefined) {
     if ((DIAGRAM_KINDS as readonly unknown[]).includes(doc.diagram))
       diagram = doc.diagram as DiagramKind;
-    else r.fail('ENUM', 'diagram', '', '图的类型无效。', `可用：${DIAGRAM_KINDS.join('、')}。`);
+    else r.fail('ENUM.diagram', 'diagram', '', { allowed: DIAGRAM_KINDS });
   }
   if (doc.unfold !== undefined && typeof doc.unfold !== 'boolean')
-    r.fail('TYPE', 'unfold', '', 'unfold 必须是布尔值。', '使用 true 或 false。');
+    r.fail('TYPE.boolean', 'unfold', '', { field: 'unfold' });
   if (doc.timeAxis !== undefined && typeof doc.timeAxis !== 'boolean')
-    r.fail('TYPE', 'timeAxis', '', 'timeAxis 必须是布尔值。', '使用 true 或 false。');
+    r.fail('TYPE.boolean', 'timeAxis', '', { field: 'timeAxis' });
   return diagram;
 }
 
@@ -818,14 +730,7 @@ function resolveLanes(
     if (!lane) continue;
     const x = axis && laned.has(node.id) ? timeCoordinate(node, axis) : null;
     if (x !== null) node.position = { x, y: lane.y };
-    else
-      r.warn(
-        'LANE_ONLY',
-        `nodes[${lane.index}].position`,
-        sourceIds.get(node.id),
-        '坐标只有 y，无法由日期得出 x；布局将重新摆放此节点，原有 y 不会保留。',
-        '只有在保持时间轴、且至少有两个不同时间的时间线上，带日期节点才能只写 y；否则补充 x，使用 { "x": 数字, "y": 数字 }。',
-      );
+    else r.warn('LANE_ONLY', `nodes[${lane.index}].position`, sourceIds.get(node.id));
   }
 }
 
@@ -841,40 +746,36 @@ export function parseGenericSource(
 ): ParsedGenericSource | null {
   const r = reader(errors, warnings);
   if (!object(doc) || doc.format !== GENERIC_FORMAT) {
-    r.fail('STRUCTURE', '$', '', '不是通用关系图文档。', `使用 format: "${GENERIC_FORMAT}"。`);
+    r.fail('STRUCTURE', '$', '', { format: GENERIC_FORMAT });
     return null;
   }
   const raw = sections(doc, r);
   if (raw.nodes.length > GENERIC_LIMITS.nodes || raw.edges.length > GENERIC_LIMITS.edges) {
-    r.fail(
-      'TOO_LARGE',
-      '$',
-      '',
-      `图谱过大（上限 ${GENERIC_LIMITS.nodes} 个节点、${GENERIC_LIMITS.edges} 条关系）。`,
-      '先筛选或聚合数据，再制作影片。',
-    );
+    r.fail('TOO_LARGE.limits', '$', '', {
+      nodes: GENERIC_LIMITS.nodes,
+      edges: GENERIC_LIMITS.edges,
+    });
     return null;
   }
   const ids = collectIds(raw, r);
   if (!ids.nodes.size) {
-    r.fail('EMPTY', '$', '', '图谱中没有任何节点或关系。', '至少添加一个节点或一条关系。');
+    r.fail('EMPTY', '$', '');
     return null;
   }
   if (ids.nodes.size > GENERIC_LIMITS.nodes) {
-    r.fail('TOO_LARGE', '$', '', '节点数量超过上限。', '先筛选或聚合数据，再制作影片。');
+    r.fail('TOO_LARGE.nodes', '$', '');
     return null;
   }
   if (
     ids.nodes.size > GENERIC_LIMITS.previewNodes ||
     raw.edges.length > GENERIC_LIMITS.previewEdges
   )
-    r.warn(
-      'LARGE_GRAPH',
-      '$',
-      '',
-      `图谱较大（${ids.nodes.size} 个节点、${raw.edges.length} 条关系），超出流畅预览的范围（约 ${GENERIC_LIMITS.previewNodes} 个节点、${GENERIC_LIMITS.previewEdges} 条关系）。`,
-      '预览可能卡顿，导出的影片不受影响；如需流畅预览，请先筛选或聚合数据。',
-    );
+    r.warn('LARGE_GRAPH', '$', '', {
+      nodes: ids.nodes.size,
+      edges: raw.edges.length,
+      previewNodes: GENERIC_LIMITS.previewNodes,
+      previewEdges: GENERIC_LIMITS.previewEdges,
+    });
 
   const { kinds, directed } = parseKinds(doc, r);
   const defaultDirected = defaultDirection(doc, r);
@@ -899,13 +800,7 @@ export function parseGenericSource(
   const { meta, timeline } = parseMeta(doc, r);
   const scenes = parseScenes(raw.scenes, ids, lookup, r);
   if (implicit.length && raw.nodes.length)
-    r.warn(
-      'IMPLICIT_NODES',
-      'edges',
-      '',
-      `${implicit.length} 个节点只在关系中出现，已按 id 自动创建。`,
-      '如需名称、类别或分组，请在 nodes 中声明它们。',
-    );
+    r.warn('IMPLICIT_NODES', 'edges', '', { count: implicit.length });
   const title = r.text(meta.title, 'meta.title', '') ?? '关系图';
   const diagram = parseDiagram(doc, r);
   resolveLanes(doc, diagram, parsedNodes, r);

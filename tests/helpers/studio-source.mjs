@@ -93,6 +93,9 @@ import { createTranscriptView } from '../../apps/studio/src/transcript-view.ts';
 import { createWorkspaceShellView } from '../../apps/studio/src/workspace-shell-view.ts';
 import { projectSelectionOverlay } from '../../apps/studio/src/selection-overlay-model.ts';
 import { createSelectionOverlayView } from '../../apps/studio/src/selection-overlay-view.ts';
+import { STUDIO_EXAMPLES } from '../../apps/studio/src/examples.ts';
+import { WORKSPACE_WORDING } from '../../apps/studio/src/diagnostic-text.ts';
+import { worded } from '../../packages/core/src/diagnostic-wording.ts';
 
 // VM tests exercise the actual TypeScript workspace against a minimal simulated DOM.
 // The imported dependencies are supplied explicitly by each harness.
@@ -179,4 +182,7 @@ export const studioImports = {
   createWorkspaceShellView,
   projectSelectionOverlay,
   createSelectionOverlayView,
+  STUDIO_EXAMPLES,
+  WORKSPACE_WORDING,
+  worded,
 };

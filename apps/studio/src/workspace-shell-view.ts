@@ -9,10 +9,8 @@ interface ShellElements {
   sceneCount: HTMLElement;
   sourceName: HTMLElement;
   sourceNote: HTMLElement;
-  exampleLiterature: HTMLButtonElement;
-  exampleBiology: HTMLButtonElement;
-  /** Further example buttons by element id; optional so embedders may omit them. */
-  gallery?: Readonly<Record<string, HTMLButtonElement>>;
+  /** Example buttons by element id. */
+  examples: Readonly<Record<ExampleId, HTMLButtonElement>>;
   themeToggle: HTMLButtonElement;
   dropzone: HTMLLabelElement;
 }
@@ -68,9 +66,7 @@ export function createWorkspaceShellView(
       elements.sourceNote.textContent = note || description || uiText('此数据未提供来源说明。');
     },
     markSource(id: ExampleId | null): void {
-      elements.exampleLiterature.setAttribute('aria-pressed', String(id === 'exampleLiterature'));
-      elements.exampleBiology.setAttribute('aria-pressed', String(id === 'exampleBiology'));
-      for (const [key, button] of Object.entries(elements.gallery ?? {}))
+      for (const [key, button] of Object.entries(elements.examples))
         button.setAttribute('aria-pressed', String(id === key));
     },
     renderTheme(theme: Theme, persist: boolean): void {

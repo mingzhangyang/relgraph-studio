@@ -88,7 +88,11 @@ Rules worth knowing:
   Unknown fields are ignored, so exported data can be loaded with its extra
   attributes in place.
 - **Diagnostics** use the same shape as the other formats: code, JSON path,
-  record id, message and repair.
+  record id, message and repair. Where one code has several wordings
+  (`TYPE` for an array, an object, a boolean, …) the diagnostic also carries a
+  `variant`, and `params` holds the values its wording names; the studio
+  translates by these, never by the Chinese sentence
+  (`packages/core/src/diagnostic-wording.ts`).
 
 Coordinate export (`仅导出坐标 JSON`) and `relgraph layout` write back to the
 ids you authored and declare nodes that previously existed only as endpoints.
@@ -155,15 +159,12 @@ document names the convention with `diagram`; everything else stays the same
 format, the same kernel and the same renderer. Removing the field turns any
 of them back into an ordinary network.
 
-| `diagram`   | Layout                   | Nodes                                                                                                                                                         | Relations                                                                                                                                                                   | Derived film                                                                                    |
-| ----------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `tree`      | `tree`                   | Glyphs with labels beside them; size by depth; one tone per main branch                                                                                       | Elbows without arrowheads, in the child's tone                                                                                                                              | Unfolds one level per shot, lighting the branches that have just arrived, then the whole tree   |
-| `mindmap`   | `mindmap`                | Boxes holding their label; the topic in solid colour; one tone per branch                                                                                     | As for trees                                                                                                                                                                | Topic, main branches, details, then the whole map                                               |
-| `flowchart` | `flow`                   | Pipelines and processes                                                                                                                                       | The same, left to right, with more room along the reading direction for labels. Relations that return to an earlier step are feedback and do not fold a loop into one rank. |
-| `tree`      | Hierarchies and lineages | A tidy tree growing to the right: leaves in written order, each parent midway between its outer children.                                                     |
-| `mindmap`   | A topic and its branches | The topic in the middle; main branches shared between right and left so both sides carry a similar load, each side read from the top.                         |
-| `timeline`  | Anything with dates      | x is time. A tree keeps its leaf order (a phylogram); anything else is packed into lanes, per group, so spans never overlap. Without dates it draws the tree. |
-| `timeline`  | `timeline`               | Bars as long as `start`…`end`; points for nodes with only a first appearance                                                                                  | Elbows                                                                                                                                                                      | Travels along the axis: one shot per start, a cursor at the film's present, then the whole axis |
+| `diagram`   | Layout     | Nodes                                                                                                                                                                                               | Relations                                                                                           | Derived film                                                                                    |
+| ----------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `tree`      | `tree`     | Glyphs with labels beside them; size by depth; one tone per main branch                                                                                                                             | Elbows without arrowheads, in the child's tone                                                      | Unfolds one level per shot, lighting the branches that have just arrived, then the whole tree   |
+| `mindmap`   | `mindmap`  | Boxes holding their label; the topic in solid colour; one tone per branch                                                                                                                           | As for trees                                                                                        | Topic, main branches, details, then the whole map                                               |
+| `flowchart` | `flow`     | Boxes holding their label: kinds named like `start` or `end` are capsules, kinds named like `decision` or `condition` are decisions, every other step a box; steps are peers, so all share one size | Elbows with arrowheads (directed unless the document says otherwise); every relation label is drawn | Unfolds one rank of the flow per shot (deep flows fold into twelve steps), then the whole chart |
+| `timeline`  | `timeline` | Bars as long as `start`…`end`; points for nodes with only a first appearance                                                                                                                        | Elbows                                                                                              | Travels along the axis: one shot per start, a cursor at the film's present, then the whole axis |
 
 | Tree unfolding (dark)                                              | Tree, whole                                              |
 | ------------------------------------------------------------------ | -------------------------------------------------------- |
@@ -353,15 +354,18 @@ All engines are pure functions of the graph and their options: ids are sorted
 before traversal, the only randomness is a seeded hash of node ids, and step
 counts are bounded. None of them runs during playback.
 
-| Strategy  | Use it for                    | What it does                                                                                                                                                                |
-| --------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `auto`    | Anything                      | No relations → `grid`; mostly directed and acyclic → `layered` when broad, `flow` when deep; a forest → `radial`; otherwise `force`.                                        |
-| `force`   | Communities, general networks | Fruchterman–Reingold from a radial start, group cohesion, a principal-axis turn and gentle lowering to fit the stage, guaranteed room between nodes. Honours fixed anchors. |
-| `layered` | Hierarchies, top to bottom    | Ranks from structure (cycles share a rank), barycentre sweeps against crossings, groups kept as bands, rows pulled under what they connect to.                              |
-| `flow`    | Pipelines and processes       | The same, left to right, with more room along the reading direction for labels.                                                                                             |
-| `radial`  | Trees and ego networks        | Rings around the graph centre (least eccentricity), each subtree in a wedge sized by its leaves, ring radii grown until siblings have room.                                 |
-| `circle`  | Showing who connects to whom  | One ring; groups stay contiguous and neighbours are drawn towards each other.                                                                                               |
-| `grid`    | Sets and lists                | A tidy matrix per group. Like `tree` and `mindmap`, it keeps the author's order.                                                                                            |
+| Strategy   | Use it for                    | What it does                                                                                                                                                                |
+| ---------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `auto`     | Anything                      | No relations → `grid`; mostly directed and acyclic → `layered` when broad, `flow` when deep; a forest → `radial`; otherwise `force`.                                        |
+| `force`    | Communities, general networks | Fruchterman–Reingold from a radial start, group cohesion, a principal-axis turn and gentle lowering to fit the stage, guaranteed room between nodes. Honours fixed anchors. |
+| `layered`  | Hierarchies, top to bottom    | Ranks from structure (cycles share a rank), barycentre sweeps against crossings, groups kept as bands, rows pulled under what they connect to.                              |
+| `flow`     | Pipelines and processes       | The same, left to right, with more room along the reading direction for labels. Relations that return to an earlier step are feedback and do not fold a loop into one rank. |
+| `tree`     | Hierarchies and lineages      | A tidy tree growing to the right: leaves in written order, each parent midway between its outer children.                                                                   |
+| `mindmap`  | A topic and its branches      | The topic in the middle; main branches shared between right and left so both sides carry a similar load, each side read from the top.                                       |
+| `radial`   | Trees and ego networks        | Rings around the graph centre (least eccentricity), each subtree in a wedge sized by its leaves, ring radii grown until siblings have room.                                 |
+| `circle`   | Showing who connects to whom  | One ring; groups stay contiguous and neighbours are drawn towards each other.                                                                                               |
+| `grid`     | Sets and lists                | A tidy matrix per group. Like `tree` and `mindmap`, it keeps the author's order.                                                                                            |
+| `timeline` | Anything with dates           | x is time. A tree keeps its leaf order (a phylogram); anything else is packed into lanes, per group, so spans never overlap. Without dates it draws the tree.               |
 
 A document with **no coordinates at all** is arranged when it is loaded
 (studio and CLI alike): by its `diagram` kind if it names one, otherwise by

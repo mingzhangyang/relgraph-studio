@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { runInNewContext } from 'node:vm';
 import { build } from 'vite';
 import { createSimulatedStudioDom } from './helpers/studio-dom.mjs';
+import examples from '../examples/manifest.json' with { type: 'json' };
 
 test('production build includes every example and the bundled workspace loads them', async () => {
   const output = await mkdtemp(join(tmpdir(), 'relgraph-build-'));
@@ -19,21 +20,19 @@ test('production build includes every example and the bundled workspace loads th
     const asset = html.match(/<script[^>]+src="([^"]+)"/);
     assert.ok(asset, 'built HTML references a JavaScript bundle');
     const script = await readFile(join(output, 'demo', asset[1]), 'utf8');
-    const exampleNames = [
-      'honglou-provisional.relgraph.json',
-      'biology-egfr-mapk.json',
-      'bookshop-systems-synthetic.graph.json',
-      'vertebrates-tree-provisional.graph.json',
-      'dynasties-timeline-provisional.graph.json',
-      'reading-club-mindmap-synthetic.graph.json',
-      'order-flowchart-synthetic.graph.json',
-    ];
-    for (const name of exampleNames) {
+    // examples/manifest.json gives the page its buttons and the build its files.
+    assert.doesNotMatch(html, /relgraph:examples/, 'the example slot is filled');
+    for (const { id, file, title, subtitle } of examples) {
+      assert.match(
+        html,
+        new RegExp(`<button id="${id}"[^>]*><b>${title}</b><small>${subtitle}</small></button>`),
+      );
       assert.deepEqual(
-        await readFile(join(output, 'examples', name)),
-        await readFile(new URL(`../examples/${name}`, import.meta.url)),
+        await readFile(join(output, 'examples', file)),
+        await readFile(new URL(`../examples/${file}`, import.meta.url)),
       );
     }
+    assert.equal(html.match(/<button id="example/g).length, examples.length);
 
     const {
       elements,
