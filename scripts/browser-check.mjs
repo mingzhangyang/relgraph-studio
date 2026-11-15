@@ -783,7 +783,12 @@ const baselineFiles = new Set(reference?.frames.map((frame) => frame.file) ?? []
   const { context, page, problems } = await openStudio();
   await check('layout preview, cancel, locks, apply, undo/redo and project reload', async () => {
     await page.evaluate(() => window.renderAt(84));
+    // The panel has one heading, in its summary, open or closed (W4, #46 review).
+    const panelHeading = page.getByRole('heading', { name: '布局策略 · 预览后应用', level: 2 });
+    assert.equal(await panelHeading.count(), 1);
     await page.locator('#layoutStrategies').evaluate((e) => (e.open = true));
+    assert.equal(await panelHeading.count(), 1);
+    assert.equal(await page.locator('#layoutStrategies').getByRole('heading').count(), 1);
     const original = await canvasPng(page),
       firstId = await page.inputValue('#strategyNode');
     await page.selectOption('#strategyType', 'circle');

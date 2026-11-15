@@ -16,7 +16,7 @@ function descendants(root) {
   return found;
 }
 
-test('W4: the disclosure summary is the layout panel’s one heading', async () => {
+test('W4: the disclosure summary holds the layout panel’s one heading', async () => {
   const app = makeStudio();
   await app.ready;
   const panel = app.node('layoutStrategyEditor');
@@ -30,8 +30,13 @@ test('W4: the disclosure summary is the layout panel’s one heading', async () 
   const html = readFileSync(new URL('../demo/index.html', import.meta.url), 'utf8');
   const disclosure = /<details id="layoutStrategies"[^>]*>([\s\S]*?)<\/details>/.exec(html)?.[1];
   assert.ok(disclosure);
-  assert.match(disclosure, /<summary>布局策略 · 预览后应用<\/summary>/);
-  assert.doesNotMatch(disclosure, /<h[1-6]/);
+  // One semantic heading, inside the summary (#46 review, P3): the panel
+  // keeps a place in the heading outline, open or closed.
+  assert.match(
+    disclosure,
+    /<summary><h2 class="summary-heading">布局策略 · 预览后应用<\/h2><\/summary>/,
+  );
+  assert.equal(disclosure.match(/<h[1-6]/g).length, 1);
 });
 
 /** A control of the layout panel by id. */

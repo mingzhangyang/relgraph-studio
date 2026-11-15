@@ -141,8 +141,8 @@ export function createLayoutStrategyView(doc: Document, host: HTMLElement, actio
   ): HTMLElementTagNameMap[K] => {
     return uiElement(doc, tag, text);
   };
-  // The disclosure's summary ("布局策略 · 预览后应用") is the panel's one
-  // heading: the panel adds none of its own.
+  // The disclosure's summary holds the panel's one heading, an h2
+  // ("布局策略 · 预览后应用", demo/index.html): the panel adds none of its own.
   // First, what drew the picture now on screen (W2).
   const drawnLine = el('p');
   drawnLine.id = 'strategyDrawn';
