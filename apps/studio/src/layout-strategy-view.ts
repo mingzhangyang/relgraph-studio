@@ -101,9 +101,11 @@ function originText(origin: DrawingOrigin, adjusted: boolean): string {
         ? uiText('载入时自动排布：') +
           uiText(TYPE_LABELS[origin.engine]) +
           uiText(REASON_LABELS[origin.reason])
-        : origin.kind === 'partial'
-          ? uiText('文档保存的坐标；') + origin.missing + uiText(' 个没有坐标的节点排在旁边')
-          : uiText('文档保存的坐标');
+        : origin.kind === 'single'
+          ? uiText('没有保存坐标，唯一的节点放在原点')
+          : origin.kind === 'partial'
+            ? uiText('文档保存的坐标；') + origin.missing + uiText(' 个没有坐标的节点排在旁边')
+            : uiText('文档保存的坐标');
   return uiText('当前画面：') + body + (adjusted ? uiText('，并有手动微调') : '');
 }
 const MODE_LABELS: Record<LayoutMode, string> = {

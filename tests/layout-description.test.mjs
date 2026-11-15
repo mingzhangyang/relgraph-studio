@@ -286,3 +286,31 @@ test('#46 review, P2: dates at one time are not "no dates"', () => {
     assert.deepEqual(drawingOrigin(graph), { kind: 'structure', engine: 'tree', reason });
   }
 });
+
+test('#46 re-review, P3: a lone node without coordinates is not "stored coordinates"', () => {
+  const lone = (node) =>
+    loadDocument({
+      format: 'relgraph.graph/1',
+      title: 'Lone',
+      nodes: [{ id: 'a', label: 'A', ...node }],
+      relations: [],
+    }).graph;
+  // No coordinates anywhere: placeNodes puts it at the origin, no engine runs.
+  const bare = lone({});
+  assert.deepEqual(drawingOrigin(bare), { kind: 'single' });
+  assert.deepEqual([...layoutGraph(bare)], [['a', { x: 0, y: 0 }]]);
+  // Stored in the source or by the project, it is a stored coordinate.
+  assert.deepEqual(drawingOrigin(lone({ position: { x: 40, y: 20 } })), { kind: 'coordinates' });
+  assert.deepEqual(
+    drawingOrigin({
+      ...bare,
+      project: { layout: { ...DEFAULT_LAYOUT_SETTINGS, positions: { a: { x: 40, y: 20 } } } },
+    }),
+    { kind: 'coordinates' },
+  );
+  // Two nodes without coordinates are still drawn from the structure.
+  assert.equal(
+    drawingOrigin({ ...bare, nodes: [...bare.nodes, { ...bare.nodes[0], id: 'b' }] }).kind,
+    'structure',
+  );
+});

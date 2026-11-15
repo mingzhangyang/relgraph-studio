@@ -171,6 +171,7 @@ const english: Record<string, string> = {
   '已应用：': 'Applied: ',
   '载入时自动排布：': 'Arranged on load: ',
   文档保存的坐标: 'Coordinates saved in the document',
+  '没有保存坐标，唯一的节点放在原点': 'No coordinates saved; the only node is placed at the origin',
   '文档保存的坐标；': 'Coordinates saved in the document; ',
   ' 个没有坐标的节点排在旁边': ' nodes without coordinates placed beside them',
   '，并有手动微调': ', with manual adjustments',

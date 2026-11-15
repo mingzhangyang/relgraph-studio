@@ -300,3 +300,24 @@ test('#46 review, P2: dates all at one time are worded as such, not as "no dates
     'Does not suit this graph: every date is at the same time, so there is no range to place nodes along and it is drawn as a tree.',
   );
 });
+
+test('#46 re-review, P3: a one-node graph without coordinates says so', async () => {
+  const app = makeStudio();
+  await app.ready;
+  await openFile(app, 'lone.graph.json', {
+    format: 'relgraph.graph/1',
+    title: 'Lone',
+    nodes: [{ id: 'a', label: 'A' }],
+    relations: [],
+  });
+  const drawn = control(app, 'strategyDrawn');
+  assert.equal(drawn.textContent, '当前画面：没有保存坐标，唯一的节点放在原点');
+  assert.doesNotMatch(drawn.textContent, /文档保存的坐标/);
+  const language = app.node('languageSelect');
+  language.value = 'en';
+  await language.dispatch('change');
+  assert.equal(
+    drawn.textContent,
+    'Current picture: No coordinates saved; the only node is placed at the origin',
+  );
+});

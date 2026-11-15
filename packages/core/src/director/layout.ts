@@ -77,6 +77,8 @@ export function drawnEngine<R extends string | null>(
  *   stored type without those coordinates did not draw the picture;
  * - `structure`: there are no coordinates, so `autoEngine` drew it (a
  *   timeline without an axis as a tree, as `drawnEngine` says);
+ * - `single`: no coordinates and a single node, which is simply placed at
+ *   the origin (no engine runs);
  * - `coordinates`: every node has stored coordinates (source or project);
  * - `partial`: some nodes have coordinates and `missing` are placed beside them.
  */
@@ -87,6 +89,7 @@ export type DrawingOrigin =
       engine: LayoutEngine;
       reason: ReturnType<typeof autoEngine>['reason'] | 'untimed' | 'instant';
     }
+  | { kind: 'single' }
   | { kind: 'coordinates' }
   | { kind: 'partial'; missing: number };
 export function drawingOrigin(
@@ -103,9 +106,12 @@ export function drawingOrigin(
   )
     return { kind: 'strategy', type };
   const missing = graph.nodes.filter((n) => !n.position && !Object.hasOwn(stored, n.id)).length;
-  // The same test as placeNodes: no coordinates at all, and more than one node.
-  if (missing === graph.nodes.length && !Object.keys(stored).length && graph.nodes.length > 1)
-    return { kind: 'structure', ...drawnEngine(graph.nodes, autoEngine(graph)) };
+  // The same test as placeNodes: with no coordinates at all, more than one
+  // node is drawn from the structure and a lone node is put at the origin.
+  if (missing === graph.nodes.length && !Object.keys(stored).length)
+    return graph.nodes.length > 1
+      ? { kind: 'structure', ...drawnEngine(graph.nodes, autoEngine(graph)) }
+      : { kind: 'single' };
   return missing ? { kind: 'partial', missing } : { kind: 'coordinates' };
 }
 
