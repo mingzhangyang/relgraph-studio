@@ -25,6 +25,7 @@ import {
   blockedLayoutMessage,
   blockedResetMessage,
   createLayoutStrategyView,
+  layoutPanelContext,
   unchangedLayoutMessage,
 } from './layout-strategy-view.js';
 import {
@@ -693,6 +694,7 @@ function clearStudio(): void {
   // Full document replacement also resets all authoritative mode owners.
   layoutPreview = null;
   strategyView.reset(undefined);
+  strategyView.describe(null);
   strategyView.render(null, undefined, false, loading);
   graph = null;
   projectHistory.reset();
@@ -742,6 +744,7 @@ function applyResult(result: LoadResult, name: string, sourceText?: string, exam
   graph = result.graph;
   sourceDocument = sourceText ? projectSource(JSON.parse(sourceText)) : null;
   projectHistory.reset(graph.project ?? {});
+  strategyView.describe(layoutPanelContext(graph));
   strategyView.reset(graph.project?.layout);
   sourceFilename = /\.json$/i.test(name) ? name : 'relgraph.json';
   currentDetailAt = result.detailAt || (() => undefined);

@@ -790,7 +790,9 @@ const baselineFiles = new Set(reference?.frames.map((frame) => frame.file) ?? []
     await page.selectOption('#strategyMode', 'rearrange');
     await page.fill('#strategySeed', '42');
     await page.fill('#strategySpacing', '188');
-    await page.fill('#strategyIterations', '123');
+    // A circle has no iterations to set (W1): the field is hidden and the
+    // stored value is kept.
+    assert.equal(await page.locator('#strategyIterations').isVisible(), false);
     // The controls are a draft until Preview/Apply. Locking alone must not
     // discard these values or persist them as a completed layout.
     await page.check('#strategyLock');
@@ -799,7 +801,6 @@ const baselineFiles = new Set(reference?.frames.map((frame) => frame.file) ?? []
       ['strategyMode', 'rearrange'],
       ['strategySeed', '42'],
       ['strategySpacing', '188'],
-      ['strategyIterations', '123'],
     ])
       assert.equal(await page.inputValue('#' + id), value, id + ' survives lock');
     await page.click('#strategyPreview');
@@ -826,7 +827,7 @@ const baselineFiles = new Set(reference?.frames.map((frame) => frame.file) ?? []
     assert.equal(project.config.layout.type, 'circle');
     assert.equal(project.config.layout.seed, 42);
     assert.equal(project.config.layout.spacing, 188);
-    assert.equal(project.config.layout.iterations, 123);
+    assert.equal(project.config.layout.iterations, 300);
     assert.ok(project.config.layout.locked.includes(firstId));
     assert.deepEqual(
       project.config.layout.positions[firstId],
@@ -863,6 +864,8 @@ for (const theme of ['light', 'dark'])
       await loadExample(page, example);
       await page.evaluate((f) => window.renderAt(f), example.key === 'biology' ? 156 : 84);
       await page.locator('#layoutStrategies').evaluate((e) => (e.open = true));
+      // Manual has no policy or seed to set (W1); force has both.
+      await page.selectOption('#strategyType', 'force');
       await page.selectOption('#strategyMode', 'rearrange');
       await page.fill('#strategySeed', '42');
       for (const type of ['layered', 'force', 'circle']) {
@@ -916,13 +919,14 @@ for (const theme of ['light', 'dark']) {
       await page.evaluate(() => window.renderAt(60));
       assert.deepEqual(await canvasPng(page), overview, 'frames do not depend on playback history');
       await page.locator('#layoutStrategies').evaluate((e) => (e.open = true));
-      await page.selectOption('#strategyMode', 'rearrange');
-      const note = () => page.locator('#layoutStrategyEditor p.muted').innerText();
+      const note = () => page.locator('#strategyNote').innerText();
       // The player drew this document with auto (the left-to-right flow) and
       // the panel's defaults: asking for either again moves nothing, and the
       // panel says so instead of showing a preview that looks pending.
       for (const type of ['auto', 'flow']) {
         await page.selectOption('#strategyType', type);
+        // The policy is a setting of every strategy but manual (W1).
+        await page.selectOption('#strategyMode', 'rearrange');
         await page.click('#strategyPreview');
         assert.match(await note(), /此布局与当前画面相同/, type);
         assert.equal(await page.locator('#strategyApply').isDisabled(), true, type);
@@ -2069,8 +2073,8 @@ for (const theme of ['dark', 'light']) {
     assert.equal(await page.evaluate(() => window.renderAt(84)), true);
     assert.deepEqual(await canvasPng(page), baseline, 'cancelled preview fully restores positions');
 
-    await page.selectOption('#strategyType', 'manual');
     await page.selectOption('#strategyMode', 'preserve');
+    await page.selectOption('#strategyType', 'manual');
     assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'false');
 
     await page.click('#layoutToggle');

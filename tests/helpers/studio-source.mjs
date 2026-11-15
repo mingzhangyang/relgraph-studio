@@ -22,6 +22,7 @@ import {
   blockedLayoutMessage,
   blockedResetMessage,
   createLayoutStrategyView,
+  layoutPanelContext,
   unchangedLayoutMessage,
 } from '../../apps/studio/src/layout-strategy-view.ts';
 import { displayNodeText } from '../../packages/core/src/project.ts';
@@ -136,6 +137,7 @@ export const studioImports = {
   placeInTime,
   timeAnchor,
   createLayoutStrategyView,
+  layoutPanelContext,
   currentStudioMode,
   planStudioModeTransition,
   ProjectHistory,

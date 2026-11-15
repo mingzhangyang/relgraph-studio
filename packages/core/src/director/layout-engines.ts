@@ -915,6 +915,28 @@ export function chooseLayoutEngine(graph: LayoutGraph): LayoutEngine {
   return 'force';
 }
 
+/** A setting of `EngineOptions` that the user can change in the layout panel. */
+export type LayoutParameter = 'seed' | 'spacing' | 'iterations';
+/**
+ * The settings each engine reads. Every engine scales with the spacing; the
+ * seed turns the rings of `radial` and `circle` and shakes the start of
+ * `force`, which alone relaxes for a number of iterations. The layout panel
+ * offers only these, and a test changes each setting an engine does not list
+ * and requires the same drawing.
+ */
+export const ENGINE_PARAMETERS: Readonly<Record<LayoutEngine, readonly LayoutParameter[]>> =
+  Object.freeze({
+    force: ['seed', 'spacing', 'iterations'],
+    layered: ['spacing'],
+    flow: ['spacing'],
+    tree: ['spacing'],
+    mindmap: ['spacing'],
+    timeline: ['spacing'],
+    radial: ['seed', 'spacing'],
+    circle: ['seed', 'spacing'],
+    grid: ['spacing'],
+  });
+
 /** Lay out every node with one engine. Fixed nodes are honoured by `force` only. */
 export function runLayoutEngine(
   graph: LayoutGraph,

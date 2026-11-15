@@ -1826,6 +1826,10 @@ test('strategy validation feedback survives locale and frame-only rerenders unti
   const strategy = app.node('layoutStrategyEditor');
   const note = strategy.children.find((child) => child.tagName === 'P');
   assert.ok(note);
+  // Spacing is a setting of every strategy but manual (W1).
+  const type = viewControl(app, 'strategyType');
+  type.value = 'grid';
+  await type.dispatch('change');
   const spacing = viewControl(app, 'strategySpacing');
   const original = spacing.value;
   spacing.value = '';
@@ -1848,6 +1852,8 @@ test('strategy validation feedback survives locale and frame-only rerenders unti
   spacing.value = original;
   await spacing.dispatch('input');
   assert.match(note.textContent, /静态确定性布局/);
+  type.value = 'manual';
+  await type.dispatch('change');
   assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
 });
 

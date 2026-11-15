@@ -4,13 +4,16 @@ import {
   displayNodeText,
   LAYOUT_MODES,
   LAYOUT_TYPES,
+  strategyParameters,
   type LayoutMode,
+  type LayoutParameter,
   type LayoutPlan,
   type LayoutReason,
   type LayoutSettings,
   type LayoutType,
   type DirectorFrameState,
   type ProjectConfig,
+  type VisualGraph,
 } from '@relgraph/core';
 // One label per strategy and policy the core knows: adding one there without
 // naming it here does not compile, and the menus cannot offer what it lacks.
@@ -61,6 +64,20 @@ const MODE_LABELS: Record<LayoutMode, string> = {
   missing: '只填补缺失坐标',
   rearrange: '重排未锁定节点',
 };
+/**
+ * What the panel knows about the loaded graph: the settings each strategy
+ * reads for it (`strategyParameters`).
+ */
+export interface LayoutPanelContext {
+  parameters: Readonly<Record<LayoutType, readonly LayoutParameter[]>>;
+}
+/** The panel's knowledge of a graph, computed once when it loads. */
+export function layoutPanelContext(graph: VisualGraph): LayoutPanelContext {
+  const parameters = Object.fromEntries(
+    LAYOUT_TYPES.map((type) => [type, strategyParameters(graph, type)]),
+  ) as Record<LayoutType, readonly LayoutParameter[]>;
+  return { parameters };
+}
 interface Actions {
   preview(settings: LayoutSettings): void;
   apply(): void;
@@ -77,9 +94,13 @@ export function createLayoutStrategyView(doc: Document, host: HTMLElement, actio
   };
   // The disclosure's summary ("布局策略 · 预览后应用") is the panel's one
   // heading: the panel adds none of its own.
+  // The label around each control, so a setting the chosen strategy does not
+  // read can be hidden with its control.
+  const labels = new Map<HTMLElement, HTMLLabelElement>();
   const select = (id: string, label: string, options: [string, string][]) => {
     const l = el('label', label),
       s = el('select');
+    labels.set(s, l);
     s.id = id;
     for (const [value, text] of options) {
       const o = el('option', text);
@@ -103,6 +124,7 @@ export function createLayoutStrategyView(doc: Document, host: HTMLElement, actio
   const number = (id: string, label: string, min: string, max: string, value: string) => {
     const l = el('label', label),
       input = el('input');
+    labels.set(input, l);
     input.id = id;
     input.type = 'number';
     input.min = min;
@@ -135,6 +157,7 @@ export function createLayoutStrategyView(doc: Document, host: HTMLElement, actio
   l.append(lock);
   host.append(l);
   const note = el('p', '布局在播放前计算。分层与流向表示连接结构，不推断家谱世代。');
+  note.id = 'strategyNote';
   note.className = 'muted';
   host.append(note);
   const button = (id: string, text: string, fn: () => void) => {
@@ -147,7 +170,31 @@ export function createLayoutStrategyView(doc: Document, host: HTMLElement, actio
   };
   let settings: LayoutSettings = DEFAULT_LAYOUT_SETTINGS,
     signature = '',
-    enabled = false;
+    enabled = false,
+    context: LayoutPanelContext | null = null;
+  const parameterInputs: Record<LayoutParameter, HTMLInputElement> = {
+    seed,
+    spacing,
+    iterations,
+  };
+  // The settings the chosen strategy reads. Without a graph every one is
+  // shown; `manual` reads none and ignores the coordinate policy.
+  const chosenType = () => type.value as LayoutType;
+  const reads = (parameter: LayoutParameter): boolean =>
+    !context || context.parameters[chosenType()].includes(parameter);
+  const usesPolicy = () => !context || chosenType() !== 'manual';
+  const syncFields = () => {
+    for (const parameter of ['seed', 'spacing', 'iterations'] as const) {
+      const label = labels.get(parameterInputs[parameter])!,
+        hidden = !reads(parameter);
+      if (label.hidden !== hidden) label.hidden = hidden;
+    }
+    const policy = labels.get(mode)!;
+    if (policy.hidden === usesPolicy()) policy.hidden = !usesPolicy();
+  };
+  /** A setting as the preview receives it: the input when shown, else the stored value. */
+  const parameterValue = (parameter: LayoutParameter): number =>
+    reads(parameter) ? Number(parameterInputs[parameter].value) : settings[parameter];
   // A locale-only render must not erase a failed preview/validation message.
   // Store the source message, never the translated label.
   let validationMessage: string | null = null;
@@ -183,7 +230,8 @@ export function createLayoutStrategyView(doc: Document, host: HTMLElement, actio
   };
   const preview = button('strategyPreview', '预览布局', () => {
     if (!enabled) return;
-    if ([seed, spacing, iterations].some((input) => !input.value.trim())) {
+    const shown = (['seed', 'spacing', 'iterations'] as const).filter(reads);
+    if (shown.some((parameter) => !parameterInputs[parameter].value.trim())) {
       validationMessage = '参数不能为空。';
       refreshNote();
       return;
@@ -192,10 +240,10 @@ export function createLayoutStrategyView(doc: Document, host: HTMLElement, actio
     actions.preview({
       ...settings,
       type: type.value as LayoutSettings['type'],
-      mode: mode.value as LayoutSettings['mode'],
-      seed: Number(seed.value),
-      spacing: Number(spacing.value),
-      iterations: Number(iterations.value),
+      mode: usesPolicy() ? (mode.value as LayoutSettings['mode']) : settings.mode,
+      seed: parameterValue('seed'),
+      spacing: parameterValue('spacing'),
+      iterations: parameterValue('iterations'),
     });
   });
   const apply = button('strategyApply', '应用布局', actions.apply),
@@ -208,6 +256,7 @@ export function createLayoutStrategyView(doc: Document, host: HTMLElement, actio
   lock.addEventListener('change', () => {
     if (nodes.value) actions.lock(nodes.value, lock.checked);
   });
+  type.addEventListener('change', syncFields);
   for (const input of [type, mode, seed, spacing, iterations]) {
     input.addEventListener('change', () => {
       clearValidation();
@@ -224,11 +273,14 @@ export function createLayoutStrategyView(doc: Document, host: HTMLElement, actio
       return (
         enabled &&
         inertDraft !== draftKey() &&
+        // A hidden setting is not read by the chosen strategy: editing it
+        // earlier is not a draft the user can lose.
         (type.value !== settings.type ||
-          mode.value !== settings.mode ||
-          seed.value !== String(settings.seed) ||
-          spacing.value !== String(settings.spacing) ||
-          iterations.value !== String(settings.iterations))
+          (usesPolicy() && mode.value !== settings.mode) ||
+          (['seed', 'spacing', 'iterations'] as const).some(
+            (parameter) =>
+              reads(parameter) && parameterInputs[parameter].value !== String(settings[parameter]),
+          ))
       );
     },
     render(
@@ -277,7 +329,13 @@ export function createLayoutStrategyView(doc: Document, host: HTMLElement, actio
       seed.value = String(settings.seed);
       spacing.value = String(settings.spacing);
       iterations.value = String(settings.iterations);
+      syncFields();
       refreshNote();
+    },
+    /** What the panel knows about the loaded graph; null when none is loaded. */
+    describe(next: LayoutPanelContext | null) {
+      context = next;
+      syncFields();
     },
     error(message: string) {
       validationMessage = message;

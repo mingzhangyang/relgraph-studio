@@ -33,3 +33,84 @@ test('W4: the disclosure summary is the layout panel’s one heading', async () 
   assert.match(disclosure, /<summary>布局策略 · 预览后应用<\/summary>/);
   assert.doesNotMatch(disclosure, /<h[1-6]/);
 });
+
+/** A control of the layout panel by id. */
+function control(app, id) {
+  const found = descendants(app.node('layoutStrategyEditor')).find((element) => element.id === id);
+  assert.ok(found, id);
+  return found;
+}
+async function choose(app, id, value) {
+  const select = control(app, id);
+  select.value = value;
+  await select.dispatch('change');
+}
+async function openExample(app, id) {
+  await app.node(id).click();
+  await flush();
+  assert.equal(app.node('status').attributes['data-state'], 'ready');
+}
+/** The settings whose labels are shown, in panel order. */
+const shownSettings = (app) =>
+  ['strategyMode', 'strategySeed', 'strategySpacing', 'strategyIterations'].filter(
+    (id) => !control(app, id).parentElement.hidden,
+  );
+
+test('W1: the panel shows the settings the chosen strategy reads for this graph', async () => {
+  const app = makeStudio();
+  await app.ready;
+  await openExample(app, 'exampleGraph');
+  const expected = {
+    manual: [],
+    force: ['strategyMode', 'strategySeed', 'strategySpacing', 'strategyIterations'],
+    radial: ['strategyMode', 'strategySeed', 'strategySpacing'],
+    circle: ['strategyMode', 'strategySeed', 'strategySpacing'],
+    layered: ['strategyMode', 'strategySpacing'],
+    flow: ['strategyMode', 'strategySpacing'],
+    tree: ['strategyMode', 'strategySpacing'],
+    mindmap: ['strategyMode', 'strategySpacing'],
+    // Undated: drawn as a tree.
+    timeline: ['strategyMode', 'strategySpacing'],
+    grid: ['strategyMode', 'strategySpacing'],
+  };
+  for (const [type, shown] of Object.entries(expected)) {
+    await choose(app, 'strategyType', type);
+    assert.deepEqual(shownSettings(app), shown, type);
+  }
+  // Auto shows what the engine it chooses reads: flow for the bookshop's
+  // directed, acyclic relations, force for the novel, a tree by its kind.
+  await choose(app, 'strategyType', 'auto');
+  assert.deepEqual(shownSettings(app), expected.flow);
+  await openExample(app, 'exampleLiterature');
+  await choose(app, 'strategyType', 'auto');
+  assert.deepEqual(shownSettings(app), expected.force);
+  await openExample(app, 'exampleTree');
+  assert.equal(control(app, 'strategyType').value, 'manual', 'a new document resets the panel');
+  assert.deepEqual(shownSettings(app), []);
+  await choose(app, 'strategyType', 'auto');
+  assert.deepEqual(shownSettings(app), ['strategyMode', 'strategySpacing']);
+});
+
+test('W1: a hidden setting is neither validated, previewed nor counted as a draft', async () => {
+  const app = makeStudio();
+  await app.ready;
+  await openExample(app, 'exampleGraph');
+  const iterations = control(app, 'strategyIterations'),
+    note = control(app, 'strategyNote');
+  await choose(app, 'strategyType', 'grid');
+  await choose(app, 'strategyMode', 'rearrange');
+  // Left empty while hidden: the preview runs with the stored value.
+  iterations.value = '';
+  await iterations.dispatch('input');
+  await control(app, 'strategyPreview').click();
+  assert.doesNotMatch(note.textContent, /参数不能为空/);
+  assert.equal(control(app, 'strategyApply').disabled, false, 'a grid preview is pending');
+  await control(app, 'strategyCancel').click();
+  // Back on manual, nothing the strategy reads differs from the stored settings.
+  await choose(app, 'strategyType', 'manual');
+  assert.equal(app.node('saveState').attributes['data-dirty'], 'false');
+  // Shown again, the same empty input is refused.
+  await choose(app, 'strategyType', 'force');
+  await control(app, 'strategyPreview').click();
+  assert.equal(note.textContent, '参数不能为空。');
+});

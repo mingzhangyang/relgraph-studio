@@ -2,7 +2,7 @@ import type { VisualGraph } from '../../types/visual-graph.js';
 import type { ProjectConfig } from '../project.js';
 import { layoutMissingNodes, roundPositionCoordinate, type LayoutPoint } from './seeded-layout.js';
 import { autoEngine, layoutGraph } from './layout.js';
-import { runLayoutEngine } from './layout-engines.js';
+import { ENGINE_PARAMETERS, runLayoutEngine, type LayoutParameter } from './layout-engines.js';
 import { placeInTime, timeAxis } from '../graph/time-axis.js';
 import {
   LAYOUT_DEFAULTS,
@@ -76,6 +76,19 @@ export function strategyEngine(
   if (chosen.engine === 'timeline' && !timeAxis(graph.nodes))
     return { engine: 'tree', reason: 'untimed' };
   return chosen;
+}
+
+/**
+ * The settings a strategy reads for this graph: none for `manual`, which
+ * keeps every coordinate, else those of the engine it draws with
+ * (`strategyEngine`). The coordinate policy matters to every strategy but
+ * `manual`.
+ */
+export function strategyParameters(
+  graph: Pick<VisualGraph, 'nodes' | 'edges' | 'diagram'>,
+  type: LayoutType,
+): readonly LayoutParameter[] {
+  return type === 'manual' ? [] : ENGINE_PARAMETERS[strategyEngine(graph, type).engine];
 }
 
 /** Bounded synchronous authoring computation. Never called by playback/frame evaluation. */
