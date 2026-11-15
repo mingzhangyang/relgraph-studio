@@ -961,6 +961,27 @@ Validation, run locally on linux-x64, Node 22.23.4, on the tree of
 (no local baseline; `--update-reference` not used). No GitHub Actions
 workflow was added, dispatched or rerun.
 
+### PR 6 · re-review of #46
+
+The [re-review at `1ac58d6`](https://github.com/mingzhangyang/relgraph-studio/pull/46#pullrequestreview-5909265708)
+verified the four fixes above (their threads resolved) and found one P3,
+fixed in `48fbbf5`: a valid one-node graph with no coordinates anywhere fell
+through the `nodes.length > 1` guard and was reported as `partial`
+("文档保存的坐标；1 个没有坐标的节点排在旁边"), although `placeNodes` simply puts
+the node at the origin. `drawingOrigin` has a new kind, `single`, which
+claims no engine; the panel says "没有保存坐标，唯一的节点放在原点". An empty
+graph is rejected by validation (`EMPTY`). A pure case (no coordinates,
+source position, project position, two nodes) and a simulated-DOM case in
+both languages fail on `1ac58d6`.
+
+Validation, run locally on linux-x64, Node 22.23.4, on the tree of
+`48fbbf5`: `npm run typecheck`, `npm run check:types`, `npm run lint`,
+`npm run format:check` passed; `npm test` 442 tests in 42 files passed;
+`npm run check:export` 31/31 passed with the 236 golden frames matching (no
+`--update`); `npm run check:browser` 77/77 passed in Chromium 153.0.8010.12
+(no local baseline; `--update-reference` not used). No GitHub Actions
+workflow was added, dispatched or rerun.
+
 ## Review evidence
 
 Ran locally on linux-x64, Node 22.23.4, at `73af432`: `npm run typecheck`,
@@ -1012,3 +1033,4 @@ rerun.
 | 2026-11-15 | W5                                            | —   | — (branch `7ef9ad2`)                    | Data source first at ≤ 840 px; example buttons of one height                                     |
 | 2026-11-15 | #46 review, P2 ×2                             | #46 | — (branch `cfc2b5e`)                    | Provenance from coordinates, not the stored type; `instant` beside `untimed`                     |
 | 2026-11-15 | #46 review, P2 and P3                         | #46 | — (branch `eab487d`, `87f1f42`)         | Source card first in the document, focus follows the layout; one h2 in the summary               |
+| 2026-11-15 | #46 re-review, P3                             | #46 | — (branch `48fbbf5`)                    | A lone node without coordinates is `single`, not `partial`                                       |
