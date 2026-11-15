@@ -838,6 +838,7 @@ one structural core commit kept apart from the UI work:
   "实际绘制" note). `manual` is renamed "保留当前画面 · 手动微调", the strategy
   that keeps the picture rather than a description of it. Hand moves after
   an applied strategy are not detected: the line still names that strategy.
+  A stored type alone no longer counts as applied: see the review of #46.
 - **W3 · Applicability before applying** (`01aad10`). `graphTraits` (dates,
   any relation, at least 70% directed as `auto` counts, directed without
   cycles, a forest) and `layoutFit(graph)`: per strategy whether it suits the
@@ -851,11 +852,10 @@ one structural core commit kept apart from the UI work:
   the chosen one (`auto` with its engine). The menu labels are written by
   the panel, not by the static translation pass.
 - **W5 · Data source first; one button height** (`7ef9ad2`). At 840 px and
-  below the sidebar is `display: contents`, so its cards join the page grid
-  and the source card is placed first (two cards per row down to 640 px, one
-  below). Keyboard and screen-reader order still follow the document
-  (preview, then sidebar); the sidebar stays one complementary landmark,
-  checked in Chromium. The buttons are still rendered from
+  below the sidebar was `display: contents` and the source card was placed
+  first with `order`, while keyboard and screen-reader order still followed
+  the document (preview, then sidebar). The review of #46 replaced this: the
+  source card now comes first in the document (see below). The buttons are still rendered from
   `examples/manifest.json` by `vite.config.mjs`; `grid-auto-rows: 1fr` gives
   every row the tallest button's height, text at the top. On a narrow screen
   the section numbers now read 03 before 01.
@@ -893,6 +893,73 @@ Validation, run locally on linux-x64, Node 22.23.4, on the tree of
 (no local baseline, so the baseline comparisons did not run;
 `--update-reference` not used). No GitHub Actions workflow was added,
 dispatched or rerun.
+
+### PR 6 · review of #46
+
+The [review at `c76a0ea`](https://github.com/mingzhangyang/relgraph-studio/pull/46#pullrequestreview-5909193479)
+found three P2 and one P3, all fixed on the branch:
+
+- **P2 · Provenance from the stored type alone** (`cfc2b5e`). A valid
+  project may store `layout.type: 'grid'` with no or partial `positions`;
+  `placeNodes` ignores the type, so the structure or the fallback draws, yet
+  the panel said "已应用：网格". `drawingOrigin` now reports a strategy only
+  when the project holds a coordinate for every node, which is what Apply
+  writes, and otherwise what actually drew. The studio reads the current
+  project the same way.
+- **P2 · "No dates" for dates at one time** (`cfc2b5e`). `timeAxis` is also
+  null when every date is equal. `hasTimes` (`graph/time-axis.ts`) tells the
+  cases apart: the new reason `instant` (`LAYOUT_REASONS`) and fit note say
+  "所有日期都在同一时间", `untimed` keeps "没有节点带日期". `drawnEngine`
+  (`layout.ts`) is now the one place where a timeline without an axis
+  becomes a tree, for `strategyEngine` and `drawingOrigin`. `graphTraits`
+  gains `ranged`, which is `dated` with an actual time range.
+- **P2 · Focus order on narrow screens** (`eab487d`). The source card is now
+  first in `demo/index.html`, outside the aside. The aside stays the one
+  complementary landmark; the card keeps its labelled section. On wide
+  screens, grid areas place it atop the right column above the sticky
+  sidebar, in a wrapper with the sidebar's padding and scrollbar gutter so
+  both column edges align. Stacked, the page follows the document: data
+  source, preview, sidebar. The `order` and `display: contents` rules are
+  gone. Trade-off on wide screens: the source card is no longer inside the
+  sidebar's scroll area, so the sidebar starts below it and its lower part
+  is reached by scrolling the page. At the end of the page the sticky
+  sidebar's top meets the header as it did on `cb532f9` (5 px from the top
+  in both, measured).
+- **P3 · No heading left** (`87f1f42`). The summary now holds an
+  `<h2 class="summary-heading">` with the same text, styled inline. Chromium
+  exposes it as a level-2 heading with the disclosure open or closed, and the
+  static translation pass still translates it.
+
+Measured in Chromium at `87f1f42`, bookshop loaded, layout panel open. Page
+heights at 1440 px grow because the sidebar starts below the source card:
+
+| Viewport, language | Page height (`cb532f9` → `7ef9ad2` → `87f1f42`) | Source card top (`87f1f42`) |
+| ------------------ | ----------------------------------------------- | --------------------------- |
+| 1440 px, Chinese   | 1,398 → 1,398 → 1,504                           | 99, right column            |
+| 1440 px, English   | 1,421 → 1,421 → 1,597                           | 99, right column            |
+| 390 px, Chinese    | 3,963 → 3,762 → 3,730                           | 75, preview at 761          |
+| 390 px, English    | 4,256 → 4,100 → 4,068                           | 122, preview at 919         |
+
+Tests: the "#46 review" pure cases in `tests/layout-description.test.mjs`:
+a type with empty, partial and full positions; undated, single-date and
+same-date fixtures across `graphTraits`, `layoutFit`, `strategyEngine`,
+`planLayout` and `drawingOrigin`. Simulated-DOM cases in
+`tests/studio-layout-panel.test.mjs` for both P2s through load, a hand edit,
+Apply and English. All of these fail on `c76a0ea`. The W4 case now requires
+exactly one heading, the h2 in the summary. Real Chromium:
+
+- a 390 px focus sequence: from the top, Tab reaches every example button and
+  the file input before any control of the preview, and in one pass focus
+  moves down the page through source, preview and sidebar;
+- one level-2 heading role for the panel, open and closed.
+
+Validation, run locally on linux-x64, Node 22.23.4, on the tree of
+`87f1f42`: `npm run typecheck`, `npm run check:types`, `npm run lint`,
+`npm run format:check` passed; `npm test` 440 tests in 42 files passed;
+`npm run check:export` 31/31 passed with the 236 golden frames matching (no
+`--update`); `npm run check:browser` 77/77 passed in Chromium 153.0.8010.12
+(no local baseline; `--update-reference` not used). No GitHub Actions
+workflow was added, dispatched or rerun.
 
 ## Review evidence
 
@@ -943,3 +1010,5 @@ rerun.
 | 2026-11-15 | W2                                            | —   | — (branch `b6c6b6f`)                    | "当前画面" line from `drawingOrigin`; manual renamed                                             |
 | 2026-11-15 | W3                                            | —   | — (branch `01aad10`)                    | `layoutFit`: suitability marked in the menu and worded under it                                  |
 | 2026-11-15 | W5                                            | —   | — (branch `7ef9ad2`)                    | Data source first at ≤ 840 px; example buttons of one height                                     |
+| 2026-11-15 | #46 review, P2 ×2                             | #46 | — (branch `cfc2b5e`)                    | Provenance from coordinates, not the stored type; `instant` beside `untimed`                     |
+| 2026-11-15 | #46 review, P2 and P3                         | #46 | — (branch `eab487d`, `87f1f42`)         | Source card first in the document, focus follows the layout; one h2 in the summary               |
