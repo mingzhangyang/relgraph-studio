@@ -1,14 +1,15 @@
 import type { VisualGraph } from '../../types/visual-graph.js';
 import type { ProjectConfig } from '../project.js';
 import { layoutMissingNodes, roundPositionCoordinate, type LayoutPoint } from './seeded-layout.js';
-import { DIAGRAM_ENGINE, layoutGraph } from './layout.js';
-import { AUTO_LAYOUT_NODE_LIMIT, chooseLayoutEngine, runLayoutEngine } from './layout-engines.js';
+import { autoEngine, layoutGraph } from './layout.js';
+import { runLayoutEngine } from './layout-engines.js';
 import { placeInTime, timeAxis } from '../graph/time-axis.js';
 import {
   LAYOUT_DEFAULTS,
   LAYOUT_MODES,
   LAYOUT_TYPES,
   type LayoutEngine,
+  type LayoutType,
 } from '../project-layout.js';
 import { anchorToTime, crowdedBy, offTime, timeAnchor } from './time-anchor.js';
 
@@ -56,6 +57,25 @@ export interface LayoutPlan {
    * coordinate and must not be applied until they are unlocked.
    */
   blocked: string[];
+}
+
+/**
+ * The engine a strategy other than `manual` draws with, and why when that is
+ * not simply the engine asked for: `auto` follows `autoEngine`, and a
+ * timeline of a graph without dates is drawn as a tree. Depends only on the
+ * graph's structure, dates and diagram kind, never on coordinates, so the
+ * workspace can say what a strategy will do before it runs.
+ */
+export function strategyEngine(
+  graph: Pick<VisualGraph, 'nodes' | 'edges' | 'diagram'>,
+  type: Exclude<LayoutType, 'manual'>,
+): { engine: LayoutEngine; reason: LayoutReason | null } {
+  const chosen: { engine: LayoutEngine; reason: LayoutReason | null } =
+    type === 'auto' ? autoEngine(graph) : { engine: type, reason: null };
+  // The timeline engine draws a tree when nothing has a date; say so.
+  if (chosen.engine === 'timeline' && !timeAxis(graph.nodes))
+    return { engine: 'tree', reason: 'untimed' };
+  return chosen;
 }
 
 /** Bounded synchronous authoring computation. Never called by playback/frame evaluation. */
@@ -129,25 +149,7 @@ export function planLayout(
     if (fixed) anchors.set(node.id, { ...fixed });
   }
   const nodes = graph.nodes.map((n) => ({ ...n, position: anchors.get(n.id) }));
-  // Auto follows the kind of diagram when the graph declares one.
-  const declared = type === 'auto' ? DIAGRAM_ENGINE[graph.diagram ?? 'network'] : null;
-  let engine: LayoutEngine =
-    type === 'auto'
-      ? (declared ?? chooseLayoutEngine({ nodes, edges: graph.edges }))
-      : (type as LayoutEngine);
-  let reason: LayoutReason | null =
-    type !== 'auto'
-      ? null
-      : declared
-        ? 'diagram'
-        : graph.nodes.length > AUTO_LAYOUT_NODE_LIMIT
-          ? 'size'
-          : 'structure';
-  // The timeline engine draws a tree when nothing has a date; say so.
-  if (engine === 'timeline' && !timeAxis(graph.nodes)) {
-    engine = 'tree';
-    reason = 'untimed';
-  }
+  const { engine, reason } = strategyEngine(graph, type);
   let result: Map<string, LayoutPoint>;
   if (engine === 'force') {
     // Anchors beyond any drawable range keep the overflow-safe incremental

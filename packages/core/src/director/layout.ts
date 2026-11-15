@@ -1,5 +1,5 @@
 import type { VisualGraph } from '../../types/visual-graph.js';
-import { autoLayout, runLayoutEngine } from './layout-engines.js';
+import { AUTO_LAYOUT_NODE_LIMIT, chooseLayoutEngine, runLayoutEngine } from './layout-engines.js';
 import { LAYOUT_DEFAULTS, type LayoutEngine } from '../project-layout.js';
 import type { DiagramKind } from '../style.js';
 
@@ -12,6 +12,25 @@ export const DIAGRAM_ENGINE: Readonly<Record<DiagramKind, LayoutEngine | null>> 
   timeline: 'timeline',
 });
 import { roundPositionCoordinate } from './seeded-layout.js';
+
+/**
+ * The engine an automatic drawing uses, and why: the engine of the declared
+ * diagram kind, else a grid for a graph too large to arrange, else the
+ * engine its structure suggests. The player's drawing of a document without
+ * coordinates, the `auto` strategy and the workspace's description of both
+ * read this one rule.
+ */
+export function autoEngine(graph: Pick<VisualGraph, 'nodes' | 'edges' | 'diagram'>): {
+  engine: LayoutEngine;
+  reason: 'diagram' | 'size' | 'structure';
+} {
+  const declared = DIAGRAM_ENGINE[graph.diagram ?? 'network'];
+  if (declared) return { engine: declared, reason: 'diagram' };
+  return {
+    engine: chooseLayoutEngine(graph),
+    reason: graph.nodes.length > AUTO_LAYOUT_NODE_LIMIT ? 'size' : 'structure',
+  };
+}
 import { anchorToTime } from './time-anchor.js';
 
 type Position = { x: number; y: number };
@@ -27,10 +46,7 @@ export function structuralLayout(
   graph: Pick<VisualGraph, 'nodes' | 'edges' | 'diagram'>,
   seed = 0,
 ): Map<string, Position> {
-  const engine = DIAGRAM_ENGINE[graph.diagram ?? 'network'];
-  const arranged = engine
-    ? runLayoutEngine(graph, engine, { seed, ...LAYOUT_DEFAULTS })
-    : autoLayout(graph, { seed });
+  const arranged = runLayoutEngine(graph, autoEngine(graph).engine, { seed, ...LAYOUT_DEFAULTS });
   return new Map(
     [...arranged].map(([id, p]) => [
       id,
