@@ -15,7 +15,11 @@ import {
   ENGINE_PARAMETERS,
   runLayoutEngine,
 } from '../packages/core/src/director/layout-engines.ts';
-import { strategyParameters } from '../packages/core/src/director/layout-strategies.ts';
+import {
+  graphTraits,
+  layoutFit,
+  strategyParameters,
+} from '../packages/core/src/director/layout-strategies.ts';
 import { LAYOUT_ENGINES, LAYOUT_TYPES } from '../packages/core/src/project-layout.ts';
 
 const example = (file) =>
@@ -145,4 +149,64 @@ test('W2: drawingOrigin says how layoutGraph drew each document', () => {
     }),
     { kind: 'partial', missing: bookshop.nodes.length - 1 },
   );
+});
+
+test('W3: layoutFit says which strategies suit each example and what the others do', () => {
+  const summary = (graph) =>
+    Object.entries(layoutFit(graph).strategies)
+      .map(([type, fit]) => `${type}:${fit.suits ? '+' : '-'}${fit.note}`)
+      .join(' ');
+  const byId = Object.fromEntries(graphs);
+  assert.deepEqual(graphTraits(byId.exampleGraph), {
+    dated: false,
+    related: true,
+    directed: true,
+    acyclic: true,
+    forest: false,
+  });
+  assert.equal(
+    summary(byId.exampleGraph),
+    'manual:+kept auto:+auto force:+any layered:+acyclic flow:+acyclic tree:-cycles ' +
+      'mindmap:-cycles timeline:-untimed radial:-cycles circle:+any grid:+order',
+  );
+  assert.equal(
+    summary(byId.exampleTree),
+    'manual:+kept auto:+auto force:+any layered:+acyclic flow:+acyclic tree:+forest ' +
+      'mindmap:+forest timeline:-untimed radial:+forest circle:+any grid:+order',
+  );
+  // Dates and no relations at all.
+  assert.equal(
+    summary(byId.exampleTimeline),
+    'manual:+kept auto:+auto force:+any layered:-unrelated flow:-unrelated tree:-unrelated ' +
+      'mindmap:-unrelated timeline:+dated radial:-unrelated circle:+any grid:+order',
+  );
+  // A process with a retry loop: flow reads the loop as feedback, layers do not.
+  assert.equal(
+    summary(byId.exampleFlowchart),
+    'manual:+kept auto:+auto force:+any layered:-cyclic flow:+feedback tree:-cycles ' +
+      'mindmap:-cycles timeline:-untimed radial:-cycles circle:+any grid:+order',
+  );
+  // Mostly undirected relations.
+  assert.equal(graphTraits(byId.exampleLiterature).directed, false);
+  assert.equal(layoutFit(byId.exampleLiterature).strategies.layered.note, 'undirected');
+});
+
+test('W3: what layoutFit says a strategy draws with is what planLayout draws with', () => {
+  for (const [id, graph] of graphs) {
+    const { strategies } = layoutFit(graph);
+    assert.deepEqual(strategies.manual, { suits: true, note: 'kept', engine: null, reason: null });
+    for (const type of strategies.auto ? LAYOUT_TYPES.filter((t) => t !== 'manual') : []) {
+      const { engine, reason } = strategies[type];
+      assert.deepEqual({ engine, reason }, strategyEngine(graph, type), `${id} / ${type}`);
+    }
+    // An unsuitable timeline says it draws a tree, and does.
+    if (!strategies.timeline.suits) {
+      assert.equal(strategies.timeline.note, 'untimed', id);
+      assert.deepEqual(
+        { engine: strategies.timeline.engine, reason: strategies.timeline.reason },
+        { engine: 'tree', reason: 'untimed' },
+        id,
+      );
+    }
+  }
 });

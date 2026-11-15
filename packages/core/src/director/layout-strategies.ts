@@ -4,6 +4,7 @@ import { layoutMissingNodes, roundPositionCoordinate, type LayoutPoint } from '.
 import { autoEngine, layoutGraph } from './layout.js';
 import { ENGINE_PARAMETERS, runLayoutEngine, type LayoutParameter } from './layout-engines.js';
 import { placeInTime, timeAxis } from '../graph/time-axis.js';
+import { componentsOf, prepare, stronglyConnected } from '../graph/analysis.js';
 import {
   LAYOUT_DEFAULTS,
   LAYOUT_MODES,
@@ -89,6 +90,118 @@ export function strategyParameters(
   type: LayoutType,
 ): readonly LayoutParameter[] {
   return type === 'manual' ? [] : ENGINE_PARAMETERS[strategyEngine(graph, type).engine];
+}
+
+/**
+ * Why a strategy suits a graph or not, as the layout panel words it:
+ * - `kept`: `manual` keeps the picture;
+ * - `auto`: `auto` names the engine it will use;
+ * - `any`, `order`: force and circle suit any graph; the grid too, in the
+ *   authors' order and without reading relations;
+ * - `dated` / `untimed`: a timeline needs dates, else it draws a tree;
+ * - `forest` / `cycles`: tree, mind map and radial read a forest; with
+ *   cycles they follow a spanning tree and the other relations place nothing;
+ * - `acyclic` / `cyclic` / `feedback` / `undirected`: layers need directed
+ *   relations without cycles (a cycle shares one level); flow reads a
+ *   relation that loops back as feedback; mostly undirected relations leave
+ *   only the connections to rank by;
+ * - `unrelated`: an engine that follows relations has none to follow.
+ */
+export const LAYOUT_FIT_NOTES = [
+  'kept',
+  'auto',
+  'any',
+  'order',
+  'dated',
+  'untimed',
+  'forest',
+  'cycles',
+  'acyclic',
+  'cyclic',
+  'feedback',
+  'undirected',
+  'unrelated',
+] as const;
+export type LayoutFitNote = (typeof LAYOUT_FIT_NOTES)[number];
+/** The facts about a graph that decide which strategies suit it. */
+export interface GraphTraits {
+  /** At least two distinct times: a time axis exists. */
+  dated: boolean;
+  /** At least one relation between two different nodes. */
+  related: boolean;
+  /** At least 70% of the relations are directed, the rule `auto` uses. */
+  directed: boolean;
+  /** Directed, and the directed relations form no cycle. */
+  acyclic: boolean;
+  /** The relations, read without direction, form no cycle. */
+  forest: boolean;
+}
+/** Whether a strategy suits a graph, why, and what it will draw with. */
+export interface StrategyFit {
+  suits: boolean;
+  note: LayoutFitNote;
+  /** The engine it draws with (`strategyEngine`); null for `manual`. */
+  engine: LayoutEngine | null;
+  reason: LayoutReason | null;
+}
+/** The traits of a graph from its structure and dates alone. */
+export function graphTraits(graph: Pick<VisualGraph, 'nodes' | 'edges'>): GraphTraits {
+  const p = prepare(graph),
+    related = p.pairs.length > 0;
+  const directed = related && p.pairs.filter((l) => l.directed).length >= p.pairs.length * 0.7;
+  let acyclic = false;
+  if (directed) {
+    const adj = new Map(p.ids.map((id) => [id, [] as string[]]));
+    for (const a of p.arcs) adj.get(a.source)!.push(a.target);
+    acyclic = stronglyConnected(p.ids, adj).every((group) => group.length === 1);
+  }
+  const connected = p.ids.filter((id) => p.degree.get(id));
+  const forest = related && p.pairs.length === connected.length - componentsOf(p, connected).length;
+  return { dated: Boolean(timeAxis(graph.nodes)), related, directed, acyclic, forest };
+}
+/**
+ * Which strategies suit a graph and what the others will do, before any of
+ * them runs (W3). Reads only structure, dates and the diagram kind.
+ */
+export function layoutFit(graph: Pick<VisualGraph, 'nodes' | 'edges' | 'diagram'>): {
+  traits: GraphTraits;
+  strategies: Record<LayoutType, StrategyFit>;
+} {
+  const traits = graphTraits(graph);
+  const fit = (type: LayoutType, suits: boolean, note: LayoutFitNote): StrategyFit =>
+    type === 'manual'
+      ? { suits, note, engine: null, reason: null }
+      : { suits, note, ...strategyEngine(graph, type) };
+  const treeLike = (type: LayoutType) =>
+    !traits.related
+      ? fit(type, false, 'unrelated')
+      : traits.forest
+        ? fit(type, true, 'forest')
+        : fit(type, false, 'cycles');
+  const strategies: Record<LayoutType, StrategyFit> = {
+    manual: fit('manual', true, 'kept'),
+    auto: fit('auto', true, 'auto'),
+    force: fit('force', true, 'any'),
+    layered: !traits.related
+      ? fit('layered', false, 'unrelated')
+      : traits.acyclic
+        ? fit('layered', true, 'acyclic')
+        : traits.directed
+          ? fit('layered', false, 'cyclic')
+          : fit('layered', false, 'undirected'),
+    flow: !traits.related
+      ? fit('flow', false, 'unrelated')
+      : traits.directed
+        ? fit('flow', true, traits.acyclic ? 'acyclic' : 'feedback')
+        : fit('flow', false, 'undirected'),
+    tree: treeLike('tree'),
+    mindmap: treeLike('mindmap'),
+    timeline: traits.dated ? fit('timeline', true, 'dated') : fit('timeline', false, 'untimed'),
+    radial: treeLike('radial'),
+    circle: fit('circle', true, 'any'),
+    grid: fit('grid', true, 'order'),
+  };
+  return { traits, strategies };
 }
 
 /** Bounded synchronous authoring computation. Never called by playback/frame evaluation. */

@@ -4,8 +4,10 @@ import {
   displayNodeText,
   LAYOUT_MODES,
   LAYOUT_TYPES,
+  layoutFit,
   strategyParameters,
   type LayoutMode,
+  type LayoutFitNote,
   type LayoutParameter,
   type LayoutPlan,
   type LayoutReason,
@@ -14,6 +16,7 @@ import {
   type DirectorFrameState,
   type DrawingOrigin,
   type ProjectConfig,
+  type StrategyFit,
   type VisualGraph,
 } from '@relgraph/core';
 // One label per strategy and policy the core knows: adding one there without
@@ -61,6 +64,32 @@ export function blockedResetMessage(names: readonly string[]): string {
   return BLOCKED_PREFIX + names.join('、') + RESET_BLOCKED_SUFFIX;
 }
 export const RESET_BLOCKED_SUFFIX = '。请先解锁它们，再重置。';
+// Whether a strategy suits the graph and what it will do (W3).
+const FIT_LABELS: Record<LayoutFitNote, string> = {
+  kept: '保留当前画面，不移动任何节点。',
+  auto: '将使用：',
+  any: '适合任何图。',
+  order: '适合任何图：按节点在文件中的顺序排列，不看关系。',
+  dated: '适合：节点带有日期，按时间排开。',
+  untimed: '不适合：没有节点带日期，将改画为树。',
+  forest: '适合：关系构成树，没有环。',
+  cycles: '不适合：关系有环，将沿生成树排布，其余关系不参与定位。',
+  acyclic: '适合：关系有方向且没有回路。',
+  cyclic: '不适合：有方向的关系形成回路，回路中的节点会排在同一层。',
+  feedback: '适合：关系有方向；回路中返回的关系不参与分层。',
+  undirected: '不适合：多数关系没有方向，层次只能由连接推断。',
+  unrelated: '不适合：图中没有关系，节点会排成紧凑的一组。',
+};
+const UNSUITED = '（不适合此图）';
+function fitText(fit: StrategyFit): string {
+  if (fit.note === 'auto' && fit.engine)
+    return (
+      uiText(FIT_LABELS.auto) +
+      uiText(TYPE_LABELS[fit.engine]) +
+      (fit.reason ? uiText(REASON_LABELS[fit.reason]) : '')
+    );
+  return uiText(FIT_LABELS[fit.note]);
+}
 /** What drew the picture on screen, in the workspace's words (W2). */
 function originText(origin: DrawingOrigin, adjusted: boolean): string {
   const body =
@@ -86,13 +115,15 @@ const MODE_LABELS: Record<LayoutMode, string> = {
  */
 export interface LayoutPanelContext {
   parameters: Readonly<Record<LayoutType, readonly LayoutParameter[]>>;
+  /** Whether each strategy suits the graph, and what it will do (`layoutFit`). */
+  fit: Readonly<Record<LayoutType, StrategyFit>>;
 }
 /** The panel's knowledge of a graph, computed once when it loads. */
 export function layoutPanelContext(graph: VisualGraph): LayoutPanelContext {
   const parameters = Object.fromEntries(
     LAYOUT_TYPES.map((type) => [type, strategyParameters(graph, type)]),
   ) as Record<LayoutType, readonly LayoutParameter[]>;
-  return { parameters };
+  return { parameters, fit: layoutFit(graph).strategies };
 }
 interface Actions {
   preview(settings: LayoutSettings): void;
@@ -144,6 +175,18 @@ export function createLayoutStrategyView(doc: Document, host: HTMLElement, actio
     '策略',
     LAYOUT_TYPES.map((value) => [value, TYPE_LABELS[value]]),
   );
+  // The menu marks the strategies that do not suit the graph, so its labels
+  // are written here, not by the static translation pass.
+  const typeOptions = new Map<LayoutType, HTMLOptionElement>();
+  for (const option of type.children as unknown as Iterable<HTMLOptionElement>) {
+    option.removeAttribute('data-ui-key');
+    typeOptions.set(option.value as LayoutType, option);
+  }
+  const fitLine = el('p');
+  fitLine.id = 'strategyFit';
+  fitLine.className = 'muted strategy-fit';
+  fitLine.hidden = true;
+  host.append(fitLine);
   const mode = select(
     'strategyMode',
     '坐标策略',
@@ -219,6 +262,17 @@ export function createLayoutStrategyView(doc: Document, host: HTMLElement, actio
     }
     const policy = labels.get(mode)!;
     if (policy.hidden === usesPolicy()) policy.hidden = !usesPolicy();
+    for (const [value, option] of typeOptions) {
+      const text =
+        uiText(TYPE_LABELS[value]) + (context?.fit[value].suits === false ? uiText(UNSUITED) : '');
+      if (option.textContent !== text) option.textContent = text;
+    }
+    const fit = context?.fit[chosenType()],
+      text = fit ? fitText(fit) : '';
+    if (fitLine.textContent !== text) fitLine.textContent = text;
+    if (fitLine.hidden !== !fit) fitLine.hidden = !fit;
+    if (fit && fitLine.getAttribute('data-suits') !== String(fit.suits))
+      fitLine.setAttribute('data-suits', String(fit.suits));
   };
   /** A setting as the preview receives it: the input when shown, else the stored value. */
   const parameterValue = (parameter: LayoutParameter): number =>
@@ -345,6 +399,7 @@ export function createLayoutStrategyView(doc: Document, host: HTMLElement, actio
       apply.disabled = !enabled || !pending;
       cancel.disabled = !enabled || !pending;
       refreshDrawn();
+      syncFields();
       hintMessage = pending
         ? '临时预览 · 尚未保存。请应用或取消；可撤销已应用布局。'
         : '静态确定性布局 · 保留 = 不移动；填补 = 仅缺失；重排 = 移动未锁定节点。自动 = 按图的结构选择策略。';

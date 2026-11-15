@@ -164,3 +164,61 @@ test('W2: the panel says what drew the picture, through edits, Apply, undo and R
   await app.node('visualRedo').click();
   assert.equal(drawn().textContent, '当前画面：已应用：网格 · 保持顺序');
 });
+
+/**
+ * Every text the layout panel shows, option labels included; node names in
+ * the lock menu are source data and are never translated.
+ */
+function panelTexts(app) {
+  const texts = [],
+    visit = (element) => {
+      if (element.hidden || element.id === 'strategyNode') return;
+      if (element.children?.length) element.children.forEach(visit);
+      else if (element.textContent) texts.push(element.textContent);
+    };
+  visit(app.node('layoutStrategyEditor'));
+  return texts;
+}
+
+test('W3: the panel shows which strategies suit the graph before anything is applied', async () => {
+  const app = makeStudio();
+  await app.ready;
+  await openExample(app, 'exampleTimeline');
+  const fit = control(app, 'strategyFit'),
+    option = (value) =>
+      control(app, 'strategyType').children.find((child) => child.value === value).textContent;
+  // Dated, without relations: the timeline suits, a tree does not.
+  assert.equal(option('timeline'), '时间轴 · 按时间排开');
+  assert.equal(option('tree'), '树 · 向右展开（不适合此图）');
+  assert.equal(option('grid'), '网格 · 保持顺序');
+  assert.equal(fit.textContent, '保留当前画面，不移动任何节点。');
+  await choose(app, 'strategyType', 'timeline');
+  assert.equal(fit.textContent, '适合：节点带有日期，按时间排开。');
+  assert.equal(fit.attributes['data-suits'], 'true');
+  await choose(app, 'strategyType', 'layered');
+  assert.equal(fit.textContent, '不适合：图中没有关系，节点会排成紧凑的一组。');
+  assert.equal(fit.attributes['data-suits'], 'false');
+
+  // The bookshop has no dates: the timeline says it will draw a tree.
+  await openExample(app, 'exampleGraph');
+  assert.equal(option('timeline'), '时间轴 · 按时间排开（不适合此图）');
+  await choose(app, 'strategyType', 'timeline');
+  assert.equal(fit.textContent, '不适合：没有节点带日期，将改画为树。');
+  await choose(app, 'strategyType', 'auto');
+  assert.equal(fit.textContent, '将使用：流向 · 从左到右（按图的结构）');
+
+  // Every panel text has its English, menus included. As in the
+  // production-build test, the panel joins the body so the static
+  // translation pass reaches its labels and buttons.
+  app.document.body.append(app.node('layoutStrategyEditor'));
+  const language = app.node('languageSelect');
+  language.value = 'en';
+  await language.dispatch('change');
+  assert.equal(fit.textContent, 'Will use: Flow · Left to right (chosen from the graph structure)');
+  assert.equal(option('timeline'), 'Timeline · Placed in time (does not suit this graph)');
+  for (const type of ['manual', 'force', 'layered', 'tree', 'timeline', 'grid']) {
+    await choose(app, 'strategyType', type);
+    const chinese = panelTexts(app).filter((text) => /[\u3400-\u9fff]/.test(text));
+    assert.deepEqual(chinese, [], `English panel under ${type}`);
+  }
+});

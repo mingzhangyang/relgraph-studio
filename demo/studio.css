@@ -797,3 +797,6 @@ footer span { color: var(--gold); }
 .appearance-editor .property-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 #visualSave { border-color: var(--gold-line); color: var(--gold-strong); }
 #layoutStrategies > summary { cursor: pointer; font-size: 13px; }
+/* What drew the picture, under the summary (W2); a strategy that does not suit the graph (W3). */
+.appearance-editor p.strategy-drawn { margin-top: 4px; }
+.appearance-editor p.strategy-fit[data-suits="false"] { color: var(--warn); }
