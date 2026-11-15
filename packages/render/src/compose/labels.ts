@@ -11,6 +11,97 @@ import { fitText, wrapText } from './text.js';
 /** Node ids in reading order; one collator instead of one per comparison. */
 const byId = new Intl.Collator('en').compare;
 
+/** Sides of a label, in the order `composeNodeLabels` lists them. */
+const SIDE = { right: 0, left: 1, top: 2, bottom: 3 } as const;
+
+/** A node's place in a tree, which decides where its label goes. */
+export type TreeRole = 'leaf' | 'root' | 'inner';
+
+/** How a tree is drawn: each node's role and the direction it grows in. */
+export interface TreeReading {
+  roles: Map<string, TreeRole>;
+  /** True when the tree grows sideways, false when it grows up or down. */
+  sideways: boolean;
+  /** +1 when it grows right or down, -1 when left or up. */
+  forward: 1 | -1;
+}
+
+/**
+ * Each node's role in the whole tree, not only in the part shown, so a
+ * branch keeps its label's side while the tree unfolds, and the direction
+ * the tree grows on the drawing (the mean direction of its relations).
+ * A node without relations has no role.
+ */
+export function treeReading(
+  graph: Pick<FrameContext['graph'], 'nodes' | 'edges'>,
+  positions: ReadonlyMap<string, Point>,
+): TreeReading {
+  const parents = new Set<string>(),
+    children = new Set<string>();
+  let gx = 0,
+    gy = 0;
+  for (const edge of graph.edges) {
+    if (edge.source === edge.target) continue;
+    parents.add(edge.source);
+    children.add(edge.target);
+    const a = positions.get(edge.source),
+      b = positions.get(edge.target);
+    if (!a || !b) continue;
+    const d = Math.hypot(b.x - a.x, b.y - a.y);
+    if (d > 0) {
+      gx += (b.x - a.x) / d;
+      gy += (b.y - a.y) / d;
+    }
+  }
+  const sideways = Math.abs(gx) >= Math.abs(gy);
+  const roles = new Map<string, TreeRole>();
+  for (const node of graph.nodes) {
+    const leads = parents.has(node.id),
+      follows = children.has(node.id);
+    if (leads || follows) roles.set(node.id, !leads ? 'leaf' : !follows ? 'root' : 'inner');
+  }
+  return { roles, sideways, forward: (sideways ? gx : gy) < 0 ? -1 : 1 };
+}
+
+/**
+ * Where a label goes in a tree, best first. A leaf is labelled ahead of its
+ * node, where nothing follows; the root behind it, where nothing leads in;
+ * an inner node across the growth (below a tree that grows sideways, right
+ * of one that grows up or down), ending where the node ends, so it sits
+ * between neither its parent nor its children and stays clear of the
+ * relations that leave towards them. Then the other side across, the same
+ * two centred on the node, and the sides along the growth last.
+ */
+function treePlaces(
+  { sideways, forward }: TreeReading,
+  role: TreeRole,
+  sides: readonly Point[],
+  { p, r, width, height }: { p: Point; r: number; width: number; height: number },
+): Point[] {
+  const [ahead, behind] = sideways
+    ? forward > 0
+      ? [SIDE.right, SIDE.left]
+      : [SIDE.left, SIDE.right]
+    : forward > 0
+      ? [SIDE.bottom, SIDE.top]
+      : [SIDE.top, SIDE.bottom];
+  const [across, opposite] = sideways ? [SIDE.bottom, SIDE.top] : [SIDE.right, SIDE.left];
+  const back = (side: Point): Point =>
+    sideways
+      ? { ...side, x: forward > 0 ? p.x + r - width : p.x - r }
+      : { ...side, y: forward > 0 ? p.y + r - height : p.y - r };
+  if (role === 'leaf') return [ahead, across, opposite, behind].map((i) => sides[i]);
+  if (role === 'root') return [behind, across, opposite, ahead].map((i) => sides[i]);
+  return [
+    back(sides[across]),
+    back(sides[opposite]),
+    sides[across],
+    sides[opposite],
+    sides[behind],
+    sides[ahead],
+  ];
+}
+
 export interface NodeLabelInputs {
   drawn: readonly DrawnNode[];
   /** Nodes whose label is drawn inside their shape (`composeNodes`). */
@@ -45,6 +136,7 @@ export function composeNodeLabels(
   // Where the other labelled nodes are, for the test that a label reads as theirs.
   const labelled = new PointIndex(u(96));
   for (const entry of sorted) labelled.add(entry.node.id, entry.p.x, entry.p.y);
+  const tree = ctx.style.labelSides === 'tree' ? treeReading(ctx.graph, ctx.positions) : undefined;
   for (const { node, custom, p, r, alpha: active } of sorted) {
     const obstacle = obstacles.get(node.id);
     if (!obstacle) continue;
@@ -73,24 +165,28 @@ export function composeNodeLabels(
       { x: nearRightX, y: bottomY },
       { x: nearLeftX, y: bottomY },
     ];
-    const preferred =
+    const authored =
       custom.textPosition === undefined || custom.textPosition === 'auto'
         ? undefined
-        : { right: 0, left: 1, top: 2, bottom: 3 }[custom.textPosition];
-    // An authored side comes first. Otherwise face away from the node's
-    // relations: the side its neighbours leave free. Reading order breaks
-    // ties, so a lone node labels to the right.
+        : SIDE[custom.textPosition];
+    const role = authored === undefined ? tree?.roles.get(node.id) : undefined;
+    // An authored side comes first, then a tree's places for the node's role
+    // (`treePlaces`). Otherwise face away from the node's relations: the side
+    // its neighbours leave free. Reading order breaks ties, so a lone node
+    // labels to the right.
     const towards = pull.get(node.id) ?? { x: 0, y: 0 },
       reach = Math.hypot(towards.x, towards.y),
       out = reach > 0.35 ? { x: -towards.x / reach, y: -towards.y / reach } : { x: 0, y: 0 };
     const score = [out.x + 0.3, -out.x + 0.12, -out.y, out.y + 0.06];
     const ordered =
-      preferred !== undefined
-        ? [sides[preferred], ...sides.filter((_, i) => i !== preferred)]
-        : sides
-            .map((side, i) => ({ side, score: score[i], i }))
-            .sort((m, n) => n.score - m.score || m.i - n.i)
-            .map((entry) => entry.side);
+      tree && role
+        ? treePlaces(tree, role, sides, { p, r, width, height })
+        : authored !== undefined
+          ? [sides[authored], ...sides.filter((_, i) => i !== authored)]
+          : sides
+              .map((side, i) => ({ side, score: score[i], i }))
+              .sort((m, n) => n.score - m.score || m.i - n.i)
+              .map((entry) => entry.side);
     const candidates = [...ordered, ...corners].map((c) => ({ ...c, w: width, h: height }));
     // Hard rules: stay on the stage and never cover a glyph or other text.
     // Among the places that remain, prefer the natural side, then the one
@@ -110,7 +206,9 @@ export function composeNodeLabels(
       const cx = c.x + c.w / 2,
         cy = c.y + c.h / 2,
         own = Math.hypot(cx - p.x, cy - p.y);
-      const ambiguous = labelled.anyCloser(cx, cy, own * 0.9, node.id);
+      // In a tree the side follows the node's role, which is how a reader
+      // pairs label and node; elsewhere a label must not sit nearer another.
+      const ambiguous = !role && labelled.anyCloser(cx, cy, own * 0.9, node.id);
       const placeCost = rank + Math.min(6, crossings) * 0.9 + (ambiguous ? 4 : 0);
       if (placeCost < best) {
         best = placeCost;

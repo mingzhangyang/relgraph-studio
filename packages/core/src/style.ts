@@ -95,6 +95,12 @@ export interface DomainStyle {
   /** `target` draws a relation in the colour of the node it leads to. */
   edgeHue?: 'kind' | 'target';
   /**
+   * `tree` sets each label beside a node by its place in the tree instead of
+   * on the side its relations leave free: a leaf ahead of its node, the root
+   * behind it, and every inner node on one side across the growth.
+   */
+  labelSides?: 'tree';
+  /**
    * The domain time axis of a timeline: its range and world units per unit of
    * time. Span glyphs take their length from it and the axis is drawn from it.
    */
@@ -281,6 +287,7 @@ export function deriveGraphStyle(
             ? { edgeHue: 'target' as const }
             : {}),
           ...(diagram === 'flowchart' ? { edgeLabels: 'always' as const } : {}),
+          ...(diagram === 'tree' ? { labelSides: 'tree' as const } : {}),
           ...(axis ? { timeAxis: { from: axis.from, to: axis.to, scale: axis.scale } } : {}),
         }),
   });

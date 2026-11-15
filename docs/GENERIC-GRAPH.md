@@ -161,7 +161,7 @@ of them back into an ordinary network.
 
 | `diagram`   | Layout     | Nodes                                                                                                                                                                                               | Relations                                                                                           | Derived film                                                                                    |
 | ----------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `tree`      | `tree`     | Glyphs with labels beside them; size by depth; one tone per main branch                                                                                                                             | Elbows without arrowheads, in the child's tone                                                      | Unfolds one level per shot, lighting the branches that have just arrived, then the whole tree   |
+| `tree`      | `tree`     | Glyphs with labels beside them by role: leaves ahead, the root behind, inner nodes below; size by depth; one tone per main branch                                                                   | Elbows without arrowheads, in the child's tone                                                      | Unfolds one level per shot, lighting the branches that have just arrived, then the whole tree   |
 | `mindmap`   | `mindmap`  | Boxes holding their label; the topic in solid colour; one tone per branch                                                                                                                           | As for trees                                                                                        | Topic, main branches, details, then the whole map                                               |
 | `flowchart` | `flow`     | Boxes holding their label: kinds named like `start` or `end` are capsules, kinds named like `decision` or `condition` are decisions, every other step a box; steps are peers, so all share one size | Elbows with arrowheads (directed unless the document says otherwise); every relation label is drawn | Unfolds one rank of the flow per shot (deep flows fold into twelve steps), then the whole chart |
 | `timeline`  | `timeline` | Bars as long as `start`…`end`; points for nodes with only a first appearance                                                                                                                        | Elbows                                                                                              | Travels along the axis: one shot per start, a cursor at the film's present, then the whole axis |
@@ -394,6 +394,11 @@ name.
 - **Labels** try the side their relations leave free first. Among the
   positions that stay on stage and cover no glyph or text, the one that
   crosses the fewest relations and cannot be read as a neighbour's name wins.
+  A tree (`DomainStyle.labelSides: 'tree'`) labels by role in the whole tree,
+  so a branch keeps its side while the tree unfolds: a leaf ahead of its node,
+  the root behind it, an inner node across the growth (below a tree that
+  grows sideways), ending where the node ends; the other side across comes
+  next. An authored `textPosition` still comes first.
 - **Legend**: bottom left of the stage, only kinds that are visible now, only
   when there is more than one. Kinds captioned on their own edges (biology)
   need no entry.
