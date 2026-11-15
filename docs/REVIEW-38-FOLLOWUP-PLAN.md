@@ -2,7 +2,8 @@
 
 Status: **open** · baseline `main` at `73af432` · reviewed 2026-11-12 ·
 PR 1 merged as `a2589bf`, PR 2 as `682dbbd` and PR 1b as `a63875c` on 2026-11-13,
-PR 3 as `ca0edd8` and PR 4 as `ad49ba5` on 2026-11-14
+PR 3 as `ca0edd8` and PR 4 as `ad49ba5` on 2026-11-14,
+PR 5 as `cb532f9` on 2026-11-15
 
 This is the tracking document for the work that came out of reviewing
 [#38](https://github.com/mingzhangyang/relgraph-studio/pull/38) (generic graphs,
@@ -29,16 +30,16 @@ The repository rules in [AGENTS.md](../AGENTS.md) apply to every step:
 - No GitHub Actions workflow is added, dispatched or rerun. Every PR states
   which local validations actually ran.
 
-| PR  | Scope                     | Items | Golden frames                               | Status                                                                                                                       |
-| --- | ------------------------- | ----- | ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Behaviour fixes           | F1–F5 | Tree example changes (F5); others identical | ☑ [#40](https://github.com/mingzhangyang/relgraph-studio/pull/40) merged as `a2589bf` (2026-11-13); leftover 3 tracked as F6 |
-| 1b  | Behaviour fix             | F6    | Must stay identical                         | ☑ [#42](https://github.com/mingzhangyang/relgraph-studio/pull/42) merged as `a63875c` (2026-11-13); golden frames identical  |
-| 2   | Per-frame cost and limits | P1–P3 | Must stay identical                         | ☑ [#41](https://github.com/mingzhangyang/relgraph-studio/pull/41) merged as `682dbbd` (2026-11-13)                           |
-| 3   | Core structure            | S1–S3 | Must stay identical                         | ☑ [#43](https://github.com/mingzhangyang/relgraph-studio/pull/43) merged as `ca0edd8` (2026-11-14); golden frames identical  |
-| 4   | Render structure          | S4–S6 | Must stay identical                         | ☑ [#44](https://github.com/mingzhangyang/relgraph-studio/pull/44) merged as `ad49ba5` (2026-11-14); display lists identical  |
-| 5   | Tooling and docs          | T1–T4 | Not affected                                | ◐ implemented on branch `claude/funny-planck-lbzpcv` from `ad49ba5`; golden frames identical                                 |
-| 6   | Workspace UI              | W1–W5 | Not affected                                | ☐ not started                                                                                                                |
-| 7   | Film frame refinement     | V1–V4 | Regenerated, with before/after frames       | ☐ not started                                                                                                                |
+| PR  | Scope                     | Items | Golden frames                               | Status                                                                                                                          |
+| --- | ------------------------- | ----- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Behaviour fixes           | F1–F5 | Tree example changes (F5); others identical | ☑ [#40](https://github.com/mingzhangyang/relgraph-studio/pull/40) merged as `a2589bf` (2026-11-13); leftover 3 tracked as F6    |
+| 1b  | Behaviour fix             | F6    | Must stay identical                         | ☑ [#42](https://github.com/mingzhangyang/relgraph-studio/pull/42) merged as `a63875c` (2026-11-13); golden frames identical     |
+| 2   | Per-frame cost and limits | P1–P3 | Must stay identical                         | ☑ [#41](https://github.com/mingzhangyang/relgraph-studio/pull/41) merged as `682dbbd` (2026-11-13)                              |
+| 3   | Core structure            | S1–S3 | Must stay identical                         | ☑ [#43](https://github.com/mingzhangyang/relgraph-studio/pull/43) merged as `ca0edd8` (2026-11-14); golden frames identical     |
+| 4   | Render structure          | S4–S6 | Must stay identical                         | ☑ [#44](https://github.com/mingzhangyang/relgraph-studio/pull/44) merged as `ad49ba5` (2026-11-14); display lists identical     |
+| 5   | Tooling and docs          | T1–T4 | Not affected                                | ☑ [#45](https://github.com/mingzhangyang/relgraph-studio/pull/45) merged as `cb532f9` (2026-11-15); tree identical to `26fd0fd` |
+| 6   | Workspace UI              | W1–W5 | Not affected                                | ◐ implemented on branch `claude/workspace-ui-w1-w5` from `cb532f9`; golden frames identical                                     |
+| 7   | Film frame refinement     | V1–V4 | Regenerated, with before/after frames       | ☐ not started                                                                                                                   |
 
 PR 1 comes first because its items are user-visible defects. PRs 3 and 4 come
 before the UI work so that PR 6 and PR 7 build on the split modules instead of
@@ -246,17 +247,17 @@ No behaviour change; golden hashes and browser baselines identical.
 
 ## PR 6 · Workspace UI
 
-- [ ] **W1 · The layout panel follows the strategy.** Seed, spacing and
+- [x] **W1 · The layout panel follows the strategy.** Seed, spacing and
       iterations are shown for all eleven strategies although most ignore one or
       more of them.
-- [ ] **W2 · The panel says what drew the picture.** A document arranged
+- [x] **W2 · The panel says what drew the picture.** A document arranged
       automatically on load shows "手动 · 保留微调".
-- [ ] **W3 · Applicability before applying.** Show which strategies suit the
+- [x] **W3 · Applicability before applying.** Show which strategies suit the
       graph (dates present, forest, directed and acyclic) and what the others will
       do. Builds on F4.
-- [ ] **W4 · One heading.** The disclosure "布局策略 · 预览后应用" is followed
+- [x] **W4 · One heading.** The disclosure "布局策略 · 预览后应用" is followed
       by a second heading "布局 · 预览后应用".
-- [ ] **W5 · Data source first on narrow screens.** At 390 px wide it sits at
+- [x] **W5 · Data source first on narrow screens.** At 390 px wide it sits at
       the bottom of a page about 6,000 px long. Example buttons have uneven
       heights in both languages.
 
@@ -792,6 +793,195 @@ value, two invalid projects per example and 24 hand-made invalid documents.
 
 Validation, linux-x64, Node 22.23.4: see the PR.
 
+### PR 5 · merged
+
+#45 merged as `cb532f9` on 2026-11-15: a squash onto `ad49ba5`, which `main`
+had not moved from. Its tree (`eff4a13`) is identical to that of the reviewed
+head `26fd0fd`. The squash commit kept only the title of the branch's first
+commit ("style: format the nine test files…"); its content is all of T1–T4.
+
+### PR 6 · as implemented
+
+Branch `claude/workspace-ui-w1-w5` from `cb532f9`, one commit per item, plus
+one structural core commit kept apart from the UI work:
+
+- **Core, no behaviour change** (`7c196a1`). `autoEngine` (`layout.ts`) is
+  the automatic choice: the diagram kind's engine, else a grid above
+  `AUTO_LAYOUT_NODE_LIMIT`, else `chooseLayoutEngine`. `structuralLayout`
+  uses it. `strategyEngine` (`layout-strategies.ts`) adds the undated-timeline
+  fallback and is what `planLayout` reads, so the panel can say what a
+  strategy draws before it runs. Golden frames identical.
+- **W4 · One heading** (`3207c4a`). The panel no longer adds the heading
+  "布局 · 预览后应用"; the disclosure summary is its only heading.
+- **W1 · The panel follows the strategy** (`6ab1cef`). `ENGINE_PARAMETERS`
+  (`layout-engines.ts`): force reads seed, spacing and iterations; radial and
+  circle seed and spacing; layered, flow, tree, mind map, timeline and grid
+  spacing only. `strategyParameters(graph, type)` gives a strategy's settings
+  for a graph (`auto` those of its engine, an undated timeline those of the
+  tree, `manual` none). The panel hides the other settings, and the
+  coordinate policy under `manual`. A hidden setting is not validated, is
+  previewed with its stored value and is not an unsaved draft. A pure test
+  changes, on every example, each setting an engine does not list and
+  requires the same drawing, and requires a listed one to change some
+  drawing. The browser check no longer types into hidden fields; its circle
+  project saves the stored iterations (300 instead of 123). Real Chromium
+  showed that `.appearance-editor label { display: grid }` overrode the
+  `hidden` attribute, which the simulated DOM cannot see; a CSS rule fixes
+  it and the browser check asserts the field is not visible.
+- **W2 · What drew the picture** (`b6c6b6f`). `drawingOrigin(graph)`
+  (`layout.ts`) says how `layoutGraph` draws a document: the stored strategy,
+  the engine and reason of an automatic drawing (an undated timeline as a
+  tree), stored coordinates, or stored coordinates with `missing` nodes
+  placed beside them. The panel opens with "当前画面：…": the applied
+  strategy, else the origin at load, with "，并有手动微调" once a node was
+  moved by hand (Reset, undo and redo follow; a pending preview keeps its
+  "实际绘制" note). `manual` is renamed "保留当前画面 · 手动微调", the strategy
+  that keeps the picture rather than a description of it. Hand moves after
+  an applied strategy are not detected: the line still names that strategy.
+  A stored type alone no longer counts as applied: see the review of #46.
+- **W3 · Applicability before applying** (`01aad10`). `graphTraits` (dates,
+  any relation, at least 70% directed as `auto` counts, directed without
+  cycles, a forest) and `layoutFit(graph)`: per strategy whether it suits the
+  graph, a note why, and the engine it draws with. A timeline needs dates and
+  otherwise draws a tree; tree, mind map and radial need a forest and
+  otherwise follow a spanning tree; layered needs directed relations without
+  cycles (a cycle shares one level); flow suits directed relations and reads
+  a loop as feedback; engines that follow relations say when there are none;
+  force and circle suit any graph and the grid keeps the file's order. The
+  menu marks unsuitable strategies "（不适合此图）" and a line under it words
+  the chosen one (`auto` with its engine). The menu labels are written by
+  the panel, not by the static translation pass.
+- **W5 · Data source first; one button height** (`7ef9ad2`). At 840 px and
+  below the sidebar was `display: contents` and the source card was placed
+  first with `order`, while keyboard and screen-reader order still followed
+  the document (preview, then sidebar). The review of #46 replaced this: the
+  source card now comes first in the document (see below). The buttons are still rendered from
+  `examples/manifest.json` by `vite.config.mjs`; `grid-auto-rows: 1fr` gives
+  every row the tallest button's height, text at the top. On a narrow screen
+  the section numbers now read 03 before 01.
+
+All new interface texts have English in `apps/studio/src/i18n.ts`; no
+diagnostic was added. Measured in Chromium with the bookshop loaded and the
+layout panel open (the plan's "about 6,000 px" was not reproduced at
+`cb532f9`):
+
+| Viewport, language | Page height, before → after | Source card top, before → after | Button heights before → after |
+| ------------------ | --------------------------- | ------------------------------- | ----------------------------- |
+| 1440 px, Chinese   | 1,398 → 1,398               | 99 → 99 (sidebar)               | 76, 60 → all 76               |
+| 1440 px, English   | 1,421 → 1,421               | 99 → 99 (sidebar)               | 95, 76, 60 → all 95           |
+| 390 px, Chinese    | 3,963 → 3,762               | 1,327 → 75 (preview at 761)     | all 60 → all 60               |
+| 390 px, English    | 4,256 → 4,100               | 1,438 → 122 (preview at 919)    | 79, 76, 60 → all 79           |
+
+Tests: `tests/layout-description.test.mjs` (pure: `strategyEngine` against
+`planLayout`, `ENGINE_PARAMETERS` against the engines, `drawingOrigin`,
+`graphTraits` and `layoutFit` on the examples) and
+`tests/studio-layout-panel.test.mjs` (simulated DOM: no heading in the
+panel, settings per strategy, hidden-setting rules, the origin line through
+edits, Reset, Apply, undo and redo, the menu marks and the fit line, and no
+Chinese left in the English panel). Old simulated-DOM cases find the note by
+id (`strategyNote`). Real Chromium: a new browser check at 1440, 840 and
+390 px in both languages (one button height, source placement, no
+horizontal overflow, one landmark). Before/after screenshots (desktop and
+390 px, both languages) were taken with real Chromium from builds of
+`cb532f9` and `7ef9ad2`.
+
+Validation, run locally on linux-x64, Node 22.23.4, on the tree of
+`7ef9ad2`: `npm run typecheck`, `npm run check:types`, `npm run lint`,
+`npm run format:check` passed; `npm test` 436 tests in 42 files passed;
+`npm run check:export` 31/31 passed with the 236 golden frames matching (no
+`--update`); `npm run check:browser` 77/77 passed in Chromium 153.0.8010.12
+(no local baseline, so the baseline comparisons did not run;
+`--update-reference` not used). No GitHub Actions workflow was added,
+dispatched or rerun.
+
+### PR 6 · review of #46
+
+The [review at `c76a0ea`](https://github.com/mingzhangyang/relgraph-studio/pull/46#pullrequestreview-5909193479)
+found three P2 and one P3, all fixed on the branch:
+
+- **P2 · Provenance from the stored type alone** (`cfc2b5e`). A valid
+  project may store `layout.type: 'grid'` with no or partial `positions`;
+  `placeNodes` ignores the type, so the structure or the fallback draws, yet
+  the panel said "已应用：网格". `drawingOrigin` now reports a strategy only
+  when the project holds a coordinate for every node, which is what Apply
+  writes, and otherwise what actually drew. The studio reads the current
+  project the same way.
+- **P2 · "No dates" for dates at one time** (`cfc2b5e`). `timeAxis` is also
+  null when every date is equal. `hasTimes` (`graph/time-axis.ts`) tells the
+  cases apart: the new reason `instant` (`LAYOUT_REASONS`) and fit note say
+  "所有日期都在同一时间", `untimed` keeps "没有节点带日期". `drawnEngine`
+  (`layout.ts`) is now the one place where a timeline without an axis
+  becomes a tree, for `strategyEngine` and `drawingOrigin`. `graphTraits`
+  gains `ranged`, which is `dated` with an actual time range.
+- **P2 · Focus order on narrow screens** (`eab487d`). The source card is now
+  first in `demo/index.html`, outside the aside. The aside stays the one
+  complementary landmark; the card keeps its labelled section. On wide
+  screens, grid areas place it atop the right column above the sticky
+  sidebar, in a wrapper with the sidebar's padding and scrollbar gutter so
+  both column edges align. Stacked, the page follows the document: data
+  source, preview, sidebar. The `order` and `display: contents` rules are
+  gone. Trade-off on wide screens: the source card is no longer inside the
+  sidebar's scroll area, so the sidebar starts below it and its lower part
+  is reached by scrolling the page. At the end of the page the sticky
+  sidebar's top meets the header as it did on `cb532f9` (5 px from the top
+  in both, measured).
+- **P3 · No heading left** (`87f1f42`). The summary now holds an
+  `<h2 class="summary-heading">` with the same text, styled inline. Chromium
+  exposes it as a level-2 heading with the disclosure open or closed, and the
+  static translation pass still translates it.
+
+Measured in Chromium at `87f1f42`, bookshop loaded, layout panel open. Page
+heights at 1440 px grow because the sidebar starts below the source card:
+
+| Viewport, language | Page height (`cb532f9` → `7ef9ad2` → `87f1f42`) | Source card top (`87f1f42`) |
+| ------------------ | ----------------------------------------------- | --------------------------- |
+| 1440 px, Chinese   | 1,398 → 1,398 → 1,504                           | 99, right column            |
+| 1440 px, English   | 1,421 → 1,421 → 1,597                           | 99, right column            |
+| 390 px, Chinese    | 3,963 → 3,762 → 3,730                           | 75, preview at 761          |
+| 390 px, English    | 4,256 → 4,100 → 4,068                           | 122, preview at 919         |
+
+Tests: the "#46 review" pure cases in `tests/layout-description.test.mjs`:
+a type with empty, partial and full positions; undated, single-date and
+same-date fixtures across `graphTraits`, `layoutFit`, `strategyEngine`,
+`planLayout` and `drawingOrigin`. Simulated-DOM cases in
+`tests/studio-layout-panel.test.mjs` for both P2s through load, a hand edit,
+Apply and English. All of these fail on `c76a0ea`. The W4 case now requires
+exactly one heading, the h2 in the summary. Real Chromium:
+
+- a 390 px focus sequence: from the top, Tab reaches every example button and
+  the file input before any control of the preview, and in one pass focus
+  moves down the page through source, preview and sidebar;
+- one level-2 heading role for the panel, open and closed.
+
+Validation, run locally on linux-x64, Node 22.23.4, on the tree of
+`87f1f42`: `npm run typecheck`, `npm run check:types`, `npm run lint`,
+`npm run format:check` passed; `npm test` 440 tests in 42 files passed;
+`npm run check:export` 31/31 passed with the 236 golden frames matching (no
+`--update`); `npm run check:browser` 77/77 passed in Chromium 153.0.8010.12
+(no local baseline; `--update-reference` not used). No GitHub Actions
+workflow was added, dispatched or rerun.
+
+### PR 6 · re-review of #46
+
+The [re-review at `1ac58d6`](https://github.com/mingzhangyang/relgraph-studio/pull/46#pullrequestreview-5909265708)
+verified the four fixes above (their threads resolved) and found one P3,
+fixed in `48fbbf5`: a valid one-node graph with no coordinates anywhere fell
+through the `nodes.length > 1` guard and was reported as `partial`
+("文档保存的坐标；1 个没有坐标的节点排在旁边"), although `placeNodes` simply puts
+the node at the origin. `drawingOrigin` has a new kind, `single`, which
+claims no engine; the panel says "没有保存坐标，唯一的节点放在原点". An empty
+graph is rejected by validation (`EMPTY`). A pure case (no coordinates,
+source position, project position, two nodes) and a simulated-DOM case in
+both languages fail on `1ac58d6`.
+
+Validation, run locally on linux-x64, Node 22.23.4, on the tree of
+`48fbbf5`: `npm run typecheck`, `npm run check:types`, `npm run lint`,
+`npm run format:check` passed; `npm test` 442 tests in 42 files passed;
+`npm run check:export` 31/31 passed with the 236 golden frames matching (no
+`--update`); `npm run check:browser` 77/77 passed in Chromium 153.0.8010.12
+(no local baseline; `--update-reference` not used). No GitHub Actions
+workflow was added, dispatched or rerun.
+
 ## Review evidence
 
 Ran locally on linux-x64, Node 22.23.4, at `73af432`: `npm run typecheck`,
@@ -834,3 +1024,13 @@ rerun.
 | 2026-11-15 | T1                                            | —   | — (branch `8c14f13`)                    | `examples/manifest.json`; buttons rendered from it                                               |
 | 2026-11-15 | T3                                            | —   | — (branch `9117a8b`)                    | Diagnostics worded by key; 7,926 messages and fixes identical                                    |
 | 2026-11-15 | T4                                            | —   | —                                       | Diagram kinds and layout tables repaired; architecture updated                                   |
+| 2026-11-15 | PR 5 merged                                   | #45 | `cb532f9`                               | Squash of `26fd0fd` onto `ad49ba5`; tree identical to the reviewed head                          |
+| 2026-11-15 | W4                                            | —   | — (branch `3207c4a`)                    | One heading in the layout panel                                                                  |
+| 2026-11-15 | Core: `autoEngine`, `strategyEngine`          | —   | — (branch `7c196a1`)                    | One rule for the engine a strategy draws with; golden frames identical                           |
+| 2026-11-15 | W1                                            | —   | — (branch `6ab1cef`)                    | Panel shows only the settings the strategy reads (`ENGINE_PARAMETERS`)                           |
+| 2026-11-15 | W2                                            | —   | — (branch `b6c6b6f`)                    | "当前画面" line from `drawingOrigin`; manual renamed                                             |
+| 2026-11-15 | W3                                            | —   | — (branch `01aad10`)                    | `layoutFit`: suitability marked in the menu and worded under it                                  |
+| 2026-11-15 | W5                                            | —   | — (branch `7ef9ad2`)                    | Data source first at ≤ 840 px; example buttons of one height                                     |
+| 2026-11-15 | #46 review, P2 ×2                             | #46 | — (branch `cfc2b5e`)                    | Provenance from coordinates, not the stored type; `instant` beside `untimed`                     |
+| 2026-11-15 | #46 review, P2 and P3                         | #46 | — (branch `eab487d`, `87f1f42`)         | Source card first in the document, focus follows the layout; one h2 in the summary               |
+| 2026-11-15 | #46 re-review, P3                             | #46 | — (branch `48fbbf5`)                    | A lone node without coordinates is `single`, not `partial`                                       |

@@ -141,9 +141,40 @@ const english: Record<string, string> = {
   '跳转至分镜 ': 'Jump to shot ',
   '分镜 ': 'Shot ',
   '，分镜 ': ', shot ',
-  '布局 · 预览后应用': 'Layout · Preview before applying',
   策略: 'Strategy',
-  '手动 · 保留微调': 'Manual · Keep adjustments',
+  '保留当前画面 · 手动微调': 'Keep the current picture · Adjust by hand',
+  '当前画面：': 'Current picture: ',
+  '保留当前画面，不移动任何节点。': 'Keeps the current picture; no node moves.',
+  '将使用：': 'Will use: ',
+  '适合任何图。': 'Suits any graph.',
+  '适合任何图：按节点在文件中的顺序排列，不看关系。':
+    'Suits any graph: nodes follow their order in the file; relations are not used.',
+  '适合：节点带有日期，按时间排开。': 'Suits this graph: nodes have dates and are placed in time.',
+  '不适合：没有节点带日期，将改画为树。':
+    'Does not suit this graph: no node has a date, so it is drawn as a tree.',
+  '不适合：所有日期都在同一时间，没有可排开的时间范围，将改画为树。':
+    'Does not suit this graph: every date is at the same time, so there is no range to place nodes along and it is drawn as a tree.',
+  '适合：关系构成树，没有环。': 'Suits this graph: the relations form a tree, without cycles.',
+  '不适合：关系有环，将沿生成树排布，其余关系不参与定位。':
+    'Does not suit this graph: the relations have cycles, so nodes follow a spanning tree and the other relations place nothing.',
+  '适合：关系有方向且没有回路。':
+    'Suits this graph: the relations are directed and have no cycles.',
+  '不适合：有方向的关系形成回路，回路中的节点会排在同一层。':
+    'Does not suit this graph: directed relations form cycles, and the nodes of a cycle share one level.',
+  '适合：关系有方向；回路中返回的关系不参与分层。':
+    'Suits this graph: the relations are directed; relations that loop back do not set the levels.',
+  '不适合：多数关系没有方向，层次只能由连接推断。':
+    'Does not suit this graph: most relations have no direction, so levels can only be inferred from connections.',
+  '不适合：图中没有关系，节点会排成紧凑的一组。':
+    'Does not suit this graph: it has no relations, so the nodes are packed into a block.',
+  '（不适合此图）': ' (does not suit this graph)',
+  '已应用：': 'Applied: ',
+  '载入时自动排布：': 'Arranged on load: ',
+  文档保存的坐标: 'Coordinates saved in the document',
+  '没有保存坐标，唯一的节点放在原点': 'No coordinates saved; the only node is placed at the origin',
+  '文档保存的坐标；': 'Coordinates saved in the document; ',
+  ' 个没有坐标的节点排在旁边': ' nodes without coordinates placed beside them',
+  '，并有手动微调': ', with manual adjustments',
   '自动 · 按结构选择': 'Auto · Chosen from structure',
   '力导向 · 聚类': 'Force-directed · Clustered',
   '分层 · 自上而下': 'Layered · Top to bottom',
@@ -184,6 +215,8 @@ const english: Record<string, string> = {
   '（节点过多，改用网格）': ' (too many nodes; grid instead)',
   '（没有节点带日期，时间轴退回为树）':
     ' (no node has a date, so the timeline falls back to a tree)',
+  '（所有日期都在同一时间，没有时间范围，时间轴退回为树）':
+    ' (every date is at the same time, so there is no time range and the timeline falls back to a tree)',
   '临时预览 · 尚未保存。请应用或取消；可撤销已应用布局。':
     'Temporary preview · Not saved. Apply or cancel; applied layouts can be undone.',
   '静态确定性布局 · 保留 = 不移动；填补 = 仅缺失；重排 = 移动未锁定节点。自动 = 按图的结构选择策略。':

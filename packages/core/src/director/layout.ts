@@ -1,6 +1,6 @@
 import type { VisualGraph } from '../../types/visual-graph.js';
-import { autoLayout, runLayoutEngine } from './layout-engines.js';
-import { LAYOUT_DEFAULTS, type LayoutEngine } from '../project-layout.js';
+import { AUTO_LAYOUT_NODE_LIMIT, chooseLayoutEngine, runLayoutEngine } from './layout-engines.js';
+import { LAYOUT_DEFAULTS, type LayoutEngine, type LayoutType } from '../project-layout.js';
 import type { DiagramKind } from '../style.js';
 
 /** The layout a kind of diagram is drawn with; a network chooses by structure. */
@@ -12,6 +12,26 @@ export const DIAGRAM_ENGINE: Readonly<Record<DiagramKind, LayoutEngine | null>> 
   timeline: 'timeline',
 });
 import { roundPositionCoordinate } from './seeded-layout.js';
+import { hasTimes, timeAxis } from '../graph/time-axis.js';
+
+/**
+ * The engine an automatic drawing uses, and why: the engine of the declared
+ * diagram kind, else a grid for a graph too large to arrange, else the
+ * engine its structure suggests. The player's drawing of a document without
+ * coordinates, the `auto` strategy and the workspace's description of both
+ * read this one rule.
+ */
+export function autoEngine(graph: Pick<VisualGraph, 'nodes' | 'edges' | 'diagram'>): {
+  engine: LayoutEngine;
+  reason: 'diagram' | 'size' | 'structure';
+} {
+  const declared = DIAGRAM_ENGINE[graph.diagram ?? 'network'];
+  if (declared) return { engine: declared, reason: 'diagram' };
+  return {
+    engine: chooseLayoutEngine(graph),
+    reason: graph.nodes.length > AUTO_LAYOUT_NODE_LIMIT ? 'size' : 'structure',
+  };
+}
 import { anchorToTime } from './time-anchor.js';
 
 type Position = { x: number; y: number };
@@ -27,16 +47,72 @@ export function structuralLayout(
   graph: Pick<VisualGraph, 'nodes' | 'edges' | 'diagram'>,
   seed = 0,
 ): Map<string, Position> {
-  const engine = DIAGRAM_ENGINE[graph.diagram ?? 'network'];
-  const arranged = engine
-    ? runLayoutEngine(graph, engine, { seed, ...LAYOUT_DEFAULTS })
-    : autoLayout(graph, { seed });
+  const arranged = runLayoutEngine(graph, autoEngine(graph).engine, { seed, ...LAYOUT_DEFAULTS });
   return new Map(
     [...arranged].map(([id, p]) => [
       id,
       { x: roundPositionCoordinate(p.x) || 0, y: roundPositionCoordinate(p.y) || 0 },
     ]),
   );
+}
+
+/**
+ * The engine that actually draws when `chosen` is asked for: the timeline
+ * engine draws a tree when the nodes make no time axis, either because none
+ * has a time (`untimed`) or because all share one (`instant`).
+ */
+export function drawnEngine<R extends string | null>(
+  nodes: Pick<VisualGraph, 'nodes'>['nodes'],
+  chosen: { engine: LayoutEngine; reason: R },
+): { engine: LayoutEngine; reason: R | 'untimed' | 'instant' } {
+  if (chosen.engine !== 'timeline' || timeAxis(nodes)) return chosen;
+  return { engine: 'tree', reason: hasTimes(nodes) ? 'instant' : 'untimed' };
+}
+
+/**
+ * How `layoutGraph` arrives at a document's drawing, so the workspace can say
+ * what drew the picture:
+ * - `strategy`: the project stores a strategy other than `manual` and a
+ *   coordinate for every node, which is what applying a strategy writes; a
+ *   stored type without those coordinates did not draw the picture;
+ * - `structure`: there are no coordinates, so `autoEngine` drew it (a
+ *   timeline without an axis as a tree, as `drawnEngine` says);
+ * - `single`: no coordinates and a single node, which is simply placed at
+ *   the origin (no engine runs);
+ * - `coordinates`: every node has stored coordinates (source or project);
+ * - `partial`: some nodes have coordinates and `missing` are placed beside them.
+ */
+export type DrawingOrigin =
+  | { kind: 'strategy'; type: Exclude<LayoutType, 'manual'> }
+  | {
+      kind: 'structure';
+      engine: LayoutEngine;
+      reason: ReturnType<typeof autoEngine>['reason'] | 'untimed' | 'instant';
+    }
+  | { kind: 'single' }
+  | { kind: 'coordinates' }
+  | { kind: 'partial'; missing: number };
+export function drawingOrigin(
+  graph: Pick<VisualGraph, 'nodes' | 'edges' | 'project' | 'diagram'>,
+): DrawingOrigin {
+  const type = graph.project?.layout?.type ?? 'manual';
+  const stored = graph.project?.layout?.positions ?? {};
+  // placeNodes ignores the stored type: only the coordinates draw. They are
+  // the strategy's drawing when it wrote one for every node.
+  if (
+    type !== 'manual' &&
+    graph.nodes.length &&
+    graph.nodes.every((n) => Object.hasOwn(stored, n.id))
+  )
+    return { kind: 'strategy', type };
+  const missing = graph.nodes.filter((n) => !n.position && !Object.hasOwn(stored, n.id)).length;
+  // The same test as placeNodes: with no coordinates at all, more than one
+  // node is drawn from the structure and a lone node is put at the origin.
+  if (missing === graph.nodes.length && !Object.keys(stored).length)
+    return graph.nodes.length > 1
+      ? { kind: 'structure', ...drawnEngine(graph.nodes, autoEngine(graph)) }
+      : { kind: 'single' };
+  return missing ? { kind: 'partial', missing } : { kind: 'coordinates' };
 }
 
 /** Stable layout prepared once per document, never advanced by playback. */

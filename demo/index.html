@@ -27,6 +27,22 @@
 </header>
 
 <main class="layout">
+  <!-- First in the document, so reading, focus and narrow-screen order all start with the data source; on wide screens CSS places it atop the right column. -->
+  <div class="source-column">
+    <section class="info-card source-card" aria-labelledby="sourceHeading">
+      <h2 id="sourceHeading" class="card-title"><span class="section-index">03</span>数据来源</h2>
+      <div class="source-buttons" role="group" aria-label="示例数据">
+        <!-- relgraph:examples — buttons rendered from examples/manifest.json by vite.config.mjs -->
+      </div>
+      <label class="dropzone" for="fileInput" id="dropzone">
+        <span class="dropzone-title">导入本地 JSON</span>
+        <span class="dropzone-sub">点击选择，或将文件拖到此处</span>
+      </label>
+      <input id="fileInput" class="sr-only" type="file" accept=".json,application/json">
+      <p class="source-current"><span class="muted-label">当前</span><span id="sourceName">尚未加载</span></p>
+    </section>
+  </div>
+
   <section class="workspace" aria-labelledby="previewHeading">
     <div class="sectionline">
       <div><span class="section-index">01</span><h1 id="previewHeading">导演预览</h1></div>
@@ -97,20 +113,8 @@
   </section>
 
   <aside class="rightbar" aria-label="数据与校验信息">
-    <section class="info-card source-card" aria-labelledby="sourceHeading">
-      <h2 id="sourceHeading" class="card-title"><span class="section-index">03</span>数据来源</h2>
-      <div class="source-buttons" role="group" aria-label="示例数据">
-        <!-- relgraph:examples — buttons rendered from examples/manifest.json by vite.config.mjs -->
-      </div>
-      <label class="dropzone" for="fileInput" id="dropzone">
-        <span class="dropzone-title">导入本地 JSON</span>
-        <span class="dropzone-sub">点击选择，或将文件拖到此处</span>
-      </label>
-      <input id="fileInput" class="sr-only" type="file" accept=".json,application/json">
-      <p class="source-current"><span class="muted-label">当前</span><span id="sourceName">尚未加载</span></p>
-    </section>
 
-    <details id="layoutStrategies" class="info-card"><summary>布局策略 · 预览后应用</summary><section id="layoutStrategyEditor" class="appearance-editor" aria-label="布局策略"></section></details>
+    <details id="layoutStrategies" class="info-card"><summary><h2 class="summary-heading">布局策略 · 预览后应用</h2></summary><section id="layoutStrategyEditor" class="appearance-editor" aria-label="布局策略"></section></details>
     <section id="appearanceEditor" class="info-card appearance-editor" aria-label="画面属性"></section>
     <section class="info-card" aria-labelledby="shotHeading">
       <h2 id="shotHeading" class="card-title">当前分镜</h2>

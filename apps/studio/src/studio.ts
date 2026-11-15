@@ -25,6 +25,7 @@ import {
   blockedLayoutMessage,
   blockedResetMessage,
   createLayoutStrategyView,
+  layoutPanelContext,
   unchangedLayoutMessage,
 } from './layout-strategy-view.js';
 import {
@@ -49,6 +50,7 @@ import {
   anchoredPoint,
   anchorToTime,
   declaresTimeAxis,
+  drawingOrigin,
   layoutGraph,
   offTime,
   placeInTime,
@@ -57,7 +59,7 @@ import {
 } from '@relgraph/core';
 import { frameCount } from '@relgraph/core';
 import type { Bio } from '@relgraph/core';
-import type { DirectorFrameState, VisualGraph } from '@relgraph/core';
+import type { DirectorFrameState, DrawingOrigin, VisualGraph } from '@relgraph/core';
 import {
   createCanvasRenderer,
   FILM_FONT_FACES,
@@ -520,6 +522,8 @@ let currentLayout: ReturnType<typeof layoutGraph> | null = null;
 let originalLayout: ReturnType<typeof layoutGraph> | null = null;
 // The strategy the document was loaded with: Reset restores it with the coordinates.
 let originalLayoutType: LayoutType = 'manual';
+// How the document was drawn when it loaded, for the layout panel (W2).
+let loadedOrigin: DrawingOrigin | null = null;
 let sourceDocument: unknown = null;
 let sourceFilename = 'relgraph.json';
 let activeSourceName = '尚未加载';
@@ -588,7 +592,25 @@ function renderDocumentToolbar(): void {
     canRedo: projectHistory.canRedo,
   });
 }
+/**
+ * Tell the layout panel what drew the picture (W2): a strategy whose
+ * coordinates the project now holds for every node (as Apply writes them),
+ * else how the document was drawn when it loaded, and whether nodes were
+ * moved by hand since. A stored type without those coordinates drew nothing
+ * (#46 review). A pending preview is described by the panel itself.
+ */
+function refreshDrawnOrigin(): void {
+  if (layoutPreview) return;
+  if (!graph || !currentLayout || !originalLayout || !loadedOrigin) {
+    strategyView.drawn(null);
+    return;
+  }
+  const now = drawingOrigin({ ...graph, project: projectHistory.value });
+  if (now.kind === 'strategy') strategyView.drawn(now);
+  else strategyView.drawn(loadedOrigin, layoutHasChanges(currentLayout, originalLayout));
+}
 function refreshUnsavedState(): void {
+  refreshDrawnOrigin();
   const dirty = hasUnsavedChanges();
   if (lastDirtyStatus === dirty) return;
   lastDirtyStatus = dirty;
@@ -693,6 +715,7 @@ function clearStudio(): void {
   // Full document replacement also resets all authoritative mode owners.
   layoutPreview = null;
   strategyView.reset(undefined);
+  strategyView.describe(null);
   strategyView.render(null, undefined, false, loading);
   graph = null;
   projectHistory.reset();
@@ -704,6 +727,7 @@ function clearStudio(): void {
   lastDisplayList = null;
   currentLayout = null;
   originalLayout = null;
+  loadedOrigin = null;
   sourceDocument = null;
   selectedLayoutNode = null;
   dragging = null;
@@ -742,12 +766,14 @@ function applyResult(result: LoadResult, name: string, sourceText?: string, exam
   graph = result.graph;
   sourceDocument = sourceText ? projectSource(JSON.parse(sourceText)) : null;
   projectHistory.reset(graph.project ?? {});
+  strategyView.describe(layoutPanelContext(graph));
   strategyView.reset(graph.project?.layout);
   sourceFilename = /\.json$/i.test(name) ? name : 'relgraph.json';
   currentDetailAt = result.detailAt || (() => undefined);
   currentLayout = layoutGraph(graph);
   originalLayout = new Map([...currentLayout].map(([id, point]) => [id, { ...point }]));
   originalLayoutType = graph.project?.layout?.type ?? 'manual';
+  loadedOrigin = drawingOrigin(graph);
   projectSavepoint.markClean(projectHistory.value, currentLayout);
   renderEditorAvailability(layoutControls, sourceDocument !== null);
   renderer = createCanvasRenderer(canvas, graph, currentLayout, {

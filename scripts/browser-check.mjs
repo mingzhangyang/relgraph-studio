@@ -783,14 +783,21 @@ const baselineFiles = new Set(reference?.frames.map((frame) => frame.file) ?? []
   const { context, page, problems } = await openStudio();
   await check('layout preview, cancel, locks, apply, undo/redo and project reload', async () => {
     await page.evaluate(() => window.renderAt(84));
+    // The panel has one heading, in its summary, open or closed (W4, #46 review).
+    const panelHeading = page.getByRole('heading', { name: '布局策略 · 预览后应用', level: 2 });
+    assert.equal(await panelHeading.count(), 1);
     await page.locator('#layoutStrategies').evaluate((e) => (e.open = true));
+    assert.equal(await panelHeading.count(), 1);
+    assert.equal(await page.locator('#layoutStrategies').getByRole('heading').count(), 1);
     const original = await canvasPng(page),
       firstId = await page.inputValue('#strategyNode');
     await page.selectOption('#strategyType', 'circle');
     await page.selectOption('#strategyMode', 'rearrange');
     await page.fill('#strategySeed', '42');
     await page.fill('#strategySpacing', '188');
-    await page.fill('#strategyIterations', '123');
+    // A circle has no iterations to set (W1): the field is hidden and the
+    // stored value is kept.
+    assert.equal(await page.locator('#strategyIterations').isVisible(), false);
     // The controls are a draft until Preview/Apply. Locking alone must not
     // discard these values or persist them as a completed layout.
     await page.check('#strategyLock');
@@ -799,7 +806,6 @@ const baselineFiles = new Set(reference?.frames.map((frame) => frame.file) ?? []
       ['strategyMode', 'rearrange'],
       ['strategySeed', '42'],
       ['strategySpacing', '188'],
-      ['strategyIterations', '123'],
     ])
       assert.equal(await page.inputValue('#' + id), value, id + ' survives lock');
     await page.click('#strategyPreview');
@@ -826,7 +832,7 @@ const baselineFiles = new Set(reference?.frames.map((frame) => frame.file) ?? []
     assert.equal(project.config.layout.type, 'circle');
     assert.equal(project.config.layout.seed, 42);
     assert.equal(project.config.layout.spacing, 188);
-    assert.equal(project.config.layout.iterations, 123);
+    assert.equal(project.config.layout.iterations, 300);
     assert.ok(project.config.layout.locked.includes(firstId));
     assert.deepEqual(
       project.config.layout.positions[firstId],
@@ -863,6 +869,8 @@ for (const theme of ['light', 'dark'])
       await loadExample(page, example);
       await page.evaluate((f) => window.renderAt(f), example.key === 'biology' ? 156 : 84);
       await page.locator('#layoutStrategies').evaluate((e) => (e.open = true));
+      // Manual has no policy or seed to set (W1); force has both.
+      await page.selectOption('#strategyType', 'force');
       await page.selectOption('#strategyMode', 'rearrange');
       await page.fill('#strategySeed', '42');
       for (const type of ['layered', 'force', 'circle']) {
@@ -916,13 +924,14 @@ for (const theme of ['light', 'dark']) {
       await page.evaluate(() => window.renderAt(60));
       assert.deepEqual(await canvasPng(page), overview, 'frames do not depend on playback history');
       await page.locator('#layoutStrategies').evaluate((e) => (e.open = true));
-      await page.selectOption('#strategyMode', 'rearrange');
-      const note = () => page.locator('#layoutStrategyEditor p.muted').innerText();
+      const note = () => page.locator('#strategyNote').innerText();
       // The player drew this document with auto (the left-to-right flow) and
       // the panel's defaults: asking for either again moves nothing, and the
       // panel says so instead of showing a preview that looks pending.
       for (const type of ['auto', 'flow']) {
         await page.selectOption('#strategyType', type);
+        // The policy is a setting of every strategy but manual (W1).
+        await page.selectOption('#strategyMode', 'rearrange');
         await page.click('#strategyPreview');
         assert.match(await note(), /此布局与当前画面相同/, type);
         assert.equal(await page.locator('#strategyApply').isDisabled(), true, type);
@@ -2069,8 +2078,8 @@ for (const theme of ['dark', 'light']) {
     assert.equal(await page.evaluate(() => window.renderAt(84)), true);
     assert.deepEqual(await canvasPng(page), baseline, 'cancelled preview fully restores positions');
 
-    await page.selectOption('#strategyType', 'manual');
     await page.selectOption('#strategyMode', 'preserve');
+    await page.selectOption('#strategyType', 'manual');
     assert.equal(await page.getAttribute('#saveState', 'data-dirty'), 'false');
 
     await page.click('#layoutToggle');
@@ -2177,6 +2186,112 @@ for (const theme of ['dark', 'light']) {
         fullPage: true,
       });
     }
+    assert.deepEqual(problems, []);
+  });
+  await context.close();
+}
+
+// W5: stacked on a narrow screen, the data source comes first, in the
+// document and so in focus order too; example buttons share one height in
+// both interface languages.
+{
+  const { context, page, problems } = await openStudio({ colorScheme: 'light' });
+  await check('data source first on narrow screens; example buttons of one height', async () => {
+    for (const language of ['zh-CN', 'en']) {
+      await page.selectOption('#languageSelect', language);
+      for (const width of [1440, 840, 390]) {
+        await page.setViewportSize({ width, height: 844 });
+        const geometry = await page.evaluate(() => {
+          const box = (element) => {
+            const r = element.getBoundingClientRect();
+            return { top: r.top + scrollY, left: r.left, right: r.right, height: r.height };
+          };
+          return {
+            source: box(document.querySelector('.source-card')),
+            stage: box(document.querySelector('.stage-shell')),
+            buttons: [...document.querySelectorAll('.source-buttons button')].map(
+              (button) => box(button).height,
+            ),
+            overflow: document.documentElement.scrollWidth - window.innerWidth,
+          };
+        });
+        const where = `${language} at ${width}px`;
+        assert.ok(geometry.buttons.length >= 2, where);
+        assert.ok(
+          Math.max(...geometry.buttons) - Math.min(...geometry.buttons) < 1,
+          `example buttons share one height, ${where}: ${geometry.buttons.join(', ')}`,
+        );
+        if (width > 840)
+          assert.ok(
+            geometry.source.left >= geometry.stage.right,
+            `source in the sidebar, ${where}`,
+          );
+        else
+          assert.ok(
+            geometry.source.top + geometry.source.height <= geometry.stage.top,
+            `source above the preview, ${where}`,
+          );
+        assert.ok(geometry.overflow <= 2, `no horizontal overflow, ${where}`);
+        // The sidebar stays a landmark when its cards join the page grid.
+        assert.equal(await page.getByRole('complementary').count(), 1, where);
+        await page.screenshot({
+          path: join(outputDir, `workspace-source-${language}-${width}.png`),
+        });
+      }
+    }
+    // Visual, reading and focus order agree (#46 review): from the top of
+    // the page, Tab reaches every example button and the file input before
+    // any control of the preview, and moves down the page.
+    await page.selectOption('#languageSelect', 'zh-CN');
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.evaluate(() => {
+      document.activeElement?.blur();
+      scrollTo(0, 0);
+    });
+    const visited = [];
+    for (let i = 0; i < 80; i++) {
+      await page.keyboard.press('Tab');
+      visited.push(
+        await page.evaluate(() => {
+          const element = document.activeElement;
+          return {
+            id: element.id,
+            area: element.closest('.source-card')
+              ? 'source'
+              : element.closest('.workspace')
+                ? 'workspace'
+                : element.closest('.rightbar')
+                  ? 'sidebar'
+                  : 'other',
+            top: element.getBoundingClientRect().top + scrollY,
+          };
+        }),
+      );
+    }
+    const firstWorkspace = visited.findIndex((entry) => entry.area === 'workspace');
+    assert.ok(firstWorkspace > 0, 'Tab reaches the preview');
+    const sourceIds = examples.map((entry) => entry.id).concat('fileInput');
+    for (const id of sourceIds) {
+      const at = visited.findIndex((entry) => entry.id === id);
+      assert.ok(at >= 0 && at < firstWorkspace, `${id} is focused before the preview`);
+    }
+    // One pass down the page: stop where Tab wraps back to the top.
+    const wrap = visited.findIndex(
+      (entry, i) => entry.id && visited.slice(0, i).some((earlier) => earlier.id === entry.id),
+    );
+    const sourceAndPreview = visited
+      .slice(0, wrap < 0 ? visited.length : wrap)
+      .filter((entry) => entry.area !== 'other');
+    assert.ok(
+      sourceAndPreview.some((entry) => entry.area === 'sidebar'),
+      'one pass reaches the sidebar',
+    );
+    for (let i = 1; i < sourceAndPreview.length; i++)
+      if (sourceAndPreview[i].area !== sourceAndPreview[i - 1].area)
+        assert.ok(
+          sourceAndPreview[i].top >= sourceAndPreview[i - 1].top,
+          `focus moves down the page from ${sourceAndPreview[i - 1].id} to ${sourceAndPreview[i].id}`,
+        );
     assert.deepEqual(problems, []);
   });
   await context.close();
