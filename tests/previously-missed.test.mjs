@@ -2,14 +2,23 @@ import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
-import { validateVisualGraph, sceneAtSecond, frameStateAt } from '../packages/core/src/graph/core.ts';
-import { validateBiologyDocument, adaptBiologyDocument } from '../packages/core/src/domains/biology.ts';
+import {
+  validateVisualGraph,
+  sceneAtSecond,
+  frameStateAt,
+} from '../packages/core/src/graph/core.ts';
+import {
+  validateBiologyDocument,
+  adaptBiologyDocument,
+} from '../packages/core/src/domains/biology.ts';
 import biology from '../examples/biology-signaling-synthetic.json' with { type: 'json' };
 
 const graph = {
   domain: 'biology',
   meta: { title: 'Technical test' },
-  nodes: [], edges: [], groups: [],
+  nodes: [],
+  edges: [],
+  groups: [],
   scenes: [
     { id: 'first', title: 'First', durationSec: 0.1, domainAt: 1 },
     { id: 'second', title: 'Second', durationSec: 0.2, domainAt: 2 },
@@ -21,22 +30,33 @@ test('visual graph requires nonempty domain and title strings', () => {
   assert.equal(validateVisualGraph(graph).valid, true);
   for (const value of [undefined, null, 42, '', '  ']) {
     const result = validateVisualGraph({ ...graph, domain: value });
-    assert.ok(result.errors.some(e => e.code === 'GRAPH_DOMAIN' && e.path === 'domain' && e.fix));
+    assert.ok(result.errors.some((e) => e.code === 'GRAPH_DOMAIN' && e.path === 'domain' && e.fix));
     const metaResult = validateVisualGraph({ ...graph, meta: { title: value } });
-    assert.ok(metaResult.errors.some(e => e.code === 'GRAPH_TITLE' && e.path === 'meta.title' && e.fix));
+    assert.ok(
+      metaResult.errors.some((e) => e.code === 'GRAPH_TITLE' && e.path === 'meta.title' && e.fix),
+    );
   }
 });
 
 test('visual graph and biology adapter reject non-finite or non-positive camera zooms', () => {
   for (const zoom of ['not-a-number', NaN, Infinity, -Infinity, -1, 0]) {
     const scenes = [{ ...graph.scenes[0], camera: { zoom } }];
-    assert.ok(validateVisualGraph({ ...graph, scenes }).errors.some(e => e.code === 'CAMERA_ZOOM'));
+    assert.ok(
+      validateVisualGraph({ ...graph, scenes }).errors.some((e) => e.code === 'CAMERA_ZOOM'),
+    );
     const doc = structuredClone(biology);
     doc.presentation[0].camera.zoom = zoom;
-    assert.ok(validateBiologyDocument(doc).errors.some(e => e.code === 'CAMERA_ZOOM'));
-    assert.throws(() => adaptBiologyDocument(doc), e => e.issues?.some(issue => issue.code === 'CAMERA_ZOOM'));
+    assert.ok(validateBiologyDocument(doc).errors.some((e) => e.code === 'CAMERA_ZOOM'));
+    assert.throws(
+      () => adaptBiologyDocument(doc),
+      (e) => e.issues?.some((issue) => issue.code === 'CAMERA_ZOOM'),
+    );
   }
-  assert.equal(validateVisualGraph({ ...graph, scenes: [{ ...graph.scenes[0], camera: { zoom: 1.25 } }] }).valid, true);
+  assert.equal(
+    validateVisualGraph({ ...graph, scenes: [{ ...graph.scenes[0], camera: { zoom: 1.25 } }] })
+      .valid,
+    true,
+  );
 });
 
 test('fractional scene boundaries select the next scene on the exact frame', () => {
@@ -61,19 +81,28 @@ test('pause/restart cannot leave more than one animation frame loop', () => {
   let id = 0;
   let drawCount = 0;
   const env = {
-    requestAnimationFrame(fn) { const token = ++id; jobs.set(token, fn); return token; },
-    cancelAnimationFrame(token) { jobs.delete(token); },
+    requestAnimationFrame(fn) {
+      const token = ++id;
+      jobs.set(token, fn);
+      return token;
+    },
+    cancelAnimationFrame(token) {
+      jobs.delete(token);
+    },
     play: { textContent: '', setAttribute() {} },
     state: { textContent: '' },
-    setFrame() { drawCount += 1; },
+    setFrame() {
+      drawCount += 1;
+    },
     FPS: 24,
     TOTAL_FRAMES: 960,
   };
   const controller = runInNewContext(
     'let animationFrameId=null, playing=false, lastTick=0, position=0;' +
-    'const { requestAnimationFrame, cancelAnimationFrame, play, state, setFrame, FPS, TOTAL_FRAMES }=env;\n' +
-    transport + '\n({setPlaying, tick})',
-    { env }
+      'const { requestAnimationFrame, cancelAnimationFrame, play, state, setFrame, FPS, TOTAL_FRAMES }=env;\n' +
+      transport +
+      '\n({setPlaying, tick})',
+    { env },
   );
   controller.setPlaying(true);
   assert.equal(jobs.size, 1);
