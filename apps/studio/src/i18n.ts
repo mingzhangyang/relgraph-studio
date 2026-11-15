@@ -141,7 +141,6 @@ const english: Record<string, string> = {
   '跳转至分镜 ': 'Jump to shot ',
   '分镜 ': 'Shot ',
   '，分镜 ': ', shot ',
-  '布局 · 预览后应用': 'Layout · Preview before applying',
   策略: 'Strategy',
   '手动 · 保留微调': 'Manual · Keep adjustments',
   '自动 · 按结构选择': 'Auto · Chosen from structure',

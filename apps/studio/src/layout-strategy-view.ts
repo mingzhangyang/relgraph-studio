@@ -75,9 +75,8 @@ export function createLayoutStrategyView(doc: Document, host: HTMLElement, actio
   ): HTMLElementTagNameMap[K] => {
     return uiElement(doc, tag, text);
   };
-  const title = el('h2', '布局 · 预览后应用');
-  title.className = 'card-title';
-  host.append(title);
+  // The disclosure's summary ("布局策略 · 预览后应用") is the panel's one
+  // heading: the panel adds none of its own.
   const select = (id: string, label: string, options: [string, string][]) => {
     const l = el('label', label),
       s = el('select');
