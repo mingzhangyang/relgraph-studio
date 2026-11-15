@@ -1,0 +1,52 @@
+[
+  {
+    "id": "exampleLiterature",
+    "file": "honglou-provisional.relgraph.json",
+    "name": "红楼梦 · 未经原著核实的技术演示",
+    "title": "红楼梦",
+    "subtitle": "文学 · 演示数据"
+  },
+  {
+    "id": "exampleBiology",
+    "file": "biology-egfr-mapk.json",
+    "name": "生物信号 · EGFR–MAPK 经典通路",
+    "title": "生物信号",
+    "subtitle": "EGFR–MAPK · 经典通路"
+  },
+  {
+    "id": "exampleGraph",
+    "file": "bookshop-systems-synthetic.graph.json",
+    "name": "线上书店 · 通用关系合成示例",
+    "title": "线上书店",
+    "subtitle": "通用关系 · 合成数据 · 布局与分镜自动生成",
+    "wide": true
+  },
+  {
+    "id": "exampleTree",
+    "file": "vertebrates-tree-provisional.graph.json",
+    "name": "进化树 · 逐层展开的简化示例",
+    "title": "进化树",
+    "subtitle": "树 · 逐层展开"
+  },
+  {
+    "id": "exampleTimeline",
+    "file": "dynasties-timeline-provisional.graph.json",
+    "name": "朝代更替 · 时间轴简化示例",
+    "title": "朝代更替",
+    "subtitle": "时间轴 · 沿时间演进"
+  },
+  {
+    "id": "exampleMindmap",
+    "file": "reading-club-mindmap-synthetic.graph.json",
+    "name": "读书会 · 思维导图合成示例",
+    "title": "读书会",
+    "subtitle": "思维导图"
+  },
+  {
+    "id": "exampleFlowchart",
+    "file": "order-flowchart-synthetic.graph.json",
+    "name": "订单流程 · 流程图合成示例",
+    "title": "订单流程",
+    "subtitle": "流程图"
+  }
+]

@@ -107,6 +107,7 @@ import { createTranscriptView } from './transcript-view.js';
 import { createWorkspaceShellView } from './workspace-shell-view.js';
 import { projectSelectionOverlay } from './selection-overlay-model.js';
 import { createSelectionOverlayView } from './selection-overlay-view.js';
+import { STUDIO_EXAMPLES, type StudioExample } from './examples.js';
 import type { DisplayList } from '@relgraph/render';
 
 declare global {
@@ -143,23 +144,11 @@ const canvas = requiredElement('stage', HTMLCanvasElement),
   restart = requiredElement('restart', HTMLButtonElement),
   scrubber = requiredElement('scrubber', HTMLInputElement),
   fileInput = requiredElement('fileInput', HTMLInputElement),
-  exampleLiterature = requiredElement('exampleLiterature', HTMLButtonElement),
-  exampleBiology = requiredElement('exampleBiology', HTMLButtonElement),
-  // Generic-graph examples: any relations, and the diagram kinds drawn from them.
-  gallery = Object.fromEntries(
-    (
-      [
-        ['exampleGraph', 'bookshop-systems-synthetic', '线上书店 · 通用关系合成示例'],
-        ['exampleTree', 'vertebrates-tree-provisional', '进化树 · 逐层展开的简化示例'],
-        ['exampleTimeline', 'dynasties-timeline-provisional', '朝代更替 · 时间轴简化示例'],
-        ['exampleMindmap', 'reading-club-mindmap-synthetic', '读书会 · 思维导图合成示例'],
-        ['exampleFlowchart', 'order-flowchart-synthetic', '订单流程 · 流程图合成示例'],
-      ] as const
-    ).map(([id, file, name]) => [
-      id,
-      { button: requiredElement(id, HTMLButtonElement), file, name },
-    ]),
-  ),
+  // One button per shipped example, in manifest order.
+  examples = STUDIO_EXAMPLES.map((example) => ({
+    ...example,
+    button: requiredElement(example.id, HTMLButtonElement),
+  })),
   themeToggle = requiredElement('themeToggle', HTMLButtonElement),
   languageSelect = requiredElement('languageSelect', HTMLSelectElement),
   layoutToggle = requiredElement('layoutToggle', HTMLButtonElement),
@@ -209,9 +198,7 @@ const shellView = createWorkspaceShellView(document, {
   sceneCount: $('sceneCount'),
   sourceName: $('sourceName'),
   sourceNote: $('sourceNote'),
-  exampleLiterature,
-  exampleBiology,
-  gallery: Object.fromEntries(Object.entries(gallery).map(([id, entry]) => [id, entry.button])),
+  examples: Object.fromEntries(examples.map((example) => [example.id, example.button])),
   themeToggle,
   dropzone,
 });
@@ -816,10 +803,11 @@ function loadFailure(code: 'LOAD' | 'FILE', error: unknown): LoadResult {
   };
 }
 
-async function loadExample(path: string, name: string): Promise<void> {
+async function loadExample({ id, file, name }: StudioExample): Promise<void> {
+  shellView.markSource(id);
   const serial = beginLoad();
   try {
-    const response = await fetch(path);
+    const response = await fetch(`../examples/${file}`);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const text = await response.text();
     if (serial === requestSerial) applyResult(parseDocument(text), name, text, true);
@@ -827,24 +815,10 @@ async function loadExample(path: string, name: string): Promise<void> {
     if (serial === requestSerial) applyResult(loadFailure('LOAD', error), name, undefined, true);
   }
 }
-exampleLiterature.addEventListener('click', () => {
-  if (!confirmSourceReplacement()) return;
-  shellView.markSource('exampleLiterature');
-  return loadExample(
-    '../examples/honglou-provisional.relgraph.json',
-    '红楼梦 · 未经原著核实的技术演示',
-  );
-});
-exampleBiology.addEventListener('click', () => {
-  if (!confirmSourceReplacement()) return;
-  shellView.markSource('exampleBiology');
-  return loadExample('../examples/biology-egfr-mapk.json', '生物信号 · EGFR–MAPK 经典通路');
-});
-for (const [id, entry] of Object.entries(gallery))
-  entry.button.addEventListener('click', () => {
+for (const example of examples)
+  example.button.addEventListener('click', () => {
     if (!confirmSourceReplacement()) return;
-    shellView.markSource(id);
-    return loadExample(`../examples/${entry.file}.graph.json`, entry.name);
+    return loadExample(example);
   });
 async function loadFile(file: File | undefined): Promise<void> {
   if (!file || !confirmSourceReplacement()) return;
@@ -1414,9 +1388,6 @@ await loadFilmFonts();
 // A film chosen while the fonts loaded was drawn with fallbacks; redraw it.
 if (renderer) setFrame(playback.frame, false);
 if (startupSerial === requestSerial) {
-  shellView.markSource('exampleLiterature');
-  await loadExample(
-    '../examples/honglou-provisional.relgraph.json',
-    '红楼梦 · 未经原著核实的技术演示',
-  );
+  // The first example of the manifest opens the workspace.
+  await loadExample(STUDIO_EXAMPLES[0]);
 }

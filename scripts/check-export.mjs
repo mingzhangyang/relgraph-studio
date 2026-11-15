@@ -28,6 +28,7 @@ import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
+import exampleManifest from '../examples/manifest.json' with { type: 'json' };
 
 const run = promisify(execFile);
 const root = fileURLToPath(new URL('..', import.meta.url));
@@ -44,31 +45,22 @@ const MIN_PSNR = 35;
 // Browser comparison: a pixel differs when a channel moves by more than this.
 const CHANNEL_TOLERANCE = 16;
 
+/** A shipped example's button and file, from examples/manifest.json. */
+function example(id) {
+  const entry = exampleManifest.find((e) => e.id === id);
+  if (!entry) throw new Error(`No example ${id} in examples/manifest.json`);
+  return { button: `#${id}`, file: `examples/${entry.file}` };
+}
+
 const EXAMPLES = [
-  {
-    key: 'literature',
-    file: 'examples/honglou-provisional.relgraph.json',
-    button: '#exampleLiterature',
-  },
-  { key: 'biology', file: 'examples/biology-egfr-mapk.json', button: '#exampleBiology' },
+  { key: 'literature', ...example('exampleLiterature') },
+  { key: 'biology', ...example('exampleBiology') },
   // A generic graph with no coordinates or storyboard: layout, encoding and
   // shots are all derived, so its frames pin the whole automatic pipeline.
-  {
-    key: 'graph',
-    file: 'examples/bookshop-systems-synthetic.graph.json',
-    button: '#exampleGraph',
-  },
+  { key: 'graph', ...example('exampleGraph') },
   // A tree that unfolds level by level, and a timeline with its axis.
-  {
-    key: 'tree',
-    file: 'examples/vertebrates-tree-provisional.graph.json',
-    button: '#exampleTree',
-  },
-  {
-    key: 'timeline',
-    file: 'examples/dynasties-timeline-provisional.graph.json',
-    button: '#exampleTimeline',
-  },
+  { key: 'tree', ...example('exampleTree') },
+  { key: 'timeline', ...example('exampleTimeline') },
 ];
 
 const results = [];

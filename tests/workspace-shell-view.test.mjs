@@ -12,8 +12,7 @@ function makeView(options = {}) {
     sceneCount: id('sceneCount'),
     sourceName: id('sourceName'),
     sourceNote: id('sourceNote'),
-    exampleLiterature: id('exampleLiterature'),
-    exampleBiology: id('exampleBiology'),
+    examples: { exampleLiterature: id('exampleLiterature'), exampleBiology: id('exampleBiology') },
     themeToggle: id('themeToggle'),
     dropzone: id('dropzone'),
   });

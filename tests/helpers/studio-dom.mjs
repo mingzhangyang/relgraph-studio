@@ -1,3 +1,5 @@
+import examples from '../../examples/manifest.json' with { type: 'json' };
+
 /**
  * Shared simulation for source-VM and production-bundle integration.
  * Does not substitute for a browser, its event propagation or native rasterization.
@@ -213,13 +215,7 @@ export function createSimulatedStudioDom({
     restart: HTMLButtonElement,
     scrubber: HTMLInputElement,
     fileInput: HTMLInputElement,
-    exampleLiterature: HTMLButtonElement,
-    exampleBiology: HTMLButtonElement,
-    exampleGraph: HTMLButtonElement,
-    exampleTree: HTMLButtonElement,
-    exampleTimeline: HTMLButtonElement,
-    exampleMindmap: HTMLButtonElement,
-    exampleFlowchart: HTMLButtonElement,
+    ...Object.fromEntries(examples.map(({ id }) => [id, HTMLButtonElement])),
     themeToggle: HTMLButtonElement,
     languageSelect: HTMLSelectElement,
     layoutToggle: HTMLButtonElement,

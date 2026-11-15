@@ -1,17 +1,24 @@
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
+import examples from './examples/manifest.json' with { type: 'json' };
 
-// Keep the shipped examples as files: users can inspect and load them as JSON.
-const exampleFiles = [
-  'honglou-provisional.relgraph.json',
-  'biology-egfr-mapk.json',
-  'bookshop-systems-synthetic.graph.json',
-  'vertebrates-tree-provisional.graph.json',
-  'dynasties-timeline-provisional.graph.json',
-  'reading-club-mindmap-synthetic.graph.json',
-  'order-flowchart-synthetic.graph.json',
-];
+const EXAMPLE_SLOT = /<!-- relgraph:examples\b[^>]*-->/g;
+const escapeHtml = (text) =>
+  String(text).replace(
+    /[&<>"']/g,
+    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
+  );
+/** The example buttons of the data-source card, one per manifest entry. */
+function exampleButtons() {
+  return examples
+    .map(
+      (e) =>
+        `<button id="${escapeHtml(e.id)}"${e.wide ? ' class="source-wide"' : ''} type="button" aria-pressed="false">` +
+        `<b>${escapeHtml(e.title)}</b><small>${escapeHtml(e.subtitle)}</small></button>`,
+    )
+    .join('\n        ');
+}
 
 export default defineConfig({
   base: './',
@@ -39,14 +46,25 @@ export default defineConfig({
   },
   plugins: [
     {
+      // examples/manifest.json is the one list of shipped examples: it fills the
+      // data-source card here, and the studio and the build read the same file.
+      name: 'example-buttons',
+      transformIndexHtml(html) {
+        const slots = html.match(EXAMPLE_SLOT)?.length ?? 0;
+        if (slots !== 1) throw new Error(`Expected one example slot in the page, found ${slots}`);
+        return html.replace(EXAMPLE_SLOT, exampleButtons());
+      },
+    },
+    {
+      // Keep the shipped examples as files: users can inspect and load them as JSON.
       name: 'include-example-documents',
       apply: 'build',
       async generateBundle() {
-        for (const filename of exampleFiles) {
+        for (const { file } of examples) {
           this.emitFile({
             type: 'asset',
-            fileName: `examples/${filename}`,
-            source: await readFile(new URL(`./examples/${filename}`, import.meta.url)),
+            fileName: `examples/${file}`,
+            source: await readFile(new URL(`./examples/${file}`, import.meta.url)),
           });
         }
       },
