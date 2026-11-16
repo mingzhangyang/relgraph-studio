@@ -3,7 +3,7 @@
 Status: **open** · baseline `main` at `73af432` · reviewed 2026-11-12 ·
 PR 1 merged as `a2589bf`, PR 2 as `682dbbd` and PR 1b as `a63875c` on 2026-11-13,
 PR 3 as `ca0edd8` and PR 4 as `ad49ba5` on 2026-11-14,
-PR 5 as `cb532f9` on 2026-11-15
+PR 5 as `cb532f9` and PR 6 as `62103bb` on 2026-11-15
 
 This is the tracking document for the work that came out of reviewing
 [#38](https://github.com/mingzhangyang/relgraph-studio/pull/38) (generic graphs,
@@ -38,8 +38,8 @@ The repository rules in [AGENTS.md](../AGENTS.md) apply to every step:
 | 3   | Core structure            | S1–S3 | Must stay identical                         | ☑ [#43](https://github.com/mingzhangyang/relgraph-studio/pull/43) merged as `ca0edd8` (2026-11-14); golden frames identical     |
 | 4   | Render structure          | S4–S6 | Must stay identical                         | ☑ [#44](https://github.com/mingzhangyang/relgraph-studio/pull/44) merged as `ad49ba5` (2026-11-14); display lists identical     |
 | 5   | Tooling and docs          | T1–T4 | Not affected                                | ☑ [#45](https://github.com/mingzhangyang/relgraph-studio/pull/45) merged as `cb532f9` (2026-11-15); tree identical to `26fd0fd` |
-| 6   | Workspace UI              | W1–W5 | Not affected                                | ◐ implemented on branch `claude/workspace-ui-w1-w5` from `cb532f9`; golden frames identical                                     |
-| 7   | Film frame refinement     | V1–V4 | Regenerated, with before/after frames       | ☐ not started                                                                                                                   |
+| 6   | Workspace UI              | W1–W5 | Not affected                                | ☑ [#46](https://github.com/mingzhangyang/relgraph-studio/pull/46) merged as `62103bb` (2026-11-15); tree identical to `afd6679` |
+| 7   | Film frame refinement     | V1–V4 | Regenerated, with before/after frames       | ◐ implemented on branch `claude/film-frame-v1-v4` from `62103bb`; 166 golden hashes regenerated                                 |
 
 PR 1 comes first because its items are user-visible defects. PRs 3 and 4 come
 before the UI work so that PR 6 and PR 7 build on the split modules instead of
@@ -266,16 +266,16 @@ No behaviour change; golden hashes and browser baselines identical.
 Each item changes pixels: regenerate the baselines and include before/after
 frames in both themes.
 
-- [ ] **V1 · Label rules per diagram kind.** In a tree, inner labels land left
+- [x] **V1 · Label rules per diagram kind.** In a tree, inner labels land left
       of some nodes and below others because they use the network's free-side
       search.
-- [ ] **V2 · Timeline label scale.** Labels inside bars are 13 px; labels that
+- [x] **V2 · Timeline label scale.** Labels inside bars are 13 px; labels that
       do not fit are set outside at 16–19 px and bold, so the shortest spans read
       loudest.
-- [ ] **V3 · Flowchart relations.** Neutral grey strokes have low contrast,
+- [x] **V3 · Flowchart relations.** Neutral grey strokes have low contrast,
       the "否，重试" tag sits away from its relation, and a long return passes
       under an unrelated step.
-- [ ] **V4 · Legend size.** At 12 px it is the smallest text in the frame
+- [x] **V4 · Legend size.** At 12 px it is the smallest text in the frame
       (about 9 px in the workspace preview).
 
 ### PR 1 · as implemented
@@ -982,6 +982,104 @@ Validation, run locally on linux-x64, Node 22.23.4, on the tree of
 (no local baseline; `--update-reference` not used). No GitHub Actions
 workflow was added, dispatched or rerun.
 
+### PR 6 · merged
+
+#46 merged as `62103bb` on 2026-11-15: a squash onto `cb532f9`, which `main`
+had not moved from. Its tree (`6ba1d33`) is identical to that of the reviewed
+head `afd6679`.
+
+### PR 7 · as implemented
+
+Branch `claude/film-frame-v1-v4` from `62103bb`, one commit per item. Before
+coding, `npm run check:browser -- --update-reference` captured a local
+browser baseline at `62103bb` (22 frames, Chromium 153.0.8010.12), kept for
+the comparison below.
+
+- **V1 · Label rules per diagram kind** (`7a7b4ae`). A tree's derived style
+  declares `labelSides: 'tree'`. The label pass reads each node's role from
+  the whole tree and the direction it grows from the drawing (`treeReading`
+  in `packages/render/src/compose/labels.ts`): a leaf is labelled ahead of
+  its node, the root behind it, an inner node across the growth (below a
+  sideways tree), ending where the node ends so it stays clear of the
+  relations to its children; then the other side across, the same two
+  centred, and the sides along the growth last (`treePlaces`). Roles come
+  from the full graph, so an inner node shown before its children keeps its
+  side; the "neighbour's name" penalty does not apply, since the side is how
+  a reader pairs label and node. An authored `textPosition` still wins;
+  networks, mind maps (labels inside boxes) and flowcharts are unchanged.
+  `ComposeOptions.graph` now includes `edges`; `FrameContext` exposes
+  `positions`. In the vertebrates tree every leaf is labelled right, the root
+  left, and seven of eight inner nodes below (Mammalia above, where below would
+  cross its parent's relation); before, inner labels were left or below.
+- **V2 · Timeline label scale** (`4d9f7e2`). `SPAN_LABEL` (13, weight 500,
+  `packages/render/src/importance.ts`) is the size and weight of a span's
+  words inside its bar and beside it; before, a span too short to hold its
+  name was labelled at its importance size (16–19, bold). Points keep the
+  importance scale.
+- **V3 · Flowchart relations** (`3fa605f`). A flowchart's derived style
+  declares `edgeContrast: 'strong'` and `returns: 'over'`. Neutral relations
+  take the new theme colour `edge.strong` (light `#5a6b74`, dark `#b4c9ce`)
+  at 92 % presence: at least 3.7:1 against every paper tone of both themes,
+  where the plain neutral at 66 % gave 1.8:1 on the light paper.
+  `relationLayout(view, points, style)` finds the returns (relations against
+  the way most relations advance, in a drawing that advances sideways) and
+  routes each up out of its step, over every step between its ends and down
+  into the top of its target, with its tag on the crossing: "否，重试" now
+  sits on its line, and the relation it pairs with is a plain elbow again.
+  The style argument is required, so no caller can silently skip the rule.
+  The example's "long return" was not reproduced at `62103bb` (its long
+  relation, 通知缺货 → 结束, runs forward below the steps); a synthetic
+  five-step flow with a return over two steps covers it.
+- **V4 · Legend size** (`c2904e0`). `LEGEND` (`compose/legend.ts`) sets the
+  legend at 14 (720p units; 21 px at 1080p, about 10.5 px in the workspace
+  preview), above the scene label and group names (13); marks, swatch and
+  plate grow with it.
+
+Tests: `tests/film-frame.test.mjs`, pure (composed display lists): V1 roles
+and growth (sideways, turned, mirrored), the side per role on the whole tree,
+stability while the tree unfolds, networks and authored sides; V2 one font
+for every span label, inside and beside, and the importance scale off the
+axis; V3 the 3:1 contrast in both themes and unchanged network strokes, the
+retry route and tag, and a long return clear of the steps it passes; V4 the
+legend size against the scene label and its plate. The V1, V2 and V3 cases
+fail on the commit before each item; the V4 case imports `LEGEND`, which
+does not exist before it, and its size assertion fails on 12.
+`tests/compose-passes.test.mjs` and `tests/style-constants.test.mjs` pass
+the style to `relationLayout`.
+
+Golden frames (`examples/golden-frames.json`, regenerated with
+`npm run check:export -- --update` after each item; 166 of 236 change in
+all, literature and biology 62 unchanged):
+
+| Item | Changed hashes | Which                                                                                  |
+| ---- | -------------- | -------------------------------------------------------------------------------------- |
+| V1   | 58             | Tree: all 58 (both themes, every shot)                                                 |
+| V2   | 6              | Timeline shot 13 (transition 878, mid 918, last 971), both themes                      |
+| V3   | 0              | No golden example is a flowchart                                                       |
+| V4   | 108            | Graph: all 40; timeline: 68 of 76 (shots 1–2 show one kind and draw no legend; 8 kept) |
+
+Browser baselines: `npm run check:browser` on the final tree against the
+`62103bb` baseline passed 79/79 (the two baseline comparisons ran);
+`--update-reference` then saved 22 frames byte-identical to the `62103bb`
+ones. The baseline holds only literature and biology mid-shot frames, which
+draw neither a tree, a timeline, a flowchart nor a legend.
+
+Before/after frames: every mid-shot and last frame of the tree, timeline,
+flowchart, bookshop and mind-map examples, both themes, 1080p, rendered with
+the skia backend from builds of `62103bb` and `c2904e0` (94 pairs): tree
+22/22, timeline 24/28, flowchart 16/18 and bookshop 16/16 differ; mind map
+0/10. Side-by-side pairs of the last frames (bookshop shot 2) in both themes
+accompany the PR.
+
+Validation, run locally on linux-x64, Node 22.23.4, on the tree of
+`c2904e0`: `npm run typecheck`, `npm run check:types`, `npm run lint`,
+`npm run format:check` passed; `npm test` 452 tests in 43 files passed;
+`npm run check:export` 31/31 passed with the 236 regenerated golden frames
+matching (no `--update` on this run); `npm run check:browser` 79/79 passed
+in Chromium 153.0.8010.12 against the `62103bb` baseline, then 77/77 with
+`--update-reference`. No GitHub Actions workflow was added, dispatched or
+rerun.
+
 ## Review evidence
 
 Ran locally on linux-x64, Node 22.23.4, at `73af432`: `npm run typecheck`,
@@ -1034,3 +1132,8 @@ rerun.
 | 2026-11-15 | #46 review, P2 ×2                             | #46 | — (branch `cfc2b5e`)                    | Provenance from coordinates, not the stored type; `instant` beside `untimed`                     |
 | 2026-11-15 | #46 review, P2 and P3                         | #46 | — (branch `eab487d`, `87f1f42`)         | Source card first in the document, focus follows the layout; one h2 in the summary               |
 | 2026-11-15 | #46 re-review, P3                             | #46 | — (branch `48fbbf5`)                    | A lone node without coordinates is `single`, not `partial`                                       |
+| 2026-11-15 | PR 6 merged                                   | #46 | `62103bb`                               | Squash of `afd6679` onto `cb532f9`; tree identical to the reviewed head                          |
+| 2026-11-16 | V1                                            | —   | — (branch `7a7b4ae`)                    | Tree labels by role; 58 tree golden hashes regenerated                                           |
+| 2026-11-16 | V2                                            | —   | — (branch `4d9f7e2`)                    | One size for span labels; 6 timeline golden hashes regenerated                                   |
+| 2026-11-16 | V3                                            | —   | — (branch `3fa605f`)                    | Strong flowchart strokes; returns over the steps; golden frames unchanged                        |
+| 2026-11-16 | V4                                            | —   | — (branch `c2904e0`)                    | Legend at 14; 108 golden hashes regenerated; browser baseline identical                          |
