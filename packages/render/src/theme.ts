@@ -24,7 +24,14 @@ export const VIDEO_THEMES = Object.freeze({
     groupLabel: 'e6',
     legendPlate: '#111d2dcc',
     legendText: '#aebdc3',
-    edge: { highlight: '#f0c99b', physical: '#8aaab5', special: '#d3b783', plain: '#9ebac0' },
+    edge: {
+      highlight: '#f0c99b',
+      physical: '#8aaab5',
+      special: '#d3b783',
+      plain: '#9ebac0',
+      // Neutral relations a reader follows (`edgeContrast: 'strong'`).
+      strong: '#b4c9ce',
+    },
     nodeFill: '#14212f',
     labelHalo: '#0f1a27',
     labelActive: '#f2eee4',
@@ -60,7 +67,13 @@ export const VIDEO_THEMES = Object.freeze({
     groupLabel: 'f0',
     legendPlate: '#f6f1e6d9',
     legendText: '#5c6973',
-    edge: { highlight: '#b5722c', physical: '#5d8696', special: '#a57e3c', plain: '#8197a0' },
+    edge: {
+      highlight: '#b5722c',
+      physical: '#5d8696',
+      special: '#a57e3c',
+      plain: '#8197a0',
+      strong: '#5a6b74',
+    },
     nodeFill: '#fffdf8',
     labelHalo: '#f8f3ea',
     labelActive: '#1d2733',
@@ -91,11 +104,15 @@ const isThemeName = (name: string): name is ThemeName => Object.hasOwn(VIDEO_THE
 export const themeFor = (name: unknown): VideoTheme =>
   typeof name === 'string' && isThemeName(name) ? VIDEO_THEMES[name] : VIDEO_THEMES.dark;
 
-/** Resolve a domain style's semantic edge stroke to this palette. */
-export function edgePaint(theme: VideoTheme, stroke: EdgeStroke): string {
+/**
+ * Resolve a domain style's semantic edge stroke to this palette. Under
+ * `strong` contrast the plain neutral is the strong one, for the stroke and
+ * for its legend swatch alike.
+ */
+export function edgePaint(theme: VideoTheme, stroke: EdgeStroke, contrast?: 'strong'): string {
   if (stroke === 'physical') return theme.edge.physical;
   if (stroke === 'regulatory') return theme.edge.special;
-  return theme.edge.plain;
+  return contrast === 'strong' ? theme.edge.strong : theme.edge.plain;
 }
 
 const channels = (hex: string): [number, number, number] => [

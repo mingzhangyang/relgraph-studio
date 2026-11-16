@@ -1,5 +1,11 @@
-import { edgeAppearance, edgeStyleFor, LINE_DASH, localize } from '@relgraph/core';
-import type { ProjectedVisualGraph } from '@relgraph/core';
+import {
+  edgeAppearance,
+  edgeStyleFor,
+  feedbackRelations,
+  LINE_DASH,
+  localize,
+} from '@relgraph/core';
+import type { DomainStyle, ProjectedVisualGraph, VisualGraph } from '@relgraph/core';
 import type { DisplayItem, FontRef, Paint } from '../display-list.js';
 import { nodeGlyphRayDistance } from '../node-geometry.js';
 import type { RectIndex } from '../spatial.js';
@@ -61,15 +67,74 @@ export interface RelationLayout {
   degree: Map<string, number>;
   /** A node's loops, in id order, so that each has its own radius. */
   loopsOf: Map<string, string[]>;
+  /** Relations that run against the flow, routed over the steps (`returns`). */
+  returns: Set<string>;
+}
+
+/**
+ * `feedbackRelations` once per graph, not once per frame. It reads the
+ * relations and the author's order of the nodes, so it is kept per pair of
+ * the two lists: a graph updated with either list replaced (reordered
+ * nodes over the same relations, say) is read again. Graphs are not edited
+ * in place; an edit makes new lists.
+ */
+const feedbackCache = new WeakMap<object, WeakMap<object, Set<string>>>();
+function feedbackOf(graph: Pick<VisualGraph, 'nodes' | 'edges'>): Set<string> {
+  let byEdges = feedbackCache.get(graph.nodes);
+  if (!byEdges) feedbackCache.set(graph.nodes, (byEdges = new WeakMap()));
+  let feedback = byEdges.get(graph.edges);
+  if (!feedback) byEdges.set(graph.edges, (feedback = feedbackRelations(graph)));
+  return feedback;
+}
+
+/**
+ * The relations routed as returns: the feedback of the process
+ * (`feedbackRelations`: those that lead back to a step already under way,
+ * by structure and the author's order, never by how many there are or which
+ * way they point), in a drawing that advances sideways, and drawn more
+ * sideways than upright. None without `returns: 'over'`.
+ */
+function returnsOf(
+  view: Pick<ProjectedVisualGraph, 'edges'>,
+  points: ReadonlyMap<string, Point>,
+  style: Pick<DomainStyle, 'returns'>,
+  graph: Pick<VisualGraph, 'nodes' | 'edges'>,
+): Set<string> {
+  const returns = new Set<string>();
+  if (style.returns !== 'over') return returns;
+  const feedback = feedbackOf(graph);
+  if (!feedback.size) return returns;
+  let sideways = 0,
+    upright = 0;
+  for (const edge of view.edges) {
+    const a = points.get(edge.source),
+      b = points.get(edge.target);
+    if (!a || !b || edge.source === edge.target) continue;
+    sideways += Math.abs(b.x - a.x);
+    upright += Math.abs(b.y - a.y);
+  }
+  if (!(sideways >= upright)) return returns;
+  for (const edge of view.edges) {
+    if (!feedback.has(edge.id)) continue;
+    const a = points.get(edge.source),
+      b = points.get(edge.target);
+    if (a && b && Math.abs(b.x - a.x) > Math.abs(b.y - a.y) * 0.35) returns.add(edge.id);
+  }
+  return returns;
 }
 
 export function relationLayout(
   view: Pick<ProjectedVisualGraph, 'nodes' | 'edges'>,
   points: ReadonlyMap<string, Point>,
+  style: Pick<DomainStyle, 'returns'>,
+  graph: Pick<VisualGraph, 'nodes' | 'edges'>,
 ): RelationLayout {
-  // Parallel and reciprocal links get stable, symmetric curve offsets.
+  const returns = returnsOf(view, points, style, graph);
+  // Parallel and reciprocal links get stable, symmetric curve offsets. A
+  // return takes its own route, so the relation it pairs with stays straight.
   const pairs = new Map<string, string[]>();
   for (const edge of view.edges) {
+    if (returns.has(edge.id)) continue;
     const key = [edge.source, edge.target].sort().join('\0');
     const siblings = pairs.get(key) ?? [];
     siblings.push(edge.id);
@@ -116,7 +181,89 @@ export function relationLayout(
       else loopsOf.set(edge.source, [edge.id]);
     }
   for (const loops of loopsOf.values()) loops.sort();
-  return { pairs, pull, spokeAngles, degree, loopsOf };
+  return { pairs, pull, spokeAngles, degree, loopsOf, returns };
+}
+
+/** Where a return crosses: above (-1) or below (1) the steps, and at what height. */
+export interface ReturnRoute {
+  side: -1 | 1;
+  peak: number;
+}
+
+/**
+ * The route of every return, so that none passes through a step it does not
+ * join and no two share a line. A return leaves and arrives upright, so it
+ * crosses on the side where fewer steps stand in the column of its ends
+ * (above when equal), beyond every step between its ends. Shorter returns
+ * are routed first and keep the inside; one that would run along another
+ * moves a lane further out. An authored `curve` only takes a return further
+ * out, and counts before the lanes are resolved.
+ */
+export function returnRoutes(
+  ctx: Pick<FrameContext, 'view' | 'u' | 'config'>,
+  drawnById: ReadonlyMap<string, DrawnNode>,
+  returns: ReadonlySet<string>,
+): Map<string, ReturnRoute> {
+  const routes = new Map<string, ReturnRoute>();
+  if (!returns.size) return routes;
+  const { u } = ctx;
+  const steps = [...drawnById.values()].filter((entry) => entry.visibility > 0);
+  const spans = ctx.view.edges
+    .filter((edge) => returns.has(edge.id))
+    .flatMap((edge) => {
+      const from = drawnById.get(edge.source),
+        to = drawnById.get(edge.target);
+      return from && to ? [{ edge, from, to, reach: Math.abs(to.p.x - from.p.x) }] : [];
+    })
+    .sort((m, n) => m.reach - n.reach || (m.edge.id < n.edge.id ? -1 : 1));
+  const placed: { lo: number; hi: number; side: number; peak: number }[] = [];
+  const lane = u(22);
+  for (const { edge, from, to } of spans) {
+    const lo = Math.min(from.p.x, to.p.x),
+      hi = Math.max(from.p.x, to.p.x);
+    // Steps standing in the way of an upright leg from `end` towards `side`.
+    const blocked = (side: number): number =>
+      [from, to].reduce(
+        (count, end) =>
+          count +
+          steps.filter(
+            (other) =>
+              other !== from &&
+              other !== to &&
+              Math.abs(other.p.x - end.p.x) <= other.geometry.halfWidth + u(6) &&
+              (other.p.y - end.p.y) * side > 0,
+          ).length,
+        0,
+      );
+    const side = blocked(1) < blocked(-1) ? 1 : -1;
+    let edgeOfSteps = side * Math.max(from.p.y * side, to.p.y * side);
+    for (const other of steps)
+      if (other.p.x + other.geometry.halfWidth >= lo && other.p.x - other.geometry.halfWidth <= hi)
+        edgeOfSteps =
+          side *
+          Math.max(edgeOfSteps * side, (other.p.y + side * other.geometry.halfHeight) * side);
+    // A lane out, and room for the turn and the arrowhead that comes back in.
+    // An authored curve only takes the return further out: it is applied
+    // before the lanes are resolved, and never brings it inside the clearance.
+    const curve = Math.max(0, edgeAppearance(ctx.config, edge).curve ?? 0);
+    let peak = edgeOfSteps + side * (lane + u(6) + u(curve));
+    for (let moved = true; moved;) {
+      moved = false;
+      for (const other of placed)
+        if (
+          other.side === side &&
+          other.lo < hi &&
+          other.hi > lo &&
+          Math.abs(other.peak - peak) < lane - 1e-6
+        ) {
+          peak = other.peak + side * lane;
+          moved = true;
+        }
+    }
+    placed.push({ lo, hi, side, peak });
+    routes.set(edge.id, { side, peak });
+  }
+  return routes;
 }
 
 /**
@@ -130,7 +277,9 @@ export function composeRelations(
   layout: RelationLayout,
 ): { items: DisplayItem[]; selection: Selection; labels: EdgeLabel[]; obstacles: RectIndex } {
   const { view, config, style, theme: P, u, sans, cam, spec, locale } = ctx;
-  const { pairs, spokeAngles, degree, loopsOf } = layout;
+  const { pairs, spokeAngles, degree, loopsOf, returns } = layout;
+  const strong = style.edgeContrast === 'strong';
+  const routes = returnRoutes(ctx, drawnById, returns);
   const items: DisplayItem[] = [];
   const selection: Selection = [];
   const edgeLabels: EdgeLabel[] = [],
@@ -155,7 +304,7 @@ export function composeRelations(
             ? to.c
             : highlighted
               ? P.edge.highlight
-              : edgePaint(P, edgeStyle.stroke))),
+              : edgePaint(P, edgeStyle.stroke, style.edgeContrast))),
       // Strength is drawn as weight; a highlighted relation gains one more step.
       width = u(
         custom.width ??
@@ -255,8 +404,9 @@ export function composeRelations(
         dy = b.y - a.y,
         len = Math.hypot(dx, dy);
       if (len < u(1)) continue;
+      const back = routes.get(edge.id);
       const key = [edge.source, edge.target].sort().join('\0');
-      const siblings = pairs.get(key);
+      const siblings = back ? [edge.id] : pairs.get(key);
       if (!siblings) throw new Error('Missing edge pair');
       const order = siblings.indexOf(edge.id) - (siblings.length - 1) / 2;
       const sign = edge.source < edge.target ? 1 : -1;
@@ -264,9 +414,13 @@ export function composeRelations(
       // two nodes are clearly side by side. A pair joined both ways, such as
       // a step and the retry that returns to it, opens into two arcs instead.
       const elbow =
-        style.routing === 'elbow' && siblings.length === 1 && Math.abs(dx) > Math.abs(dy) * 0.35;
-      const ux = elbow ? Math.sign(dx) : dx / len,
-        uy = elbow ? 0 : dy / len;
+        !back &&
+        style.routing === 'elbow' &&
+        siblings.length === 1 &&
+        Math.abs(dx) > Math.abs(dy) * 0.35;
+      // A return leaves its step upright and enters its target from the same side.
+      const ux = back ? 0 : elbow ? Math.sign(dx) : dx / len,
+        uy = back ? back.side : elbow ? 0 : dy / len;
       const sourceRim = nodeGlyphRayDistance(
           from.node,
           { x: ux, y: uy },
@@ -277,7 +431,7 @@ export function composeRelations(
         ),
         targetRim = nodeGlyphRayDistance(
           to.node,
-          { x: -ux, y: -uy },
+          back ? { x: 0, y: back.side } : { x: -ux, y: -uy },
           cam.scale,
           spec,
           style,
@@ -298,11 +452,24 @@ export function composeRelations(
               : width / 2 + u(2.5);
       const rb = targetRim + reach;
       // Glyphs that touch or overlap leave no room for a readable stroke.
-      if ((elbow ? Math.abs(dx) : len) <= ra + rb + u(1)) continue;
+      if (!back && (elbow ? Math.abs(dx) : len) <= ra + rb + u(1)) continue;
       const start = { x: a.x + ux * ra, y: a.y + uy * ra },
-        end = { x: b.x - ux * rb, y: b.y - uy * rb };
+        end = back ? { x: b.x, y: b.y + back.side * rb } : { x: b.x - ux * rb, y: b.y - uy * rb };
       let segments: Segment[];
-      if (elbow) {
+      if (back) {
+        // Out upright, across beyond every step between the two, and back
+        // in upright (`returnRoutes`).
+        const peak = back.peak,
+          way = Math.sign(dx),
+          turn = Math.min(Math.abs(dx) / 3, u(18));
+        const leave = { x: start.x + way * turn, y: peak },
+          arrive = { x: end.x - way * turn, y: peak };
+        segments = [
+          [start, { x: start.x, y: peak }, leave],
+          [leave, { x: (leave.x + arrive.x) / 2, y: peak }, arrive],
+          [arrive, { x: end.x, y: peak }, end],
+        ];
+      } else if (elbow) {
         // Out level, across, in level: two quadratic arcs that meet upright.
         const turn = (start.x + end.x) / 2 + u(custom.curve ?? 0),
           middle = { x: turn, y: (start.y + end.y) / 2 };
@@ -393,6 +560,7 @@ export function composeRelations(
           });
         }
       }
+      // On a return, the middle of its crossing.
       labelAt = pathPoint(segments, 0.5);
       // Where a tag may step aside when it does not fit on the line: across
       // the relation, first to the side it already bows to.
@@ -415,7 +583,7 @@ export function composeRelations(
         });
       items.push({
         type: 'group',
-        alpha: active * (highlighted ? 0.98 : 0.66),
+        alpha: active * (highlighted ? 0.98 : strong ? 0.92 : 0.66),
         items: parts,
       });
     }

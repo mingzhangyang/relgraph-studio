@@ -12,7 +12,7 @@ import {
   DEFAULT_BORDER_WIDTH,
   type GlyphGeometry,
 } from '../node-geometry.js';
-import { importanceStep } from '../importance.js';
+import { importanceStep, SPAN_LABEL } from '../importance.js';
 import type { RectIndex } from '../spatial.js';
 import { mixHex, toneOf } from '../theme.js';
 import { alphaHex, color, type FrameContext, type Selection } from './context.js';
@@ -231,8 +231,8 @@ export function composeNodes(
       geometry.inside ??
       (geometry.shape === 'span'
         ? insideLabel(ctx.nodeLabel(node), 0, ts, {
-            fontSize: custom.fontSize ?? 13,
-            fontWeight: custom.fontWeight,
+            fontSize: custom.fontSize ?? SPAN_LABEL.size,
+            fontWeight: custom.fontWeight ?? SPAN_LABEL.weight,
           })
         : undefined);
     if (

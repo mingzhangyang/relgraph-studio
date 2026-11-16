@@ -95,6 +95,27 @@ export interface DomainStyle {
   /** `target` draws a relation in the colour of the node it leads to. */
   edgeHue?: 'kind' | 'target';
   /**
+   * `tree` sets each label beside a node by its place in the tree instead of
+   * on the side its relations leave free: a leaf ahead of its node, the root
+   * behind it, and every inner node on one side across the growth. It holds
+   * while the drawing grows one way; a tree drawn around a centre keeps the
+   * free-side search.
+   */
+  labelSides?: 'tree';
+  /**
+   * `strong` draws neutral relations in the theme's strong neutral and at
+   * nearly full presence, for diagrams read by following them (flowcharts).
+   */
+  edgeContrast?: 'strong';
+  /**
+   * `over` routes a relation that runs against the flow of the drawing
+   * around the steps it passes: out of its step upright, across above them
+   * (below, when a step stands over one of its ends) and upright into its
+   * target, with its tag on the crossing. It never passes through a step it
+   * does not join, and two returns never share a line.
+   */
+  returns?: 'over';
+  /**
    * The domain time axis of a timeline: its range and world units per unit of
    * time. Span glyphs take their length from it and the axis is drawn from it.
    */
@@ -280,7 +301,14 @@ export function deriveGraphStyle(
           ...(edgeKinds.length < 2 && diagram !== 'flowchart'
             ? { edgeHue: 'target' as const }
             : {}),
-          ...(diagram === 'flowchart' ? { edgeLabels: 'always' as const } : {}),
+          ...(diagram === 'flowchart'
+            ? {
+                edgeLabels: 'always' as const,
+                edgeContrast: 'strong' as const,
+                returns: 'over' as const,
+              }
+            : {}),
+          ...(diagram === 'tree' ? { labelSides: 'tree' as const } : {}),
           ...(axis ? { timeAxis: { from: axis.from, to: axis.to, scale: axis.scale } } : {}),
         }),
   });

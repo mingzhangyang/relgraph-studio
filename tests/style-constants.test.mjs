@@ -98,7 +98,7 @@ test('importance has one scale: glyph radius, bar, held words and labels read it
       drawn,
       held: new Set(),
       obstacles: nodeObstacles(ctx, drawn, ctx.rectIndex()),
-      pull: relationLayout(ctx.view, ctx.points).pull,
+      pull: relationLayout(ctx.view, ctx.points, ctx.style, ctx.graph).pull,
       relations: ctx.rectIndex(),
     },
     ctx.rectIndex(),

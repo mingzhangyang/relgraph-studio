@@ -90,7 +90,8 @@ are then the authoritative input to playback and both rendering backends.
 
 Dependencies inside `packages/core/src` point inward. Graph analysis
 (components, clusters, strongly connected components, the tree a part reads as,
-flow ranks and `diagramStructure`) lives in `graph/analysis.ts`; the time-axis
+flow ranks and the feedback they skip (`feedbackRelations`, which the renderer
+routes as returns), and `diagramStructure`) lives in `graph/analysis.ts`; the time-axis
 model (`timeAxis`, `placeInTime`, `keepsTime`, lane geometry) in
 `graph/time-axis.ts`; the stored strategy, mode and engine names and
 `LAYOUT_DEFAULTS` in `project-layout.ts`, beside the project types. Adapters,

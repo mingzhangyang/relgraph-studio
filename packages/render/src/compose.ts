@@ -48,7 +48,7 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
   const obstacles = nodeObstacles(ctx, drawn, occupied);
   const axis = composeTimeAxis(ctx, occupied);
   const hulls = composeGroups(ctx, drawn, occupied);
-  const layout = relationLayout(ctx.view, ctx.points);
+  const layout = relationLayout(ctx.view, ctx.points, ctx.style, ctx.graph);
   const relations = composeRelations(
     ctx,
     new Map(drawn.map((entry) => [entry.node.id, entry])),

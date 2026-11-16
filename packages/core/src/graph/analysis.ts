@@ -298,14 +298,16 @@ export function ranksOf(p: Prepared, members: string[]): Map<string, number> {
 }
 
 /**
- * Ranks for a process that may loop: relations that lead back to a step
- * already under way are feedback, and are ignored when ranking, so a loop
- * reads as a sequence with one relation returning instead of one tall rank.
+ * The relations of a process that may loop that move it forward, as each
+ * step's list of next steps; the others lead back to a step already under
+ * way and are feedback. Depth-first from the entry points, in the author's
+ * order, so a loop is read the way its author wrote it, whatever its
+ * coordinates. Null when the part has no directed relation.
  */
-export function flowRanks(p: Prepared, members: string[]): Map<string, number> {
+function flowForward(p: Prepared, members: readonly string[]): Map<string, string[]> | null {
   const inside = new Set(members),
     arcs = p.arcs.filter((a) => inside.has(a.source) && inside.has(a.target));
-  if (!arcs.length) return ranksOf(p, members);
+  if (!arcs.length) return null;
   const out = new Map(members.map((id) => [id, [] as string[]])),
     incoming = new Map(members.map((id) => [id, 0]));
   for (const a of arcs) {
@@ -320,8 +322,7 @@ export function flowRanks(p: Prepared, members: string[]): Map<string, number> {
     (a, b) => Math.min(1, incoming.get(a)!) - Math.min(1, incoming.get(b)!) || byOrder(a, b),
   );
   const state = new Map<string, 1 | 2>(),
-    forward = new Map(members.map((id) => [id, [] as string[]])),
-    pending = new Map(members.map((id) => [id, 0]));
+    forward = new Map(members.map((id) => [id, [] as string[]]));
   for (const start of starts) {
     if (state.has(start)) continue;
     const stack: [string, number][] = [[start, 0]];
@@ -335,7 +336,6 @@ export function flowRanks(p: Prepared, members: string[]): Map<string, number> {
       } else if (state.get(next) !== 1) {
         // Not on the current path: a forward relation.
         forward.get(top[0])!.push(next);
-        pending.set(next, pending.get(next)! + 1);
         if (!state.has(next)) {
           state.set(next, 1);
           stack.push([next, 0]);
@@ -343,6 +343,22 @@ export function flowRanks(p: Prepared, members: string[]): Map<string, number> {
       }
     }
   }
+  return forward;
+}
+
+/**
+ * Ranks for a process that may loop: relations that lead back to a step
+ * already under way are feedback, and are ignored when ranking, so a loop
+ * reads as a sequence with one relation returning instead of one tall rank.
+ */
+export function flowRanks(p: Prepared, members: string[]): Map<string, number> {
+  const forward = flowForward(p, members);
+  if (!forward) return ranksOf(p, members);
+  const byOrder = (a: string, b: string): number =>
+    (p.order.get(a) ?? 0) - (p.order.get(b) ?? 0) || compare(a, b);
+  const pending = new Map(members.map((id) => [id, 0]));
+  for (const nexts of forward.values())
+    for (const next of nexts) pending.set(next, pending.get(next)! + 1);
   const ranks = new Map(members.map((id) => [id, 0])),
     ready = members.filter((id) => pending.get(id) === 0).sort(byOrder);
   for (let i = 0; i < ready.length; i++)
@@ -352,6 +368,36 @@ export function flowRanks(p: Prepared, members: string[]): Map<string, number> {
       if (pending.get(next) === 0) ready.push(next);
     }
   return ranks;
+}
+
+/**
+ * The feedback relations of a graph read as a process (`flowRanks`): the
+ * ids of the directed relations that lead back to a step already under way.
+ * It depends on the structure and the author's order alone, never on
+ * coordinates, so the flow layout ranks by it and the renderer routes these
+ * relations as returns, whichever way the drawing runs and however many of
+ * them there are.
+ */
+export function feedbackRelations(graph: LayoutGraph): Set<string> {
+  const p = prepare(graph);
+  const ahead = new Set<string>();
+  for (const members of componentsOf(p)) {
+    const forward = flowForward(p, members);
+    if (forward)
+      for (const [source, nexts] of forward)
+        for (const target of nexts) ahead.add(source + '\0' + target);
+  }
+  const feedback = new Set<string>();
+  for (const edge of graph.edges)
+    if (
+      edge.directed &&
+      edge.source !== edge.target &&
+      p.order.has(edge.source) &&
+      p.order.has(edge.target) &&
+      !ahead.has(edge.source + '\0' + edge.target)
+    )
+      feedback.add(edge.id);
+  return feedback;
 }
 
 /** Where a tree starts: the node nothing points to, else the centre of the part. */

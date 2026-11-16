@@ -37,10 +37,11 @@ export type DetailLookup = (
 export interface ComposeOptions {
   /**
    * The full graph. The frame state is already projected; what is read here
-   * does not depend on the frame: the scene count, the project, and every
-   * node's place in time, to tell whether the drawing keeps a time axis.
+   * does not depend on the frame: the scene count, the project, every node's
+   * place in time, to tell whether the drawing keeps a time axis, and the
+   * relations, to tell a tree's leaves and root before all of it is shown.
    */
-  graph: Pick<VisualGraph, 'scenes' | 'project' | 'nodes'>;
+  graph: Pick<VisualGraph, 'scenes' | 'project' | 'nodes' | 'edges'>;
   positions: ReadonlyMap<string, Point>;
   frame: number;
   fps: number;
@@ -126,6 +127,8 @@ export interface LabelBounds {
 export interface FrameContext {
   readonly state: DirectorFrameState;
   readonly graph: ComposeOptions['graph'];
+  /** World positions of every node of the graph, shown or not. */
+  readonly positions: ReadonlyMap<string, Point>;
   readonly frame: number;
   readonly fps: number;
   readonly measure: TextMeasurer;
@@ -230,6 +233,7 @@ export function frameContext(state: DirectorFrameState, options: ComposeOptions)
   return {
     state,
     graph,
+    positions,
     frame,
     fps,
     measure,

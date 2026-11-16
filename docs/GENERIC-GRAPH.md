@@ -159,12 +159,12 @@ document names the convention with `diagram`; everything else stays the same
 format, the same kernel and the same renderer. Removing the field turns any
 of them back into an ordinary network.
 
-| `diagram`   | Layout     | Nodes                                                                                                                                                                                               | Relations                                                                                           | Derived film                                                                                    |
-| ----------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `tree`      | `tree`     | Glyphs with labels beside them; size by depth; one tone per main branch                                                                                                                             | Elbows without arrowheads, in the child's tone                                                      | Unfolds one level per shot, lighting the branches that have just arrived, then the whole tree   |
-| `mindmap`   | `mindmap`  | Boxes holding their label; the topic in solid colour; one tone per branch                                                                                                                           | As for trees                                                                                        | Topic, main branches, details, then the whole map                                               |
-| `flowchart` | `flow`     | Boxes holding their label: kinds named like `start` or `end` are capsules, kinds named like `decision` or `condition` are decisions, every other step a box; steps are peers, so all share one size | Elbows with arrowheads (directed unless the document says otherwise); every relation label is drawn | Unfolds one rank of the flow per shot (deep flows fold into twelve steps), then the whole chart |
-| `timeline`  | `timeline` | Bars as long as `start`…`end`; points for nodes with only a first appearance                                                                                                                        | Elbows                                                                                              | Travels along the axis: one shot per start, a cursor at the film's present, then the whole axis |
+| `diagram`   | Layout     | Nodes                                                                                                                                                                                               | Relations                                                                                                                                                                                                                                                                                                                                                                                                               | Derived film                                                                                    |
+| ----------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `tree`      | `tree`     | Glyphs with labels beside them by role: leaves ahead, the root behind, inner nodes below; size by depth; one tone per main branch                                                                   | Elbows without arrowheads, in the child's tone                                                                                                                                                                                                                                                                                                                                                                          | Unfolds one level per shot, lighting the branches that have just arrived, then the whole tree   |
+| `mindmap`   | `mindmap`  | Boxes holding their label; the topic in solid colour; one tone per branch                                                                                                                           | As for trees                                                                                                                                                                                                                                                                                                                                                                                                            | Topic, main branches, details, then the whole map                                               |
+| `flowchart` | `flow`     | Boxes holding their label: kinds named like `start` or `end` are capsules, kinds named like `decision` or `condition` are decisions, every other step a box; steps are peers, so all share one size | Elbows with arrowheads (directed unless the document says otherwise) in a strong neutral; every relation label is drawn; a feedback relation (one leading back to a step already under way, as the flow layout reads it) runs round the steps it passes (above them, or below when a step stands over one of its ends), each in its own lane (an authored `curve` only moves it further out), its label on the crossing | Unfolds one rank of the flow per shot (deep flows fold into twelve steps), then the whole chart |
+| `timeline`  | `timeline` | Bars as long as `start`…`end`, labelled at one size inside or beside the bar; points for nodes with only a first appearance                                                                         | Elbows                                                                                                                                                                                                                                                                                                                                                                                                                  | Travels along the axis: one shot per start, a cursor at the film's present, then the whole axis |
 
 | Tree unfolding (dark)                                              | Tree, whole                                              |
 | ------------------------------------------------------------------ | -------------------------------------------------------- |
@@ -394,9 +394,17 @@ name.
 - **Labels** try the side their relations leave free first. Among the
   positions that stay on stage and cover no glyph or text, the one that
   crosses the fewest relations and cannot be read as a neighbour's name wins.
+  A tree (`DomainStyle.labelSides: 'tree'`) labels by role in the whole tree,
+  so a branch keeps its side while the tree unfolds: a leaf ahead of its node,
+  the root behind it, an inner node across the growth (below a tree that
+  grows sideways), ending where the node ends; the other side across comes
+  next. An authored `textPosition` still comes first, and a tree whose
+  relations do not agree on one direction (drawn radially, by force, on a
+  circle or a grid) keeps the free-side search.
 - **Legend**: bottom left of the stage, only kinds that are visible now, only
   when there is more than one. Kinds captioned on their own edges (biology)
-  need no entry.
+  need no entry. Its words are set at 14 (720p units, `LEGEND`), no smaller
+  than the frame's other secondary text.
 - **Ground**: the diagonal hatch is replaced by a quiet dot lattice.
 
 Every length still derives from `FrameSpec`; the 1080p composition of all
@@ -413,8 +421,8 @@ seven examples is exactly the 720p composition scaled by 1.5.
   `square`, `hexagon`, `box`, `capsule` and `decision`. Older projects
   validate unchanged.
 - `VisualGraph` gains optional `diagram`; `VisualNode` optional `tone` and
-  `span`; `DomainStyle` optional `routing`, `edgeLabels`, `edgeHue` and
-  `timeAxis`.
+  `span`; `DomainStyle` optional `routing`, `edgeLabels`, `edgeHue`,
+  `timeAxis`, `labelSides`, `edgeContrast` and `returns`.
 - The kernel no longer rejects `source === target`; the literary and
   biological validators still do.
 - `layoutGraph` now returns a structural layout for documents without any
