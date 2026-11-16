@@ -39,7 +39,7 @@ The repository rules in [AGENTS.md](../AGENTS.md) apply to every step:
 | 4   | Render structure          | S4–S6 | Must stay identical                         | ☑ [#44](https://github.com/mingzhangyang/relgraph-studio/pull/44) merged as `ad49ba5` (2026-11-14); display lists identical     |
 | 5   | Tooling and docs          | T1–T4 | Not affected                                | ☑ [#45](https://github.com/mingzhangyang/relgraph-studio/pull/45) merged as `cb532f9` (2026-11-15); tree identical to `26fd0fd` |
 | 6   | Workspace UI              | W1–W5 | Not affected                                | ☑ [#46](https://github.com/mingzhangyang/relgraph-studio/pull/46) merged as `62103bb` (2026-11-15); tree identical to `afd6679` |
-| 7   | Film frame refinement     | V1–V4 | Regenerated, with before/after frames       | ◐ implemented on branch `claude/film-frame-v1-v4` from `62103bb`; 166 golden hashes regenerated                                 |
+| 7   | Film frame refinement     | V1–V4 | Regenerated, with before/after frames       | ◐ [#47](https://github.com/mingzhangyang/relgraph-studio/pull/47) open, from `62103bb`; 166 golden hashes regenerated           |
 
 PR 1 comes first because its items are user-visible defects. PRs 3 and 4 come
 before the UI work so that PR 6 and PR 7 build on the split modules instead of
@@ -1128,6 +1128,38 @@ Validation of the fixes, run locally on linux-x64, Node 22.23.4:
 Chromium 153.0.8010.12 against the `62103bb` baseline. No GitHub Actions
 workflow was added, dispatched or rerun.
 
+### PR 7 · review of #47
+
+The [review at `f57705a`](https://github.com/mingzhangyang/relgraph-studio/pull/47#pullrequestreview-5915372801)
+found two P2, both in the routing of returns:
+
+- **P2 · a loop cancelled its own flow.** The flow's way was the sign of the
+  summed sideways distance, which is 0 for a reciprocal retry `A → B → A`
+  and for a full cycle `A → B → C → A` drawn left to right, so neither had a
+  return: the retry kept two arcs and the cycle's way back ran through `B`.
+  The way is now a vote, one per relation more sideways than upright, so a
+  loop still has one; a tie reads left to right, as the flow engine draws.
+- **P2 · an authored curve could undo the clearance.** `curve` (−160 to 160)
+  was added after the route had been cleared of steps and of other lanes, so
+  a negative value brought a return back through a step, and two returns
+  could share a line. `returnRoutes` now counts the curve before the lanes
+  are resolved, and only outwards: a negative curve leaves the cleared route
+  as it is.
+
+Tests: two "#47 review" cases in `tests/film-frame.test.mjs` at fixed
+coordinates (a reciprocal retry, a three-step cycle; both returns at curve
+−160, and one at +40 passing the other). Both fail on `f57705a`, the cycle
+part on its own too. Golden frames, the browser baseline and every frame
+of the order flow example are unchanged.
+
+Validation of the fixes, run locally on linux-x64, Node 22.23.4:
+`npm run typecheck`, `npm run check:types`, `npm run lint`,
+`npm run format:check` passed; `npm test` 458 tests in 43 files passed;
+`npm run check:export` 31/31 passed with the 236 golden frames matching (no
+`--update`); `npm run check:browser` 79/79 passed in Chromium 153.0.8010.12
+against the `62103bb` baseline. No GitHub Actions workflow was added,
+dispatched or rerun.
+
 ## Review evidence
 
 Ran locally on linux-x64, Node 22.23.4, at `73af432`: `npm run typecheck`,
@@ -1186,3 +1218,4 @@ rerun.
 | 2026-11-16 | V3                                            | —   | — (branch `3fa605f`)                    | Strong flowchart strokes; returns over the steps; golden frames unchanged                                              |
 | 2026-11-16 | V4                                            | —   | — (branch `c2904e0`)                    | Legend at 14; 108 golden hashes regenerated; browser baseline identical                                                |
 | 2026-11-16 | PR 7 self-review                              | —   | —                                       | Returns routed round steps in lanes; tree rule only for one-way growth; legend swatch matches; golden frames unchanged |
+| 2026-11-16 | #47 review, P2 ×2                             | #47 | —                                       | Flow way by vote, so loops have returns; authored curve only outward, before lanes                                     |

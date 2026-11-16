@@ -66,10 +66,12 @@ export interface RelationLayout {
 }
 
 /**
- * The relations that run against the flow of a drawing: the flow is the way
- * most relations advance, and only a drawing that advances sideways has
- * one. A relation that leads back across it, more sideways than upright,
- * returns. None without `returns: 'over'`.
+ * The relations that run against the flow of a drawing. Only a drawing that
+ * advances sideways has a flow; its way is the one most sideways relations
+ * take, counted one vote each so that a loop, whose way back cancels its way
+ * out in distance, still has one. A tie reads left to right, as the flow
+ * engine draws. A relation that leads back across the flow, more sideways
+ * than upright, returns. None without `returns: 'over'`.
  */
 function returnsOf(
   view: Pick<ProjectedVisualGraph, 'edges'>,
@@ -78,26 +80,26 @@ function returnsOf(
 ): Set<string> {
   const returns = new Set<string>();
   if (style.returns !== 'over') return returns;
-  let along = 0,
-    sideways = 0,
-    upright = 0;
+  const across: { id: string; dx: number }[] = [];
+  let sideways = 0,
+    upright = 0,
+    votes = 0;
   for (const edge of view.edges) {
     const a = points.get(edge.source),
       b = points.get(edge.target);
     if (!a || !b || edge.source === edge.target) continue;
-    along += b.x - a.x;
-    sideways += Math.abs(b.x - a.x);
-    upright += Math.abs(b.y - a.y);
+    const dx = b.x - a.x,
+      dy = b.y - a.y;
+    sideways += Math.abs(dx);
+    upright += Math.abs(dy);
+    if (Math.abs(dx) > Math.abs(dy) * 0.35) {
+      across.push({ id: edge.id, dx });
+      votes += Math.sign(dx);
+    }
   }
-  if (!(sideways >= upright) || along === 0) return returns;
-  const forward = Math.sign(along);
-  for (const edge of view.edges) {
-    const a = points.get(edge.source),
-      b = points.get(edge.target);
-    if (!a || !b || edge.source === edge.target) continue;
-    const dx = (b.x - a.x) * forward;
-    if (dx < 0 && -dx > Math.abs(b.y - a.y) * 0.35) returns.add(edge.id);
-  }
+  if (!(sideways >= upright)) return returns;
+  const forward = votes < 0 ? -1 : 1;
+  for (const { id, dx } of across) if (dx * forward < 0) returns.add(id);
   return returns;
 }
 
@@ -173,10 +175,11 @@ export interface ReturnRoute {
  * crosses on the side where fewer steps stand in the column of its ends
  * (above when equal), beyond every step between its ends. Shorter returns
  * are routed first and keep the inside; one that would run along another
- * moves a lane further out.
+ * moves a lane further out. An authored `curve` only takes a return further
+ * out, and counts before the lanes are resolved.
  */
 export function returnRoutes(
-  ctx: Pick<FrameContext, 'view' | 'u'>,
+  ctx: Pick<FrameContext, 'view' | 'u' | 'config'>,
   drawnById: ReadonlyMap<string, DrawnNode>,
   returns: ReadonlySet<string>,
 ): Map<string, ReturnRoute> {
@@ -219,7 +222,10 @@ export function returnRoutes(
           side *
           Math.max(edgeOfSteps * side, (other.p.y + side * other.geometry.halfHeight) * side);
     // A lane out, and room for the turn and the arrowhead that comes back in.
-    let peak = edgeOfSteps + side * (lane + u(6));
+    // An authored curve only takes the return further out: it is applied
+    // before the lanes are resolved, and never brings it inside the clearance.
+    const curve = Math.max(0, edgeAppearance(ctx.config, edge).curve ?? 0);
+    let peak = edgeOfSteps + side * (lane + u(6) + u(curve));
     for (let moved = true; moved;) {
       moved = false;
       for (const other of placed)
@@ -432,7 +438,7 @@ export function composeRelations(
       if (back) {
         // Out upright, across beyond every step between the two, and back
         // in upright (`returnRoutes`).
-        const peak = back.peak + back.side * u(custom.curve ?? 0),
+        const peak = back.peak,
           way = Math.sign(dx),
           turn = Math.min(Math.abs(dx) / 3, u(18));
         const leave = { x: start.x + way * turn, y: peak },

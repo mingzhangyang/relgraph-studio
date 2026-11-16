@@ -458,3 +458,89 @@ test('review · the legend swatch of a neutral relation kind is the stroke that 
   assert.ok(strokes.has(P.edge.strong));
   assert.ok(!strokes.has(P.edge.plain), 'no swatch or stroke in the plain neutral');
 });
+
+/** A flowchart at fixed coordinates, so the case does not depend on a layout engine. */
+const placed = (steps, edges) => {
+  const result = flow(Object.keys(steps), edges);
+  const ids = new Map(result.graph.nodes.map((n) => [n.label, n.id]));
+  const positions = new Map(
+    Object.entries(steps).map(([label, [x, y]]) => [ids.get(label), { x, y }]),
+  );
+  return { result, positions };
+};
+const returnPath = (result, list, label) =>
+  outlines(result, list).edges.get(result.graph.edges.find((e) => e.label === label).id);
+
+test('#47 review · a reciprocal retry and a full cycle still route their return', () => {
+  // A ⇄ B: the way out and the way back cancel in distance.
+  const pair = placed({ 下单: [0, 0], 支付: [220, 0] }, [
+    { source: '下单', target: '支付', label: '去' },
+    { source: '支付', target: '下单', label: '重试' },
+  ]);
+  const one = compose(pair.result, frameCount(pair.result.graph) - 1, pair.positions);
+  const boxes = outlines(pair.result, one.list).nodes;
+  const top = Math.min(...[...boxes.values()].map((box) => box.y));
+  const retry = returnPath(pair.result, one.list, '重试');
+  assert.ok(
+    retry.every((q) => q.y <= top + 1),
+    'the retry crosses above both steps',
+  );
+  const out = returnPath(pair.result, one.list, '去');
+  assert.ok(
+    out.every((q) => Math.abs(q.y - out[0].y) < 1),
+    'the way out is a plain level line',
+  );
+  // A → B → C → A, left to right: the return goes round B, not through it.
+  const cycle = placed({ 甲: [0, 0], 乙: [220, 0], 丙: [440, 0] }, [
+    { source: '甲', target: '乙', label: '一' },
+    { source: '乙', target: '丙', label: '二' },
+    { source: '丙', target: '甲', label: '回' },
+  ]);
+  const two = compose(cycle.result, frameCount(cycle.result.graph) - 1, cycle.positions);
+  const middle = outlines(cycle.result, two.list).nodes.get('乙');
+  const back = returnPath(cycle.result, two.list, '回');
+  assert.ok(!back.some((q) => inside(q, middle)), 'clear of 乙');
+  assert.ok(Math.min(...back.map((q) => q.y)) < middle.y, 'over the row');
+});
+
+test('#47 review · an authored curve cannot bring a return inside its clearance or onto another lane', () => {
+  const steps = { 甲: [0, 0], 乙: [220, 0], 丙: [440, 0], 丁: [660, 0] };
+  const edges = [
+    { source: '甲', target: '乙' },
+    { source: '乙', target: '丙' },
+    { source: '丙', target: '丁' },
+    { source: '丁', target: '甲', label: '长' },
+    { source: '丙', target: '乙', label: '短' },
+  ];
+  const { result, positions } = placed(steps, edges);
+  const id = (label) => result.graph.edges.find((e) => e.label === label).id;
+  const frame = frameCount(result.graph) - 1;
+  const crossing = (curves) => {
+    result.graph = {
+      ...result.graph,
+      project: {
+        edges: {
+          objects: Object.fromEntries(
+            Object.entries(curves).map(([label, curve]) => [id(label), { curve }]),
+          ),
+        },
+      },
+    };
+    const { list } = compose(result, frame, positions);
+    const { nodes } = outlines(result, list);
+    const path = (label) => returnPath(result, list, label);
+    for (const label of ['长', '短'])
+      for (const [step, box] of nodes)
+        assert.ok(!path(label).some((q) => inside(q, box)), `${label} clear of ${step}`);
+    return (label) => Math.min(...path(label).map((q) => q.y));
+  };
+  const plain = crossing({});
+  // Pulled inwards as far as the project allows: no closer than unauthored.
+  const pulled = crossing({ 长: -160, 短: -160 });
+  assert.equal(pulled('长'), plain('长'));
+  assert.equal(pulled('短'), plain('短'));
+  // Pushed out, the short return passes the long one, which moves a lane out.
+  const pushed = crossing({ 短: 40 });
+  assert.ok(pushed('短') < plain('短') - 30, 'pushed further out');
+  assert.ok(Math.abs(pushed('长') - pushed('短')) >= 21, 'still a lane apart');
+});
