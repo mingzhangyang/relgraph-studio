@@ -1160,6 +1160,44 @@ Validation of the fixes, run locally on linux-x64, Node 22.23.4:
 against the `62103bb` baseline. No GitHub Actions workflow was added,
 dispatched or rerun.
 
+### PR 7 · re-review of #47
+
+The [re-review at `838c0ae`](https://github.com/mingzhangyang/relgraph-studio/pull/47#pullrequestreview-5920152414)
+verified both fixes above (threads resolved) and found one P2: the per-edge
+vote still read the flow's way from the drawing, so a flow with more
+feedback than forward steps (`A → B → C → D` with `C → B`, `D → C`,
+`D → B`, `D → A`: three votes forward, four back) was turned around: the
+three steps became returns and the four retries were drawn as ordinary
+relations, `D → A` across `B` and `C`.
+
+Fixed by reading returns from structure, not from coordinates or counts.
+`feedbackRelations(graph)` (`packages/core/src/graph/analysis.ts`, exported)
+names the directed relations that lead back to a step already under way,
+with the same depth-first reading, from the entry points in the author's
+order, that `flowRanks` ranks the flow layout by; both now share one helper
+(`flowForward`). The renderer routes those as returns, still only in a
+drawing that advances sideways and only where the relation is drawn more
+sideways than upright; the result is cached per list of relations. It does
+not depend on which way the drawing runs, so a mirrored flow reads the same.
+`relationLayout` takes the graph as a fourth argument.
+
+Tests: "#47 re-review" in `tests/film-frame.test.mjs`, the reviewer's case
+at fixed coordinates, left to right and mirrored: the feedback is the same
+four relations, the three steps stay level lines on the row, and every
+return crosses above, clear of every step. It fails on `838c0ae` with "step
+1 is a level line", the defect reported. The flow, layered and automatic
+layouts of all seven examples are identical before and after the
+`flowRanks` refactor; golden frames, the browser baseline and the order
+flow example are unchanged.
+
+Validation of the fix, run locally on linux-x64, Node 22.23.4:
+`npm run typecheck`, `npm run check:types`, `npm run lint`,
+`npm run format:check` passed; `npm test` 459 tests in 43 files passed;
+`npm run check:export` 31/31 passed with the 236 golden frames matching (no
+`--update`); `npm run check:browser` 79/79 passed in Chromium 153.0.8010.12
+against the `62103bb` baseline. No GitHub Actions workflow was added,
+dispatched or rerun.
+
 ## Review evidence
 
 Ran locally on linux-x64, Node 22.23.4, at `73af432`: `npm run typecheck`,
@@ -1219,3 +1257,4 @@ rerun.
 | 2026-11-16 | V4                                            | —   | — (branch `c2904e0`)                    | Legend at 14; 108 golden hashes regenerated; browser baseline identical                                                |
 | 2026-11-16 | PR 7 self-review                              | —   | —                                       | Returns routed round steps in lanes; tree rule only for one-way growth; legend swatch matches; golden frames unchanged |
 | 2026-11-16 | #47 review, P2 ×2                             | #47 | —                                       | Flow way by vote, so loops have returns; authored curve only outward, before lanes                                     |
+| 2026-11-16 | #47 re-review, P2                             | #47 | —                                       | Returns are the structural feedback (`feedbackRelations`), not a vote                                                  |

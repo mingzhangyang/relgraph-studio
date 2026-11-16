@@ -1,5 +1,11 @@
-import { edgeAppearance, edgeStyleFor, LINE_DASH, localize } from '@relgraph/core';
-import type { DomainStyle, ProjectedVisualGraph } from '@relgraph/core';
+import {
+  edgeAppearance,
+  edgeStyleFor,
+  feedbackRelations,
+  LINE_DASH,
+  localize,
+} from '@relgraph/core';
+import type { DomainStyle, ProjectedVisualGraph, VisualGraph } from '@relgraph/core';
 import type { DisplayItem, FontRef, Paint } from '../display-list.js';
 import { nodeGlyphRayDistance } from '../node-geometry.js';
 import type { RectIndex } from '../spatial.js';
@@ -65,41 +71,46 @@ export interface RelationLayout {
   returns: Set<string>;
 }
 
+/** The feedback of each graph's relations, once per list of relations. */
+const feedbackOf = new WeakMap<readonly unknown[], Set<string>>();
+
 /**
- * The relations that run against the flow of a drawing. Only a drawing that
- * advances sideways has a flow; its way is the one most sideways relations
- * take, counted one vote each so that a loop, whose way back cancels its way
- * out in distance, still has one. A tie reads left to right, as the flow
- * engine draws. A relation that leads back across the flow, more sideways
- * than upright, returns. None without `returns: 'over'`.
+ * The relations routed as returns: the feedback of the process
+ * (`feedbackRelations`: those that lead back to a step already under way,
+ * by structure and the author's order, never by how many there are or which
+ * way they point), in a drawing that advances sideways, and drawn more
+ * sideways than upright. None without `returns: 'over'`.
  */
 function returnsOf(
   view: Pick<ProjectedVisualGraph, 'edges'>,
   points: ReadonlyMap<string, Point>,
   style: Pick<DomainStyle, 'returns'>,
+  graph: Pick<VisualGraph, 'nodes' | 'edges'>,
 ): Set<string> {
   const returns = new Set<string>();
   if (style.returns !== 'over') return returns;
-  const across: { id: string; dx: number }[] = [];
+  let feedback = feedbackOf.get(graph.edges);
+  if (!feedback) {
+    feedback = feedbackRelations(graph);
+    feedbackOf.set(graph.edges, feedback);
+  }
+  if (!feedback.size) return returns;
   let sideways = 0,
-    upright = 0,
-    votes = 0;
+    upright = 0;
   for (const edge of view.edges) {
     const a = points.get(edge.source),
       b = points.get(edge.target);
     if (!a || !b || edge.source === edge.target) continue;
-    const dx = b.x - a.x,
-      dy = b.y - a.y;
-    sideways += Math.abs(dx);
-    upright += Math.abs(dy);
-    if (Math.abs(dx) > Math.abs(dy) * 0.35) {
-      across.push({ id: edge.id, dx });
-      votes += Math.sign(dx);
-    }
+    sideways += Math.abs(b.x - a.x);
+    upright += Math.abs(b.y - a.y);
   }
   if (!(sideways >= upright)) return returns;
-  const forward = votes < 0 ? -1 : 1;
-  for (const { id, dx } of across) if (dx * forward < 0) returns.add(id);
+  for (const edge of view.edges) {
+    if (!feedback.has(edge.id)) continue;
+    const a = points.get(edge.source),
+      b = points.get(edge.target);
+    if (a && b && Math.abs(b.x - a.x) > Math.abs(b.y - a.y) * 0.35) returns.add(edge.id);
+  }
   return returns;
 }
 
@@ -107,8 +118,9 @@ export function relationLayout(
   view: Pick<ProjectedVisualGraph, 'nodes' | 'edges'>,
   points: ReadonlyMap<string, Point>,
   style: Pick<DomainStyle, 'returns'>,
+  graph: Pick<VisualGraph, 'nodes' | 'edges'>,
 ): RelationLayout {
-  const returns = returnsOf(view, points, style);
+  const returns = returnsOf(view, points, style, graph);
   // Parallel and reciprocal links get stable, symmetric curve offsets. A
   // return takes its own route, so the relation it pairs with stays straight.
   const pairs = new Map<string, string[]>();

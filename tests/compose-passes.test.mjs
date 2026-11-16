@@ -82,7 +82,7 @@ test('composeFrame is its passes, run in order over one context', () => {
     const obstacles = nodeObstacles(ctx, drawn, occupied);
     const axis = composeTimeAxis(ctx, occupied);
     const hulls = composeGroups(ctx, drawn, occupied);
-    const layout = relationLayout(ctx.view, ctx.points, ctx.style);
+    const layout = relationLayout(ctx.view, ctx.points, ctx.style, ctx.graph);
     const relations = composeRelations(
       ctx,
       new Map(drawn.map((entry) => [entry.node.id, entry])),
@@ -194,7 +194,7 @@ test('groups: one hull per group in view, named by a tab that keeps its room', (
 test('relations: a stroke and a selection target per revealed relation', () => {
   const { ctx } = contextOf(bookshop);
   const drawn = drawnNodes(ctx);
-  const layout = relationLayout(ctx.view, ctx.points, ctx.style);
+  const layout = relationLayout(ctx.view, ctx.points, ctx.style, ctx.graph);
   const { items, selection, obstacles, labels } = composeRelations(
     ctx,
     new Map(drawn.map((entry) => [entry.node.id, entry])),
@@ -265,7 +265,7 @@ test('node labels: never set over a taken room, and each placed label takes one'
     drawn,
     held: new Set(),
     obstacles,
-    pull: relationLayout(ctx.view, ctx.points, ctx.style).pull,
+    pull: relationLayout(ctx.view, ctx.points, ctx.style, ctx.graph).pull,
     relations: ctx.rectIndex(),
   };
   const labels = composeNodeLabels(ctx, inputs, occupied);
@@ -287,7 +287,7 @@ test('relation tags: a plate and its text, or nothing where no room is left', ()
   const { labels } = composeRelations(
     ctx,
     new Map(drawn.map((entry) => [entry.node.id, entry])),
-    relationLayout(ctx.view, ctx.points, ctx.style),
+    relationLayout(ctx.view, ctx.points, ctx.style, ctx.graph),
   );
   assert.ok(labels.length >= 1, 'biology captions its relations');
   const tags = composeRelationLabels(ctx, labels, ctx.rectIndex());

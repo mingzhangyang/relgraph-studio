@@ -13,6 +13,7 @@ import {
   DEFAULT_LAYOUT_SETTINGS,
 } from '../packages/core/src/director/layout-strategies.ts';
 import { styleForGraph } from '../packages/core/src/style.ts';
+import { feedbackRelations } from '../packages/core/src/graph/analysis.ts';
 import { composeFrame } from '../packages/render/src/compose.ts';
 import { TREE_GROWTH, treeReading } from '../packages/render/src/compose/labels.ts';
 import {
@@ -543,4 +544,51 @@ test('#47 review · an authored curve cannot bring a return inside its clearance
   const pushed = crossing({ 短: 40 });
   assert.ok(pushed('短') < plain('短') - 30, 'pushed further out');
   assert.ok(Math.abs(pushed('长') - pushed('短')) >= 21, 'still a lane apart');
+});
+
+test('#47 re-review · more retries than forward steps do not turn the flow around', () => {
+  // A → B → C → D with four feedback relations: more of them than steps forward.
+  const edges = [
+    { source: '甲', target: '乙', label: '1' },
+    { source: '乙', target: '丙', label: '2' },
+    { source: '丙', target: '丁', label: '3' },
+    { source: '丙', target: '乙', label: '丙回乙' },
+    { source: '丁', target: '丙', label: '丁回丙' },
+    { source: '丁', target: '乙', label: '丁回乙' },
+    { source: '丁', target: '甲', label: '丁回甲' },
+  ];
+  const feedback = ['丙回乙', '丁回丙', '丁回乙', '丁回甲'];
+  for (const [name, x] of [
+    ['left to right', (i) => i * 220],
+    ['mirrored', (i) => -i * 220],
+  ]) {
+    const { result, positions } = placed(
+      { 甲: [x(0), 0], 乙: [x(1), 0], 丙: [x(2), 0], 丁: [x(3), 0] },
+      edges,
+    );
+    const byLabel = new Map(result.graph.edges.map((e) => [e.label, e.id]));
+    // The feedback is structural: the same four, whatever the coordinates.
+    assert.deepEqual(
+      [...feedbackRelations(result.graph)].sort(),
+      feedback.map((label) => byLabel.get(label)).sort(),
+      name,
+    );
+    const { list } = compose(result, frameCount(result.graph) - 1, positions);
+    const { nodes } = outlines(result, list);
+    const top = Math.min(...[...nodes.values()].map((box) => box.y));
+    // Forward steps stay level lines on the row; every return goes round.
+    for (const label of ['1', '2', '3']) {
+      const path = returnPath(result, list, label);
+      assert.ok(
+        path.every((q) => Math.abs(q.y - path[0].y) < 1),
+        `${name}: step ${label} is a level line`,
+      );
+    }
+    for (const label of feedback) {
+      const path = returnPath(result, list, label);
+      assert.ok(Math.min(...path.map((q) => q.y)) < top, `${name}: ${label} crosses above`);
+      for (const [step, box] of nodes)
+        assert.ok(!path.some((q) => inside(q, box)), `${name}: ${label} clear of ${step}`);
+    }
+  }
 });
