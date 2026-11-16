@@ -1,9 +1,10 @@
 # Follow-up plan · review of #37 and #38
 
-Status: **open** · baseline `main` at `73af432` · reviewed 2026-11-12 ·
+Status: **complete** (2026-11-16) · baseline `main` at `73af432` · reviewed 2026-11-12 ·
 PR 1 merged as `a2589bf`, PR 2 as `682dbbd` and PR 1b as `a63875c` on 2026-11-13,
 PR 3 as `ca0edd8` and PR 4 as `ad49ba5` on 2026-11-14,
-PR 5 as `cb532f9` and PR 6 as `62103bb` on 2026-11-15
+PR 5 as `cb532f9` and PR 6 as `62103bb` on 2026-11-15,
+PR 7 as `f08de1f` on 2026-11-16.
 
 This is the tracking document for the work that came out of reviewing
 [#38](https://github.com/mingzhangyang/relgraph-studio/pull/38) (generic graphs,
@@ -13,7 +14,7 @@ example). Each item has an id, the evidence it rests on, the files it touches
 and what "done" means. Tick the box and fill in the PR and commit when an item
 lands; add a line to the [progress log](#progress-log).
 
-The review verdict in one line: the pipeline (source → adapter → `VisualGraph`
+The original review verdict (before these fixes), in one line: the pipeline (source → adapter → `VisualGraph`
 → layout → frame state → display list → backend) is intact and the "one graph,
 several conventions" model is sound, but four behaviours fail in ways a user
 meets quickly, three dependencies point the wrong way, and two modules have
@@ -39,7 +40,7 @@ The repository rules in [AGENTS.md](../AGENTS.md) apply to every step:
 | 4   | Render structure          | S4–S6 | Must stay identical                         | ☑ [#44](https://github.com/mingzhangyang/relgraph-studio/pull/44) merged as `ad49ba5` (2026-11-14); display lists identical     |
 | 5   | Tooling and docs          | T1–T4 | Not affected                                | ☑ [#45](https://github.com/mingzhangyang/relgraph-studio/pull/45) merged as `cb532f9` (2026-11-15); tree identical to `26fd0fd` |
 | 6   | Workspace UI              | W1–W5 | Not affected                                | ☑ [#46](https://github.com/mingzhangyang/relgraph-studio/pull/46) merged as `62103bb` (2026-11-15); tree identical to `afd6679` |
-| 7   | Film frame refinement     | V1–V4 | Regenerated, with before/after frames       | ◐ [#47](https://github.com/mingzhangyang/relgraph-studio/pull/47) open, from `62103bb`; 166 golden hashes regenerated           |
+| 7   | Film frame refinement     | V1–V4 | Regenerated, with before/after frames       | ☑ [#47](https://github.com/mingzhangyang/relgraph-studio/pull/47) merged as `f08de1f` (2026-11-16); reviewed `c678ce6`; 166 golden hashes regenerated |
 
 PR 1 comes first because its items are user-visible defects. PRs 3 and 4 come
 before the UI work so that PR 6 and PR 7 build on the split modules instead of
@@ -50,6 +51,35 @@ Validation for every PR, run locally and reported as run or not run:
 `npm run format:check`, `npm test`, `npm run check:browser`,
 `npm run check:export`. A PR whose table row says "must stay identical" does
 not pass `--update` to the golden or browser baselines.
+
+### Completion and acceptance · 2026-11-16
+
+All seven numbered PR batches (1–7, #40/#41/#43/#44/#45/#46/#47), plus the
+separate F6 follow-up (1b, #42), have landed on `main`. All planned items
+F1–F6, P1–P3, S1–S6, T1–T4, W1–W5 and V1–V4 are marked complete.
+This follow-up plan is closed; the next product milestone, B2-2, remains
+separately tracked in [ROADMAP.md](ROADMAP.md).
+
+PR 7 ([#47](https://github.com/mingzhangyang/relgraph-studio/pull/47))
+was squash-merged directly into `main` on 2026-11-16 as
+[`f08de1f`](https://github.com/mingzhangyang/relgraph-studio/commit/f08de1f61f8666c74b5793ca975df66b97b379d0),
+from `62103bb`. The final reviewed branch HEAD was
+[`c678ce6`](https://github.com/mingzhangyang/relgraph-studio/commit/c678ce6610ddbca089f0907fe91ef452a84891f7).
+Both commits have Git tree `ae611959ac1471c26b82bb882937d5b6496f9711`:
+the merged contents exactly match the final reviewed tree. The
+[final COMMENT review](https://github.com/mingzhangyang/relgraph-studio/pull/47#pullrequestreview-5921774845)
+reported no new actionable findings at that HEAD, and all four inline
+review threads are resolved; it is not a formal approval.
+
+**Final PR 7 validation (author-reported, on `c678ce6`):**
+`npm run typecheck`, `npm run check:types`, `npm run lint` and
+`npm run format:check` passed; `npm test` passed 460 tests in 43 files;
+`npm run check:export` passed 31/31 with all 236 golden frames matching
+the updated manifest; `npm run check:browser` passed 79/79 against the
+local `62103bb` baseline. V1, V2 and V4 intentionally regenerated
+166 golden hashes, with before/after evidence in both themes. The reviewer
+verified the merged Git tree and thread states but did not independently
+rerun these suites. No GitHub Actions workflow was added, dispatched or rerun.
 
 ## Decisions needed before coding
 
@@ -277,6 +307,9 @@ frames in both themes.
       under an unrelated step.
 - [x] **V4 · Legend size.** At 12 px it is the smallest text in the frame
       (about 9 px in the workspace preview).
+
+PR 7 merged as `f08de1f` on 2026-11-16. Its Git tree exactly matches
+reviewed HEAD `c678ce6`; see [completion and acceptance](#completion-and-acceptance--2026-11-16).
 
 ### PR 1 · as implemented
 
@@ -1290,3 +1323,4 @@ rerun.
 | 2026-11-16 | #47 review, P2 ×2                             | #47 | —                                       | Flow way by vote, so loops have returns; authored curve only outward, before lanes                                     |
 | 2026-11-16 | #47 re-review, P2                             | #47 | —                                       | Returns are the structural feedback (`feedbackRelations`), not a vote                                                  |
 | 2026-11-16 | #47 second re-review, P2                      | #47 | —                                       | Feedback cache keyed by nodes and edges together                                                                       |
+| 2026-11-16 | PR 7 merged; plan complete                    | #47 | `f08de1f` (reviewed `c678ce6`)          | Squash onto `62103bb`; Git tree `ae611959` identical; 4/4 review threads resolved; author-reported 460 tests, 31/31 export, 79/79 browser |
