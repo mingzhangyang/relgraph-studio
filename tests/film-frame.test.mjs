@@ -592,3 +592,31 @@ test('#47 re-review · more retries than forward steps do not turn the flow arou
     }
   }
 });
+
+test('#47 re-review 2 · reordered nodes over the same relations re-read the feedback', () => {
+  // A → B → C → A, drawn in a row. Which relation closes the loop depends
+  // on where the author's reading starts, i.e. on the order of the nodes.
+  const { result, positions } = placed({ 甲: [0, 0], 乙: [220, 0], 丙: [440, 0] }, [
+    { source: '甲', target: '乙', label: '甲乙' },
+    { source: '乙', target: '丙', label: '乙丙' },
+    { source: '丙', target: '甲', label: '丙甲' },
+  ]);
+  const byLabel = new Map(result.graph.edges.map((e) => [e.label, e.id]));
+  const rising = (label, list) => {
+    const path = returnPath(result, list, label);
+    return path.some((q) => Math.abs(q.y - path[0].y) > 5);
+  };
+  const frame = frameCount(result.graph) - 1;
+  const first = compose(result, frame, positions);
+  assert.deepEqual([...feedbackRelations(result.graph)], [byLabel.get('丙甲')]);
+  assert.ok(rising('丙甲', first.list), '丙 → 甲 is routed as the return');
+  // Same edges array, nodes reordered so the reading starts at 丙.
+  const [a, b, c] = result.graph.nodes,
+    edges = result.graph.edges;
+  result.graph = { ...result.graph, nodes: [c, a, b] };
+  assert.equal(result.graph.edges, edges, 'the very same relations');
+  assert.deepEqual([...feedbackRelations(result.graph)], [byLabel.get('乙丙')]);
+  const second = compose(result, frame, positions);
+  assert.ok(rising('乙丙', second.list), '乙 → 丙 is now the return');
+  assert.ok(!rising('丙甲', second.list), '丙 → 甲 is no longer routed round');
+});

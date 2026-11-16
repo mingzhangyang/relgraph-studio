@@ -1177,7 +1177,7 @@ with the same depth-first reading, from the entry points in the author's
 order, that `flowRanks` ranks the flow layout by; both now share one helper
 (`flowForward`). The renderer routes those as returns, still only in a
 drawing that advances sideways and only where the relation is drawn more
-sideways than upright; the result is cached per list of relations. It does
+sideways than upright; the result is cached per list of relations (keyed by both lists since the second re-review). It does
 not depend on which way the drawing runs, so a mirrored flow reads the same.
 `relationLayout` takes the graph as a fourth argument.
 
@@ -1193,6 +1193,37 @@ flow example are unchanged.
 Validation of the fix, run locally on linux-x64, Node 22.23.4:
 `npm run typecheck`, `npm run check:types`, `npm run lint`,
 `npm run format:check` passed; `npm test` 459 tests in 43 files passed;
+`npm run check:export` 31/31 passed with the 236 golden frames matching (no
+`--update`); `npm run check:browser` 79/79 passed in Chromium 153.0.8010.12
+against the `62103bb` baseline. No GitHub Actions workflow was added,
+dispatched or rerun.
+
+### PR 7 · second re-review of #47
+
+The [re-review at `2808c58`](https://github.com/mingzhangyang/relgraph-studio/pull/47#pullrequestreview-5921110947)
+verified the structural-feedback fix (thread resolved) and found one P2: the
+renderer cached `feedbackRelations` per list of relations, but the feedback
+also depends on the author's order of the nodes (the depth-first reading
+starts from it). A graph updated with reordered nodes over the same `edges`
+array kept the old classification: for `A → B → C → A`, order `[A, B, C]`
+makes `C → A` the return and `[C, A, B]` makes `B → C` the return, yet the
+cache still routed `C → A`, disagreeing with `flowRanks`.
+
+Fixed: the cache is keyed by both lists (`feedbackOf`, a `WeakMap` of
+`nodes` to a `WeakMap` of `edges`), so replacing either is read again.
+Graphs are not edited in place: nothing in the studio or core mutates a
+graph's `nodes` or `edges` after loading; an edit makes new lists.
+Without a cache the classification costs about 1.1 ms per frame at 300
+nodes (the preview budget) and 5.9 ms at 1,500, which is why one is kept.
+
+Test: "#47 re-review 2" composes the same three-step cycle twice over one
+`edges` array, nodes reordered between the two, and requires the routed
+return to follow the order. It fails on `2808c58` with "乙 → 丙 is now the
+return".
+
+Validation of the fix, run locally on linux-x64, Node 22.23.4:
+`npm run typecheck`, `npm run check:types`, `npm run lint`,
+`npm run format:check` passed; `npm test` 460 tests in 43 files passed;
 `npm run check:export` 31/31 passed with the 236 golden frames matching (no
 `--update`); `npm run check:browser` 79/79 passed in Chromium 153.0.8010.12
 against the `62103bb` baseline. No GitHub Actions workflow was added,
@@ -1258,3 +1289,4 @@ rerun.
 | 2026-11-16 | PR 7 self-review                              | —   | —                                       | Returns routed round steps in lanes; tree rule only for one-way growth; legend swatch matches; golden frames unchanged |
 | 2026-11-16 | #47 review, P2 ×2                             | #47 | —                                       | Flow way by vote, so loops have returns; authored curve only outward, before lanes                                     |
 | 2026-11-16 | #47 re-review, P2                             | #47 | —                                       | Returns are the structural feedback (`feedbackRelations`), not a vote                                                  |
+| 2026-11-16 | #47 second re-review, P2                      | #47 | —                                       | Feedback cache keyed by nodes and edges together                                                                       |

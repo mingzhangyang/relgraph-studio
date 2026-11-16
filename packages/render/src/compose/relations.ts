@@ -71,8 +71,21 @@ export interface RelationLayout {
   returns: Set<string>;
 }
 
-/** The feedback of each graph's relations, once per list of relations. */
-const feedbackOf = new WeakMap<readonly unknown[], Set<string>>();
+/**
+ * `feedbackRelations` once per graph, not once per frame. It reads the
+ * relations and the author's order of the nodes, so it is kept per pair of
+ * the two lists: a graph updated with either list replaced (reordered
+ * nodes over the same relations, say) is read again. Graphs are not edited
+ * in place; an edit makes new lists.
+ */
+const feedbackCache = new WeakMap<object, WeakMap<object, Set<string>>>();
+function feedbackOf(graph: Pick<VisualGraph, 'nodes' | 'edges'>): Set<string> {
+  let byEdges = feedbackCache.get(graph.nodes);
+  if (!byEdges) feedbackCache.set(graph.nodes, (byEdges = new WeakMap()));
+  let feedback = byEdges.get(graph.edges);
+  if (!feedback) byEdges.set(graph.edges, (feedback = feedbackRelations(graph)));
+  return feedback;
+}
 
 /**
  * The relations routed as returns: the feedback of the process
@@ -89,11 +102,7 @@ function returnsOf(
 ): Set<string> {
   const returns = new Set<string>();
   if (style.returns !== 'over') return returns;
-  let feedback = feedbackOf.get(graph.edges);
-  if (!feedback) {
-    feedback = feedbackRelations(graph);
-    feedbackOf.set(graph.edges, feedback);
-  }
+  const feedback = feedbackOf(graph);
   if (!feedback.size) return returns;
   let sideways = 0,
     upright = 0;
