@@ -20,19 +20,22 @@ enforced only for the same font digest (see `examples/golden-frames.json`).
 
 ## Character set
 
-`charset.txt` is what is requested from the sources (4,835 characters), the
+`charset.txt` is what is requested from the sources (7,849 characters), the
 union of:
 
-- every character in the two shipped examples, the domain style sheets and the
+- every character in the shipped examples and bundled datasets listed in
+  `TEXT_SOURCES` (`scripts/subset-fonts.mjs`), the domain style sheets and the
   renderer's own text (`packages/render/src/locale.ts`);
-- the 3,755 level-1 hanzi of GB 2312 (the usual common-character list), decoded
-  from their GB 2312 code points;
+- all 6,763 hanzi of GB 2312, decoded from their GB 2312 code points: the 3,755
+  level-1 characters (the usual common-character list) and the 3,008 level-2
+  characters, which hold many rarer characters of classical names and places
+  (岑, 皎, 稹, 羲, 颀…);
 - the non-hanzi rows of GB 2312: CJK punctuation, full-width forms, kana,
   Greek, Cyrillic and box drawing;
 - printable ASCII and Latin-1, general punctuation, arrows, CJK symbols and
   punctuation, and half- and full-width forms.
 
-`coverage.txt` is what every face actually contains: 4,798 characters, read
+`coverage.txt` is what every face actually contains: 7,812 characters, read
 from the output fonts' character maps. It differs from the request because 39
 requested punctuation marks in U+2017–U+205E (for example ‣ U+2023, ‽ U+203D,
 ⁄ U+2044) do not exist in Noto CJK, while feature closure keeps two extra
@@ -42,6 +45,10 @@ Characters outside `coverage.txt` fall back to the next font in `FONT_STACKS`,
 which differs between machines; `relgraph render` warns about them. When an
 example or the renderer copy gains new characters, `npm test` fails until the
 fonts are regenerated.
+
+The five faces total 10.1 MiB (about 1.9–2.6 MiB each). Before level 2 was
+added they were 5.8 MiB; the workspace loads all five before its first frame,
+from the local server only.
 
 ## Regenerating
 

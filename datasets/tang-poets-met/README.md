@@ -20,6 +20,6 @@ npm run relgraph -- render datasets/tang-poets-met/唐代诗人见面网络_30.g
 
 Do not edit these files here: regenerate them with `python3 network/build_met_network.py` in the tangshi repository and copy them over. The evidence table, method and excluded pairs are documented in that repository's `network/README.md`.
 
-**Fonts:** the vendored font subset covers GB 2312 level 1 only. Seven names (岑参, 皎然, 张祜, 元稹, 綦毋潜, 储光羲, 李颀) use characters outside it, so `relgraph render` warns and draws them with a system font.
+**Fonts:** both files are listed in `TEXT_SOURCES` of `scripts/subset-fonts.mjs`, so every character they use is in the vendored fonts and `relgraph render` draws them without fallback. Editing the files changes the required charset: `npm test` then fails until the fonts are regenerated.
 
 **Data licences:** poem titles and texts come from chinese-poetry (MIT) and birth/death years from OpenQTS (CC BY-SA 4.0). CBDB counts appear only in the tangshi evidence table, not in these files.
