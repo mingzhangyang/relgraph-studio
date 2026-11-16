@@ -1,0 +1,1718 @@
+{
+  "format": "relgraph.graph/1",
+  "meta": {
+    "title": "唐代诗人见面网络 · 30 人",
+    "description": "只收有作品或史料为证、确曾当面相见的关系：30 位诗人，60 条连线（题目直证 50，正文自述 4，同场唱和 4，史传记载 2）。寄赠、怀念、读集、遥和不算见面。",
+    "sourceNote": "证据取自 mingzhangyang/tangshi：chinese-poetry 唐诗题目与正文（作品 ID 见 workIds），生卒取自 OpenQTS，个别关系参照 05_文献核查关系；少数关系据史书原文、作品题注或学术年谱补入，出处见关系的 sources 字段。关系由人工逐条核定；年份、地点是按通行年谱给证据作品估计的约数，仅用于视频出场顺序，未逐条考证。"
+  },
+  "directed": false,
+  "timeline": {
+    "unit": "公元"
+  },
+  "groups": [
+    {
+      "id": "盛唐",
+      "label": "盛唐"
+    },
+    {
+      "id": "大历",
+      "label": "大历前后"
+    },
+    {
+      "id": "元和",
+      "label": "元和前后"
+    },
+    {
+      "id": "晚唐",
+      "label": "晚唐"
+    }
+  ],
+  "kinds": {
+    "nodes": {
+      "诗人": {
+        "label": "诗人",
+        "shape": "circle"
+      },
+      "诗僧": {
+        "label": "诗僧",
+        "shape": "diamond"
+      }
+    },
+    "edges": {
+      "题目直证": {
+        "label": "题目直证",
+        "line": "solid",
+        "head": "none"
+      },
+      "正文自述": {
+        "label": "正文自述同游",
+        "line": "dashed",
+        "head": "none"
+      },
+      "同场唱和": {
+        "label": "同场唱和（推断）",
+        "line": "dotted",
+        "head": "none"
+      },
+      "史传记载": {
+        "label": "史传、年谱记载",
+        "head": "none"
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "贺知章",
+      "kind": "诗人",
+      "group": "盛唐",
+      "visibleFrom": 744,
+      "summary": "659–744（OpenQTS 所载）。存诗 25 首（chinese-poetry 署名）。见过：李白。",
+      "birth": 659,
+      "death": 744,
+      "works": 25,
+      "position": {
+        "x": 224,
+        "y": 717
+      }
+    },
+    {
+      "id": "张九龄",
+      "kind": "诗人",
+      "group": "盛唐",
+      "visibleFrom": 735,
+      "summary": "678–740（OpenQTS 所载）。存诗 223 首（chinese-poetry 署名）。见过：孟浩然、王维。",
+      "birth": 678,
+      "death": 740,
+      "works": 223,
+      "position": {
+        "x": 96,
+        "y": 267
+      }
+    },
+    {
+      "id": "孟浩然",
+      "kind": "诗人",
+      "group": "盛唐",
+      "visibleFrom": 730,
+      "summary": "690–740（OpenQTS 所载）。存诗 274 首（chinese-poetry 署名）。见过：张九龄、王维、王昌龄、李白。",
+      "birth": 690,
+      "death": 740,
+      "works": 274,
+      "position": {
+        "x": 64,
+        "y": 417
+      }
+    },
+    {
+      "id": "王维",
+      "kind": "诗人",
+      "group": "盛唐",
+      "visibleFrom": 730,
+      "summary": "699–759（OpenQTS 所载）。存诗 403 首（chinese-poetry 署名）。见过：张九龄、孟浩然、王昌龄、杜甫、贾至、钱起。",
+      "birth": 699,
+      "death": 759,
+      "works": 403,
+      "position": {
+        "x": 316,
+        "y": 333
+      }
+    },
+    {
+      "id": "王昌龄",
+      "kind": "诗人",
+      "group": "盛唐",
+      "visibleFrom": 735,
+      "summary": "698–756（OpenQTS 所载）。存诗 222 首（chinese-poetry 署名）。见过：孟浩然、王维、岑参、李白。",
+      "birth": 698,
+      "death": 756,
+      "works": 222,
+      "position": {
+        "x": 284,
+        "y": 431
+      }
+    },
+    {
+      "id": "岑参",
+      "kind": "诗人",
+      "group": "盛唐",
+      "visibleFrom": 739,
+      "summary": "715–770（OpenQTS 所载）。存诗 411 首（chinese-poetry 署名）。见过：王昌龄、高适、杜甫、贾至。",
+      "birth": 715,
+      "death": 770,
+      "works": 411,
+      "position": {
+        "x": 504,
+        "y": 417
+      }
+    },
+    {
+      "id": "高适",
+      "kind": "诗人",
+      "group": "盛唐",
+      "visibleFrom": 744,
+      "summary": "707–765（OpenQTS 所载）。存诗 268 首（chinese-poetry 署名）。见过：岑参、李白、杜甫。",
+      "birth": 707,
+      "death": 765,
+      "works": 268,
+      "position": {
+        "x": 433,
+        "y": 633
+      }
+    },
+    {
+      "id": "李白",
+      "kind": "诗人",
+      "group": "盛唐",
+      "visibleFrom": 730,
+      "summary": "701–762（OpenQTS 所载）。存诗 1207 首（chinese-poetry 署名）。见过：贺知章、孟浩然、王昌龄、高适、杜甫、贾至。",
+      "birth": 701,
+      "death": 762,
+      "works": 1207,
+      "position": {
+        "x": 213,
+        "y": 597
+      }
+    },
+    {
+      "id": "杜甫",
+      "kind": "诗人",
+      "group": "盛唐",
+      "visibleFrom": 744,
+      "summary": "712–770（OpenQTS 所载）。存诗 1489 首（chinese-poetry 署名）。见过：王维、岑参、高适、李白、贾至、严武。",
+      "birth": 712,
+      "death": 770,
+      "works": 1489,
+      "position": {
+        "x": 357,
+        "y": 117
+      }
+    },
+    {
+      "id": "贾至",
+      "kind": "诗人",
+      "group": "盛唐",
+      "visibleFrom": 758,
+      "summary": "718–772（OpenQTS 所载）。存诗 48 首（chinese-poetry 署名）。见过：王维、岑参、李白、杜甫。",
+      "birth": 718,
+      "death": 772,
+      "works": 48,
+      "position": {
+        "x": 536,
+        "y": 267
+      }
+    },
+    {
+      "id": "严武",
+      "kind": "诗人",
+      "group": "盛唐",
+      "visibleFrom": 758,
+      "summary": "生卒不详。存诗 7 首（chinese-poetry 署名）。见过：杜甫。",
+      "birth": null,
+      "death": null,
+      "works": 7,
+      "position": {
+        "x": 577,
+        "y": 153
+      }
+    },
+    {
+      "id": "钱起",
+      "kind": "诗人",
+      "group": "大历",
+      "visibleFrom": 755,
+      "summary": "710–780（OpenQTS 所载）。存诗 541 首（chinese-poetry 署名）。见过：王维、卢纶、李端、司空曙。",
+      "birth": 710,
+      "death": 780,
+      "works": 541,
+      "position": {
+        "x": 756,
+        "y": 333
+      }
+    },
+    {
+      "id": "卢纶",
+      "kind": "诗人",
+      "group": "大历",
+      "visibleFrom": 770,
+      "summary": "739–799（OpenQTS 所载）。存诗 353 首（chinese-poetry 署名）。见过：钱起、李端、司空曙、令狐楚。",
+      "birth": 739,
+      "death": 799,
+      "works": 353,
+      "position": {
+        "x": 944,
+        "y": 417
+      }
+    },
+    {
+      "id": "李端",
+      "kind": "诗人",
+      "group": "大历",
+      "visibleFrom": 770,
+      "summary": "732–792（OpenQTS 所载）。存诗 280 首（chinese-poetry 署名）。见过：钱起、卢纶、司空曙、皎然。",
+      "birth": 732,
+      "death": 792,
+      "works": 280,
+      "position": {
+        "x": 680,
+        "y": 567
+      }
+    },
+    {
+      "id": "司空曙",
+      "kind": "诗人",
+      "group": "大历",
+      "visibleFrom": 770,
+      "summary": "720–790（OpenQTS 所载）。存诗 175 首（chinese-poetry 署名）。见过：钱起、卢纶、李端。",
+      "birth": 720,
+      "death": 790,
+      "works": 175,
+      "position": {
+        "x": 724,
+        "y": 453
+      }
+    },
+    {
+      "id": "皎然",
+      "kind": "诗僧",
+      "group": "大历",
+      "visibleFrom": 780,
+      "summary": "730–799（OpenQTS 所载）。存诗 488 首（chinese-poetry 署名）。见过：李端、孟郊。",
+      "birth": 730,
+      "death": 799,
+      "works": 488,
+      "position": {
+        "x": 900,
+        "y": 633
+      }
+    },
+    {
+      "id": "孟郊",
+      "kind": "诗人",
+      "group": "元和",
+      "visibleFrom": 787,
+      "summary": "751–814（OpenQTS 所载）。存诗 532 首（chinese-poetry 署名）。见过：皎然、韩愈、张籍、贾岛。",
+      "birth": 751,
+      "death": 814,
+      "works": 532,
+      "position": {
+        "x": 1120,
+        "y": 597
+      }
+    },
+    {
+      "id": "韩愈",
+      "kind": "诗人",
+      "group": "元和",
+      "visibleFrom": 792,
+      "summary": "768–824（OpenQTS 所载）。存诗 440 首（chinese-poetry 署名）。见过：孟郊、张籍、贾岛、白居易、刘禹锡、柳宗元。",
+      "birth": 768,
+      "death": 824,
+      "works": 440,
+      "position": {
+        "x": 1195,
+        "y": 483
+      }
+    },
+    {
+      "id": "张籍",
+      "kind": "诗人",
+      "group": "元和",
+      "visibleFrom": 795,
+      "summary": "766–830（OpenQTS 所载）。存诗 489 首（chinese-poetry 署名）。见过：孟郊、韩愈、贾岛、王建、白居易、刘禹锡、令狐楚。",
+      "birth": 766,
+      "death": 830,
+      "works": 489,
+      "position": {
+        "x": 1340,
+        "y": 603
+      }
+    },
+    {
+      "id": "贾岛",
+      "kind": "诗人",
+      "group": "元和",
+      "visibleFrom": 811,
+      "summary": "779–843（OpenQTS 所载）。存诗 421 首（chinese-poetry 署名）。见过：孟郊、韩愈、张籍、王建、姚合。",
+      "birth": 779,
+      "death": 843,
+      "works": 421,
+      "position": {
+        "x": 1363,
+        "y": 783
+      }
+    },
+    {
+      "id": "王建",
+      "kind": "诗人",
+      "group": "元和",
+      "visibleFrom": 795,
+      "summary": "生卒不详。存诗 580 首（chinese-poetry 署名）。见过：张籍、贾岛、白居易、刘禹锡、姚合。",
+      "birth": null,
+      "death": null,
+      "works": 580,
+      "position": {
+        "x": 1560,
+        "y": 567
+      }
+    },
+    {
+      "id": "白居易",
+      "kind": "诗人",
+      "group": "元和",
+      "visibleFrom": 803,
+      "summary": "772–846（OpenQTS 所载）。存诗 3009 首（chinese-poetry 署名）。见过：韩愈、张籍、王建、元稹、刘禹锡、令狐楚、姚合。",
+      "birth": 772,
+      "death": 846,
+      "works": 3009,
+      "position": {
+        "x": 1516,
+        "y": 333
+      }
+    },
+    {
+      "id": "元稹",
+      "kind": "诗人",
+      "group": "元和",
+      "visibleFrom": 803,
+      "summary": "779–831（OpenQTS 所载）。存诗 910 首（chinese-poetry 署名）。见过：白居易、刘禹锡、柳宗元。",
+      "birth": 779,
+      "death": 831,
+      "works": 910,
+      "position": {
+        "x": 1415,
+        "y": 447
+      }
+    },
+    {
+      "id": "刘禹锡",
+      "kind": "诗人",
+      "group": "元和",
+      "visibleFrom": 803,
+      "summary": "772–842（OpenQTS 所载）。存诗 886 首（chinese-poetry 署名）。见过：韩愈、张籍、王建、白居易、元稹、柳宗元、令狐楚、姚合。",
+      "birth": 772,
+      "death": 842,
+      "works": 886,
+      "position": {
+        "x": 1635,
+        "y": 453
+      }
+    },
+    {
+      "id": "柳宗元",
+      "kind": "诗人",
+      "group": "元和",
+      "visibleFrom": 803,
+      "summary": "773–819（OpenQTS 所载）。存诗 202 首（chinese-poetry 署名）。见过：韩愈、元稹、刘禹锡。",
+      "birth": 773,
+      "death": 819,
+      "works": 202,
+      "position": {
+        "x": 1296,
+        "y": 297
+      }
+    },
+    {
+      "id": "令狐楚",
+      "kind": "诗人",
+      "group": "元和",
+      "visibleFrom": 791,
+      "summary": "766–837（OpenQTS 所载）。存诗 90 首（chinese-poetry 署名）。见过：卢纶、张籍、白居易、刘禹锡、李商隐、张祜。",
+      "birth": 766,
+      "death": 837,
+      "works": 90,
+      "position": {
+        "x": 1480,
+        "y": 117
+      }
+    },
+    {
+      "id": "姚合",
+      "kind": "诗人",
+      "group": "元和",
+      "visibleFrom": 815,
+      "summary": "781–854（OpenQTS 所载）。存诗 534 首（chinese-poetry 署名）。见过：贾岛、王建、白居易、刘禹锡。",
+      "birth": 781,
+      "death": 854,
+      "works": 534,
+      "position": {
+        "x": 1583,
+        "y": 770
+      }
+    },
+    {
+      "id": "李商隐",
+      "kind": "诗人",
+      "group": "晚唐",
+      "visibleFrom": 829,
+      "summary": "813–858（OpenQTS 所载）。存诗 616 首（chinese-poetry 署名）。见过：令狐楚。",
+      "birth": 813,
+      "death": 858,
+      "works": 616,
+      "position": {
+        "x": 1700,
+        "y": 183
+      }
+    },
+    {
+      "id": "杜牧",
+      "kind": "诗人",
+      "group": "晚唐",
+      "visibleFrom": 845,
+      "summary": "803–852（OpenQTS 所载）。存诗 544 首（chinese-poetry 署名）。见过：张祜。",
+      "birth": 803,
+      "death": 852,
+      "works": 544,
+      "position": {
+        "x": 1956,
+        "y": 333
+      }
+    },
+    {
+      "id": "张祜",
+      "kind": "诗人",
+      "group": "晚唐",
+      "visibleFrom": 830,
+      "summary": "792–852（OpenQTS 所载）。存诗 565 首（chinese-poetry 署名）。见过：令狐楚、杜牧。",
+      "birth": 792,
+      "death": 852,
+      "works": 565,
+      "position": {
+        "x": 1736,
+        "y": 297
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "孟浩然—王维",
+      "source": "孟浩然",
+      "target": "王维",
+      "kind": "题目直证",
+      "weight": 2.0,
+      "visibleFrom": 730,
+      "year": 730,
+      "place": "长安",
+      "evidenceTitles": 2,
+      "evidence": ["孟浩然《留别王侍御维》", "王维《送孟六归襄阳》"],
+      "workIds": ["7f4cacb5-cde8-40de-9b14-e223879cc2f4", "31555526-5589-474b-b33a-fcfb3381111c"],
+      "note": "孟浩然入京应举不第，与王维相别。"
+    },
+    {
+      "id": "孟浩然—李白",
+      "source": "孟浩然",
+      "target": "李白",
+      "kind": "题目直证",
+      "weight": 1.0,
+      "visibleFrom": 730,
+      "year": 730,
+      "place": "江夏",
+      "evidenceTitles": 1,
+      "evidence": ["李白《黄鹤楼送孟浩然之广陵》"],
+      "workIds": ["d43a4767-2240-44b7-8d5b-c2acdc689839"]
+    },
+    {
+      "id": "王维—张九龄",
+      "source": "王维",
+      "target": "张九龄",
+      "kind": "史传记载",
+      "weight": 1.0,
+      "visibleFrom": 735,
+      "year": 735,
+      "place": "长安",
+      "evidenceTitles": 1,
+      "evidence": ["王维《献始兴公》"],
+      "workIds": ["49f16d59-ce56-4ed7-b3b3-82571018a52a"],
+      "note": "王维受宰相张九龄拔擢为右拾遗，同在朝中；《献始兴公》为献张九龄之作。",
+      "sources": [
+        {
+          "title": "《新唐书·王维传》：“张九龄执政，擢右拾遗。”（维基文库）",
+          "url": "https://zh.wikisource.org/wiki/新唐書/卷202"
+        }
+      ]
+    },
+    {
+      "id": "王维—王昌龄",
+      "source": "王维",
+      "target": "王昌龄",
+      "kind": "题目直证",
+      "weight": 1.0,
+      "visibleFrom": 735,
+      "year": 735,
+      "place": "长安青龙寺",
+      "evidenceTitles": 1,
+      "evidence": ["王昌龄《同王维集青龙寺昙壁上人兄院五韵》"],
+      "workIds": ["aebc05f0-516c-4909-83c3-f9e51a2a1a6c"]
+    },
+    {
+      "id": "张九龄—孟浩然",
+      "source": "张九龄",
+      "target": "孟浩然",
+      "kind": "题目直证",
+      "weight": 3.0,
+      "visibleFrom": 737,
+      "year": 737,
+      "place": "荆州",
+      "evidenceTitles": 4,
+      "evidence": [
+        "孟浩然《送丁大凤进士赴举呈张九龄》",
+        "孟浩然《陪张丞相登荆城楼因寄蓟州张使君及浪泊戍主刘家》",
+        "孟浩然《陪张丞相祠紫盖山途经玉泉寺》",
+        "孟浩然《陪张丞相自松滋江东泊渚宫》"
+      ],
+      "workIds": [
+        "7ed6173a-e61e-4a96-a35e-5fe7f9c73cb4",
+        "b6e1710a-4d30-437c-9fea-bc32f0f57b59",
+        "c5995ee4-f2d9-46e3-8dd4-fec82bafe040",
+        "0ea9c522-80c5-4d5c-bcfb-775bae3d8041"
+      ],
+      "note": "张九龄贬荆州长史，孟浩然入其幕府，题中“张丞相”即张九龄。"
+    },
+    {
+      "id": "孟浩然—王昌龄",
+      "source": "孟浩然",
+      "target": "王昌龄",
+      "kind": "题目直证",
+      "weight": 2.0,
+      "visibleFrom": 739,
+      "year": 739,
+      "place": "襄阳",
+      "evidenceTitles": 2,
+      "evidence": ["孟浩然《与王昌龄宴王道士房》", "孟浩然《送王昌龄之岭南》"],
+      "workIds": ["268aae62-5eac-44ea-8f36-f6ef9314ea6e", "3eef5ead-96d6-4531-8eeb-be21f3a31d68"]
+    },
+    {
+      "id": "王昌龄—岑参",
+      "source": "王昌龄",
+      "target": "岑参",
+      "kind": "题目直证",
+      "weight": 2.0,
+      "visibleFrom": 739,
+      "year": 739,
+      "place": "长安",
+      "evidenceTitles": 2,
+      "evidence": ["岑参《送王大昌龄赴江宁》", "王昌龄《留别岑参兄弟》"],
+      "workIds": ["6f4c5101-f4f8-470c-97cc-aa67d313658c", "419db4f0-72c6-4a05-aa1f-d5865f9cea66"]
+    },
+    {
+      "id": "王昌龄—李白",
+      "source": "王昌龄",
+      "target": "李白",
+      "kind": "题目直证",
+      "weight": 1.0,
+      "visibleFrom": 739,
+      "year": 739,
+      "place": "巴陵",
+      "evidenceTitles": 1,
+      "evidence": [
+        "李白《同王昌龄送族弟襄归桂阳二首 一》",
+        "李白《同王昌龄送族弟襄归桂阳二首 二》"
+      ],
+      "workIds": ["ecaff990-891b-4270-be58-232b9ce0a501", "84f4fe6b-129d-4ab3-b888-b014cc21eef9"]
+    },
+    {
+      "id": "李白—贺知章",
+      "source": "李白",
+      "target": "贺知章",
+      "kind": "题目直证",
+      "weight": 2.0,
+      "visibleFrom": 744,
+      "year": 744,
+      "place": "长安",
+      "evidenceTitles": 2,
+      "evidence": ["李白《送贺监归四明应制》", "李白《送贺宾客归越》"],
+      "workIds": ["e6605a4d-7343-4a17-9663-0cded2180293", "e410354e-db61-419e-96f8-b2f28f9e7aca"],
+      "note": "《对酒忆贺监》序述二人在长安紫极宫相见，这里只计送别诗。"
+    },
+    {
+      "id": "李白—高适",
+      "source": "李白",
+      "target": "高适",
+      "kind": "正文自述",
+      "weight": 2.0,
+      "visibleFrom": 744,
+      "year": 744,
+      "place": "梁宋（单父台）",
+      "evidenceTitles": 2,
+      "evidence": ["杜甫《昔游》", "杜甫《遣怀》"],
+      "workIds": ["eb527751-8039-4031-bded-476c82a0ebe1", "f5003828-ec14-49f6-a2b4-9eb6ce67a9d8"],
+      "note": "见于杜甫诗：“昔者与高李，晚登单父台”“忆与高李辈，论交入酒垆”。"
+    },
+    {
+      "id": "李白—杜甫",
+      "source": "李白",
+      "target": "杜甫",
+      "kind": "题目直证",
+      "weight": 3.0,
+      "visibleFrom": 744,
+      "year": 744,
+      "place": "洛阳、梁宋、东鲁",
+      "evidenceTitles": 4,
+      "evidence": [
+        "李白《鲁郡东石门送杜二甫》",
+        "杜甫《昔游》",
+        "杜甫《与李十二白同寻范十隐居》",
+        "杜甫《遣怀》"
+      ],
+      "workIds": [
+        "432f0351-d99d-41eb-9712-143f2850cb42",
+        "eb527751-8039-4031-bded-476c82a0ebe1",
+        "64b7dbe3-a2e2-47a2-9ca0-32413250c0c4",
+        "f5003828-ec14-49f6-a2b4-9eb6ce67a9d8"
+      ]
+    },
+    {
+      "id": "杜甫—高适",
+      "source": "杜甫",
+      "target": "高适",
+      "kind": "题目直证",
+      "weight": 2.58,
+      "visibleFrom": 744,
+      "year": 744,
+      "place": "梁宋",
+      "evidenceTitles": 3,
+      "evidence": ["杜甫《昔游》", "杜甫《送高三十五书记》", "杜甫《遣怀》"],
+      "workIds": [
+        "eb527751-8039-4031-bded-476c82a0ebe1",
+        "c9e63635-0caa-43c2-b4b8-b459f9983fbf",
+        "f5003828-ec14-49f6-a2b4-9eb6ce67a9d8"
+      ]
+    },
+    {
+      "id": "高适—岑参",
+      "source": "高适",
+      "target": "岑参",
+      "kind": "题目直证",
+      "weight": 2.0,
+      "visibleFrom": 752,
+      "year": 752,
+      "place": "长安慈恩寺",
+      "evidenceTitles": 2,
+      "evidence": ["岑参《与高适薛据慈恩寺浮图》", "高适《同诸公登慈恩寺浮图》"],
+      "workIds": ["93d82a12-5e4d-45c2-b837-d0c54447fba3", "a491ab1b-43b6-4757-b3bb-9e984de2b5d9"]
+    },
+    {
+      "id": "杜甫—岑参",
+      "source": "杜甫",
+      "target": "岑参",
+      "kind": "正文自述",
+      "weight": 2.58,
+      "visibleFrom": 752,
+      "year": 752,
+      "place": "长安",
+      "evidenceTitles": 3,
+      "evidence": ["杜甫《同诸公登慈恩寺塔》", "杜甫《奉荅岑参补阙见赠》", "杜甫《渼陂行》"],
+      "workIds": [
+        "e2595ed8-1345-4194-86f6-ec71bd785110",
+        "2503d099-6e39-4c1e-bf86-cd84c0e61d85",
+        "efa1a341-99b5-4f81-9c2e-4a1e372e41d1"
+      ],
+      "note": "《渼陂行》：“岑参兄弟皆好奇，携我远来游渼陂”。"
+    },
+    {
+      "id": "王维—钱起",
+      "source": "王维",
+      "target": "钱起",
+      "kind": "题目直证",
+      "weight": 2.58,
+      "visibleFrom": 755,
+      "year": 755,
+      "place": "蓝田",
+      "evidenceTitles": 3,
+      "evidence": [
+        "王维《留别钱起》",
+        "钱起《晚归蓝田酬王维给事赠别》",
+        "钱起《酬王维春夜竹亭赠别》"
+      ],
+      "workIds": [
+        "daa10a71-7423-4830-96cf-8db885e4bbe5",
+        "b8d11097-ddd2-4ec5-9bcd-e47676e01f82",
+        "5c373cc0-d72c-4bc8-b39e-c48d0564c86e"
+      ]
+    },
+    {
+      "id": "王维—杜甫",
+      "source": "王维",
+      "target": "杜甫",
+      "kind": "同场唱和",
+      "weight": 2.58,
+      "visibleFrom": 758,
+      "year": 758,
+      "place": "长安",
+      "evidenceTitles": 3,
+      "evidence": [
+        "杜甫《奉和贾至舍人早朝大明宫》",
+        "杜甫《奉赠王中允》",
+        "王维《和贾舍人早朝大明宫之作》"
+      ],
+      "workIds": [
+        "56df51aa-0b14-4261-aaca-6866007287b1",
+        "63aa0a1e-4b50-42f0-adbf-15fea1394963",
+        "a364504e-3cfc-44c6-9203-173856452cdd"
+      ],
+      "note": "乾元元年二人同在朝，杜甫有《奉赠王中允》，又同和贾至《早朝大明宫》。"
+    },
+    {
+      "id": "王维—贾至",
+      "source": "王维",
+      "target": "贾至",
+      "kind": "同场唱和",
+      "weight": 1.0,
+      "visibleFrom": 758,
+      "year": 758,
+      "place": "长安",
+      "evidenceTitles": 1,
+      "evidence": ["王维《和贾舍人早朝大明宫之作》"],
+      "workIds": ["a364504e-3cfc-44c6-9203-173856452cdd"]
+    },
+    {
+      "id": "岑参—贾至",
+      "source": "岑参",
+      "target": "贾至",
+      "kind": "同场唱和",
+      "weight": 1.0,
+      "visibleFrom": 758,
+      "year": 758,
+      "place": "长安",
+      "evidenceTitles": 1,
+      "evidence": ["岑参《奉和中书舍人贾至早朝大明宫》"],
+      "workIds": ["8df8e94b-ffe4-4930-af4c-491d7cb04651"]
+    },
+    {
+      "id": "杜甫—贾至",
+      "source": "杜甫",
+      "target": "贾至",
+      "kind": "题目直证",
+      "weight": 2.58,
+      "visibleFrom": 758,
+      "year": 758,
+      "place": "长安",
+      "evidenceTitles": 3,
+      "evidence": [
+        "杜甫《奉和贾至舍人早朝大明宫》",
+        "杜甫《留别贾严二阁老两院补阙》",
+        "杜甫《送贾阁老出汝州》"
+      ],
+      "workIds": [
+        "56df51aa-0b14-4261-aaca-6866007287b1",
+        "f35c4d3c-1141-4821-9c39-99a480960d98",
+        "88a4cb52-fee3-461b-b681-32275a0edd24"
+      ]
+    },
+    {
+      "id": "杜甫—严武",
+      "source": "杜甫",
+      "target": "严武",
+      "kind": "题目直证",
+      "weight": 4.32,
+      "visibleFrom": 758,
+      "year": 758,
+      "place": "长安、成都",
+      "evidenceTitles": 10,
+      "evidence": [
+        "杜甫《留别贾严二阁老两院补阙》",
+        "杜甫《严中丞枉驾见过》",
+        "杜甫《严公仲夏枉驾草堂兼携酒馔》",
+        "杜甫《严公厅宴同咏蜀道画图》",
+        "杜甫《严郑公宅同咏竹》",
+        "杜甫《奉济驿重送严公四韵》"
+      ],
+      "workIds": [
+        "f35c4d3c-1141-4821-9c39-99a480960d98",
+        "35976f47-d2ee-4703-82c3-7c675e65929b",
+        "3cc5a45c-2739-4fc6-9ea9-ca01d2eee3e7",
+        "8e754fed-aabb-441a-8bdb-ed98dfa07e89",
+        "a2c64cce-66c4-481f-bcce-0b54ff36d87f",
+        "c2c83ee2-940f-4ae3-9ab3-4f509d2991f3",
+        "39df70ad-1359-4f75-9358-421aa7db5fe6",
+        "dceaa342-8374-4c18-9c45-85943d152c38",
+        "f7961f8c-6bd0-4a4d-89f8-0a10ba3f77b9",
+        "6c49fcc2-e014-4a5f-8b7b-bc592de83062"
+      ],
+      "note": "乾元元年同在两省；上元、广德间严武镇蜀，屡至草堂。"
+    },
+    {
+      "id": "李白—贾至",
+      "source": "李白",
+      "target": "贾至",
+      "kind": "题目直证",
+      "weight": 2.0,
+      "visibleFrom": 759,
+      "year": 759,
+      "place": "岳州、洞庭",
+      "evidenceTitles": 2,
+      "evidence": [
+        "李白《留别贾舍人至二首 一》",
+        "李白《留别贾舍人至二首 二》",
+        "李白《陪族叔刑部侍郎晔及中书贾舍人至游洞庭五首 一》",
+        "李白《陪族叔刑部侍郎晔及中书贾舍人至游洞庭五首 三》",
+        "李白《陪族叔刑部侍郎晔及中书贾舍人至游洞庭五首 二》",
+        "李白《陪族叔刑部侍郎晔及中书贾舍人至游洞庭五首 五》"
+      ],
+      "workIds": [
+        "c0e8867b-a945-4f03-8e0e-eacbf3c6c0ee",
+        "02e2ee6f-0796-49c6-b9bd-96e786042baf",
+        "a759f1f9-138e-40dc-b75c-0e9923ab71fe",
+        "53718a9e-e29a-42fb-8edb-630fed52a722",
+        "82f6ab4f-11e2-43c1-8db3-3c7faebc17f8",
+        "abc97ffb-bbe7-47e0-bbf4-47d3479095d1",
+        "d6fb5943-be0a-4559-853c-222c60be55a6"
+      ]
+    },
+    {
+      "id": "钱起—李端",
+      "source": "钱起",
+      "target": "李端",
+      "kind": "题目直证",
+      "weight": 1.0,
+      "visibleFrom": 770,
+      "year": 770,
+      "place": "长安",
+      "evidenceTitles": 1,
+      "evidence": ["李端《野亭三韵送钱员外》"],
+      "workIds": ["553ab62d-c697-480c-96a3-c9f93da53fc1"]
+    },
+    {
+      "id": "钱起—司空曙",
+      "source": "钱起",
+      "target": "司空曙",
+      "kind": "题目直证",
+      "weight": 1.0,
+      "visibleFrom": 770,
+      "year": 770,
+      "place": "长安",
+      "evidenceTitles": 1,
+      "evidence": ["司空曙《过钱员外》"],
+      "workIds": ["2c1a6bd0-a7fc-4485-97ce-040b34633957"]
+    },
+    {
+      "id": "卢纶—李端",
+      "source": "卢纶",
+      "target": "李端",
+      "kind": "题目直证",
+      "weight": 1.0,
+      "visibleFrom": 770,
+      "year": 770,
+      "place": "长安",
+      "evidenceTitles": 1,
+      "evidence": ["李端《野寺病居喜卢纶见访》"],
+      "workIds": ["39640e40-b5f6-4ca0-8106-235b98251880"]
+    },
+    {
+      "id": "卢纶—司空曙",
+      "source": "卢纶",
+      "target": "司空曙",
+      "kind": "题目直证",
+      "weight": 3.0,
+      "visibleFrom": 770,
+      "year": 770,
+      "place": "长安",
+      "evidenceTitles": 4,
+      "evidence": [
+        "司空曙《别卢纶》",
+        "司空曙《喜外弟卢纶见宿》",
+        "卢纶《赠别司空曙》",
+        "卢纶《过司空曙村居》"
+      ],
+      "workIds": [
+        "4f3920b1-4088-40d9-a888-98e8869adcf1",
+        "f0cd6afd-c89d-4fc3-b214-bcbf63042e8e",
+        "dffd705d-29d2-422f-883a-36ae86876fce",
+        "424be0b8-1f41-4659-9e87-3e9bcbb7cab9"
+      ],
+      "note": "司空曙为卢纶表兄（题称“外弟卢纶”）。"
+    },
+    {
+      "id": "李端—司空曙",
+      "source": "李端",
+      "target": "司空曙",
+      "kind": "题目直证",
+      "weight": 2.58,
+      "visibleFrom": 770,
+      "year": 770,
+      "place": "",
+      "evidenceTitles": 3,
+      "evidence": [
+        "李端《江上喜逢司空文明》",
+        "李端《江上逢司空曙》",
+        "李端《秋日旅舍别司空文明》"
+      ],
+      "workIds": [
+        "dde43147-3d4b-4c3b-b9f8-5e45db51e046",
+        "5e2d8a26-816a-42a0-a793-43cb68b807be",
+        "4d79a7f2-2e3c-496a-b9bd-9f778aee26ee"
+      ]
+    },
+    {
+      "id": "钱起—卢纶",
+      "source": "钱起",
+      "target": "卢纶",
+      "kind": "题目直证",
+      "weight": 1.0,
+      "visibleFrom": 772,
+      "year": 772,
+      "place": "长安灞上",
+      "evidenceTitles": 1,
+      "evidence": ["卢纶《将赴阌乡灞上留别钱起员外》"],
+      "workIds": ["38ac5aee-b8ad-4472-9514-957044c782b2"]
+    },
+    {
+      "id": "李端—皎然",
+      "source": "李端",
+      "target": "皎然",
+      "kind": "题目直证",
+      "weight": 1.0,
+      "visibleFrom": 780,
+      "year": 780,
+      "place": "",
+      "evidenceTitles": 1,
+      "evidence": ["李端《送皎然上人归山》"],
+      "workIds": ["9b9e4720-2ced-46a8-8cd2-be4575f67658"]
+    },
+    {
+      "id": "皎然—孟郊",
+      "source": "皎然",
+      "target": "孟郊",
+      "kind": "题目直证",
+      "weight": 2.0,
+      "visibleFrom": 787,
+      "year": 787,
+      "place": "湖州",
+      "evidenceTitles": 2,
+      "evidence": ["孟郊《同昼上人送郭秀才江南寻兄弟》", "孟郊《逢江南故昼上人会中郑方回》"],
+      "workIds": ["05979c1c-21bf-46ea-809e-ad7d6707eeff", "7815179b-c4d1-4365-a169-b4dabe1caaf3"],
+      "note": "“昼上人”即皎然（字清昼）。"
+    },
+    {
+      "id": "卢纶—令狐楚",
+      "source": "卢纶",
+      "target": "令狐楚",
+      "kind": "题目直证",
+      "weight": 1.0,
+      "visibleFrom": 791,
+      "year": 791,
+      "place": "长安",
+      "evidenceTitles": 1,
+      "evidence": ["卢纶《送尹枢令狐楚及第后归觐》"],
+      "workIds": ["823c919b-3ad6-47c7-bd05-3e89d7b74183"]
+    },
+    {
+      "id": "孟郊—韩愈",
+      "source": "孟郊",
+      "target": "韩愈",
+      "kind": "题目直证",
+      "weight": 3.32,
+      "visibleFrom": 792,
+      "year": 792,
+      "place": "长安、汴州",
+      "evidenceTitles": 5,
+      "evidence": [
+        "孟郊《汴州留别韩愈》",
+        "孟郊《答韩愈李观别因献张徐州》",
+        "孟郊《与韩愈李翱张籍话别》",
+        "孟郊《送韩愈从军》",
+        "韩愈《长安交游者赠孟郊》"
+      ],
+      "workIds": [
+        "e87073d6-8089-481f-bc0b-32dde82eb4f8",
+        "33ca206a-03ef-462f-a1ad-beec2ba07560",
+        "7c52da8e-5d6b-48bf-baf3-6d0c5851907e",
+        "37972b94-000b-468a-9075-dbf997309066",
+        "d39658f3-b254-4985-abf0-48751db03198"
+      ]
+    },
+    {
+      "id": "张籍—王建",
+      "source": "张籍",
+      "target": "王建",
+      "kind": "题目直证",
+      "weight": 2.0,
+      "visibleFrom": 795,
+      "year": 795,
+      "place": "",
+      "evidenceTitles": 2,
+      "evidence": ["张籍《逢王建有赠》", "王建《送张籍归江东》"],
+      "workIds": ["ef40e90a-5774-4790-951d-06277b45033d", "db092216-2813-4abb-8802-fa92516db6f2"]
+    },
+    {
+      "id": "孟郊—张籍",
+      "source": "孟郊",
+      "target": "张籍",
+      "kind": "题目直证",
+      "weight": 2.0,
+      "visibleFrom": 797,
+      "year": 797,
+      "place": "汴州",
+      "evidenceTitles": 2,
+      "evidence": ["孟郊《与韩愈李翱张籍话别》", "张籍《赠别孟郊》"],
+      "workIds": ["7c52da8e-5d6b-48bf-baf3-6d0c5851907e", "a888e890-ca60-47f3-a750-3df66492fb8c"]
+    },
+    {
+      "id": "韩愈—张籍",
+      "source": "韩愈",
+      "target": "张籍",
+      "kind": "题目直证",
+      "weight": 3.0,
+      "visibleFrom": 797,
+      "year": 797,
+      "place": "汴州、长安",
+      "evidenceTitles": 4,
+      "evidence": [
+        "韩愈《题张十八所居》",
+        "韩愈《喜侯喜至赠张籍张彻》",
+        "韩愈《与张十八同效阮步兵一日复一夕》",
+        "韩愈《游城南十六首 赠张十八助敎》"
+      ],
+      "workIds": [
+        "1b869632-0dcf-4e3c-98f5-291aaa1b3884",
+        "b17e7f46-07c8-4596-9a54-6e6e88f40bae",
+        "82c880fc-b1f4-4249-997d-6710c1bd016c",
+        "af9cb51e-80f1-4766-89f1-20c35e804f3c"
+      ]
+    },
+    {
+      "id": "韩愈—刘禹锡",
+      "source": "韩愈",
+      "target": "刘禹锡",
+      "kind": "正文自述",
+      "weight": 1.0,
+      "visibleFrom": 803,
+      "year": 803,
+      "place": "长安御史台",
+      "evidenceTitles": 1,
+      "evidence": ["韩愈《赴江陵途中寄赠王二十补阙李十一拾遗李二十六员外翰林三学士》"],
+      "workIds": ["c325ca32-5efc-4c90-89d3-853ca1782713"],
+      "note": "同上。"
+    },
+    {
+      "id": "韩愈—柳宗元",
+      "source": "韩愈",
+      "target": "柳宗元",
+      "kind": "正文自述",
+      "weight": 1.0,
+      "visibleFrom": 803,
+      "year": 803,
+      "place": "长安御史台",
+      "evidenceTitles": 1,
+      "evidence": ["韩愈《赴江陵途中寄赠王二十补阙李十一拾遗李二十六员外翰林三学士》"],
+      "workIds": ["c325ca32-5efc-4c90-89d3-853ca1782713"],
+      "note": "贞元十九年韩、柳、刘同为监察御史，韩愈诗云“同官尽才俊，偏善柳与刘”。"
+    },
+    {
+      "id": "元稹—白居易",
+      "source": "元稹",
+      "target": "白居易",
+      "kind": "题目直证",
+      "weight": 4.46,
+      "visibleFrom": 803,
+      "year": 803,
+      "place": "长安",
+      "evidenceTitles": 11,
+      "evidence": [
+        "元稹《沣西别乐天博载樊宗宪李景信两秀才侄谷三月三十日相饯送》",
+        "元稹《与乐天同葬杓直》",
+        "元稹《过东都别乐天二首 一》",
+        "元稹《过东都别乐天二首 二》",
+        "白居易《十年三月三十日别微之于[沣]上十四年三月十一日夜遇微之于峡中停舟夷陵三宿而别言不尽者以诗终之因赋七言十七韵以赠且欲记所遇之地与相见之时为他年会话张本也》",
+        "白居易《同微之赠别郭虚舟炼师五十韵》"
+      ],
+      "workIds": [
+        "51b29661-bad2-4158-bfed-a346f386224e",
+        "62628a33-df75-4e06-a6c6-f80faa92c977",
+        "5786583f-f2e4-4d98-97ae-143d78135231",
+        "9cd675e1-ee14-4478-8dd0-90f6b9f81c03",
+        "26bd5c77-3ac8-4384-b873-d1b76d5df8dd",
+        "31fbf86c-ad15-4c12-9f7a-b39f87c82109",
+        "ea55d569-22e0-4bc4-9bf5-7078c40e9b27",
+        "d6cdd0b5-02c7-450b-a984-6eb12ddf4f2c",
+        "73df8fc0-6c14-48f6-8e6c-8089eaaa9efb",
+        "1dc8f53a-980e-40fa-b2c1-4c00638899d4",
+        "607e1f98-5d6e-4c0f-81de-f309b22c882f",
+        "0d84451b-011a-4985-ae1b-a133b973e046"
+      ]
+    },
+    {
+      "id": "孟郊—贾岛",
+      "source": "孟郊",
+      "target": "贾岛",
+      "kind": "史传记载",
+      "weight": 2.0,
+      "visibleFrom": 811,
+      "year": 811,
+      "place": "洛阳",
+      "evidenceTitles": 2,
+      "evidence": ["孟郊《戏赠无本 一》", "孟郊《戏赠无本 二》", "贾岛《投孟郊》"],
+      "workIds": [
+        "22107002-3bdc-478c-a488-2aa99acc3f8b",
+        "8b4c36ff-cac2-4e3d-97e2-9bcff5c4e3b8",
+        "b76e800b-6bd5-433a-9384-edbfb139d31e"
+      ],
+      "sources": [
+        {
+          "title": "李嘉言《贾岛年谱》系二人初交于元和六年；孟郊《戏赠无本》作于是年冬送贾岛归范阳时（据葛晓音书评转引）",
+          "url": "https://m.douban.com/book/review/16061244/"
+        },
+        {
+          "title": "百度百科“郊岛”",
+          "url": "https://baike.baidu.com/item/%E9%83%8A%E5%B2%9B/10676466"
+        }
+      ]
+    },
+    {
+      "id": "韩愈—贾岛",
+      "source": "韩愈",
+      "target": "贾岛",
+      "kind": "题目直证",
+      "weight": 2.58,
+      "visibleFrom": 811,
+      "year": 811,
+      "place": "洛阳、长安",
+      "evidenceTitles": 3,
+      "evidence": [
+        "贾岛《和韩吏部泛南溪》",
+        "贾岛《携新文诣张籍韩愈途中成》",
+        "韩愈《送无本师归范阳》"
+      ],
+      "workIds": [
+        "7fbb8ad9-85d1-4e8c-af90-10c309744ac3",
+        "1cfd0726-3105-41c1-ab25-aef335f3a82a",
+        "76461079-8151-4e54-9be8-f650b406a657"
+      ],
+      "note": "“无本”是贾岛为僧时的法名。"
+    },
+    {
+      "id": "张籍—贾岛",
+      "source": "张籍",
+      "target": "贾岛",
+      "kind": "题目直证",
+      "weight": 3.0,
+      "visibleFrom": 811,
+      "year": 811,
+      "place": "长安",
+      "evidenceTitles": 4,
+      "evidence": [
+        "张籍《与贾岛闲游》",
+        "张籍《逢贾岛》",
+        "张籍《过贾岛野居》",
+        "贾岛《携新文诣张籍韩愈途中成》"
+      ],
+      "workIds": [
+        "9ac10c96-2565-49a8-8d9c-c7a8e00a6bfd",
+        "b2a58a7a-bed8-4d97-9c8f-7632cd235987",
+        "e797885d-1d00-48f0-9f55-d45b2365608d",
+        "1cfd0726-3105-41c1-ab25-aef335f3a82a"
+      ]
+    },
+    {
+      "id": "白居易—张籍",
+      "source": "白居易",
+      "target": "张籍",
+      "kind": "题目直证",
+      "weight": 3.81,
+      "visibleFrom": 815,
+      "year": 815,
+      "place": "长安",
+      "evidenceTitles": 7,
+      "evidence": [
+        "张籍《苏州江岸留别乐天》",
+        "张籍《送白宾客分司东都》",
+        "白居易《喜张十八博士除水部员外郎》",
+        "白居易《曲江独行招张十八》",
+        "白居易《逢张十八员外籍》",
+        "白居易《酬张十八访宿见赠》"
+      ],
+      "workIds": [
+        "3db0db09-2db6-4884-bc07-4dd85d45b67c",
+        "12d6d253-6aa8-43ea-98ae-6fbd0bafbbf7",
+        "035b287d-9a07-4082-819f-cebee0988cf9",
+        "1cba0bc8-479b-4d43-821b-8edbe55d3428",
+        "c9383dcc-342c-48b5-8809-f45671db940d",
+        "637abf28-c2e0-4168-a2a0-001c56c9a175",
+        "e62cd454-8cda-44d6-b491-6a7a127de4a9"
+      ]
+    },
+    {
+      "id": "元稹—刘禹锡",
+      "source": "元稹",
+      "target": "刘禹锡",
+      "kind": "题目直证",
+      "weight": 1.0,
+      "visibleFrom": 815,
+      "year": 815,
+      "place": "长安",
+      "evidenceTitles": 1,
+      "evidence": ["元稹《留呈梦得子厚致用》"],
+      "workIds": ["ad007ffd-f419-4839-baf6-0a8f2108fb1f"],
+      "note": "元和十年春，元、刘、柳同被召回长安。"
+    },
+    {
+      "id": "元稹—柳宗元",
+      "source": "元稹",
+      "target": "柳宗元",
+      "kind": "题目直证",
+      "weight": 1.0,
+      "visibleFrom": 815,
+      "year": 815,
+      "place": "长安",
+      "evidenceTitles": 1,
+      "evidence": ["元稹《留呈梦得子厚致用》"],
+      "workIds": ["ad007ffd-f419-4839-baf6-0a8f2108fb1f"]
+    },
+    {
+      "id": "刘禹锡—柳宗元",
+      "source": "刘禹锡",
+      "target": "柳宗元",
+      "kind": "题目直证",
+      "weight": 2.58,
+      "visibleFrom": 815,
+      "year": 815,
+      "place": "衡阳",
+      "evidenceTitles": 3,
+      "evidence": [
+        "刘禹锡《再授连州至衡阳酬柳柳州赠别》",
+        "柳宗元《衡阳与梦得分路赠别》",
+        "柳宗元《重别梦得》"
+      ],
+      "workIds": [
+        "7a11fbb0-0fa3-436a-a778-a2095d3fb85e",
+        "7d475032-daa2-4ee7-bbaa-dbd8d0bc2dca",
+        "fe6a4fdb-7d32-47ad-b976-da9d50df4368"
+      ],
+      "note": "二人为贞元九年同榜进士，此处取两人再贬分路的衡阳赠别。"
+    },
+    {
+      "id": "姚合—贾岛",
+      "source": "姚合",
+      "target": "贾岛",
+      "kind": "题目直证",
+      "weight": 3.58,
+      "visibleFrom": 815,
+      "year": 815,
+      "place": "长安",
+      "evidenceTitles": 6,
+      "evidence": [
+        "姚合《别贾岛》",
+        "姚合《喜贾岛至》",
+        "姚合《喜贾岛雨中访宿》",
+        "姚合《送贾岛及钟浑》",
+        "贾岛《喜姚郎中自杭州回》",
+        "贾岛《送姚杭州》"
+      ],
+      "workIds": [
+        "19a70179-39ee-4e60-9642-72c0cccafc07",
+        "8a27b541-6346-4561-bcfe-db060ed3f10b",
+        "34f90471-9c6d-47fe-adb6-46c2ece6c80c",
+        "8d8b40a6-db13-4b12-a86c-27784d219d19",
+        "24855878-b6e3-4668-b0e9-a1617a1035b5",
+        "4e9ca82f-2295-4e31-b500-0e38da48f5da"
+      ]
+    },
+    {
+      "id": "韩愈—白居易",
+      "source": "韩愈",
+      "target": "白居易",
+      "kind": "题目直证",
+      "weight": 1.0,
+      "visibleFrom": 822,
+      "year": 822,
+      "place": "长安",
+      "evidenceTitles": 1,
+      "evidence": ["白居易《同韩侍郎游郑家池吟诗小饮》"],
+      "workIds": ["31debc88-7cae-4121-80a0-46a24e47b296"]
+    },
+    {
+      "id": "王建—姚合",
+      "source": "王建",
+      "target": "姚合",
+      "kind": "题目直证",
+      "weight": 1.0,
+      "visibleFrom": 825,
+      "year": 825,
+      "place": "",
+      "evidenceTitles": 1,
+      "evidence": ["姚合《送王建秘书往渭南庄》"],
+      "workIds": ["5a11df95-1dc6-4732-80e5-9ae3e4b7ecb8"]
+    },
+    {
+      "id": "刘禹锡—白居易",
+      "source": "刘禹锡",
+      "target": "白居易",
+      "kind": "题目直证",
+      "weight": 5.46,
+      "visibleFrom": 826,
+      "year": 826,
+      "place": "扬州、洛阳",
+      "evidenceTitles": 22,
+      "evidence": [
+        "刘禹锡《酬乐天扬州初逢席上见赠》",
+        "刘禹锡《三月三日与乐天及河南李尹奉陪裴令公泛洛禊饮各赋十二韵》",
+        "刘禹锡《元日乐天见过因举酒为贺》",
+        "刘禹锡《同乐天和微之深春二十首 一》",
+        "刘禹锡《同乐天和微之深春二十首 七》",
+        "刘禹锡《同乐天和微之深春二十首 三》"
+      ],
+      "workIds": [
+        "9c955427-5806-4e78-949e-0cff513bc8e7",
+        "c6a082c4-3aa9-4c23-9104-38aeef957d55",
+        "c4e45aca-6a1a-4cdb-a334-f95d7cbfe76e",
+        "d109931b-6121-42ea-80d9-f8c53c0cef04",
+        "beb2f202-2c2e-429e-bada-58d23707883f",
+        "7da7530a-7033-43b3-90e3-f37c6baa5bd8",
+        "72ea76eb-c624-4e9d-b791-4b8438c18605",
+        "23b288e3-01d9-4688-8f00-8572431a2819",
+        "80ce1d3d-d35a-427f-b85b-db8923949c05",
+        "3317e361-b45c-40b1-82e6-ce523ee6d424",
+        "72a19fe4-7b5e-4285-9bf8-4d2812f89675",
+        "db700e6b-5b2f-4354-9295-aafa4fdac50e",
+        "cdf6e3ff-c80d-438c-9d6d-a03d4b5d6230",
+        "68bab652-e497-471f-8e4e-eb48eb6fb6ee",
+        "379d9a4d-c126-44e6-b632-f4d45ad8111f",
+        "61e989b9-18bd-491a-abbc-a64c45061b27",
+        "c6af1ead-26f2-4762-9cea-bd841de31686",
+        "243fae53-1b7d-41c1-a052-1f8daa6d7e48",
+        "a7ec76b2-0a7d-4769-828a-451d5775f2bf",
+        "e7c21de5-b9f7-40e9-9e86-4a6bb501ad72",
+        "d842e734-ca12-43de-a4ea-b7b48c2ff1fd",
+        "19cd6d1c-fd8c-4d74-a79d-6177b72c1b3e",
+        "8534811a-5ddc-4cb6-aca7-74939e9c2676",
+        "a22fd731-e400-4a31-baef-ec055010aabe",
+        "365fea04-14ad-416f-bf79-f64d20cb9441",
+        "d2713cdb-0b94-4cc2-9673-567c21766154",
+        "abf46c97-4770-4e6b-bd01-b4c4ad49c552",
+        "a86e1f74-25be-409e-bc40-23c5c588d7db",
+        "5753f4b7-f085-4a30-8698-f3ae049f655d",
+        "8fc1b3ff-50cc-4767-814f-541e521d38ae",
+        "045f4f0f-2b75-495a-a1db-987d6900874e",
+        "fabcd3b0-ac3e-4199-9592-cd1d59ba92b0",
+        "247d6876-899a-4ee0-99e0-37fbcb40d56a",
+        "946dc59e-313f-4094-80e1-4edd39a8215f",
+        "feb122e4-3555-4678-a0ca-e5d43c72e6b7",
+        "34f4cb4c-c56a-4332-9a5d-d7fe611695e4",
+        "a58a0828-9669-4171-ad0c-ce6ae0fad3b1",
+        "b3ff17ef-526a-4563-9d76-787965ea4d5f",
+        "d1cd191a-cfcb-4220-9840-bc474fad15aa",
+        "54abc77f-ac71-4825-93c7-c155b27dff0f",
+        "7b6ebc85-65b1-4eb0-850e-0e36b8c80f58",
+        "7faa59ad-1cd2-45af-8b4a-90d7fb3d6b5e"
+      ],
+      "note": "宝历二年扬州初逢，晚年同居洛阳，唱和最多。"
+    },
+    {
+      "id": "王建—贾岛",
+      "source": "王建",
+      "target": "贾岛",
+      "kind": "题目直证",
+      "weight": 1.0,
+      "visibleFrom": 828,
+      "year": 828,
+      "place": "长安",
+      "evidenceTitles": 1,
+      "evidence": ["贾岛《送陕府王建司马》"],
+      "workIds": ["82ed511f-3b9a-4519-b7de-eba88f3a89c8"]
+    },
+    {
+      "id": "王建—白居易",
+      "source": "王建",
+      "target": "白居易",
+      "kind": "题目直证",
+      "weight": 2.0,
+      "visibleFrom": 828,
+      "year": 828,
+      "place": "长安",
+      "evidenceTitles": 2,
+      "evidence": ["白居易《别陕州王司马》", "白居易《送陕州王司马建赴任》"],
+      "workIds": ["e592f003-9497-4ce0-afef-231973017049", "874bb5b3-1e94-4b59-a222-bce3060a603d"]
+    },
+    {
+      "id": "王建—刘禹锡",
+      "source": "王建",
+      "target": "刘禹锡",
+      "kind": "题目直证",
+      "weight": 1.0,
+      "visibleFrom": 828,
+      "year": 828,
+      "place": "长安",
+      "evidenceTitles": 1,
+      "evidence": ["刘禹锡《送王司马之陕州》"],
+      "workIds": ["d77c5ac8-e977-4729-b491-8399d1702c86"]
+    },
+    {
+      "id": "白居易—令狐楚",
+      "source": "白居易",
+      "target": "令狐楚",
+      "kind": "题目直证",
+      "weight": 3.0,
+      "visibleFrom": 828,
+      "year": 828,
+      "place": "长安",
+      "evidenceTitles": 4,
+      "evidence": [
+        "白居易《令狐尚书许过弊居先赠长句》",
+        "白居易《和令狐仆射小饮听阮咸》",
+        "白居易《送令狐相公赴太原》",
+        "白居易《送东都留守令狐尚书赴任》"
+      ],
+      "workIds": [
+        "56ce8a48-d698-4ff1-a5d1-70dbe2c3a7c9",
+        "8ae31a9a-1271-4bd1-8d56-b7be57aa5c5e",
+        "acab01b4-43e9-4f17-a94f-7d851fdd94e8",
+        "190d90cc-22b2-4755-a834-4adf7155988a"
+      ]
+    },
+    {
+      "id": "刘禹锡—张籍",
+      "source": "刘禹锡",
+      "target": "张籍",
+      "kind": "题目直证",
+      "weight": 1.0,
+      "visibleFrom": 828,
+      "year": 828,
+      "place": "长安杏园",
+      "evidenceTitles": 1,
+      "evidence": ["张籍《同白侍郎杏园赠刘郎中》"],
+      "workIds": ["2742f3ef-4b79-44df-878f-bd61b8ff829c"]
+    },
+    {
+      "id": "刘禹锡—令狐楚",
+      "source": "刘禹锡",
+      "target": "令狐楚",
+      "kind": "题目直证",
+      "weight": 2.58,
+      "visibleFrom": 828,
+      "year": 828,
+      "place": "长安",
+      "evidenceTitles": 3,
+      "evidence": [
+        "刘禹锡《令狐相公见示题洋州崔侍郎宅双木瓜花顷接侍郎同舍陪宴树下吟玩来什辄成和章》",
+        "刘禹锡《和令狐相公以司空裴相见招南亭看雪四韵》",
+        "刘禹锡《和令狐相公寻白阁老见留小饮因赠》"
+      ],
+      "workIds": [
+        "f4613fb0-ddac-4218-8e28-73ff327fee9d",
+        "e0ee9fcf-9538-4402-9fe5-14f63b7e4016",
+        "5fb59324-2136-41f0-82a7-a517efa537b2"
+      ]
+    },
+    {
+      "id": "张籍—令狐楚",
+      "source": "张籍",
+      "target": "令狐楚",
+      "kind": "题目直证",
+      "weight": 2.0,
+      "visibleFrom": 829,
+      "year": 829,
+      "place": "长安",
+      "evidenceTitles": 2,
+      "evidence": ["张籍《和户部令狐尚书喜裴司空见招看雪》", "张籍《送令狐尚书赴东都留守》"],
+      "workIds": ["4260e861-cbbb-4ffd-a284-7ce1ced21787", "c90e225a-331a-4f78-9e14-f930489e2cff"]
+    },
+    {
+      "id": "令狐楚—李商隐",
+      "source": "令狐楚",
+      "target": "李商隐",
+      "kind": "题目直证",
+      "weight": 1.0,
+      "visibleFrom": 829,
+      "year": 829,
+      "place": "洛阳、郓州",
+      "evidenceTitles": 1,
+      "evidence": ["李商隐《天平公座中呈令狐令公时蔡京在坐京曾为僧徒故有第五句》"],
+      "workIds": ["7df747d5-e7b2-4651-ab44-f0f7db3534c1"],
+      "note": "李商隐少年受知于令狐楚，入其天平幕府。"
+    },
+    {
+      "id": "令狐楚—张祜",
+      "source": "令狐楚",
+      "target": "张祜",
+      "kind": "同场唱和",
+      "weight": 1.0,
+      "visibleFrom": 830,
+      "year": 830,
+      "place": "",
+      "evidenceTitles": 1,
+      "evidence": ["张祜《奉和令狐相公送陈肱侍御》"],
+      "workIds": ["f81690f4-5328-40a0-a38b-c574af351b44"],
+      "note": "张祜得令狐楚荐举；此题为幕中奉和，见面属推断。"
+    },
+    {
+      "id": "姚合—刘禹锡",
+      "source": "姚合",
+      "target": "刘禹锡",
+      "kind": "题目直证",
+      "weight": 1.0,
+      "visibleFrom": 831,
+      "year": 831,
+      "place": "长安",
+      "evidenceTitles": 1,
+      "evidence": ["姚合《送刘禹锡郎中赴苏州 一》", "姚合《送刘禹锡郎中赴苏州 二》"],
+      "workIds": ["53a1e44b-511b-4586-9414-3c73b86f7c54", "a66b4af3-fcac-4dad-99c8-89f99b4ad6e1"]
+    },
+    {
+      "id": "姚合—白居易",
+      "source": "姚合",
+      "target": "白居易",
+      "kind": "题目直证",
+      "weight": 1.0,
+      "visibleFrom": 834,
+      "year": 834,
+      "place": "洛阳",
+      "evidenceTitles": 1,
+      "evidence": [
+        "白居易《送姚杭州赴任因思旧游二首 一》",
+        "白居易《送姚杭州赴任因思旧游二首 二》"
+      ],
+      "workIds": ["817643e5-6280-4dd3-91fd-b9f3754ba08f", "c8ebc364-36ae-466d-a19e-b2d0d443cf32"]
+    },
+    {
+      "id": "张祜—杜牧",
+      "source": "张祜",
+      "target": "杜牧",
+      "kind": "题目直证",
+      "weight": 1.0,
+      "visibleFrom": 845,
+      "year": 845,
+      "place": "池州",
+      "evidenceTitles": 1,
+      "evidence": ["张祜《妓席与杜牧之同咏》"],
+      "workIds": ["e78d31b7-0bc5-48a6-91ca-36cdca85bb93"]
+    }
+  ],
+  "presentation": [
+    {
+      "id": "mhr",
+      "title": "开元年间 · 孟浩然",
+      "narration": "孟浩然往来襄阳、长安与荆州：王维送他归襄阳，李白在黄鹤楼送他东下，张九龄贬荆州时，他入其幕府。王维则由张九龄擢为右拾遗。",
+      "durationSec": 7,
+      "domainAt": 737,
+      "camera": {
+        "fitIds": ["孟浩然", "王维", "李白", "张九龄"]
+      },
+      "highlight": {
+        "nodeIds": ["孟浩然", "王维", "李白", "张九龄"]
+      }
+    },
+    {
+      "id": "wcl",
+      "title": "七三九年 · 王昌龄南行",
+      "narration": "王昌龄谪岭南前后，岑参在长安送他赴江宁，李颀、綦毋潜在洛阳白马寺相送，途中又与孟浩然、李白相会。",
+      "durationSec": 7,
+      "domainAt": 740,
+      "camera": {
+        "fitIds": ["王昌龄", "岑参", "孟浩然", "李白", "王维"]
+      },
+      "highlight": {
+        "nodeIds": ["王昌龄", "岑参", "孟浩然", "李白", "王维"]
+      }
+    },
+    {
+      "id": "lidu",
+      "title": "七四四年 · 梁宋之游",
+      "narration": "天宝三载，李白离开长安，与杜甫相识，又与高适同游梁宋。杜甫晚年回忆：“昔者与高李，晚登单父台。”",
+      "durationSec": 7,
+      "domainAt": 744,
+      "camera": {
+        "fitIds": ["李白", "杜甫", "高适", "贺知章"]
+      },
+      "highlight": {
+        "nodeIds": ["李白", "杜甫", "高适", "贺知章"]
+      }
+    },
+    {
+      "id": "cien",
+      "title": "七五二年 · 同登慈恩寺塔",
+      "narration": "天宝十一载秋，高适、岑参、杜甫等同题登慈恩寺塔。岑参题中点名高适，其余同行是推断，以点线表示。",
+      "durationSec": 7,
+      "domainAt": 752,
+      "camera": {
+        "fitIds": ["高适", "岑参", "杜甫"]
+      },
+      "highlight": {
+        "nodeIds": ["高适", "岑参", "杜甫"]
+      }
+    },
+    {
+      "id": "zaochao",
+      "title": "七五八年 · 早朝大明宫",
+      "narration": "贾至作《早朝大明宫》，同在朝中的王维、杜甫、岑参都有和诗。严武后来镇蜀，常到杜甫草堂；李白遇赦，与贾至同游洞庭。",
+      "durationSec": 7,
+      "domainAt": 759,
+      "camera": {
+        "fitIds": ["贾至", "王维", "杜甫", "岑参", "严武", "李白", "钱起"]
+      },
+      "highlight": {
+        "nodeIds": ["贾至", "王维", "杜甫", "岑参", "严武", "李白", "钱起"]
+      }
+    },
+    {
+      "id": "dali",
+      "title": "大历 · 十才子的长安",
+      "narration": "安史之乱后，钱起、卢纶、司空曙、李端在长安往来送别。王维晚年在蓝田与钱起相别，是两代诗人的交接。",
+      "durationSec": 7,
+      "domainAt": 791,
+      "camera": {
+        "fitIds": ["钱起", "卢纶", "司空曙", "李端", "皎然"]
+      },
+      "highlight": {
+        "nodeIds": ["钱起", "卢纶", "司空曙", "李端", "皎然"]
+      }
+    },
+    {
+      "id": "hanmeng",
+      "title": "贞元、元和 · 韩孟一派",
+      "narration": "韩愈与孟郊在长安订交，张籍经孟郊结识韩愈；韩愈又与柳宗元、刘禹锡同为监察御史。元和六年，曾为僧人的贾岛在洛阳结识韩、孟。",
+      "durationSec": 7,
+      "domainAt": 811,
+      "camera": {
+        "fitIds": ["韩愈", "孟郊", "张籍", "贾岛", "柳宗元", "刘禹锡"]
+      },
+      "highlight": {
+        "nodeIds": ["韩愈", "孟郊", "张籍", "贾岛", "柳宗元", "刘禹锡"]
+      }
+    },
+    {
+      "id": "yuanbai",
+      "title": "元和十年 · 元白刘柳",
+      "narration": "元稹与白居易同年登科，在长安订交。元和十年春，元稹、刘禹锡、柳宗元同被召回长安，旋即远贬，刘柳在衡阳分路。",
+      "durationSec": 7,
+      "domainAt": 815,
+      "camera": {
+        "fitIds": ["元稹", "白居易", "刘禹锡", "柳宗元", "张籍"]
+      },
+      "highlight": {
+        "nodeIds": ["元稹", "白居易", "刘禹锡", "柳宗元", "张籍"]
+      }
+    },
+    {
+      "id": "luoyang",
+      "title": "大和 · 长安与洛阳的宴集",
+      "narration": "白居易与刘禹锡宝历二年在扬州初逢。大和年间，二人与裴度、令狐楚、张籍等宴集唱和，晚年同居洛阳。",
+      "durationSec": 7,
+      "domainAt": 834,
+      "camera": {
+        "fitIds": ["白居易", "刘禹锡", "令狐楚", "张籍", "王建", "姚合"]
+      },
+      "highlight": {
+        "nodeIds": ["白居易", "刘禹锡", "令狐楚", "张籍", "王建", "姚合"]
+      }
+    },
+    {
+      "id": "late",
+      "title": "晚唐 · 零散的相逢",
+      "narration": "晚唐的见面记录变得零散：李商隐少年入令狐楚幕府，张祜得令狐楚荐举，又与杜牧在池州同席赋诗。",
+      "durationSec": 7,
+      "domainAt": 895,
+      "camera": {
+        "fitIds": ["李商隐", "令狐楚", "张祜", "杜牧"]
+      },
+      "highlight": {
+        "nodeIds": ["李商隐", "令狐楚", "张祜", "杜牧"]
+      }
+    },
+    {
+      "id": "all",
+      "title": "全景",
+      "narration": "只保留有诗为证、确曾见面的关系：30 位诗人，60 条连线。实线是题目直证，虚线是诗中自述，点线是同场唱和的推断，另有几条据史书与年谱补入。",
+      "durationSec": 8,
+      "domainAt": 900
+    }
+  ]
+}
