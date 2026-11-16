@@ -17,6 +17,7 @@ import {
   projectCameraPoint,
 } from '../packages/render/src/frame-spec.ts';
 import { SPAN_LABEL } from '../packages/render/src/importance.ts';
+import { LEGEND } from '../packages/render/src/compose/legend.ts';
 import { VIDEO_THEMES } from '../packages/render/src/theme.ts';
 import { drawables, measure } from './helpers/display-list.mjs';
 
@@ -309,4 +310,24 @@ test('V3 · a long return passes over every step between its ends, never under o
     assert.ok(!path.some((q) => inside(q, nodes.get(step))), `clear of ${step}`);
   const highest = Math.min(...['校验', '打包', '出库', '签收'].map((s) => nodes.get(s).y));
   assert.ok(Math.min(...path.map((q) => q.y)) < highest, 'over the row');
+});
+
+test('V4 · the legend is set no smaller than the frame’s other secondary text', () => {
+  const result = load(flowchart);
+  const { list } = compose(result, frameCount(result.graph) - 1);
+  const entries = new Set(['步骤', '判断', '开始', '结束']);
+  const legend = drawables(list).filter(
+    (item) => item.type === 'text' && entries.has(item.text) && item.align !== 'center',
+  );
+  assert.equal(legend.length, 4);
+  for (const item of legend) assert.equal(item.font.size, LEGEND.size * spec.typeScale);
+  // The scene label (13) is the frame's secondary text; the legend is no smaller.
+  const scene = drawables(list).find((item) => item.type === 'text' && /^SCENE/.test(item.text));
+  assert.ok(legend[0].font.size >= scene.font.size, `${legend[0].font.size} < ${scene.font.size}`);
+  // Its plate still holds a line of it, with room above and below.
+  const plate = drawables(list).find(
+    (item) => item.type === 'path' && item.fill === VIDEO_THEMES.light.legendPlate,
+  );
+  const [, , , , h] = plate.d[0];
+  assert.ok(h >= legend[0].font.size * 1.8, `plate ${h} for ${legend[0].font.size}`);
 });

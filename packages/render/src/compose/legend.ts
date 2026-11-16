@@ -6,6 +6,14 @@ import { edgePaint, mixHex, toneOf } from '../theme.js';
 import { color, type FrameContext } from './context.js';
 import { fitText } from './text.js';
 
+/**
+ * The legend's type and marks, in 720p design units. At 12 its words were
+ * the smallest text in the frame, about 9 px in the workspace preview; now
+ * they are no smaller than the frame's other secondary text (scene label and
+ * group names, 13). Marks and plate grow with them.
+ */
+export const LEGEND = Object.freeze({ size: 14, mark: 14, swatch: 22, gap: 7, plate: 28 });
+
 /** How far the most advanced item of each kind has come. */
 const kindProgress = (
   list: readonly { id: string; kind: string }[],
@@ -36,31 +44,32 @@ export function composeLegend(ctx: FrameContext, occupied: RectIndex): DisplayIt
     return progress > 0.5 ? [{ ...entry, isNode, alpha: Math.min(1, (progress - 0.5) * 2) }] : [];
   });
   if (legendEntries.length <= 1) return items;
-  const font = sans(12, 400),
-    swatch = u(20),
-    gap = u(6),
+  const font = sans(LEGEND.size, 400),
+    swatch = u(LEGEND.swatch),
+    gap = u(LEGEND.gap),
     between = u(16),
-    padX = u(10),
-    h = u(24);
+    padX = u(12),
+    h = u(LEGEND.plate),
+    mark = u(LEGEND.mark);
   const x0 = titleBand.x + u(2),
     y0 = stage.y + stage.h - h - u(8),
     limit = stage.x + stage.w - u(12);
   const row: DisplayItem[] = [];
   let x = x0 + padX;
   for (const entry of legendEntries) {
-    const text = fitText(measure, localize(entry.label, locale), font, u(120)),
-      w = (entry.isNode ? u(12) : swatch) + gap + measure(text, font);
+    const text = fitText(measure, localize(entry.label, locale), font, u(140)),
+      w = (entry.isNode ? mark : swatch) + gap + measure(text, font);
     if (x + w + padX > limit) break;
     const cy = y0 + h / 2;
     if (entry.isNode) {
       const kindStyle = nodeStyleFor(style, entry.kind),
         c = color(kindStyle.color, toneOf(P, kindStyle.tone) ?? P.legendText),
-        half = u(5.2),
+        half = mark * 0.43,
         // The miniature is the glyph as drawn: off the time axis a span is a point.
         shape = kindStyle.shape === 'span' && !style.timeAxis ? 'circle' : kindStyle.shape;
       row.push({
         type: 'path',
-        d: nodeOutline({ x: x + u(6), y: cy }, miniatureGeometry(shape, half)),
+        d: nodeOutline({ x: x + mark / 2, y: cy }, miniatureGeometry(shape, half)),
         fill: mixHex(color(c, P.fallbackNode), P.nodeFill, P.nodeTint),
         stroke: c,
         width: u(1.5),
@@ -84,7 +93,7 @@ export function composeLegend(ctx: FrameContext, occupied: RectIndex): DisplayIt
     row.push({
       type: 'text',
       text,
-      x: x + (entry.isNode ? u(12) : swatch) + gap,
+      x: x + (entry.isNode ? mark : swatch) + gap,
       y: cy + u(0.5),
       font,
       fill: P.legendText,

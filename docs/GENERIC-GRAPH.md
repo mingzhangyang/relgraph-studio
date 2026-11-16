@@ -401,7 +401,8 @@ name.
   next. An authored `textPosition` still comes first.
 - **Legend**: bottom left of the stage, only kinds that are visible now, only
   when there is more than one. Kinds captioned on their own edges (biology)
-  need no entry.
+  need no entry. Its words are set at 14 (720p units, `LEGEND`), no smaller
+  than the frame's other secondary text.
 - **Ground**: the diagonal hatch is replaced by a quiet dot lattice.
 
 Every length still derives from `FrameSpec`; the 1080p composition of all
