@@ -54,3 +54,11 @@ export function importanceStep(importance: number | undefined): ImportanceStep {
           ? IMPORTANCE_SCALE.minor
           : IMPORTANCE_SCALE.unrated;
 }
+
+/**
+ * The words of a time span, inside its bar or beside it: one size and
+ * weight whatever the node's importance or the bar's length. A span's
+ * length carries its duration; were the labels that do not fit inside set
+ * larger, the shortest spans would read loudest.
+ */
+export const SPAN_LABEL = Object.freeze({ size: 13, weight: 500 });

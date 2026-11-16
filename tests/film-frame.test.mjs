@@ -3,6 +3,7 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import tree from '../examples/vertebrates-tree-provisional.graph.json' with { type: 'json' };
+import dynasties from '../examples/dynasties-timeline-provisional.graph.json' with { type: 'json' };
 import { loadDocument } from '../packages/core/src/director/load.ts';
 import { layoutGraph } from '../packages/core/src/director/layout.ts';
 import { directorFrameAt, frameCount } from '../packages/core/src/director/state.ts';
@@ -14,6 +15,7 @@ import {
   FRAME_SPECS,
   projectCameraPoint,
 } from '../packages/render/src/frame-spec.ts';
+import { SPAN_LABEL } from '../packages/render/src/importance.ts';
 import { VIDEO_THEMES } from '../packages/render/src/theme.ts';
 import { drawables, measure } from './helpers/display-list.mjs';
 
@@ -156,4 +158,32 @@ test('V1 · networks keep the free-side search; an authored side still comes fir
   };
   const { list, point } = compose(authored, frameCount(authored.graph) - 1);
   assert.equal(sideOf(textBoxes(list).get('Osteichthyes'), point(node.id)), 'above');
+});
+
+test('V2 · a timeline labels every span at one size, inside its bar or beside it', () => {
+  const result = load(dynasties);
+  const { graph } = result;
+  const labels = new Set(graph.nodes.map((n) => n.label));
+  const { list } = compose(result, frameCount(graph) - 1);
+  const spans = drawables(list).filter((item) => item.type === 'text' && labels.has(item.text));
+  const inside = spans.filter((item) => item.align === 'center'),
+    beside = spans.filter((item) => item.align !== 'center');
+  // The example has both: long reigns hold their names, short ones do not.
+  assert.ok(inside.length >= 8 && beside.length >= 4, `${inside.length} / ${beside.length}`);
+  assert.equal(spans.length, graph.nodes.length);
+  const fonts = new Set(spans.map((item) => `${item.font.size}/${item.font.weight}`));
+  assert.deepEqual([...fonts], [`${SPAN_LABEL.size * spec.typeScale}/${SPAN_LABEL.weight}`]);
+});
+
+test('V2 · off the time axis a timeline keeps the importance scale for its points', () => {
+  const result = load({ ...dynasties, timeAxis: false });
+  const { graph } = result;
+  const labels = new Set(graph.nodes.map((n) => n.label));
+  const { list } = compose(result, frameCount(graph) - 1);
+  const sizes = new Set(
+    drawables(list)
+      .filter((item) => item.type === 'text' && labels.has(item.text))
+      .map((item) => item.font.size),
+  );
+  assert.ok(![...sizes].includes(SPAN_LABEL.size * spec.typeScale), [...sizes].join());
 });

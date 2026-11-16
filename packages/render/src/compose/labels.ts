@@ -1,6 +1,6 @@
 import type { DisplayItem } from '../display-list.js';
 import type { Rect } from '../frame-spec.js';
-import { importanceStep } from '../importance.js';
+import { importanceStep, SPAN_LABEL } from '../importance.js';
 import { PointIndex, type RectIndex } from '../spatial.js';
 import type { FrameContext } from './context.js';
 import type { Point } from './geometry.js';
@@ -137,12 +137,17 @@ export function composeNodeLabels(
   const labelled = new PointIndex(u(96));
   for (const entry of sorted) labelled.add(entry.node.id, entry.p.x, entry.p.y);
   const tree = ctx.style.labelSides === 'tree' ? treeReading(ctx.graph, ctx.positions) : undefined;
-  for (const { node, custom, p, r, alpha: active } of sorted) {
+  for (const { node, custom, p, r, geometry, alpha: active } of sorted) {
     const obstacle = obstacles.get(node.id);
     if (!obstacle) continue;
     // Type follows the same hierarchy as the glyphs: principals speak loudest.
-    const scale = importanceStep(node.importance);
-    const font = sans(custom.fontSize ?? scale.label, custom.fontWeight ?? scale.weight);
+    // A span that cannot hold its words is labelled as one that can.
+    const step = importanceStep(node.importance),
+      span = geometry.shape === 'span';
+    const font = sans(
+      custom.fontSize ?? (span ? SPAN_LABEL.size : step.label),
+      custom.fontWeight ?? (span ? SPAN_LABEL.weight : step.weight),
+    );
     const lines = wrapText(measure, ctx.nodeLabel(node), font, u(170), 2);
     const width = Math.max(0, ...lines.map((line) => measure(line, font))),
       height = lines.length * font.size * 1.3;
