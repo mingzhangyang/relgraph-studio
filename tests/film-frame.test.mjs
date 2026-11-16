@@ -3,6 +3,7 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import tree from '../examples/vertebrates-tree-provisional.graph.json' with { type: 'json' };
+import flowchart from '../examples/order-flowchart-synthetic.graph.json' with { type: 'json' };
 import dynasties from '../examples/dynasties-timeline-provisional.graph.json' with { type: 'json' };
 import { loadDocument } from '../packages/core/src/director/load.ts';
 import { layoutGraph } from '../packages/core/src/director/layout.ts';
@@ -186,4 +187,126 @@ test('V2 · off the time axis a timeline keeps the importance scale for its poin
       .map((item) => item.font.size),
   );
   assert.ok(![...sizes].includes(SPAN_LABEL.size * spec.typeScale), [...sizes].join());
+});
+
+/** WCAG contrast of two #RRGGBB colours. */
+function contrast(a, b) {
+  const lum = (hex) => {
+    const [r, g, bl] = [1, 3, 5].map((i) => {
+      const c = parseInt(hex.slice(i, i + 2), 16) / 255;
+      return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * bl;
+  };
+  const [hi, lo] = [lum(a), lum(b)].sort((m, n) => n - m);
+  return (hi + 0.05) / (lo + 0.05);
+}
+const over = (fg, bg, alpha) =>
+  '#' +
+  [1, 3, 5]
+    .map((i) =>
+      Math.round(
+        parseInt(fg.slice(i, i + 2), 16) * alpha + parseInt(bg.slice(i, i + 2), 16) * (1 - alpha),
+      )
+        .toString(16)
+        .padStart(2, '0'),
+    )
+    .join('');
+/** The groups that draw relation strokes: their alpha and the stroke of their first path. */
+function strokeGroups(list) {
+  const found = [];
+  const walk = (items) => {
+    for (const item of items) {
+      if (item.type !== 'group') continue;
+      const first = item.items[0];
+      if (first?.type === 'path' && first.stroke && !first.fill && item.alpha !== undefined)
+        found.push({ alpha: item.alpha, stroke: first.stroke });
+      else walk(item.items);
+    }
+  };
+  walk(list.items);
+  return found;
+}
+
+test('V3 · flowchart relations hold 3:1 against the paper in both themes; networks are unchanged', () => {
+  const result = load(flowchart);
+  assert.equal(styleForGraph(result.graph).edgeContrast, 'strong');
+  for (const theme of ['light', 'dark']) {
+    const P = VIDEO_THEMES[theme];
+    const { list } = compose(result, frameCount(result.graph) - 1, undefined, theme);
+    const strokes = strokeGroups(list).filter((g) => g.stroke === P.edge.strong);
+    assert.equal(strokes.length, result.graph.edges.length, theme);
+    for (const { alpha } of strokes)
+      for (const paper of P.bg)
+        assert.ok(contrast(over(P.edge.strong, paper, alpha), paper) >= 3, `${theme} on ${paper}`);
+  }
+  // The same document as a network keeps its plain strokes.
+  const network = load({ ...flowchart, diagram: undefined });
+  assert.equal(styleForGraph(network.graph).edgeContrast, undefined);
+  const { list } = compose(network, frameCount(network.graph) - 1);
+  assert.equal(
+    strokeGroups(list).filter((g) => g.stroke === VIDEO_THEMES.light.edge.strong).length,
+    0,
+  );
+});
+
+/** Selection outline of each drawn relation and node, by label or id. */
+function outlines(result, list) {
+  const label = new Map(result.graph.nodes.map((n) => [n.id, n.label]));
+  const nodes = new Map(),
+    edges = new Map();
+  for (const item of list.selection)
+    if (item.kind === 'node') nodes.set(label.get(item.id), item.box);
+    else edges.set(item.id, item.points);
+  return { nodes, edges };
+}
+const inside = (q, box) => q.x > box.x && q.x < box.x + box.w && q.y > box.y && q.y < box.y + box.h;
+
+test('V3 · a return runs over the steps it passes and carries its tag on the crossing', () => {
+  const result = load(flowchart);
+  const { list } = compose(result, frameCount(result.graph) - 1);
+  const { nodes, edges } = outlines(result, list);
+  const retry = result.graph.edges.find((e) => e.label === '否，重试');
+  const path = edges.get(retry.id);
+  // It leaves the top of the decision and comes down into the top of the step.
+  const from = nodes.get('支付成功？'),
+    to = nodes.get('发起支付');
+  assert.ok(
+    path.every((q) => q.y <= Math.min(from.y, to.y) + 1),
+    'above both steps',
+  );
+  assert.ok(Math.abs(path.at(-1).x - (to.x + to.w / 2)) < 2, 'into the top of its target');
+  // The tag sits on the crossing.
+  const tag = drawables(list).find((item) => item.type === 'text' && item.text === '否，重试');
+  const nearest = Math.min(...path.map((q) => Math.hypot(q.x - tag.x, q.y - tag.y)));
+  assert.ok(nearest < 4, `tag ${nearest.toFixed(1)} px from its relation`);
+  // The relation it returns along is a plain elbow again, not one of two arcs.
+  const forward = result.graph.edges.find(
+    (e) => e.source === retry.target && e.target === retry.source,
+  );
+  const ahead = edges.get(forward.id);
+  assert.ok(Math.abs(ahead[0].y - (to.y + to.h / 2)) < 2, 'leaves its step sideways');
+});
+
+test('V3 · a long return passes over every step between its ends, never under one', () => {
+  const steps = ['收单', '校验', '打包', '出库', '签收'];
+  const result = load({
+    format: 'relgraph.graph/1',
+    diagram: 'flowchart',
+    meta: { title: 'return' },
+    directed: true,
+    nodes: steps.map((id) => ({ id, kind: '步骤' })),
+    edges: [
+      ...steps.slice(1).map((id, i) => ({ source: steps[i], target: id })),
+      { source: '签收', target: '校验', label: '退回' },
+    ],
+  });
+  const { list } = compose(result, frameCount(result.graph) - 1);
+  const { nodes, edges } = outlines(result, list);
+  const back = result.graph.edges.find((e) => e.label === '退回');
+  const path = edges.get(back.id);
+  for (const step of ['打包', '出库'])
+    assert.ok(!path.some((q) => inside(q, nodes.get(step))), `clear of ${step}`);
+  const highest = Math.min(...['校验', '打包', '出库', '签收'].map((s) => nodes.get(s).y));
+  assert.ok(Math.min(...path.map((q) => q.y)) < highest, 'over the row');
 });

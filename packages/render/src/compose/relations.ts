@@ -1,5 +1,5 @@
 import { edgeAppearance, edgeStyleFor, LINE_DASH, localize } from '@relgraph/core';
-import type { ProjectedVisualGraph } from '@relgraph/core';
+import type { DomainStyle, ProjectedVisualGraph } from '@relgraph/core';
 import type { DisplayItem, FontRef, Paint } from '../display-list.js';
 import { nodeGlyphRayDistance } from '../node-geometry.js';
 import type { RectIndex } from '../spatial.js';
@@ -61,15 +61,57 @@ export interface RelationLayout {
   degree: Map<string, number>;
   /** A node's loops, in id order, so that each has its own radius. */
   loopsOf: Map<string, string[]>;
+  /** Relations that run against the flow, routed over the steps (`returns`). */
+  returns: Set<string>;
+}
+
+/**
+ * The relations that run against the flow of a drawing: the flow is the way
+ * most relations advance, and only a drawing that advances sideways has
+ * one. A relation that leads back across it, more sideways than upright,
+ * returns. None without `returns: 'over'`.
+ */
+function returnsOf(
+  view: Pick<ProjectedVisualGraph, 'edges'>,
+  points: ReadonlyMap<string, Point>,
+  style: Pick<DomainStyle, 'returns'>,
+): Set<string> {
+  const returns = new Set<string>();
+  if (style.returns !== 'over') return returns;
+  let along = 0,
+    sideways = 0,
+    upright = 0;
+  for (const edge of view.edges) {
+    const a = points.get(edge.source),
+      b = points.get(edge.target);
+    if (!a || !b || edge.source === edge.target) continue;
+    along += b.x - a.x;
+    sideways += Math.abs(b.x - a.x);
+    upright += Math.abs(b.y - a.y);
+  }
+  if (!(sideways >= upright) || along === 0) return returns;
+  const forward = Math.sign(along);
+  for (const edge of view.edges) {
+    const a = points.get(edge.source),
+      b = points.get(edge.target);
+    if (!a || !b || edge.source === edge.target) continue;
+    const dx = (b.x - a.x) * forward;
+    if (dx < 0 && -dx > Math.abs(b.y - a.y) * 0.35) returns.add(edge.id);
+  }
+  return returns;
 }
 
 export function relationLayout(
   view: Pick<ProjectedVisualGraph, 'nodes' | 'edges'>,
   points: ReadonlyMap<string, Point>,
+  style: Pick<DomainStyle, 'returns'>,
 ): RelationLayout {
-  // Parallel and reciprocal links get stable, symmetric curve offsets.
+  const returns = returnsOf(view, points, style);
+  // Parallel and reciprocal links get stable, symmetric curve offsets. A
+  // return takes its own route, so the relation it pairs with stays straight.
   const pairs = new Map<string, string[]>();
   for (const edge of view.edges) {
+    if (returns.has(edge.id)) continue;
     const key = [edge.source, edge.target].sort().join('\0');
     const siblings = pairs.get(key) ?? [];
     siblings.push(edge.id);
@@ -116,7 +158,7 @@ export function relationLayout(
       else loopsOf.set(edge.source, [edge.id]);
     }
   for (const loops of loopsOf.values()) loops.sort();
-  return { pairs, pull, spokeAngles, degree, loopsOf };
+  return { pairs, pull, spokeAngles, degree, loopsOf, returns };
 }
 
 /**
@@ -130,7 +172,8 @@ export function composeRelations(
   layout: RelationLayout,
 ): { items: DisplayItem[]; selection: Selection; labels: EdgeLabel[]; obstacles: RectIndex } {
   const { view, config, style, theme: P, u, sans, cam, spec, locale } = ctx;
-  const { pairs, spokeAngles, degree, loopsOf } = layout;
+  const { pairs, spokeAngles, degree, loopsOf, returns } = layout;
+  const strong = style.edgeContrast === 'strong';
   const items: DisplayItem[] = [];
   const selection: Selection = [];
   const edgeLabels: EdgeLabel[] = [],
@@ -155,7 +198,9 @@ export function composeRelations(
             ? to.c
             : highlighted
               ? P.edge.highlight
-              : edgePaint(P, edgeStyle.stroke))),
+              : strong && edgeStyle.stroke === 'plain'
+                ? P.edge.strong
+                : edgePaint(P, edgeStyle.stroke))),
       // Strength is drawn as weight; a highlighted relation gains one more step.
       width = u(
         custom.width ??
@@ -255,8 +300,9 @@ export function composeRelations(
         dy = b.y - a.y,
         len = Math.hypot(dx, dy);
       if (len < u(1)) continue;
+      const back = returns.has(edge.id);
       const key = [edge.source, edge.target].sort().join('\0');
-      const siblings = pairs.get(key);
+      const siblings = back ? [edge.id] : pairs.get(key);
       if (!siblings) throw new Error('Missing edge pair');
       const order = siblings.indexOf(edge.id) - (siblings.length - 1) / 2;
       const sign = edge.source < edge.target ? 1 : -1;
@@ -264,9 +310,13 @@ export function composeRelations(
       // two nodes are clearly side by side. A pair joined both ways, such as
       // a step and the retry that returns to it, opens into two arcs instead.
       const elbow =
-        style.routing === 'elbow' && siblings.length === 1 && Math.abs(dx) > Math.abs(dy) * 0.35;
-      const ux = elbow ? Math.sign(dx) : dx / len,
-        uy = elbow ? 0 : dy / len;
+        !back &&
+        style.routing === 'elbow' &&
+        siblings.length === 1 &&
+        Math.abs(dx) > Math.abs(dy) * 0.35;
+      // A return leaves its step upwards and comes down into its target.
+      const ux = back ? 0 : elbow ? Math.sign(dx) : dx / len,
+        uy = back ? -1 : elbow ? 0 : dy / len;
       const sourceRim = nodeGlyphRayDistance(
           from.node,
           { x: ux, y: uy },
@@ -277,7 +327,7 @@ export function composeRelations(
         ),
         targetRim = nodeGlyphRayDistance(
           to.node,
-          { x: -ux, y: -uy },
+          back ? { x: 0, y: -1 } : { x: -ux, y: -uy },
           cam.scale,
           spec,
           style,
@@ -298,11 +348,33 @@ export function composeRelations(
               : width / 2 + u(2.5);
       const rb = targetRim + reach;
       // Glyphs that touch or overlap leave no room for a readable stroke.
-      if ((elbow ? Math.abs(dx) : len) <= ra + rb + u(1)) continue;
+      if (!back && (elbow ? Math.abs(dx) : len) <= ra + rb + u(1)) continue;
       const start = { x: a.x + ux * ra, y: a.y + uy * ra },
-        end = { x: b.x - ux * rb, y: b.y - uy * rb };
+        end = back ? { x: b.x, y: b.y - rb } : { x: b.x - ux * rb, y: b.y - uy * rb };
       let segments: Segment[];
-      if (elbow) {
+      if (back) {
+        // Over the top of every step between the two, clear of their glyphs
+        // and of the labels above them: up, across, and down into the target.
+        const lo = Math.min(a.x, b.x),
+          hi = Math.max(a.x, b.x);
+        let top = Math.min(start.y, end.y);
+        for (const other of drawnById.values()) {
+          if (other.visibility <= 0) continue;
+          const half = other.geometry.halfWidth;
+          if (other.p.x + half >= lo && other.p.x - half <= hi)
+            top = Math.min(top, other.p.y - other.geometry.halfHeight);
+        }
+        const peak = top - u(22) - u(custom.curve ?? 0),
+          way = Math.sign(dx),
+          turn = Math.min(Math.abs(dx) / 3, u(18));
+        const leave = { x: start.x + way * turn, y: peak },
+          arrive = { x: end.x - way * turn, y: peak };
+        segments = [
+          [start, { x: start.x, y: peak }, leave],
+          [leave, { x: (leave.x + arrive.x) / 2, y: peak }, arrive],
+          [arrive, { x: end.x, y: peak }, end],
+        ];
+      } else if (elbow) {
         // Out level, across, in level: two quadratic arcs that meet upright.
         const turn = (start.x + end.x) / 2 + u(custom.curve ?? 0),
           middle = { x: turn, y: (start.y + end.y) / 2 };
@@ -393,6 +465,7 @@ export function composeRelations(
           });
         }
       }
+      // On a return, the middle of its crossing above the steps.
       labelAt = pathPoint(segments, 0.5);
       // Where a tag may step aside when it does not fit on the line: across
       // the relation, first to the side it already bows to.
@@ -415,7 +488,7 @@ export function composeRelations(
         });
       items.push({
         type: 'group',
-        alpha: active * (highlighted ? 0.98 : 0.66),
+        alpha: active * (highlighted ? 0.98 : strong ? 0.92 : 0.66),
         items: parts,
       });
     }
