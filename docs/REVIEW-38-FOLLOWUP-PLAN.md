@@ -1080,6 +1080,54 @@ in Chromium 153.0.8010.12 against the `62103bb` baseline, then 77/77 with
 `--update-reference`. No GitHub Actions workflow was added, dispatched or
 rerun.
 
+### PR 7 · self-review of `6773a23`
+
+A review of the branch before any PR found three defects and fixed them in
+one commit:
+
+- **V3 · a return could run through a step.** The route always went over the
+  top, and its upright legs ignored what stood above its ends: in a flow with
+  two lanes, a return from the lower lane rose straight through the step over
+  it, the defect V3 set out to remove. Several returns also shared one
+  height, so their lines and tags lay on one another. `returnRoutes`
+  (`compose/relations.ts`) now plans every return of a frame: it crosses on
+  the side where fewer steps stand in the column of its ends (above when
+  equal), beyond every step between them, and enters its target from that
+  side; shorter returns are routed first and a return that would run along
+  another moves one lane (22 units, a tag's height) further out. In the order
+  flow example the retry keeps its route over the two steps; its crossing
+  sits a few pixels lower (flowchart frames are not golden frames).
+- **V1 · the tree rule assumed one direction of growth.** A tree diagram
+  drawn by another strategy (radial, force, circle, grid) was still labelled
+  "leaves to the right". `treeReading` returns null unless the relations
+  agree on a direction (`TREE_GROWTH` 0.6: the mean of their unit vectors;
+  the vertebrates example measures 0.90 as a tree, 0.75 layered, 0.19
+  radial, 0.53 on a grid), and the free-side search then applies. Roles are
+  read from the drawing along the growth instead of from which end a relation
+  names first, so a stray relation written child to parent does not swap
+  leaf and root.
+- **V3 · legend swatch.** A neutral relation kind in a flowchart's legend
+  kept the plain neutral while its strokes were strong. `edgePaint(theme,
+stroke, contrast)` is now the one resolution for both.
+
+Checked and left as they are: the larger legend drops no entry on any example
+at 720p or 1080p; a flowchart that advances downwards has no returns and
+keeps its two arcs; V2 has no finding.
+
+Tests: four "review" cases in `tests/film-frame.test.mjs` (strategies that do
+and do not read as a tree, and the radial frame equal to the free-side one;
+roles under a reversed relation; a two-lane flow with three returns, none
+through a step, each tag on its own line, lanes apart; swatch colour). All
+four fail on `6773a23`. Golden frames are unchanged by these fixes (236
+match without `--update`), as are the 22 browser baseline frames.
+
+Validation of the fixes, run locally on linux-x64, Node 22.23.4:
+`npm run typecheck`, `npm run check:types`, `npm run lint`,
+`npm run format:check` passed; `npm test` 456 tests in 43 files passed;
+`npm run check:export` 31/31 passed; `npm run check:browser` 79/79 passed in
+Chromium 153.0.8010.12 against the `62103bb` baseline. No GitHub Actions
+workflow was added, dispatched or rerun.
+
 ## Review evidence
 
 Ran locally on linux-x64, Node 22.23.4, at `73af432`: `npm run typecheck`,
@@ -1092,48 +1140,49 @@ rerun.
 
 ## Progress log
 
-| Date       | Item                                          | PR  | Commit on `main`                        | Note                                                                                             |
-| ---------- | --------------------------------------------- | --- | --------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| 2026-11-12 | Plan                                          | —   | —                                       | Review completed; plan written                                                                   |
-| 2026-11-12 | F1–F4                                         | #40 | `a2589bf` (branch `94a97d3`)            | Golden frames unchanged                                                                          |
-| 2026-11-12 | F5                                            | #40 | `a2589bf` (branch `6034b30`)            | 58 tree golden hashes regenerated                                                                |
-| 2026-11-13 | #40 review, items 1–8 and minor               | #40 | `a2589bf` (branch `588bb88`)            | One anchor definition; golden frames unchanged                                                   |
-| 2026-11-13 | #40 re-review, leftovers 1–2 and unsaved flag | #40 | `a2589bf` (branch `0348d87`)            | Leftover 3 tracked as F6                                                                         |
-| 2026-11-13 | PR 1 merged                                   | #40 | `a2589bf`                               | Squash of `0348d87` onto `08c8e57`; tree identical to the reviewed head                          |
-| 2026-11-13 | P1, P2                                        | #41 | `682dbbd` (branch `dd2fa58`)            | Display lists and golden frames identical                                                        |
-| 2026-11-13 | P3                                            | #41 | `682dbbd` (branch `f54385b`)            | `LARGE_GRAPH` above 500 nodes or 1,000 relations                                                 |
-| 2026-11-13 | #41 review, items 1–3 and minor               | #41 | `682dbbd` (branch `72beefa`)            | Budget lowered to 300 / 600 (D3); golden frames unchanged                                        |
-| 2026-11-13 | PR 2 merged                                   | #41 | `682dbbd`                               | Squash of `72beefa` onto `a2589bf`; tree identical to the reviewed head                          |
-| 2026-11-13 | F6                                            | #42 | `a63875c` (branch `e29cc70`, `a8c2a80`) | Lanes only for anchored dated nodes; golden frames unchanged                                     |
-| 2026-11-13 | #42 review and follow-up review               | #42 | `a63875c` (branch `ada4d09`, `1271551`) | One lane rule for writer and reader; `LANE_ONLY` warning; golden frames unchanged                |
-| 2026-11-13 | PR 1b merged                                  | #42 | `a63875c`                               | Squash of `1271551` onto `682dbbd`; tree identical to the reviewed head                          |
-| 2026-11-13 | S1                                            | —   | — (branch `5e21269`)                    | Graph analysis, time axis and layout names in their own modules; exports unchanged               |
-| 2026-11-13 | S2                                            | —   | — (branch `8e49fc2`)                    | Parser split by section, storyboard module, one parse per load; 87 documents identical           |
-| 2026-11-13 | S3                                            | —   | — (branch `9c7ae0a`)                    | `revealStep` track; 5,376 frames identical; golden frames unchanged                              |
-| 2026-11-13 | D1, D2, D4                                    | #43 | —                                       | Owner confirmed the recommendations; all four decisions closed                                   |
-| 2026-11-13 | #43 review, P2                                | #43 | — (branch `2569a4a`)                    | Regenerated storyboard of an unfolded graph unfolds; golden frames unchanged                     |
-| 2026-11-14 | PR 3 merged                                   | #43 | `ca0edd8`                               | Squash of `54f5f98` onto `a63875c`; tree identical to the reviewed head                          |
-| 2026-11-14 | S4                                            | —   | — (branch `6882f62`)                    | `composeFrame` in passes over a frame context; 50,832 display lists identical                    |
-| 2026-11-14 | S5                                            | —   | — (branch `9d13310`)                    | One source for line rhythms, shape proportions and the importance scale; display lists identical |
-| 2026-11-14 | S6                                            | —   | — (branch `87e4354`)                    | The renderer owns the drawn style; hit tests have no default; display lists identical            |
-| 2026-11-14 | #44 review, P2                                | #44 | —                                       | Harness renderer resolves the graph's style on first load, as production does                    |
-| 2026-11-14 | PR 4 merged                                   | #44 | `ad49ba5`                               | Squash of `277eac0` onto `ca0edd8`; tree identical to the reviewed head                          |
-| 2026-11-15 | T2                                            | —   | — (branch `3939a8c`, `a298444`)         | Tests linted and formatted by glob                                                               |
-| 2026-11-15 | T1                                            | —   | — (branch `8c14f13`)                    | `examples/manifest.json`; buttons rendered from it                                               |
-| 2026-11-15 | T3                                            | —   | — (branch `9117a8b`)                    | Diagnostics worded by key; 7,926 messages and fixes identical                                    |
-| 2026-11-15 | T4                                            | —   | —                                       | Diagram kinds and layout tables repaired; architecture updated                                   |
-| 2026-11-15 | PR 5 merged                                   | #45 | `cb532f9`                               | Squash of `26fd0fd` onto `ad49ba5`; tree identical to the reviewed head                          |
-| 2026-11-15 | W4                                            | —   | — (branch `3207c4a`)                    | One heading in the layout panel                                                                  |
-| 2026-11-15 | Core: `autoEngine`, `strategyEngine`          | —   | — (branch `7c196a1`)                    | One rule for the engine a strategy draws with; golden frames identical                           |
-| 2026-11-15 | W1                                            | —   | — (branch `6ab1cef`)                    | Panel shows only the settings the strategy reads (`ENGINE_PARAMETERS`)                           |
-| 2026-11-15 | W2                                            | —   | — (branch `b6c6b6f`)                    | "当前画面" line from `drawingOrigin`; manual renamed                                             |
-| 2026-11-15 | W3                                            | —   | — (branch `01aad10`)                    | `layoutFit`: suitability marked in the menu and worded under it                                  |
-| 2026-11-15 | W5                                            | —   | — (branch `7ef9ad2`)                    | Data source first at ≤ 840 px; example buttons of one height                                     |
-| 2026-11-15 | #46 review, P2 ×2                             | #46 | — (branch `cfc2b5e`)                    | Provenance from coordinates, not the stored type; `instant` beside `untimed`                     |
-| 2026-11-15 | #46 review, P2 and P3                         | #46 | — (branch `eab487d`, `87f1f42`)         | Source card first in the document, focus follows the layout; one h2 in the summary               |
-| 2026-11-15 | #46 re-review, P3                             | #46 | — (branch `48fbbf5`)                    | A lone node without coordinates is `single`, not `partial`                                       |
-| 2026-11-15 | PR 6 merged                                   | #46 | `62103bb`                               | Squash of `afd6679` onto `cb532f9`; tree identical to the reviewed head                          |
-| 2026-11-16 | V1                                            | —   | — (branch `7a7b4ae`)                    | Tree labels by role; 58 tree golden hashes regenerated                                           |
-| 2026-11-16 | V2                                            | —   | — (branch `4d9f7e2`)                    | One size for span labels; 6 timeline golden hashes regenerated                                   |
-| 2026-11-16 | V3                                            | —   | — (branch `3fa605f`)                    | Strong flowchart strokes; returns over the steps; golden frames unchanged                        |
-| 2026-11-16 | V4                                            | —   | — (branch `c2904e0`)                    | Legend at 14; 108 golden hashes regenerated; browser baseline identical                          |
+| Date       | Item                                          | PR  | Commit on `main`                        | Note                                                                                                                   |
+| ---------- | --------------------------------------------- | --- | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-12 | Plan                                          | —   | —                                       | Review completed; plan written                                                                                         |
+| 2026-11-12 | F1–F4                                         | #40 | `a2589bf` (branch `94a97d3`)            | Golden frames unchanged                                                                                                |
+| 2026-11-12 | F5                                            | #40 | `a2589bf` (branch `6034b30`)            | 58 tree golden hashes regenerated                                                                                      |
+| 2026-11-13 | #40 review, items 1–8 and minor               | #40 | `a2589bf` (branch `588bb88`)            | One anchor definition; golden frames unchanged                                                                         |
+| 2026-11-13 | #40 re-review, leftovers 1–2 and unsaved flag | #40 | `a2589bf` (branch `0348d87`)            | Leftover 3 tracked as F6                                                                                               |
+| 2026-11-13 | PR 1 merged                                   | #40 | `a2589bf`                               | Squash of `0348d87` onto `08c8e57`; tree identical to the reviewed head                                                |
+| 2026-11-13 | P1, P2                                        | #41 | `682dbbd` (branch `dd2fa58`)            | Display lists and golden frames identical                                                                              |
+| 2026-11-13 | P3                                            | #41 | `682dbbd` (branch `f54385b`)            | `LARGE_GRAPH` above 500 nodes or 1,000 relations                                                                       |
+| 2026-11-13 | #41 review, items 1–3 and minor               | #41 | `682dbbd` (branch `72beefa`)            | Budget lowered to 300 / 600 (D3); golden frames unchanged                                                              |
+| 2026-11-13 | PR 2 merged                                   | #41 | `682dbbd`                               | Squash of `72beefa` onto `a2589bf`; tree identical to the reviewed head                                                |
+| 2026-11-13 | F6                                            | #42 | `a63875c` (branch `e29cc70`, `a8c2a80`) | Lanes only for anchored dated nodes; golden frames unchanged                                                           |
+| 2026-11-13 | #42 review and follow-up review               | #42 | `a63875c` (branch `ada4d09`, `1271551`) | One lane rule for writer and reader; `LANE_ONLY` warning; golden frames unchanged                                      |
+| 2026-11-13 | PR 1b merged                                  | #42 | `a63875c`                               | Squash of `1271551` onto `682dbbd`; tree identical to the reviewed head                                                |
+| 2026-11-13 | S1                                            | —   | — (branch `5e21269`)                    | Graph analysis, time axis and layout names in their own modules; exports unchanged                                     |
+| 2026-11-13 | S2                                            | —   | — (branch `8e49fc2`)                    | Parser split by section, storyboard module, one parse per load; 87 documents identical                                 |
+| 2026-11-13 | S3                                            | —   | — (branch `9c7ae0a`)                    | `revealStep` track; 5,376 frames identical; golden frames unchanged                                                    |
+| 2026-11-13 | D1, D2, D4                                    | #43 | —                                       | Owner confirmed the recommendations; all four decisions closed                                                         |
+| 2026-11-13 | #43 review, P2                                | #43 | — (branch `2569a4a`)                    | Regenerated storyboard of an unfolded graph unfolds; golden frames unchanged                                           |
+| 2026-11-14 | PR 3 merged                                   | #43 | `ca0edd8`                               | Squash of `54f5f98` onto `a63875c`; tree identical to the reviewed head                                                |
+| 2026-11-14 | S4                                            | —   | — (branch `6882f62`)                    | `composeFrame` in passes over a frame context; 50,832 display lists identical                                          |
+| 2026-11-14 | S5                                            | —   | — (branch `9d13310`)                    | One source for line rhythms, shape proportions and the importance scale; display lists identical                       |
+| 2026-11-14 | S6                                            | —   | — (branch `87e4354`)                    | The renderer owns the drawn style; hit tests have no default; display lists identical                                  |
+| 2026-11-14 | #44 review, P2                                | #44 | —                                       | Harness renderer resolves the graph's style on first load, as production does                                          |
+| 2026-11-14 | PR 4 merged                                   | #44 | `ad49ba5`                               | Squash of `277eac0` onto `ca0edd8`; tree identical to the reviewed head                                                |
+| 2026-11-15 | T2                                            | —   | — (branch `3939a8c`, `a298444`)         | Tests linted and formatted by glob                                                                                     |
+| 2026-11-15 | T1                                            | —   | — (branch `8c14f13`)                    | `examples/manifest.json`; buttons rendered from it                                                                     |
+| 2026-11-15 | T3                                            | —   | — (branch `9117a8b`)                    | Diagnostics worded by key; 7,926 messages and fixes identical                                                          |
+| 2026-11-15 | T4                                            | —   | —                                       | Diagram kinds and layout tables repaired; architecture updated                                                         |
+| 2026-11-15 | PR 5 merged                                   | #45 | `cb532f9`                               | Squash of `26fd0fd` onto `ad49ba5`; tree identical to the reviewed head                                                |
+| 2026-11-15 | W4                                            | —   | — (branch `3207c4a`)                    | One heading in the layout panel                                                                                        |
+| 2026-11-15 | Core: `autoEngine`, `strategyEngine`          | —   | — (branch `7c196a1`)                    | One rule for the engine a strategy draws with; golden frames identical                                                 |
+| 2026-11-15 | W1                                            | —   | — (branch `6ab1cef`)                    | Panel shows only the settings the strategy reads (`ENGINE_PARAMETERS`)                                                 |
+| 2026-11-15 | W2                                            | —   | — (branch `b6c6b6f`)                    | "当前画面" line from `drawingOrigin`; manual renamed                                                                   |
+| 2026-11-15 | W3                                            | —   | — (branch `01aad10`)                    | `layoutFit`: suitability marked in the menu and worded under it                                                        |
+| 2026-11-15 | W5                                            | —   | — (branch `7ef9ad2`)                    | Data source first at ≤ 840 px; example buttons of one height                                                           |
+| 2026-11-15 | #46 review, P2 ×2                             | #46 | — (branch `cfc2b5e`)                    | Provenance from coordinates, not the stored type; `instant` beside `untimed`                                           |
+| 2026-11-15 | #46 review, P2 and P3                         | #46 | — (branch `eab487d`, `87f1f42`)         | Source card first in the document, focus follows the layout; one h2 in the summary                                     |
+| 2026-11-15 | #46 re-review, P3                             | #46 | — (branch `48fbbf5`)                    | A lone node without coordinates is `single`, not `partial`                                                             |
+| 2026-11-15 | PR 6 merged                                   | #46 | `62103bb`                               | Squash of `afd6679` onto `cb532f9`; tree identical to the reviewed head                                                |
+| 2026-11-16 | V1                                            | —   | — (branch `7a7b4ae`)                    | Tree labels by role; 58 tree golden hashes regenerated                                                                 |
+| 2026-11-16 | V2                                            | —   | — (branch `4d9f7e2`)                    | One size for span labels; 6 timeline golden hashes regenerated                                                         |
+| 2026-11-16 | V3                                            | —   | — (branch `3fa605f`)                    | Strong flowchart strokes; returns over the steps; golden frames unchanged                                              |
+| 2026-11-16 | V4                                            | —   | — (branch `c2904e0`)                    | Legend at 14; 108 golden hashes regenerated; browser baseline identical                                                |
+| 2026-11-16 | PR 7 self-review                              | —   | —                                       | Returns routed round steps in lanes; tree rule only for one-way growth; legend swatch matches; golden frames unchanged |

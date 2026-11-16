@@ -161,6 +161,84 @@ export function relationLayout(
   return { pairs, pull, spokeAngles, degree, loopsOf, returns };
 }
 
+/** Where a return crosses: above (-1) or below (1) the steps, and at what height. */
+export interface ReturnRoute {
+  side: -1 | 1;
+  peak: number;
+}
+
+/**
+ * The route of every return, so that none passes through a step it does not
+ * join and no two share a line. A return leaves and arrives upright, so it
+ * crosses on the side where fewer steps stand in the column of its ends
+ * (above when equal), beyond every step between its ends. Shorter returns
+ * are routed first and keep the inside; one that would run along another
+ * moves a lane further out.
+ */
+export function returnRoutes(
+  ctx: Pick<FrameContext, 'view' | 'u'>,
+  drawnById: ReadonlyMap<string, DrawnNode>,
+  returns: ReadonlySet<string>,
+): Map<string, ReturnRoute> {
+  const routes = new Map<string, ReturnRoute>();
+  if (!returns.size) return routes;
+  const { u } = ctx;
+  const steps = [...drawnById.values()].filter((entry) => entry.visibility > 0);
+  const spans = ctx.view.edges
+    .filter((edge) => returns.has(edge.id))
+    .flatMap((edge) => {
+      const from = drawnById.get(edge.source),
+        to = drawnById.get(edge.target);
+      return from && to ? [{ edge, from, to, reach: Math.abs(to.p.x - from.p.x) }] : [];
+    })
+    .sort((m, n) => m.reach - n.reach || (m.edge.id < n.edge.id ? -1 : 1));
+  const placed: { lo: number; hi: number; side: number; peak: number }[] = [];
+  const lane = u(22);
+  for (const { edge, from, to } of spans) {
+    const lo = Math.min(from.p.x, to.p.x),
+      hi = Math.max(from.p.x, to.p.x);
+    // Steps standing in the way of an upright leg from `end` towards `side`.
+    const blocked = (side: number): number =>
+      [from, to].reduce(
+        (count, end) =>
+          count +
+          steps.filter(
+            (other) =>
+              other !== from &&
+              other !== to &&
+              Math.abs(other.p.x - end.p.x) <= other.geometry.halfWidth + u(6) &&
+              (other.p.y - end.p.y) * side > 0,
+          ).length,
+        0,
+      );
+    const side = blocked(1) < blocked(-1) ? 1 : -1;
+    let edgeOfSteps = side * Math.max(from.p.y * side, to.p.y * side);
+    for (const other of steps)
+      if (other.p.x + other.geometry.halfWidth >= lo && other.p.x - other.geometry.halfWidth <= hi)
+        edgeOfSteps =
+          side *
+          Math.max(edgeOfSteps * side, (other.p.y + side * other.geometry.halfHeight) * side);
+    // A lane out, and room for the turn and the arrowhead that comes back in.
+    let peak = edgeOfSteps + side * (lane + u(6));
+    for (let moved = true; moved;) {
+      moved = false;
+      for (const other of placed)
+        if (
+          other.side === side &&
+          other.lo < hi &&
+          other.hi > lo &&
+          Math.abs(other.peak - peak) < lane - 1e-6
+        ) {
+          peak = other.peak + side * lane;
+          moved = true;
+        }
+    }
+    placed.push({ lo, hi, side, peak });
+    routes.set(edge.id, { side, peak });
+  }
+  return routes;
+}
+
 /**
  * The relations: strokes, heads and the glow of a highlighted one. Returns
  * the tags to place later and the obstacles the drawn strokes make for node
@@ -174,6 +252,7 @@ export function composeRelations(
   const { view, config, style, theme: P, u, sans, cam, spec, locale } = ctx;
   const { pairs, spokeAngles, degree, loopsOf, returns } = layout;
   const strong = style.edgeContrast === 'strong';
+  const routes = returnRoutes(ctx, drawnById, returns);
   const items: DisplayItem[] = [];
   const selection: Selection = [];
   const edgeLabels: EdgeLabel[] = [],
@@ -198,9 +277,7 @@ export function composeRelations(
             ? to.c
             : highlighted
               ? P.edge.highlight
-              : strong && edgeStyle.stroke === 'plain'
-                ? P.edge.strong
-                : edgePaint(P, edgeStyle.stroke))),
+              : edgePaint(P, edgeStyle.stroke, style.edgeContrast))),
       // Strength is drawn as weight; a highlighted relation gains one more step.
       width = u(
         custom.width ??
@@ -300,7 +377,7 @@ export function composeRelations(
         dy = b.y - a.y,
         len = Math.hypot(dx, dy);
       if (len < u(1)) continue;
-      const back = returns.has(edge.id);
+      const back = routes.get(edge.id);
       const key = [edge.source, edge.target].sort().join('\0');
       const siblings = back ? [edge.id] : pairs.get(key);
       if (!siblings) throw new Error('Missing edge pair');
@@ -314,9 +391,9 @@ export function composeRelations(
         style.routing === 'elbow' &&
         siblings.length === 1 &&
         Math.abs(dx) > Math.abs(dy) * 0.35;
-      // A return leaves its step upwards and comes down into its target.
+      // A return leaves its step upright and enters its target from the same side.
       const ux = back ? 0 : elbow ? Math.sign(dx) : dx / len,
-        uy = back ? -1 : elbow ? 0 : dy / len;
+        uy = back ? back.side : elbow ? 0 : dy / len;
       const sourceRim = nodeGlyphRayDistance(
           from.node,
           { x: ux, y: uy },
@@ -327,7 +404,7 @@ export function composeRelations(
         ),
         targetRim = nodeGlyphRayDistance(
           to.node,
-          back ? { x: 0, y: -1 } : { x: -ux, y: -uy },
+          back ? { x: 0, y: back.side } : { x: -ux, y: -uy },
           cam.scale,
           spec,
           style,
@@ -350,21 +427,12 @@ export function composeRelations(
       // Glyphs that touch or overlap leave no room for a readable stroke.
       if (!back && (elbow ? Math.abs(dx) : len) <= ra + rb + u(1)) continue;
       const start = { x: a.x + ux * ra, y: a.y + uy * ra },
-        end = back ? { x: b.x, y: b.y - rb } : { x: b.x - ux * rb, y: b.y - uy * rb };
+        end = back ? { x: b.x, y: b.y + back.side * rb } : { x: b.x - ux * rb, y: b.y - uy * rb };
       let segments: Segment[];
       if (back) {
-        // Over the top of every step between the two, clear of their glyphs
-        // and of the labels above them: up, across, and down into the target.
-        const lo = Math.min(a.x, b.x),
-          hi = Math.max(a.x, b.x);
-        let top = Math.min(start.y, end.y);
-        for (const other of drawnById.values()) {
-          if (other.visibility <= 0) continue;
-          const half = other.geometry.halfWidth;
-          if (other.p.x + half >= lo && other.p.x - half <= hi)
-            top = Math.min(top, other.p.y - other.geometry.halfHeight);
-        }
-        const peak = top - u(22) - u(custom.curve ?? 0),
+        // Out upright, across beyond every step between the two, and back
+        // in upright (`returnRoutes`).
+        const peak = back.peak + back.side * u(custom.curve ?? 0),
           way = Math.sign(dx),
           turn = Math.min(Math.abs(dx) / 3, u(18));
         const leave = { x: start.x + way * turn, y: peak },
@@ -465,7 +533,7 @@ export function composeRelations(
           });
         }
       }
-      // On a return, the middle of its crossing above the steps.
+      // On a return, the middle of its crossing.
       labelAt = pathPoint(segments, 0.5);
       // Where a tag may step aside when it does not fit on the line: across
       // the relation, first to the side it already bows to.

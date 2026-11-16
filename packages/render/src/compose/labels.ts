@@ -27,40 +27,62 @@ export interface TreeReading {
 }
 
 /**
+ * How far the relations of a drawing must agree on one direction (the length
+ * of the mean of their unit vectors, 0–1) for it to grow that way. The
+ * vertebrates example measures 0.90 as a tree, 0.75 layered and 0.94 as a
+ * flow; 0.19 radial, 0.35 by force, 0.41 on a circle and 0.53 on a grid.
+ */
+export const TREE_GROWTH = 0.6;
+
+/**
  * Each node's role in the whole tree, not only in the part shown, so a
  * branch keeps its label's side while the tree unfolds, and the direction
- * the tree grows on the drawing (the mean direction of its relations).
- * A node without relations has no role.
+ * the tree grows on the drawing: the one most of its relations lead in.
+ * Roles are read from the drawing along that direction (a node with a
+ * neighbour further on leads, one with a neighbour before it follows), so a
+ * stray relation authored child to parent does not turn its ends around. A
+ * node without relations has no role. Null when the relations do not agree
+ * on a direction (`TREE_GROWTH`): a tree drawn around its root, or written
+ * every which way, has no "ahead", and keeps the free-side search.
  */
 export function treeReading(
   graph: Pick<FrameContext['graph'], 'nodes' | 'edges'>,
   positions: ReadonlyMap<string, Point>,
-): TreeReading {
-  const parents = new Set<string>(),
-    children = new Set<string>();
+): TreeReading | null {
+  const drawn: [string, string, number, number][] = [];
   let gx = 0,
     gy = 0;
   for (const edge of graph.edges) {
-    if (edge.source === edge.target) continue;
-    parents.add(edge.source);
-    children.add(edge.target);
     const a = positions.get(edge.source),
       b = positions.get(edge.target);
     if (!a || !b) continue;
-    const d = Math.hypot(b.x - a.x, b.y - a.y);
-    if (d > 0) {
-      gx += (b.x - a.x) / d;
-      gy += (b.y - a.y) / d;
-    }
+    const dx = b.x - a.x,
+      dy = b.y - a.y,
+      d = Math.hypot(dx, dy);
+    if (!(d > 0)) continue;
+    drawn.push([edge.source, edge.target, dx, dy]);
+    gx += dx / d;
+    gy += dy / d;
   }
-  const sideways = Math.abs(gx) >= Math.abs(gy);
+  if (!drawn.length || Math.hypot(gx, gy) < TREE_GROWTH * drawn.length) return null;
+  const sideways = Math.abs(gx) >= Math.abs(gy),
+    forward = (sideways ? gx : gy) < 0 ? -1 : 1;
+  const leads = new Set<string>(),
+    follows = new Set<string>();
+  for (const [source, target, dx, dy] of drawn) {
+    const along = (sideways ? dx : dy) * forward;
+    // Level with one another: neither is ahead.
+    if (along === 0) continue;
+    leads.add(along > 0 ? source : target);
+    follows.add(along > 0 ? target : source);
+  }
   const roles = new Map<string, TreeRole>();
   for (const node of graph.nodes) {
-    const leads = parents.has(node.id),
-      follows = children.has(node.id);
-    if (leads || follows) roles.set(node.id, !leads ? 'leaf' : !follows ? 'root' : 'inner');
+    const parent = leads.has(node.id),
+      child = follows.has(node.id);
+    if (parent || child) roles.set(node.id, !parent ? 'leaf' : !child ? 'root' : 'inner');
   }
-  return { roles, sideways, forward: (sideways ? gx : gy) < 0 ? -1 : 1 };
+  return { roles, sideways, forward };
 }
 
 /**

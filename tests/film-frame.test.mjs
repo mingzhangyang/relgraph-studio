@@ -8,9 +8,13 @@ import dynasties from '../examples/dynasties-timeline-provisional.graph.json' wi
 import { loadDocument } from '../packages/core/src/director/load.ts';
 import { layoutGraph } from '../packages/core/src/director/layout.ts';
 import { directorFrameAt, frameCount } from '../packages/core/src/director/state.ts';
+import {
+  computeLayout,
+  DEFAULT_LAYOUT_SETTINGS,
+} from '../packages/core/src/director/layout-strategies.ts';
 import { styleForGraph } from '../packages/core/src/style.ts';
 import { composeFrame } from '../packages/render/src/compose.ts';
-import { treeReading } from '../packages/render/src/compose/labels.ts';
+import { TREE_GROWTH, treeReading } from '../packages/render/src/compose/labels.ts';
 import {
   cameraFitFor,
   FRAME_SPECS,
@@ -330,4 +334,127 @@ test('V4 · the legend is set no smaller than the frame’s other secondary text
   );
   const [, , , , h] = plate.d[0];
   assert.ok(h >= legend[0].font.size * 1.8, `plate ${h} for ${legend[0].font.size}`);
+});
+
+test('review · a tree that does not grow one way keeps the free-side search', () => {
+  const result = load(tree);
+  const { graph } = result;
+  const drawnBy = (type) =>
+    computeLayout(graph, { ...DEFAULT_LAYOUT_SETTINGS, type, mode: 'rearrange' });
+  // Strategies that advance one way read as a tree; the others have no "ahead".
+  for (const type of ['tree', 'layered', 'flow'])
+    assert.ok(treeReading(graph, drawnBy(type)), `${type} grows one way`);
+  for (const type of ['radial', 'force', 'circle', 'grid'])
+    assert.equal(treeReading(graph, drawnBy(type)), null, `${type} does not`);
+  assert.ok(TREE_GROWTH > 0.53 && TREE_GROWTH < 0.75);
+  // Drawn radially, the frame is the one the free-side search composes.
+  const radial = drawnBy('radial');
+  const frame = frameCount(graph) - 1;
+  const state = directorFrameAt(graph, radial, frame, spec.fps, { fit: cameraFitFor(spec) });
+  const options = { graph, positions: radial, frame, fps: spec.fps, measure, frameSpec: spec };
+  const style = styleForGraph(graph);
+  const free = { ...style };
+  delete free.labelSides;
+  assert.deepEqual(
+    composeFrame(state, { ...options, style }),
+    composeFrame(state, { ...options, style: free }),
+  );
+});
+
+test('review · tree roles are read from the drawing, whichever way a relation is written', () => {
+  const { graph } = load(tree);
+  const positions = layoutGraph(graph);
+  const expected = treeReading(graph, positions);
+  // One relation written child to parent: same drawing, same roles.
+  const turned = (every) => ({
+    ...graph,
+    edges: graph.edges.map((e, i) =>
+      i % every ? e : { ...e, source: e.target, target: e.source },
+    ),
+  });
+  const reading = treeReading(turned(graph.edges.length), positions);
+  assert.deepEqual([...reading.roles].sort(), [...expected.roles].sort());
+  assert.equal(reading.forward, expected.forward);
+  assert.equal(reading.sideways, expected.sideways);
+  // Written every which way, the relations name no direction: free-side search.
+  assert.equal(treeReading(turned(2), positions), null);
+});
+
+const flow = (ids, edges) =>
+  load({
+    format: 'relgraph.graph/1',
+    diagram: 'flowchart',
+    meta: { title: 'returns' },
+    directed: true,
+    nodes: ids.map((id) => ({ id, kind: id.endsWith('？') ? '判断' : '步骤' })),
+    edges,
+  });
+
+test('review · a return never runs through a step over its ends, and returns keep lanes', () => {
+  const result = flow(
+    ['收单', '有货？', '支付', '缺货登记', '补货', '发货', '签收'],
+    [
+      { source: '收单', target: '有货？' },
+      { source: '有货？', target: '支付', label: '是' },
+      { source: '有货？', target: '缺货登记', label: '否' },
+      { source: '缺货登记', target: '补货' },
+      { source: '支付', target: '发货' },
+      { source: '发货', target: '签收' },
+      { source: '补货', target: '有货？', label: '到货' },
+      { source: '签收', target: '支付', label: '退款' },
+      { source: '发货', target: '支付', label: '改址' },
+    ],
+  );
+  const { list } = compose(result, frameCount(result.graph) - 1);
+  const { nodes, edges } = outlines(result, list);
+  const path = (label) => edges.get(result.graph.edges.find((e) => e.label === label).id);
+  // No return touches any step: 补货 sits under 发货, so 到货 goes round below.
+  for (const label of ['到货', '退款', '改址'])
+    for (const [step, box] of nodes)
+      assert.ok(!path(label).some((q) => inside(q, box)), `${label} clear of ${step}`);
+  const lowest = Math.max(...[...nodes.values()].map((box) => box.y + box.h));
+  assert.ok(Math.max(...path('到货').map((q) => q.y)) > lowest, '到货 crosses below the steps');
+  const below = nodes.get('有货？');
+  assert.ok(path('到货').at(-1).y >= below.y + below.h, 'and enters its target from below');
+  // The two returns above cross at different heights, the shorter inside.
+  const crossing = (label) => Math.min(...path(label).map((q) => q.y));
+  assert.ok(crossing('退款') < crossing('改址') - 15, `${crossing('退款')} / ${crossing('改址')}`);
+  // Each tag is on its own line.
+  for (const label of ['到货', '退款', '改址']) {
+    const tag = drawables(list).find((item) => item.type === 'text' && item.text === label);
+    const nearest = Math.min(...path(label).map((q) => Math.hypot(q.x - tag.x, q.y - tag.y)));
+    assert.ok(nearest < 4, `${label} tag ${nearest.toFixed(1)} px from its relation`);
+  }
+});
+
+test('review · the legend swatch of a neutral relation kind is the stroke that is drawn', () => {
+  const result = load({
+    format: 'relgraph.graph/1',
+    diagram: 'flowchart',
+    meta: { title: 'kinds' },
+    directed: true,
+    nodes: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'].map((id) => ({ id, kind: `k${id}` })),
+    edges: [
+      { source: 'a', target: 'b', kind: 'next' },
+      { source: 'b', target: 'c', kind: 'else' },
+      ...['d', 'e', 'f', 'g', 'h', 'i', 'j'].map((id) => ({
+        source: 'c',
+        target: id,
+        kind: 'next',
+      })),
+    ],
+  });
+  const style = styleForGraph(result.graph);
+  const neutral = Object.entries(style.edges).filter(([, s]) => s.tone === undefined && !s.color);
+  // Ten node kinds take every palette slot, so the relation kinds are neutral.
+  assert.ok(neutral.length >= 1, 'a relation kind without a hue');
+  const P = VIDEO_THEMES.light;
+  const { list } = compose(result, frameCount(result.graph) - 1);
+  const strokes = new Set(
+    drawables(list)
+      .filter((item) => item.type === 'path' && item.stroke && !item.fill)
+      .map((item) => item.stroke),
+  );
+  assert.ok(strokes.has(P.edge.strong));
+  assert.ok(!strokes.has(P.edge.plain), 'no swatch or stroke in the plain neutral');
 });

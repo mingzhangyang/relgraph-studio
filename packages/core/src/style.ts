@@ -97,7 +97,9 @@ export interface DomainStyle {
   /**
    * `tree` sets each label beside a node by its place in the tree instead of
    * on the side its relations leave free: a leaf ahead of its node, the root
-   * behind it, and every inner node on one side across the growth.
+   * behind it, and every inner node on one side across the growth. It holds
+   * while the drawing grows one way; a tree drawn around a centre keeps the
+   * free-side search.
    */
   labelSides?: 'tree';
   /**
@@ -106,9 +108,11 @@ export interface DomainStyle {
    */
   edgeContrast?: 'strong';
   /**
-   * `over` routes a relation that runs against the flow of the drawing over
-   * every step it passes, into the top of its target, with its tag on the
-   * crossing; it never passes under a step it does not join.
+   * `over` routes a relation that runs against the flow of the drawing
+   * around the steps it passes: out of its step upright, across above them
+   * (below, when a step stands over one of its ends) and upright into its
+   * target, with its tag on the crossing. It never passes through a step it
+   * does not join, and two returns never share a line.
    */
   returns?: 'over';
   /**

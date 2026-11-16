@@ -104,11 +104,15 @@ const isThemeName = (name: string): name is ThemeName => Object.hasOwn(VIDEO_THE
 export const themeFor = (name: unknown): VideoTheme =>
   typeof name === 'string' && isThemeName(name) ? VIDEO_THEMES[name] : VIDEO_THEMES.dark;
 
-/** Resolve a domain style's semantic edge stroke to this palette. */
-export function edgePaint(theme: VideoTheme, stroke: EdgeStroke): string {
+/**
+ * Resolve a domain style's semantic edge stroke to this palette. Under
+ * `strong` contrast the plain neutral is the strong one, for the stroke and
+ * for its legend swatch alike.
+ */
+export function edgePaint(theme: VideoTheme, stroke: EdgeStroke, contrast?: 'strong'): string {
   if (stroke === 'physical') return theme.edge.physical;
   if (stroke === 'regulatory') return theme.edge.special;
-  return theme.edge.plain;
+  return contrast === 'strong' ? theme.edge.strong : theme.edge.plain;
 }
 
 const channels = (hex: string): [number, number, number] => [

@@ -77,7 +77,10 @@ export function composeLegend(ctx: FrameContext, occupied: RectIndex): DisplayIt
       });
     } else {
       const edgeStyle = edgeStyleFor(style, entry.kind),
-        c = color(edgeStyle.color, toneOf(P, edgeStyle.tone) ?? edgePaint(P, edgeStyle.stroke));
+        c = color(
+          edgeStyle.color,
+          toneOf(P, edgeStyle.tone) ?? edgePaint(P, edgeStyle.stroke, style.edgeContrast),
+        );
       row.push({
         type: 'path',
         d: [
