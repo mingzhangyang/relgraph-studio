@@ -13,7 +13,7 @@ npm run relgraph -- render datasets/tang-poets-met/唐代诗人见面网络_30.g
 ```
 
 - **Edge kinds:** 题目直证 (the poem title records a farewell, outing, stay or banquet together), 正文自述 (the poem text recalls travelling together), 同场唱和 (same-occasion poems; meeting inferred) and 史传记载 (official histories, original title notes or scholarly chronologies; each has `sources` with URLs).
-- **Time:** every node and edge has `visibleFrom` in years CE, so the film grows from 730 to 895. The years are approximate dates of the evidence poems, used for ordering only.
+- **Time:** nodes and edges use `visibleFrom` in CE years. The 30-person graph spans **730–845**, and the 50-person graph spans **724–895**; storyboard shots can advance later (the final overview is at year 900). These are approximate evidence dates used for ordering, not precise event dates.
 - **Layout:** positions are precomputed (x is roughly time, y is a lane), so the player does not lay the graph out. Adjust them in the studio if needed.
 - **Groups:** 盛唐, 大历前后, 元和前后, 晚唐. **Node kinds:** 诗人 and 诗僧 (monk poets).
 - Extra fields (`evidence`, `workIds`, `year`, `place`, `sources`, `note`, `birth`, `death`, `works`) are ignored by the loader and kept for checking.
