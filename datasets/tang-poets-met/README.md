@@ -25,7 +25,7 @@ npm run relgraph -- render datasets/tang-poets-met/唐代诗人见面网络_30.g
   Edges whose basis lies outside the repository carry `sources` with URLs.
 
 - **Time:** `visibleFrom` is in CE years; the storyboard's closing overview is at year 900. The years are approximate dates of the evidence, used for ordering only.
-- **Layout:** positions are precomputed, with x roughly time and y a lane. The generator rejects a layout in which a straight relation passes within 55 units of an unrelated poet, or two poets are too close for their names. Both files report `meta.layoutQuality.status: "ok"`, with 0 near-passes and 0 crowded pairs. Relations are drawn slightly bowed, so check the film as well.
+- **Layout:** positions are precomputed, with x roughly time and y a lane. The generator rejects a layout in which a straight relation passes within 55 units of an unrelated poet, two poets are too close for their names, or two poets whose mean relationship years differ by 20 years or more appear in reverse order. Both files report `meta.layoutQuality.status: "ok"`, with 0 near-passes, 0 crowded pairs and 0 chronological inversions. Relations are drawn slightly bowed, so check the film as well.
 - **Groups:** 盛唐, 大历前后, 元和前后, 晚唐. **Node kinds:** 诗人 and 诗僧 (monk poets).
 - Extra fields (`evidence`, `evidenceTitles`, `workIds`, `year`, `place`, `sources`, `note`, `birth`, `death`, `works`, `meta.layoutQuality`) are ignored by the loader and kept for checking.
 
