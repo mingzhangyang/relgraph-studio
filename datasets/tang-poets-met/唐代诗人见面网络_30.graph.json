@@ -1,9 +1,17 @@
 {
   "format": "relgraph.graph/1",
   "meta": {
-    "title": "唐代诗人见面网络 · 30 人",
-    "description": "只收有作品或史料为证、确曾当面相见的关系：30 位诗人，60 条连线（题目直证 50，正文自述 4，同场唱和 4，史传记载 2）。寄赠、怀念、读集、遥和不算见面。",
-    "sourceNote": "证据取自 mingzhangyang/tangshi：chinese-poetry 唐诗题目与正文（作品 ID 见 workIds），生卒取自 OpenQTS，个别关系参照 05_文献核查关系；少数关系据史书原文、作品题注或学术年谱补入，出处见关系的 sources 字段。关系由人工逐条核定；年份、地点是按通行年谱给证据作品估计的约数，仅用于视频出场顺序，未逐条考证。"
+    "title": "唐代诗人交往网络 · 30 人",
+    "description": "有作品或文献支持的唐代诗人交往网络：30 人，61 条关系。当面交往 50、官场联系 3、交往推定 1、诗文往来 6、史料交往 1。关系不等于均曾见面；时间地点多为约数。",
+    "sourceNote": "证据来自本仓库作品、人物资料及所引史书、题注和年谱。原始关键词自动推定见面已停用，高频作品只采用逐条核验作品 ID。连线代表有证据的交往，不代表均曾面对面相见。年份和地点均为编年约数，尚未逐条考证。",
+    "layoutQuality": {
+      "status": "ok",
+      "clearance": 55,
+      "edgeNodeOverlaps": 0,
+      "crowdedPairs": 0,
+      "examples": [],
+      "note": "静态几何检查：任何连线与无关节点的直线距离不小于 55，两人横向不足 0.85 个间距时纵向至少相隔 0.85 道。渲染时连线略带弧度，仍应看片复核。"
+    }
   },
   "directed": false,
   "timeline": {
@@ -39,23 +47,29 @@
       }
     },
     "edges": {
-      "题目直证": {
-        "label": "题目直证",
+      "当面交往": {
+        "label": "当面交往",
         "line": "solid",
         "head": "none"
       },
-      "正文自述": {
-        "label": "正文自述同游",
+      "诗文往来": {
+        "label": "诗文往来",
         "line": "dashed",
         "head": "none"
       },
-      "同场唱和": {
-        "label": "同场唱和（推断）",
-        "line": "dotted",
+      "官场联系": {
+        "label": "官场联系",
+        "line": "dashed",
         "head": "none"
       },
-      "史传记载": {
-        "label": "史传、年谱记载",
+      "史料交往": {
+        "label": "史料交往",
+        "line": "dashed",
+        "head": "none"
+      },
+      "交往推定": {
+        "label": "交往推定",
+        "line": "dotted",
         "head": "none"
       }
     }
@@ -66,13 +80,13 @@
       "kind": "诗人",
       "group": "盛唐",
       "visibleFrom": 744,
-      "summary": "659–744（OpenQTS 所载）。存诗 25 首（chinese-poetry 署名）。见过：李白。",
+      "summary": "659–744（OpenQTS 所载）。存诗 25 首（chinese-poetry 署名）。关联：李白。",
       "birth": 659,
       "death": 744,
       "works": 25,
       "position": {
-        "x": 224,
-        "y": 717
+        "x": 108,
+        "y": 91
       }
     },
     {
@@ -80,13 +94,13 @@
       "kind": "诗人",
       "group": "盛唐",
       "visibleFrom": 735,
-      "summary": "678–740（OpenQTS 所载）。存诗 223 首（chinese-poetry 署名）。见过：孟浩然、王维。",
+      "summary": "678–740（OpenQTS 所载）。存诗 223 首（chinese-poetry 署名）。关联：孟浩然、王维。",
       "birth": 678,
       "death": 740,
       "works": 223,
       "position": {
-        "x": 96,
-        "y": 267
+        "x": -266,
+        "y": 523
       }
     },
     {
@@ -94,13 +108,13 @@
       "kind": "诗人",
       "group": "盛唐",
       "visibleFrom": 730,
-      "summary": "690–740（OpenQTS 所载）。存诗 274 首（chinese-poetry 署名）。见过：张九龄、王维、王昌龄、李白。",
+      "summary": "690–740（OpenQTS 所载）。存诗 274 首（chinese-poetry 署名）。关联：张九龄、王维、王昌龄、李白。",
       "birth": 690,
       "death": 740,
       "works": 274,
       "position": {
-        "x": 64,
-        "y": 417
+        "x": 162,
+        "y": 336
       }
     },
     {
@@ -108,13 +122,13 @@
       "kind": "诗人",
       "group": "盛唐",
       "visibleFrom": 730,
-      "summary": "699–759（OpenQTS 所载）。存诗 403 首（chinese-poetry 署名）。见过：张九龄、孟浩然、王昌龄、杜甫、贾至、钱起。",
+      "summary": "699–759（OpenQTS 所载）。存诗 403 首（chinese-poetry 署名）。关联：张九龄、孟浩然、王昌龄、杜甫、贾至、钱起。",
       "birth": 699,
       "death": 759,
       "works": 403,
       "position": {
-        "x": 316,
-        "y": 333
+        "x": 458,
+        "y": 470
       }
     },
     {
@@ -122,13 +136,13 @@
       "kind": "诗人",
       "group": "盛唐",
       "visibleFrom": 735,
-      "summary": "698–756（OpenQTS 所载）。存诗 222 首（chinese-poetry 署名）。见过：孟浩然、王维、岑参、李白。",
+      "summary": "698–756（OpenQTS 所载）。存诗 222 首（chinese-poetry 署名）。关联：孟浩然、王维、岑参、李白。",
       "birth": 698,
       "death": 756,
       "works": 222,
       "position": {
-        "x": 284,
-        "y": 431
+        "x": 273,
+        "y": 673
       }
     },
     {
@@ -136,13 +150,13 @@
       "kind": "诗人",
       "group": "盛唐",
       "visibleFrom": 739,
-      "summary": "715–770（OpenQTS 所载）。存诗 411 首（chinese-poetry 署名）。见过：王昌龄、高适、杜甫、贾至。",
+      "summary": "715–770（OpenQTS 所载）。存诗 411 首（chinese-poetry 署名）。关联：王昌龄、高适、杜甫、贾至。",
       "birth": 715,
       "death": 770,
       "works": 411,
       "position": {
-        "x": 504,
-        "y": 417
+        "x": 1018,
+        "y": 153
       }
     },
     {
@@ -150,13 +164,13 @@
       "kind": "诗人",
       "group": "盛唐",
       "visibleFrom": 744,
-      "summary": "707–765（OpenQTS 所载）。存诗 268 首（chinese-poetry 署名）。见过：岑参、李白、杜甫。",
+      "summary": "707–765（OpenQTS 所载）。存诗 268 首（chinese-poetry 署名）。关联：岑参、李白、杜甫。",
       "birth": 707,
       "death": 765,
       "works": 268,
       "position": {
-        "x": 433,
-        "y": 633
+        "x": 790,
+        "y": 108
       }
     },
     {
@@ -164,13 +178,13 @@
       "kind": "诗人",
       "group": "盛唐",
       "visibleFrom": 730,
-      "summary": "701–762（OpenQTS 所载）。存诗 1207 首（chinese-poetry 署名）。见过：贺知章、孟浩然、王昌龄、高适、杜甫、贾至。",
+      "summary": "701–762（OpenQTS 所载）。存诗 1207 首（chinese-poetry 署名）。关联：贺知章、孟浩然、王昌龄、高适、杜甫、贾至。",
       "birth": 701,
       "death": 762,
       "works": 1207,
       "position": {
-        "x": 213,
-        "y": 597
+        "x": 438,
+        "y": 294
       }
     },
     {
@@ -178,13 +192,13 @@
       "kind": "诗人",
       "group": "盛唐",
       "visibleFrom": 744,
-      "summary": "712–770（OpenQTS 所载）。存诗 1489 首（chinese-poetry 署名）。见过：王维、岑参、高适、李白、贾至、严武。",
+      "summary": "712–770（OpenQTS 所载）。存诗 1489 首（chinese-poetry 署名）。关联：王维、岑参、高适、李白、贾至、严武。",
       "birth": 712,
       "death": 770,
       "works": 1489,
       "position": {
-        "x": 357,
-        "y": 117
+        "x": 810,
+        "y": 437
       }
     },
     {
@@ -192,13 +206,13 @@
       "kind": "诗人",
       "group": "盛唐",
       "visibleFrom": 758,
-      "summary": "718–772（OpenQTS 所载）。存诗 48 首（chinese-poetry 署名）。见过：王维、岑参、李白、杜甫。",
+      "summary": "718–772（OpenQTS 所载）。存诗 48 首（chinese-poetry 署名）。关联：王维、岑参、李白、杜甫。",
       "birth": 718,
       "death": 772,
       "works": 48,
       "position": {
-        "x": 536,
-        "y": 267
+        "x": 978,
+        "y": 627
       }
     },
     {
@@ -206,13 +220,13 @@
       "kind": "诗人",
       "group": "盛唐",
       "visibleFrom": 758,
-      "summary": "生卒不详。存诗 7 首（chinese-poetry 署名）。见过：杜甫。",
+      "summary": "生卒不详。存诗 7 首（chinese-poetry 署名）。关联：杜甫。",
       "birth": null,
       "death": null,
       "works": 7,
       "position": {
-        "x": 577,
-        "y": 153
+        "x": 203,
+        "y": 917
       }
     },
     {
@@ -220,13 +234,13 @@
       "kind": "诗人",
       "group": "大历",
       "visibleFrom": 755,
-      "summary": "710–780（OpenQTS 所载）。存诗 541 首（chinese-poetry 署名）。见过：王维、卢纶、李端、司空曙。",
+      "summary": "710–780（OpenQTS 所载）。存诗 541 首（chinese-poetry 署名）。关联：王维、卢纶、李端、司空曙。",
       "birth": 710,
       "death": 780,
       "works": 541,
       "position": {
-        "x": 756,
-        "y": 333
+        "x": 438,
+        "y": 820
       }
     },
     {
@@ -234,13 +248,13 @@
       "kind": "诗人",
       "group": "大历",
       "visibleFrom": 770,
-      "summary": "739–799（OpenQTS 所载）。存诗 353 首（chinese-poetry 署名）。见过：钱起、李端、司空曙、令狐楚。",
+      "summary": "739–799（OpenQTS 所载）。存诗 353 首（chinese-poetry 署名）。关联：钱起、李端、司空曙、令狐楚。",
       "birth": 739,
       "death": 799,
       "works": 353,
       "position": {
-        "x": 944,
-        "y": 417
+        "x": 673,
+        "y": 845
       }
     },
     {
@@ -248,13 +262,13 @@
       "kind": "诗人",
       "group": "大历",
       "visibleFrom": 770,
-      "summary": "732–792（OpenQTS 所载）。存诗 280 首（chinese-poetry 署名）。见过：钱起、卢纶、司空曙、皎然。",
+      "summary": "732–792（OpenQTS 所载）。存诗 280 首（chinese-poetry 署名）。关联：钱起、卢纶、司空曙、皎然。",
       "birth": 732,
       "death": 792,
       "works": 280,
       "position": {
-        "x": 680,
-        "y": 567
+        "x": 893,
+        "y": 1092
       }
     },
     {
@@ -262,13 +276,13 @@
       "kind": "诗人",
       "group": "大历",
       "visibleFrom": 770,
-      "summary": "720–790（OpenQTS 所载）。存诗 175 首（chinese-poetry 署名）。见过：钱起、卢纶、李端。",
+      "summary": "720–790（OpenQTS 所载）。存诗 175 首（chinese-poetry 署名）。关联：钱起、卢纶、李端。",
       "birth": 720,
       "death": 790,
       "works": 175,
       "position": {
-        "x": 724,
-        "y": 453
+        "x": 174,
+        "y": 1063
       }
     },
     {
@@ -276,13 +290,13 @@
       "kind": "诗僧",
       "group": "大历",
       "visibleFrom": 780,
-      "summary": "730–799（OpenQTS 所载）。存诗 488 首（chinese-poetry 署名）。见过：李端、孟郊。",
+      "summary": "730–799（OpenQTS 所载）。存诗 488 首（chinese-poetry 署名）。关联：李端、孟郊。",
       "birth": 730,
       "death": 799,
       "works": 488,
       "position": {
-        "x": 900,
-        "y": 633
+        "x": 871,
+        "y": 865
       }
     },
     {
@@ -290,13 +304,13 @@
       "kind": "诗人",
       "group": "元和",
       "visibleFrom": 787,
-      "summary": "751–814（OpenQTS 所载）。存诗 532 首（chinese-poetry 署名）。见过：皎然、韩愈、张籍、贾岛。",
+      "summary": "751–814（OpenQTS 所载）。存诗 532 首（chinese-poetry 署名）。关联：皎然、韩愈、张籍、贾岛。",
       "birth": 751,
       "death": 814,
       "works": 532,
       "position": {
-        "x": 1120,
-        "y": 597
+        "x": 1100,
+        "y": 1030
       }
     },
     {
@@ -304,13 +318,13 @@
       "kind": "诗人",
       "group": "元和",
       "visibleFrom": 792,
-      "summary": "768–824（OpenQTS 所载）。存诗 440 首（chinese-poetry 署名）。见过：孟郊、张籍、贾岛、白居易、刘禹锡、柳宗元。",
+      "summary": "768–824（OpenQTS 所载）。存诗 440 首（chinese-poetry 署名）。关联：孟郊、张籍、贾岛、白居易、刘禹锡、柳宗元。",
       "birth": 768,
       "death": 824,
       "works": 440,
       "position": {
-        "x": 1195,
-        "y": 483
+        "x": 1383,
+        "y": 1158
       }
     },
     {
@@ -318,13 +332,13 @@
       "kind": "诗人",
       "group": "元和",
       "visibleFrom": 795,
-      "summary": "766–830（OpenQTS 所载）。存诗 489 首（chinese-poetry 署名）。见过：孟郊、韩愈、贾岛、王建、白居易、刘禹锡、令狐楚。",
+      "summary": "766–830（OpenQTS 所载）。存诗 489 首（chinese-poetry 署名）。关联：孟郊、韩愈、贾岛、王建、白居易、刘禹锡、令狐楚、姚合。",
       "birth": 766,
       "death": 830,
       "works": 489,
       "position": {
-        "x": 1340,
-        "y": 603
+        "x": 1231,
+        "y": 773
       }
     },
     {
@@ -332,13 +346,13 @@
       "kind": "诗人",
       "group": "元和",
       "visibleFrom": 811,
-      "summary": "779–843（OpenQTS 所载）。存诗 421 首（chinese-poetry 署名）。见过：孟郊、韩愈、张籍、王建、姚合。",
+      "summary": "779–843（OpenQTS 所载）。存诗 421 首（chinese-poetry 署名）。关联：孟郊、韩愈、张籍、王建、姚合。",
       "birth": 779,
       "death": 843,
       "works": 421,
       "position": {
-        "x": 1363,
-        "y": 783
+        "x": 1751,
+        "y": 697
       }
     },
     {
@@ -346,13 +360,13 @@
       "kind": "诗人",
       "group": "元和",
       "visibleFrom": 795,
-      "summary": "生卒不详。存诗 580 首（chinese-poetry 署名）。见过：张籍、贾岛、白居易、刘禹锡、姚合。",
+      "summary": "生卒不详。存诗 580 首（chinese-poetry 署名）。关联：张籍、贾岛、白居易、刘禹锡、姚合。",
       "birth": null,
       "death": null,
       "works": 580,
       "position": {
-        "x": 1560,
-        "y": 567
+        "x": 1839,
+        "y": 908
       }
     },
     {
@@ -360,13 +374,13 @@
       "kind": "诗人",
       "group": "元和",
       "visibleFrom": 803,
-      "summary": "772–846（OpenQTS 所载）。存诗 3009 首（chinese-poetry 署名）。见过：韩愈、张籍、王建、元稹、刘禹锡、令狐楚、姚合。",
+      "summary": "772–846（OpenQTS 所载）。存诗 3009 首（chinese-poetry 署名）。关联：韩愈、张籍、王建、元稹、刘禹锡、令狐楚、姚合。",
       "birth": 772,
       "death": 846,
       "works": 3009,
       "position": {
-        "x": 1516,
-        "y": 333
+        "x": 1947,
+        "y": 198
       }
     },
     {
@@ -374,13 +388,13 @@
       "kind": "诗人",
       "group": "元和",
       "visibleFrom": 803,
-      "summary": "779–831（OpenQTS 所载）。存诗 910 首（chinese-poetry 署名）。见过：白居易、刘禹锡、柳宗元。",
+      "summary": "779–831（OpenQTS 所载）。存诗 910 首（chinese-poetry 署名）。关联：白居易、刘禹锡、柳宗元。",
       "birth": 779,
       "death": 831,
       "works": 910,
       "position": {
-        "x": 1415,
-        "y": 447
+        "x": 1544,
+        "y": 288
       }
     },
     {
@@ -388,13 +402,13 @@
       "kind": "诗人",
       "group": "元和",
       "visibleFrom": 803,
-      "summary": "772–842（OpenQTS 所载）。存诗 886 首（chinese-poetry 署名）。见过：韩愈、张籍、王建、白居易、元稹、柳宗元、令狐楚、姚合。",
+      "summary": "772–842（OpenQTS 所载）。存诗 886 首（chinese-poetry 署名）。关联：韩愈、张籍、王建、白居易、元稹、柳宗元、令狐楚、姚合。",
       "birth": 772,
       "death": 842,
       "works": 886,
       "position": {
-        "x": 1635,
-        "y": 453
+        "x": 1345,
+        "y": 470
       }
     },
     {
@@ -402,13 +416,13 @@
       "kind": "诗人",
       "group": "元和",
       "visibleFrom": 803,
-      "summary": "773–819（OpenQTS 所载）。存诗 202 首（chinese-poetry 署名）。见过：韩愈、元稹、刘禹锡。",
+      "summary": "773–819（OpenQTS 所载）。存诗 202 首（chinese-poetry 署名）。关联：韩愈、元稹、刘禹锡。",
       "birth": 773,
       "death": 819,
       "works": 202,
       "position": {
-        "x": 1296,
-        "y": 297
+        "x": 1189,
+        "y": 342
       }
     },
     {
@@ -416,13 +430,13 @@
       "kind": "诗人",
       "group": "元和",
       "visibleFrom": 791,
-      "summary": "766–837（OpenQTS 所载）。存诗 90 首（chinese-poetry 署名）。见过：卢纶、张籍、白居易、刘禹锡、李商隐、张祜。",
+      "summary": "766–837（OpenQTS 所载）。存诗 90 首（chinese-poetry 署名）。关联：卢纶、张籍、白居易、刘禹锡、李商隐、张祜。",
       "birth": 766,
       "death": 837,
       "works": 90,
       "position": {
-        "x": 1480,
-        "y": 117
+        "x": 2076,
+        "y": 387
       }
     },
     {
@@ -430,13 +444,13 @@
       "kind": "诗人",
       "group": "元和",
       "visibleFrom": 815,
-      "summary": "781–854（OpenQTS 所载）。存诗 534 首（chinese-poetry 署名）。见过：贾岛、王建、白居易、刘禹锡。",
+      "summary": "781–854（OpenQTS 所载）。存诗 534 首（chinese-poetry 署名）。关联：张籍、贾岛、王建、白居易、刘禹锡。",
       "birth": 781,
       "death": 854,
       "works": 534,
       "position": {
-        "x": 1583,
-        "y": 770
+        "x": 1716,
+        "y": 1038
       }
     },
     {
@@ -444,13 +458,13 @@
       "kind": "诗人",
       "group": "晚唐",
       "visibleFrom": 829,
-      "summary": "813–858（OpenQTS 所载）。存诗 616 首（chinese-poetry 署名）。见过：令狐楚。",
+      "summary": "813–858（OpenQTS 所载）。存诗 616 首（chinese-poetry 署名）。关联：令狐楚。",
       "birth": 813,
       "death": 858,
       "works": 616,
       "position": {
-        "x": 1700,
-        "y": 183
+        "x": 2059,
+        "y": 589
       }
     },
     {
@@ -458,13 +472,13 @@
       "kind": "诗人",
       "group": "晚唐",
       "visibleFrom": 845,
-      "summary": "803–852（OpenQTS 所载）。存诗 544 首（chinese-poetry 署名）。见过：张祜。",
+      "summary": "803–852（OpenQTS 所载）。存诗 544 首（chinese-poetry 署名）。关联：张祜。",
       "birth": 803,
       "death": 852,
       "works": 544,
       "position": {
-        "x": 1956,
-        "y": 333
+        "x": 2411,
+        "y": 448
       }
     },
     {
@@ -472,13 +486,13 @@
       "kind": "诗人",
       "group": "晚唐",
       "visibleFrom": 830,
-      "summary": "792–852（OpenQTS 所载）。存诗 565 首（chinese-poetry 署名）。见过：令狐楚、杜牧。",
+      "summary": "792–852（OpenQTS 所载）。存诗 565 首（chinese-poetry 署名）。关联：令狐楚、杜牧。",
       "birth": 792,
       "death": 852,
       "works": 565,
       "position": {
-        "x": 1736,
-        "y": 297
+        "x": 2170,
+        "y": 732
       }
     }
   ],
@@ -487,7 +501,7 @@
       "id": "孟浩然—王维",
       "source": "孟浩然",
       "target": "王维",
-      "kind": "题目直证",
+      "kind": "当面交往",
       "weight": 2.0,
       "visibleFrom": 730,
       "year": 730,
@@ -501,7 +515,7 @@
       "id": "孟浩然—李白",
       "source": "孟浩然",
       "target": "李白",
-      "kind": "题目直证",
+      "kind": "当面交往",
       "weight": 1.0,
       "visibleFrom": 730,
       "year": 730,
@@ -514,7 +528,7 @@
       "id": "王维—张九龄",
       "source": "王维",
       "target": "张九龄",
-      "kind": "史传记载",
+      "kind": "官场联系",
       "weight": 1.0,
       "visibleFrom": 735,
       "year": 735,
@@ -522,7 +536,7 @@
       "evidenceTitles": 1,
       "evidence": ["王维《献始兴公》"],
       "workIds": ["49f16d59-ce56-4ed7-b3b3-82571018a52a"],
-      "note": "王维受宰相张九龄拔擢为右拾遗，同在朝中；《献始兴公》为献张九龄之作。",
+      "note": "《新唐书》载张九龄执政时擢王维为右拾遗，另有《献始兴公》；属官场联系，不以实际见面为前提。",
       "sources": [
         {
           "title": "《新唐书·王维传》：“张九龄执政，擢右拾遗。”（维基文库）",
@@ -534,7 +548,7 @@
       "id": "王维—王昌龄",
       "source": "王维",
       "target": "王昌龄",
-      "kind": "题目直证",
+      "kind": "当面交往",
       "weight": 1.0,
       "visibleFrom": 735,
       "year": 735,
@@ -547,7 +561,7 @@
       "id": "张九龄—孟浩然",
       "source": "张九龄",
       "target": "孟浩然",
-      "kind": "题目直证",
+      "kind": "当面交往",
       "weight": 3.0,
       "visibleFrom": 737,
       "year": 737,
@@ -571,7 +585,7 @@
       "id": "孟浩然—王昌龄",
       "source": "孟浩然",
       "target": "王昌龄",
-      "kind": "题目直证",
+      "kind": "当面交往",
       "weight": 2.0,
       "visibleFrom": 739,
       "year": 739,
@@ -584,7 +598,7 @@
       "id": "王昌龄—岑参",
       "source": "王昌龄",
       "target": "岑参",
-      "kind": "题目直证",
+      "kind": "当面交往",
       "weight": 2.0,
       "visibleFrom": 739,
       "year": 739,
@@ -597,7 +611,7 @@
       "id": "王昌龄—李白",
       "source": "王昌龄",
       "target": "李白",
-      "kind": "题目直证",
+      "kind": "当面交往",
       "weight": 1.0,
       "visibleFrom": 739,
       "year": 739,
@@ -613,7 +627,7 @@
       "id": "李白—贺知章",
       "source": "李白",
       "target": "贺知章",
-      "kind": "题目直证",
+      "kind": "当面交往",
       "weight": 2.0,
       "visibleFrom": 744,
       "year": 744,
@@ -627,7 +641,7 @@
       "id": "李白—高适",
       "source": "李白",
       "target": "高适",
-      "kind": "正文自述",
+      "kind": "当面交往",
       "weight": 2.0,
       "visibleFrom": 744,
       "year": 744,
@@ -641,7 +655,7 @@
       "id": "李白—杜甫",
       "source": "李白",
       "target": "杜甫",
-      "kind": "题目直证",
+      "kind": "当面交往",
       "weight": 3.0,
       "visibleFrom": 744,
       "year": 744,
@@ -664,7 +678,7 @@
       "id": "杜甫—高适",
       "source": "杜甫",
       "target": "高适",
-      "kind": "题目直证",
+      "kind": "当面交往",
       "weight": 2.58,
       "visibleFrom": 744,
       "year": 744,
@@ -681,7 +695,7 @@
       "id": "高适—岑参",
       "source": "高适",
       "target": "岑参",
-      "kind": "题目直证",
+      "kind": "当面交往",
       "weight": 2.0,
       "visibleFrom": 752,
       "year": 752,
@@ -694,7 +708,7 @@
       "id": "杜甫—岑参",
       "source": "杜甫",
       "target": "岑参",
-      "kind": "正文自述",
+      "kind": "当面交往",
       "weight": 2.58,
       "visibleFrom": 752,
       "year": 752,
@@ -712,7 +726,7 @@
       "id": "王维—钱起",
       "source": "王维",
       "target": "钱起",
-      "kind": "题目直证",
+      "kind": "当面交往",
       "weight": 2.58,
       "visibleFrom": 755,
       "year": 755,
@@ -733,7 +747,7 @@
       "id": "王维—杜甫",
       "source": "王维",
       "target": "杜甫",
-      "kind": "同场唱和",
+      "kind": "交往推定",
       "weight": 2.58,
       "visibleFrom": 758,
       "year": 758,
@@ -755,7 +769,7 @@
       "id": "王维—贾至",
       "source": "王维",
       "target": "贾至",
-      "kind": "同场唱和",
+      "kind": "诗文往来",
       "weight": 1.0,
       "visibleFrom": 758,
       "year": 758,
@@ -768,7 +782,7 @@
       "id": "岑参—贾至",
       "source": "岑参",
       "target": "贾至",
-      "kind": "同场唱和",
+      "kind": "诗文往来",
       "weight": 1.0,
       "visibleFrom": 758,
       "year": 758,
@@ -781,7 +795,7 @@
       "id": "杜甫—贾至",
       "source": "杜甫",
       "target": "贾至",
-      "kind": "题目直证",
+      "kind": "当面交往",
       "weight": 2.58,
       "visibleFrom": 758,
       "year": 758,
@@ -802,12 +816,12 @@
       "id": "杜甫—严武",
       "source": "杜甫",
       "target": "严武",
-      "kind": "题目直证",
-      "weight": 4.32,
+      "kind": "当面交往",
+      "weight": 3.58,
       "visibleFrom": 758,
       "year": 758,
       "place": "长安、成都",
-      "evidenceTitles": 10,
+      "evidenceTitles": 6,
       "evidence": [
         "杜甫《留别贾严二阁老两院补阙》",
         "杜甫《严中丞枉驾见过》",
@@ -822,11 +836,7 @@
         "3cc5a45c-2739-4fc6-9ea9-ca01d2eee3e7",
         "8e754fed-aabb-441a-8bdb-ed98dfa07e89",
         "a2c64cce-66c4-481f-bcce-0b54ff36d87f",
-        "c2c83ee2-940f-4ae3-9ab3-4f509d2991f3",
-        "39df70ad-1359-4f75-9358-421aa7db5fe6",
-        "dceaa342-8374-4c18-9c45-85943d152c38",
-        "f7961f8c-6bd0-4a4d-89f8-0a10ba3f77b9",
-        "6c49fcc2-e014-4a5f-8b7b-bc592de83062"
+        "c2c83ee2-940f-4ae3-9ab3-4f509d2991f3"
       ],
       "note": "乾元元年同在两省；上元、广德间严武镇蜀，屡至草堂。"
     },
@@ -834,7 +844,7 @@
       "id": "李白—贾至",
       "source": "李白",
       "target": "贾至",
-      "kind": "题目直证",
+      "kind": "当面交往",
       "weight": 2.0,
       "visibleFrom": 759,
       "year": 759,
@@ -862,7 +872,7 @@
       "id": "钱起—李端",
       "source": "钱起",
       "target": "李端",
-      "kind": "题目直证",
+      "kind": "当面交往",
       "weight": 1.0,
       "visibleFrom": 770,
       "year": 770,
@@ -875,7 +885,7 @@
       "id": "钱起—司空曙",
       "source": "钱起",
       "target": "司空曙",
-      "kind": "题目直证",
+      "kind": "当面交往",
       "weight": 1.0,
       "visibleFrom": 770,
       "year": 770,
@@ -888,7 +898,7 @@
       "id": "卢纶—李端",
       "source": "卢纶",
       "target": "李端",
-      "kind": "题目直证",
+      "kind": "当面交往",
       "weight": 1.0,
       "visibleFrom": 770,
       "year": 770,
@@ -901,7 +911,7 @@
       "id": "卢纶—司空曙",
       "source": "卢纶",
       "target": "司空曙",
-      "kind": "题目直证",
+      "kind": "当面交往",
       "weight": 3.0,
       "visibleFrom": 770,
       "year": 770,
@@ -925,7 +935,7 @@
       "id": "李端—司空曙",
       "source": "李端",
       "target": "司空曙",
-      "kind": "题目直证",
+      "kind": "当面交往",
       "weight": 2.58,
       "visibleFrom": 770,
       "year": 770,
@@ -946,7 +956,7 @@
       "id": "钱起—卢纶",
       "source": "钱起",
       "target": "卢纶",
-      "kind": "题目直证",
+      "kind": "当面交往",
       "weight": 1.0,
       "visibleFrom": 772,
       "year": 772,
@@ -959,7 +969,7 @@
       "id": "李端—皎然",
       "source": "李端",
       "target": "皎然",
-      "kind": "题目直证",
+      "kind": "当面交往",
       "weight": 1.0,
       "visibleFrom": 780,
       "year": 780,
@@ -972,7 +982,7 @@
       "id": "皎然—孟郊",
       "source": "皎然",
       "target": "孟郊",
-      "kind": "题目直证",
+      "kind": "当面交往",
       "weight": 2.0,
       "visibleFrom": 787,
       "year": 787,
@@ -986,7 +996,7 @@
       "id": "卢纶—令狐楚",
       "source": "卢纶",
       "target": "令狐楚",
-      "kind": "题目直证",
+      "kind": "当面交往",
       "weight": 1.0,
       "visibleFrom": 791,
       "year": 791,
@@ -999,7 +1009,7 @@
       "id": "孟郊—韩愈",
       "source": "孟郊",
       "target": "韩愈",
-      "kind": "题目直证",
+      "kind": "当面交往",
       "weight": 3.32,
       "visibleFrom": 792,
       "year": 792,
@@ -1024,7 +1034,7 @@
       "id": "张籍—王建",
       "source": "张籍",
       "target": "王建",
-      "kind": "题目直证",
+      "kind": "当面交往",
       "weight": 2.0,
       "visibleFrom": 795,
       "year": 795,
@@ -1037,7 +1047,7 @@
       "id": "孟郊—张籍",
       "source": "孟郊",
       "target": "张籍",
-      "kind": "题目直证",
+      "kind": "当面交往",
       "weight": 2.0,
       "visibleFrom": 797,
       "year": 797,
@@ -1050,21 +1060,19 @@
       "id": "韩愈—张籍",
       "source": "韩愈",
       "target": "张籍",
-      "kind": "题目直证",
-      "weight": 3.0,
+      "kind": "当面交往",
+      "weight": 2.58,
       "visibleFrom": 797,
       "year": 797,
       "place": "汴州、长安",
-      "evidenceTitles": 4,
+      "evidenceTitles": 3,
       "evidence": [
         "韩愈《题张十八所居》",
-        "韩愈《喜侯喜至赠张籍张彻》",
         "韩愈《与张十八同效阮步兵一日复一夕》",
         "韩愈《游城南十六首 赠张十八助敎》"
       ],
       "workIds": [
         "1b869632-0dcf-4e3c-98f5-291aaa1b3884",
-        "b17e7f46-07c8-4596-9a54-6e6e88f40bae",
         "82c880fc-b1f4-4249-997d-6710c1bd016c",
         "af9cb51e-80f1-4766-89f1-20c35e804f3c"
       ]
@@ -1073,7 +1081,7 @@
       "id": "韩愈—刘禹锡",
       "source": "韩愈",
       "target": "刘禹锡",
-      "kind": "正文自述",
+      "kind": "官场联系",
       "weight": 1.0,
       "visibleFrom": 803,
       "year": 803,
@@ -1087,7 +1095,7 @@
       "id": "韩愈—柳宗元",
       "source": "韩愈",
       "target": "柳宗元",
-      "kind": "正文自述",
+      "kind": "官场联系",
       "weight": 1.0,
       "visibleFrom": 803,
       "year": 803,
@@ -1101,12 +1109,12 @@
       "id": "元稹—白居易",
       "source": "元稹",
       "target": "白居易",
-      "kind": "题目直证",
-      "weight": 4.46,
+      "kind": "当面交往",
+      "weight": 3.58,
       "visibleFrom": 803,
       "year": 803,
       "place": "长安",
-      "evidenceTitles": 11,
+      "evidenceTitles": 6,
       "evidence": [
         "元稹《沣西别乐天博载樊宗宪李景信两秀才侄谷三月三十日相饯送》",
         "元稹《与乐天同葬杓直》",
@@ -1122,19 +1130,40 @@
         "9cd675e1-ee14-4478-8dd0-90f6b9f81c03",
         "26bd5c77-3ac8-4384-b873-d1b76d5df8dd",
         "31fbf86c-ad15-4c12-9f7a-b39f87c82109",
-        "ea55d569-22e0-4bc4-9bf5-7078c40e9b27",
-        "d6cdd0b5-02c7-450b-a984-6eb12ddf4f2c",
-        "73df8fc0-6c14-48f6-8e6c-8089eaaa9efb",
-        "1dc8f53a-980e-40fa-b2c1-4c00638899d4",
-        "607e1f98-5d6e-4c0f-81de-f309b22c882f",
-        "0d84451b-011a-4985-ae1b-a133b973e046"
+        "607e1f98-5d6e-4c0f-81de-f309b22c882f"
       ]
+    },
+    {
+      "id": "元稹—刘禹锡",
+      "source": "元稹",
+      "target": "刘禹锡",
+      "kind": "诗文往来",
+      "weight": 3.32,
+      "visibleFrom": 810,
+      "year": 810,
+      "place": "江陵、朗州",
+      "evidenceTitles": 5,
+      "evidence": [
+        "元稹《刘二十八以文石枕见赠仍题绝句以将厚意因持壁州鞭酬谢兼广为四韵》",
+        "元稹《留呈梦得子厚致用》",
+        "刘禹锡《微之镇武昌中路见寄蓝桥怀旧之作凄然继和兼寄安平》",
+        "刘禹锡《酬元九侍御赠璧竹鞭长句》",
+        "刘禹锡《酬元九院长自江陵见寄》"
+      ],
+      "workIds": [
+        "7fd8c120-42de-41c2-bb28-964055bc1b6b",
+        "ad007ffd-f419-4839-baf6-0a8f2108fb1f",
+        "7630b188-5b47-4f80-83cd-7f1066c4b876",
+        "95818c9a-fb02-49b8-a75a-90d4aee426ca",
+        "cc66bd2e-bfd3-4f97-b7c4-1f4b2714a5ea"
+      ],
+      "note": "元稹在江陵、刘禹锡在朗州时互赠璧竹鞭与文石枕并以诗酬答，此后屡有寄和；《留呈梦得子厚致用》是题于蓝桥驿留给刘、柳等人的诗，不证明当面相见。"
     },
     {
       "id": "孟郊—贾岛",
       "source": "孟郊",
       "target": "贾岛",
-      "kind": "史传记载",
+      "kind": "史料交往",
       "weight": 2.0,
       "visibleFrom": 811,
       "year": 811,
@@ -1161,7 +1190,7 @@
       "id": "韩愈—贾岛",
       "source": "韩愈",
       "target": "贾岛",
-      "kind": "题目直证",
+      "kind": "当面交往",
       "weight": 2.58,
       "visibleFrom": 811,
       "year": 811,
@@ -1183,7 +1212,7 @@
       "id": "张籍—贾岛",
       "source": "张籍",
       "target": "贾岛",
-      "kind": "题目直证",
+      "kind": "当面交往",
       "weight": 3.0,
       "visibleFrom": 811,
       "year": 811,
@@ -1203,19 +1232,32 @@
       ]
     },
     {
+      "id": "元稹—柳宗元",
+      "source": "元稹",
+      "target": "柳宗元",
+      "kind": "诗文往来",
+      "weight": 2.0,
+      "visibleFrom": 811,
+      "year": 811,
+      "place": "江陵、永州",
+      "evidenceTitles": 2,
+      "evidence": ["元稹《留呈梦得子厚致用》", "柳宗元《同刘二十八哭吕衡州兼寄江陵李元二侍御》"],
+      "workIds": ["ad007ffd-f419-4839-baf6-0a8f2108fb1f", "9dd7d4eb-5662-4dae-ab12-25882cd10835"],
+      "note": "双向寄诗：柳宗元寄江陵“李元二侍御”（李景俭、元稹），元稹题蓝桥驿留呈刘、柳等人。两首都是寄赠，不证明当面相见；“元侍御”指元稹为通行注释的说法。"
+    },
+    {
       "id": "白居易—张籍",
       "source": "白居易",
       "target": "张籍",
-      "kind": "题目直证",
-      "weight": 3.81,
+      "kind": "当面交往",
+      "weight": 3.32,
       "visibleFrom": 815,
       "year": 815,
       "place": "长安",
-      "evidenceTitles": 7,
+      "evidenceTitles": 5,
       "evidence": [
         "张籍《苏州江岸留别乐天》",
         "张籍《送白宾客分司东都》",
-        "白居易《喜张十八博士除水部员外郎》",
         "白居易《曲江独行招张十八》",
         "白居易《逢张十八员外籍》",
         "白居易《酬张十八访宿见赠》"
@@ -1223,45 +1265,16 @@
       "workIds": [
         "3db0db09-2db6-4884-bc07-4dd85d45b67c",
         "12d6d253-6aa8-43ea-98ae-6fbd0bafbbf7",
-        "035b287d-9a07-4082-819f-cebee0988cf9",
         "1cba0bc8-479b-4d43-821b-8edbe55d3428",
         "c9383dcc-342c-48b5-8809-f45671db940d",
-        "637abf28-c2e0-4168-a2a0-001c56c9a175",
-        "e62cd454-8cda-44d6-b491-6a7a127de4a9"
+        "637abf28-c2e0-4168-a2a0-001c56c9a175"
       ]
-    },
-    {
-      "id": "元稹—刘禹锡",
-      "source": "元稹",
-      "target": "刘禹锡",
-      "kind": "题目直证",
-      "weight": 1.0,
-      "visibleFrom": 815,
-      "year": 815,
-      "place": "长安",
-      "evidenceTitles": 1,
-      "evidence": ["元稹《留呈梦得子厚致用》"],
-      "workIds": ["ad007ffd-f419-4839-baf6-0a8f2108fb1f"],
-      "note": "元和十年春，元、刘、柳同被召回长安。"
-    },
-    {
-      "id": "元稹—柳宗元",
-      "source": "元稹",
-      "target": "柳宗元",
-      "kind": "题目直证",
-      "weight": 1.0,
-      "visibleFrom": 815,
-      "year": 815,
-      "place": "长安",
-      "evidenceTitles": 1,
-      "evidence": ["元稹《留呈梦得子厚致用》"],
-      "workIds": ["ad007ffd-f419-4839-baf6-0a8f2108fb1f"]
     },
     {
       "id": "刘禹锡—柳宗元",
       "source": "刘禹锡",
       "target": "柳宗元",
-      "kind": "题目直证",
+      "kind": "当面交往",
       "weight": 2.58,
       "visibleFrom": 815,
       "year": 815,
@@ -1283,7 +1296,7 @@
       "id": "姚合—贾岛",
       "source": "姚合",
       "target": "贾岛",
-      "kind": "题目直证",
+      "kind": "当面交往",
       "weight": 3.58,
       "visibleFrom": 815,
       "year": 815,
@@ -1307,10 +1320,34 @@
       ]
     },
     {
+      "id": "姚合—张籍",
+      "source": "姚合",
+      "target": "张籍",
+      "kind": "诗文往来",
+      "weight": 3.0,
+      "visibleFrom": 820,
+      "year": 820,
+      "place": "长安",
+      "evidenceTitles": 4,
+      "evidence": [
+        "姚合《赠张籍太祝》",
+        "姚合《酬张籍司业见寄》",
+        "张籍《赠姚合》",
+        "张籍《赠姚合少府》"
+      ],
+      "workIds": [
+        "2c03c521-514b-4ed5-ade4-b57f322116e1",
+        "4026e3f4-b4c8-4abe-b325-79311be570c8",
+        "fa49873e-d6a9-4a2b-87f0-b9b3fb310b20",
+        "4f315ed4-b73a-4a9e-8799-98871c553726"
+      ],
+      "note": "双向赠答。"
+    },
+    {
       "id": "韩愈—白居易",
       "source": "韩愈",
       "target": "白居易",
-      "kind": "题目直证",
+      "kind": "当面交往",
       "weight": 1.0,
       "visibleFrom": 822,
       "year": 822,
@@ -1323,7 +1360,7 @@
       "id": "王建—姚合",
       "source": "王建",
       "target": "姚合",
-      "kind": "题目直证",
+      "kind": "当面交往",
       "weight": 1.0,
       "visibleFrom": 825,
       "year": 825,
@@ -1336,63 +1373,21 @@
       "id": "刘禹锡—白居易",
       "source": "刘禹锡",
       "target": "白居易",
-      "kind": "题目直证",
-      "weight": 5.46,
+      "kind": "当面交往",
+      "weight": 2.58,
       "visibleFrom": 826,
       "year": 826,
       "place": "扬州、洛阳",
-      "evidenceTitles": 22,
+      "evidenceTitles": 3,
       "evidence": [
         "刘禹锡《酬乐天扬州初逢席上见赠》",
         "刘禹锡《三月三日与乐天及河南李尹奉陪裴令公泛洛禊饮各赋十二韵》",
-        "刘禹锡《元日乐天见过因举酒为贺》",
-        "刘禹锡《同乐天和微之深春二十首 一》",
-        "刘禹锡《同乐天和微之深春二十首 七》",
-        "刘禹锡《同乐天和微之深春二十首 三》"
+        "刘禹锡《元日乐天见过因举酒为贺》"
       ],
       "workIds": [
         "9c955427-5806-4e78-949e-0cff513bc8e7",
         "c6a082c4-3aa9-4c23-9104-38aeef957d55",
-        "c4e45aca-6a1a-4cdb-a334-f95d7cbfe76e",
-        "d109931b-6121-42ea-80d9-f8c53c0cef04",
-        "beb2f202-2c2e-429e-bada-58d23707883f",
-        "7da7530a-7033-43b3-90e3-f37c6baa5bd8",
-        "72ea76eb-c624-4e9d-b791-4b8438c18605",
-        "23b288e3-01d9-4688-8f00-8572431a2819",
-        "80ce1d3d-d35a-427f-b85b-db8923949c05",
-        "3317e361-b45c-40b1-82e6-ce523ee6d424",
-        "72a19fe4-7b5e-4285-9bf8-4d2812f89675",
-        "db700e6b-5b2f-4354-9295-aafa4fdac50e",
-        "cdf6e3ff-c80d-438c-9d6d-a03d4b5d6230",
-        "68bab652-e497-471f-8e4e-eb48eb6fb6ee",
-        "379d9a4d-c126-44e6-b632-f4d45ad8111f",
-        "61e989b9-18bd-491a-abbc-a64c45061b27",
-        "c6af1ead-26f2-4762-9cea-bd841de31686",
-        "243fae53-1b7d-41c1-a052-1f8daa6d7e48",
-        "a7ec76b2-0a7d-4769-828a-451d5775f2bf",
-        "e7c21de5-b9f7-40e9-9e86-4a6bb501ad72",
-        "d842e734-ca12-43de-a4ea-b7b48c2ff1fd",
-        "19cd6d1c-fd8c-4d74-a79d-6177b72c1b3e",
-        "8534811a-5ddc-4cb6-aca7-74939e9c2676",
-        "a22fd731-e400-4a31-baef-ec055010aabe",
-        "365fea04-14ad-416f-bf79-f64d20cb9441",
-        "d2713cdb-0b94-4cc2-9673-567c21766154",
-        "abf46c97-4770-4e6b-bd01-b4c4ad49c552",
-        "a86e1f74-25be-409e-bc40-23c5c588d7db",
-        "5753f4b7-f085-4a30-8698-f3ae049f655d",
-        "8fc1b3ff-50cc-4767-814f-541e521d38ae",
-        "045f4f0f-2b75-495a-a1db-987d6900874e",
-        "fabcd3b0-ac3e-4199-9592-cd1d59ba92b0",
-        "247d6876-899a-4ee0-99e0-37fbcb40d56a",
-        "946dc59e-313f-4094-80e1-4edd39a8215f",
-        "feb122e4-3555-4678-a0ca-e5d43c72e6b7",
-        "34f4cb4c-c56a-4332-9a5d-d7fe611695e4",
-        "a58a0828-9669-4171-ad0c-ce6ae0fad3b1",
-        "b3ff17ef-526a-4563-9d76-787965ea4d5f",
-        "d1cd191a-cfcb-4220-9840-bc474fad15aa",
-        "54abc77f-ac71-4825-93c7-c155b27dff0f",
-        "7b6ebc85-65b1-4eb0-850e-0e36b8c80f58",
-        "7faa59ad-1cd2-45af-8b4a-90d7fb3d6b5e"
+        "c4e45aca-6a1a-4cdb-a334-f95d7cbfe76e"
       ],
       "note": "宝历二年扬州初逢，晚年同居洛阳，唱和最多。"
     },
@@ -1400,7 +1395,7 @@
       "id": "王建—贾岛",
       "source": "王建",
       "target": "贾岛",
-      "kind": "题目直证",
+      "kind": "当面交往",
       "weight": 1.0,
       "visibleFrom": 828,
       "year": 828,
@@ -1413,7 +1408,7 @@
       "id": "王建—白居易",
       "source": "王建",
       "target": "白居易",
-      "kind": "题目直证",
+      "kind": "当面交往",
       "weight": 2.0,
       "visibleFrom": 828,
       "year": 828,
@@ -1426,7 +1421,7 @@
       "id": "王建—刘禹锡",
       "source": "王建",
       "target": "刘禹锡",
-      "kind": "题目直证",
+      "kind": "当面交往",
       "weight": 1.0,
       "visibleFrom": 828,
       "year": 828,
@@ -1439,7 +1434,7 @@
       "id": "白居易—令狐楚",
       "source": "白居易",
       "target": "令狐楚",
-      "kind": "题目直证",
+      "kind": "当面交往",
       "weight": 3.0,
       "visibleFrom": 828,
       "year": 828,
@@ -1462,7 +1457,7 @@
       "id": "刘禹锡—张籍",
       "source": "刘禹锡",
       "target": "张籍",
-      "kind": "题目直证",
+      "kind": "当面交往",
       "weight": 1.0,
       "visibleFrom": 828,
       "year": 828,
@@ -1475,7 +1470,7 @@
       "id": "刘禹锡—令狐楚",
       "source": "刘禹锡",
       "target": "令狐楚",
-      "kind": "题目直证",
+      "kind": "当面交往",
       "weight": 2.58,
       "visibleFrom": 828,
       "year": 828,
@@ -1496,7 +1491,7 @@
       "id": "张籍—令狐楚",
       "source": "张籍",
       "target": "令狐楚",
-      "kind": "题目直证",
+      "kind": "当面交往",
       "weight": 2.0,
       "visibleFrom": 829,
       "year": 829,
@@ -1509,7 +1504,7 @@
       "id": "令狐楚—李商隐",
       "source": "令狐楚",
       "target": "李商隐",
-      "kind": "题目直证",
+      "kind": "当面交往",
       "weight": 1.0,
       "visibleFrom": 829,
       "year": 829,
@@ -1523,7 +1518,7 @@
       "id": "令狐楚—张祜",
       "source": "令狐楚",
       "target": "张祜",
-      "kind": "同场唱和",
+      "kind": "诗文往来",
       "weight": 1.0,
       "visibleFrom": 830,
       "year": 830,
@@ -1531,13 +1526,13 @@
       "evidenceTitles": 1,
       "evidence": ["张祜《奉和令狐相公送陈肱侍御》"],
       "workIds": ["f81690f4-5328-40a0-a38b-c574af351b44"],
-      "note": "张祜得令狐楚荐举；此题为幕中奉和，见面属推断。"
+      "note": "张祜得令狐楚荐举；此题为幕中奉和，是否同席仍是推断。"
     },
     {
       "id": "姚合—刘禹锡",
       "source": "姚合",
       "target": "刘禹锡",
-      "kind": "题目直证",
+      "kind": "当面交往",
       "weight": 1.0,
       "visibleFrom": 831,
       "year": 831,
@@ -1550,7 +1545,7 @@
       "id": "姚合—白居易",
       "source": "姚合",
       "target": "白居易",
-      "kind": "题目直证",
+      "kind": "当面交往",
       "weight": 1.0,
       "visibleFrom": 834,
       "year": 834,
@@ -1566,7 +1561,7 @@
       "id": "张祜—杜牧",
       "source": "张祜",
       "target": "杜牧",
-      "kind": "题目直证",
+      "kind": "当面交往",
       "weight": 1.0,
       "visibleFrom": 845,
       "year": 845,
@@ -1696,8 +1691,8 @@
     },
     {
       "id": "late",
-      "title": "晚唐 · 零散的相逢",
-      "narration": "晚唐的见面记录变得零散：李商隐少年入令狐楚幕府，张祜得令狐楚荐举，又与杜牧在池州同席赋诗。",
+      "title": "晚唐 · 零散的交往",
+      "narration": "晚唐保存下来的交往证据较分散：李商隐少年入令狐楚幕府，张祜得令狐楚荐举，又与杜牧在池州同席赋诗。",
       "durationSec": 7,
       "domainAt": 895,
       "camera": {
@@ -1710,7 +1705,7 @@
     {
       "id": "all",
       "title": "全景",
-      "narration": "只保留有诗为证、确曾见面的关系：30 位诗人，60 条连线。实线是题目直证，虚线是诗中自述，点线是同场唱和的推断，另有几条据史书与年谱补入。",
+      "narration": "有作品或史料支持的交往网络：30 位诗人，61 条连线。实线有当面交往的依据，虚线是诗文、官场或史料上的交往，点线是有待核实的推断。并非每条线都代表二人见过面。",
       "durationSec": 8,
       "domainAt": 900
     }
