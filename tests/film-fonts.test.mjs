@@ -50,12 +50,13 @@ test('the subset charset covers the examples and renderer text and is current', 
   assert.equal(manifest.charset.sha256, sha256(text));
   assert.equal(manifest.charset.characters, chars.length);
   const covered = new Set(chars);
-  for (const ch of '红楼梦贾宝玉林黛玉薛宝钗王熙凤激酶磷酸化…·→—：，。0123456789AZaz')
+  for (const ch of '红楼梦贾宝玉林黛玉薛宝钗王熙凤激酶磷酸化岑皎祜稹綦羲颀…·→—：，。0123456789AZaz')
     assert.ok(covered.has(ch), ch);
-  // GB 2312 level 1 is 3,755 hanzi; with Latin, punctuation and example text
-  // the subset stays well under the full fonts' 30k+ characters.
+  // GB 2312 is 6,763 hanzi (3,755 level 1 and 3,008 level 2); with Latin,
+  // punctuation and example text the subset stays well under the full fonts'
+  // 30k+ characters.
   const hanzi = chars.filter((ch) => /\p{Script=Han}/u.test(ch)).length;
-  assert.ok(hanzi >= 3755 && hanzi < 4500, `${hanzi} hanzi`);
+  assert.ok(hanzi >= 6763 && hanzi < 7500, `${hanzi} hanzi`);
 });
 
 test('the workspace declares every face with the same family, weight and file', async () => {

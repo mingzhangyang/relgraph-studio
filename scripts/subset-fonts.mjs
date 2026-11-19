@@ -5,10 +5,13 @@
 // from https://github.com/notofonts/noto-cjk (SIL Open Font License 1.1). The
 // full fonts are 16–25 MB each, so only the characters a film needs are kept:
 //
-//   - every character of the shipped examples, the domain style sheets and the
-//     renderer's own text (packages/render/src/locale.ts);
-//   - the 3,755 level-1 hanzi of GB 2312, the usual "common characters" list,
-//     decoded from their GB 2312 code points so no external list is needed;
+//   - every character of the shipped examples, the bundled datasets in
+//     TEXT_SOURCES, the domain style sheets and the renderer's own text
+//     (packages/render/src/locale.ts);
+//   - all 6,763 hanzi of GB 2312: the 3,755 level-1 "common characters" and the
+//     3,008 level-2 characters, which hold many of the rarer characters of
+//     classical names (岑, 皎, 稹, 羲…), decoded from their GB 2312 code points so
+//     no external list is needed;
 //   - the non-hanzi rows of GB 2312 (CJK punctuation, full-width forms, kana,
 //     Greek, Cyrillic, box drawing);
 //   - printable ASCII and Latin-1, general punctuation, CJK symbols and
@@ -86,6 +89,8 @@ export const TEXT_SOURCES = [
   'examples/honglou-provisional.relgraph.json',
   'examples/biology-signaling-synthetic.json',
   'examples/biology-egfr-mapk.json',
+  'datasets/tang-poets-met/唐代诗人见面网络_30.graph.json',
+  'datasets/tang-poets-met/唐代诗人见面网络_50.graph.json',
   'packages/core/src/domains/biology.style.ts',
   'packages/core/src/domains/literature.style.ts',
   'packages/render/src/locale.ts',
@@ -125,6 +130,7 @@ export async function buildCharset() {
     for (let cp = first; cp <= last; cp += 1) chars.add(String.fromCodePoint(cp));
   for (const ch of gb2312(0xa1, 0xa9)) chars.add(ch); // symbols, kana, Greek, Cyrillic…
   for (const ch of gb2312(0xb0, 0xd7, 0xf9)) chars.add(ch); // level-1 hanzi
+  for (const ch of gb2312(0xd8, 0xf7)) chars.add(ch); // level-2 hanzi
   for (const path of TEXT_SOURCES)
     for (const ch of await readFile(join(root, path), 'utf8')) {
       const cp = ch.codePointAt(0);
