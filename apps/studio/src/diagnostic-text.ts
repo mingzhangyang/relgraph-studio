@@ -257,6 +257,11 @@ export const ENGLISH_DIAGNOSTICS: EnglishCatalogue = {
       'Could not convert data into a graph.',
       'Check the format, field types, and required fields.',
     ),
+    CAPTION_READING_SPEED: wording(
+      (p) =>
+        `The shot's title and narration take about ${p.needed} s to read, but are fully shown for only ${p.shown} s.`,
+      (p) => `Raise durationSec to at least ${p.suggested} s, or shorten the title and narration.`,
+    ),
     LOAD: wording(
       (p) => `Cannot load example: ${p.detail}`,
       'Run npm run dev or npm run preview from the repository root, then reopen the workspace.',

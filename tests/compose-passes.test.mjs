@@ -90,12 +90,14 @@ test('composeFrame is its passes, run in order over one context', () => {
     );
     const glyphs = composeNodes(ctx, drawn);
     const legend = composeLegend(ctx, occupied);
+    const omitted = [];
     const labels = composeNodeLabels(
       ctx,
       { drawn, held: glyphs.held, obstacles, pull: layout.pull, relations: relations.obstacles },
       occupied,
+      omitted,
     );
-    const tags = composeRelationLabels(ctx, relations.labels, occupied);
+    const tags = composeRelationLabels(ctx, relations.labels, occupied, omitted);
     const card = composeDetailCard(ctx);
     const expected = {
       width: spec.width,
@@ -121,6 +123,7 @@ test('composeFrame is its passes, run in order over one context', () => {
       a11y: frameText(ctx, card.detail),
       selection: [...relations.selection, ...glyphs.selection],
       selectionClip: { ...spec.stage },
+      omitted,
     };
     assert.deepEqual(composeFrame(state, options), expected);
   }

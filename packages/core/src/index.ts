@@ -6,6 +6,7 @@ export * from './director/load.js';
 export * from './diagnostic-wording.js';
 export * from './director/state.js';
 export * from './director/timeline.js';
+export * from './director/reading-speed.js';
 export * from './domains/biology.js';
 export * from './domains/biology.style.js';
 export * from './domains/generic.js';

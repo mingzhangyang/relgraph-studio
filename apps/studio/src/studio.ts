@@ -107,6 +107,7 @@ import {
 import { createShotsView } from './shots-view.js';
 import { createDiagnosticsView } from './diagnostics-view.js';
 import { createTranscriptView } from './transcript-view.js';
+import { createOmittedLabelsView } from './omitted-labels-view.js';
 import { createWorkspaceShellView } from './workspace-shell-view.js';
 import { projectSelectionOverlay } from './selection-overlay-model.js';
 import { createSelectionOverlayView } from './selection-overlay-view.js';
@@ -195,6 +196,7 @@ const transcriptView = createTranscriptView(document, {
   nodeCount: $('nodeCount'),
   edgeCount: $('edgeCount'),
 });
+const omittedLabelsView = createOmittedLabelsView($('omittedLabels'));
 const shellView = createWorkspaceShellView(document, {
   canvas,
   domainTime: $('domainTime'),
@@ -703,6 +705,7 @@ function setFrame(next: number, updatePosition = true): DirectorFrameState | und
   );
   renderPlaybackFrame(playbackControls, playbackDisplay(playback, p.index, p.totalSec));
   transcriptView.render(list.a11y);
+  omittedLabelsView.render(list.omitted);
   projectEditor.render(state, projectHistory.value);
   renderDocumentToolbar();
   refreshSelectionFeedback();
@@ -744,6 +747,7 @@ function clearStudio(): void {
   shotsView.clear();
   diagnosticsView.clear();
   transcriptView.reset();
+  omittedLabelsView.reset();
   shellView.paintEmptyStage('请选择示例或导入有效的 JSON 数据', theme);
   shellView.resetMetadata();
   documentToolbarView.message(DOCUMENT_TOOLBAR_NOTE);
@@ -1332,6 +1336,7 @@ function applyLanguage(next: StudioLanguage): void {
     );
     projectEditor.render(currentFrameState, projectHistory.value);
     transcriptView.render(lastDisplayList.a11y);
+    omittedLabelsView.render(lastDisplayList.omitted);
     shotsView.refreshLanguage();
     shotsView.render(frame.index, lastDisplayList.a11y.scene.title, frame.progress);
     shellView.renderDomainTime(frame.domainAt, currentFrameState.view.timeline?.unit);
@@ -1349,6 +1354,7 @@ function applyLanguage(next: StudioLanguage): void {
     shellView.repaintEmptyStage(theme);
     if (!graph) {
       transcriptView.reset();
+      omittedLabelsView.reset();
       shellView.renderEmptyDomainTime();
     }
   }

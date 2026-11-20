@@ -25,6 +25,8 @@ import { captionWithLabel } from './text.js';
 
 /** A relation's tag, placed after the node labels (`composeRelationLabels`). */
 export type EdgeLabel = Point & {
+  /** The relation the tag names. */
+  id: string;
   text: string;
   alpha: number;
   font: FontRef;
@@ -595,6 +597,7 @@ export function composeRelations(
         : '';
     if (label && custom.showLabel !== false && visibility > 0.5)
       edgeLabels.push({
+        id: edge.id,
         text: label,
         font: sans(custom.fontSize ?? 12, custom.fontWeight ?? 500),
         color: custom.textColor ?? P.edgeLabelText,

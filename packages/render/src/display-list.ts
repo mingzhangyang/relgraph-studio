@@ -97,6 +97,18 @@ export interface FrameText {
   relations: string[];
 }
 
+/**
+ * A label the frame could not place: every candidate place would leave the
+ * stage or cover a glyph or other text. Only objects whose point is on the
+ * stage are listed, so a node the camera has framed out is not reported.
+ * The label is still in `a11y`; this list says it is missing from the pixels.
+ */
+export interface OmittedLabel {
+  kind: 'node-label' | 'edge-label';
+  id: string;
+  text: string;
+}
+
 export interface DisplayList {
   selectionClip?: { x: number; y: number; w: number; h: number };
   selection?: {
@@ -109,6 +121,8 @@ export interface DisplayList {
   height: number;
   items: DisplayItem[];
   a11y: FrameText;
+  /** Labels this frame had to leave out, in placement order (ADR 004, D1). */
+  omitted: OmittedLabel[];
 }
 
 /** Width of `text` in pixels when drawn with `font`. */

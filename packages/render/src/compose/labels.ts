@@ -1,4 +1,4 @@
-import type { DisplayItem } from '../display-list.js';
+import type { DisplayItem, OmittedLabel } from '../display-list.js';
 import type { Rect } from '../frame-spec.js';
 import { importanceStep, SPAN_LABEL } from '../importance.js';
 import { PointIndex, type RectIndex } from '../spatial.js';
@@ -7,6 +7,12 @@ import type { Point } from './geometry.js';
 import type { DrawnNode } from './nodes.js';
 import type { EdgeLabel } from './relations.js';
 import { fitText, wrapText } from './text.js';
+
+/** Whether a point lies on the stage, where its label would be expected. */
+const onStage = (ctx: FrameContext, p: Point): boolean => {
+  const { stage } = ctx.spec;
+  return p.x >= stage.x && p.x <= stage.x + stage.w && p.y >= stage.y && p.y <= stage.y + stage.h;
+};
 
 /** Node ids in reading order; one collator instead of one per comparison. */
 const byId = new Intl.Collator('en').compare;
@@ -138,12 +144,14 @@ export interface NodeLabelInputs {
 
 /**
  * Deterministic screen-space label placement: prioritize selected and major
- * nodes. Each placed label takes its place in `occupied`.
+ * nodes. Each placed label takes its place in `occupied`. A label of a node on
+ * the stage that finds no place is appended to `omitted`, when given.
  */
 export function composeNodeLabels(
   ctx: FrameContext,
   { drawn, held, obstacles, pull, relations: edgeObstacles }: NodeLabelInputs,
   occupied: RectIndex,
+  omitted?: OmittedLabel[],
 ): DisplayItem[] {
   const { theme: P, u, sans, measure, inBounds } = ctx;
   const items: DisplayItem[] = [];
@@ -242,7 +250,11 @@ export function composeNodeLabels(
         box = c;
       }
     }
-    if (!box) continue;
+    if (!box) {
+      if (omitted && onStage(ctx, p))
+        omitted.push({ kind: 'node-label', id: node.id, text: ctx.nodeLabel(node) });
+      continue;
+    }
     const placed: Rect = box;
     occupied.add(placed);
     lines.forEach((line, index) =>
@@ -265,11 +277,14 @@ export function composeNodeLabels(
 /**
  * Relation tags, placed after the node labels: on their relation, or a step
  * aside when the line is taken. Each placed tag takes its place in `occupied`.
+ * A tag whose home point is on the stage and finds no place is appended to
+ * `omitted`, when given.
  */
 export function composeRelationLabels(
   ctx: FrameContext,
   labels: readonly EdgeLabel[],
   occupied: RectIndex,
+  omitted?: OmittedLabel[],
 ): DisplayItem[] {
   const { theme: P, u, measure, inBounds } = ctx;
   const items: DisplayItem[] = [];
@@ -295,7 +310,11 @@ export function composeRelationLabels(
         y: home.y + (aside?.y ?? 0) * k * reach,
       }))
       .find((candidate) => inBounds(candidate) && !occupied.someIntersecting(candidate));
-    if (!box) continue;
+    if (!box) {
+      if (omitted && onStage(ctx, label))
+        omitted.push({ kind: 'edge-label', id: label.id, text: label.text });
+      continue;
+    }
     occupied.add(box);
     items.push(
       {

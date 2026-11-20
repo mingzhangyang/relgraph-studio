@@ -394,6 +394,14 @@ button { cursor: pointer; }
   color: var(--text-2);
   font-size: 12px;
 }
+.omitted-labels {
+  margin: 2px 2px 0;
+  color: var(--gold-strong);
+  font-size: 12px;
+}
+.omitted-labels[hidden] {
+  display: none;
+}
 
 .layout-tools {
   display: flex;

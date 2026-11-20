@@ -10,6 +10,7 @@ export const USAGE = `用法：
   relgraph validate <file> [--json]
   relgraph layout <file> [--seed N] [--write | --out output.json]
   relgraph render <file> (--out film.mp4 | --frames out/%05d.png) [选项]
+  relgraph check-labels <file> [--frame-spec <name>] [--locale <语言>] [--json]
 
 layout 选项：
   --seed <N>             无符号 32 位整数，固定种子（默认 0）
@@ -25,6 +26,11 @@ render 选项：
   --from <N> --to <M>     只渲染第 N 到第 M 帧（含两端，从 0 起）
   --jobs <N>              并行渲染的线程数（默认 ${defaultJobs()}）
   --ffmpeg <path>         FFmpeg 可执行文件（默认在 PATH 中查找）
+  --fail-on-omitted-labels
+                          镜头画面稳定后仍有标签放不下时，写出结果后以失败退出
+
+check-labels：不渲染，逐镜头检查画面稳定后（镜头切换和揭示动画结束之后）放不下的标签；
+  每个镜头检查稳定段的首、中、末三帧，有省略时退出码为 1。--frame-spec 和 --locale 同 render。
 
 其他：
   relgraph --help | --version`;
@@ -43,6 +49,13 @@ export interface LayoutCommand {
   write: boolean;
   out?: string;
 }
+export interface CheckLabelsCommand {
+  command: 'check-labels';
+  file: string;
+  frameSpec: FrameSpecName;
+  locale: Locale;
+  json: boolean;
+}
 export interface RenderCommand {
   command: 'render';
   file: string;
@@ -55,9 +68,15 @@ export interface RenderCommand {
   to?: number;
   jobs: number;
   ffmpeg?: string;
+  failOnOmittedLabels: boolean;
 }
 export type Command =
-  ValidateCommand | LayoutCommand | RenderCommand | { command: 'help' } | { command: 'version' };
+  | ValidateCommand
+  | LayoutCommand
+  | RenderCommand
+  | CheckLabelsCommand
+  | { command: 'help' }
+  | { command: 'version' };
 
 function integer(name: string, value: string | undefined, min: number): number | undefined {
   if (value === undefined) return undefined;
@@ -78,7 +97,12 @@ export function parseCommand(argv: readonly string[]): Command {
   if (command === undefined || command === '--help' || command === '-h' || command === 'help')
     return { command: 'help' };
   if (command === '--version' || command === '-v') return { command: 'version' };
-  if (command !== 'validate' && command !== 'layout' && command !== 'render')
+  if (
+    command !== 'validate' &&
+    command !== 'layout' &&
+    command !== 'render' &&
+    command !== 'check-labels'
+  )
     throw new UsageError(`未知命令 ${JSON.stringify(command)}`);
   let parsed;
   try {
@@ -95,17 +119,24 @@ export function parseCommand(argv: readonly string[]): Command {
                 write: { type: 'boolean', default: false },
                 out: { type: 'string' },
               }
-            : {
-                out: { type: 'string' },
-                frames: { type: 'string' },
-                'frame-spec': { type: 'string', default: 'landscape-1080p' },
-                theme: { type: 'string', default: 'light' },
-                locale: { type: 'string', default: 'zh-CN' },
-                from: { type: 'string' },
-                to: { type: 'string' },
-                jobs: { type: 'string' },
-                ffmpeg: { type: 'string' },
-              },
+            : command === 'check-labels'
+              ? {
+                  'frame-spec': { type: 'string', default: 'landscape-1080p' },
+                  locale: { type: 'string', default: 'zh-CN' },
+                  json: { type: 'boolean', default: false },
+                }
+              : {
+                  out: { type: 'string' },
+                  frames: { type: 'string' },
+                  'frame-spec': { type: 'string', default: 'landscape-1080p' },
+                  theme: { type: 'string', default: 'light' },
+                  locale: { type: 'string', default: 'zh-CN' },
+                  from: { type: 'string' },
+                  to: { type: 'string' },
+                  jobs: { type: 'string' },
+                  ffmpeg: { type: 'string' },
+                  'fail-on-omitted-labels': { type: 'boolean', default: false },
+                },
     });
   } catch (error) {
     throw new UsageError(error instanceof Error ? error.message : String(error));
@@ -134,6 +165,16 @@ export function parseCommand(argv: readonly string[]): Command {
     const value = (values as Record<string, unknown>)[key];
     return typeof value === 'string' ? value : undefined;
   };
+  const frameSpec = (): FrameSpecName =>
+    oneOf('frame-spec', str('frame-spec') ?? '', Object.keys(FRAME_SPECS) as FrameSpecName[]);
+  if (command === 'check-labels')
+    return {
+      command,
+      file,
+      frameSpec: frameSpec(),
+      locale: oneOf('locale', str('locale') ?? '', LOCALES),
+      json: (values as Record<string, unknown>).json === true,
+    };
   const out = str('out'),
     frames = str('frames');
   if ((out === undefined) === (frames === undefined))
@@ -153,16 +194,13 @@ export function parseCommand(argv: readonly string[]): Command {
     file,
     ...(out !== undefined ? { out } : {}),
     ...(frames !== undefined ? { frames } : {}),
-    frameSpec: oneOf(
-      'frame-spec',
-      str('frame-spec') ?? '',
-      Object.keys(FRAME_SPECS) as FrameSpecName[],
-    ),
+    frameSpec: frameSpec(),
     theme: oneOf('theme', str('theme') ?? '', ['light', 'dark'] as const),
     locale: oneOf('locale', str('locale') ?? '', LOCALES),
     ...(from !== undefined ? { from } : {}),
     ...(to !== undefined ? { to } : {}),
     jobs: integer('jobs', str('jobs'), 1) ?? defaultJobs(),
     ...(str('ffmpeg') !== undefined ? { ffmpeg: str('ffmpeg') } : {}),
+    failOnOmittedLabels: (values as Record<string, unknown>)['fail-on-omitted-labels'] === true,
   };
 }

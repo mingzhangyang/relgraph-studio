@@ -26,6 +26,19 @@ import { makeStudio } from './helpers/studio-harness.mjs';
 
 const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
 
+/**
+ * The biology fixture with one more second per shot: two of its captions are
+ * a little too long to read in their shots (CAPTION_READING_SPEED), and these
+ * tests need a document without any diagnostics.
+ */
+const roomyBiology = {
+  ...structuredClone(biology),
+  presentation: biology.presentation.map((shot) => ({
+    ...shot,
+    durationSec: shot.durationSec + 1,
+  })),
+};
+
 test('render defaults: 1080p, light film theme, zh-CN, whole film', () => {
   const command = parseCommand(['render', 'story.json', '--out', 'film.mp4']);
   assert.equal(command.command, 'render');
@@ -35,6 +48,7 @@ test('render defaults: 1080p, light film theme, zh-CN, whole film', () => {
   assert.equal(command.from, undefined);
   assert.equal(command.to, undefined);
   assert.ok(command.jobs >= 1);
+  assert.equal(command.failOnOmittedLabels, false);
   const frames = parseCommand(
     ['render', 's.json', '--frames', 'out/%05d.png', '--theme', 'dark'].concat(
       ['--frame-spec', 'landscape-720p', '--locale', 'en', '--from', '3', '--to', '9'],
@@ -54,8 +68,11 @@ test('render defaults: 1080p, light film theme, zh-CN, whole film', () => {
       to: 9,
       jobs: 2,
       ffmpeg: '/opt/ffmpeg',
+      failOnOmittedLabels: false,
     },
   );
+  const strict = parseCommand(['render', 's.json', '--out', 'f.mp4', '--fail-on-omitted-labels']);
+  assert.equal(strict.failOnOmittedLabels, true);
 });
 
 test('invalid arguments are usage errors', () => {
@@ -68,6 +85,10 @@ test('invalid arguments are usage errors', () => {
     ['render', 's.json', '--out', 'a.mp4', '--theme', 'sepia'],
     ['render', 's.json', '--out', 'a.mp4', '--frame-spec', 'portrait'],
     ['render', 's.json', '--out', 'a.mp4', '--locale', 'fr'],
+    ['check-labels'],
+    ['check-labels', 's.json', '--theme', 'dark'],
+    ['check-labels', 's.json', '--frame-spec', 'portrait'],
+    ['check-labels', 's.json', '--fail-on-omitted-labels'],
     ['render', 's.json', '--out', 'a.mp4', '--from', '5', '--to', '2'],
     ['render', 's.json', '--out', 'a.mp4', '--from', '-1'],
     ['render', 's.json', '--out', 'a.mp4', '--jobs', '0'],
@@ -113,7 +134,7 @@ test('validate prints the workspace diagnostics text', async () => {
   assert.match(text, /^错误 · 1\n {2}✗ UNKNOWN_TARGET · r01\n {4}relations\[0\]\.target\n/);
   assert.match(text, /\n {4}建议：/);
   assert.match(text, /\n警告 · \d+\n/);
-  assert.equal(formatDiagnostics(loadDocument(biology)), '未发现校验问题。\n');
+  assert.equal(formatDiagnostics(loadDocument(roomyBiology)), '未发现校验问题。\n');
 
   // The workspace renders the same entries from the same helpers.
   const fetcher = async () => ({ ok: true, text: async () => JSON.stringify(invalid) });

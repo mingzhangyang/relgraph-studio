@@ -202,6 +202,23 @@ export function compileTimeline(graph: VisualGraph, fps = 24): FilmTimeline {
   };
 }
 
+/**
+ * When each shot settles: the first second at which its camera and highlight
+ * transition (none for the first shot) and every reveal under way at its
+ * start have finished, capped at the shot's end. From then until the shot
+ * ends nothing on the stage moves, so what a frame shows there is what the
+ * viewer has time to read (ADR 004, D1).
+ */
+export function shotSettledSec(timeline: FilmTimeline): number[] {
+  return timeline.shots.map((shot, index) => {
+    let settled = shot.startSec + (index > 0 ? timeline.camera[index].transitionSec : 0);
+    for (const cue of timeline.reveal)
+      if (cue.inSec <= shot.startSec && (cue.outSec === undefined || cue.outSec > shot.startSec))
+        settled = Math.max(settled, cue.inSec + cue.durationSec);
+    return Math.min(settled, shot.endSec);
+  });
+}
+
 /** Match the original half-open scene boundary tolerance (including final frame). */
 export function timelinePlaybackAt(
   timeline: FilmTimeline,
