@@ -19,8 +19,11 @@
 //    PSNR) and must match better than its neighbours. The PNG must equal the
 //    in-process render exactly, which also shows that frames do not depend on
 //    the worker or on previously drawn frames.
-// 4. Events (ADR 004, D3): `relgraph events` and `render --events` must
-//    write the same bytes at any `--jobs`.
+// 4. Audio and events (ADR 004, D3): `--audio` with a test tone shorter and
+//    longer than the film (made by FFmpeg here; the repository makes no
+//    sound) must leave every decoded video frame identical by framemd5, warn
+//    about the length and fit the AAC track to the video; `relgraph events`
+//    and `render --events` must write the same bytes at any `--jobs`.
 // 5. Informational: pixel differences between the browser preview and the
 //    headless export at 720p, mid-shot frames of every example and theme.
 import assert from 'node:assert/strict';
@@ -378,7 +381,129 @@ for (const { example, out, spec } of films) {
   });
 }
 
-// ---------------------------------------------------------- events (ADR 004, D3)
+// ------------------------------------------------- audio and events (ADR 004, D3)
+
+/** The decoded frames of a file's video stream, by FFmpeg's framemd5 (timestamps and pixel MD5s). */
+async function videoFrameMd5(file) {
+  const { stdout } = await run(
+    'ffmpeg',
+    ['-v', 'error', '-i', file, '-map', '0:v:0', '-f', 'framemd5', '-'],
+    { maxBuffer: 64 << 20 },
+  );
+  return stdout
+    .split('\n')
+    .filter((line) => line && !line.startsWith('#'))
+    .join('\n');
+}
+const streamsOf = async (file) =>
+  JSON.parse(
+    (
+      await run('ffprobe', [
+        '-v',
+        'error',
+        '-show_entries',
+        'stream=index,codec_type,codec_name,duration,nb_frames,color_space,color_primaries,color_transfer,color_range',
+        '-of',
+        'json',
+        file,
+      ])
+    ).stdout,
+  ).streams;
+/** A test tone made by FFmpeg for this check only; nothing in the repository makes sound. */
+async function tone(file, seconds) {
+  await run('ffmpeg', [
+    '-v',
+    'error',
+    '-y',
+    '-f',
+    'lavfi',
+    '-i',
+    `sine=frequency=440:sample_rate=48000:duration=${seconds}`,
+    '-ac',
+    '2',
+    file,
+  ]);
+}
+
+for (const { example, out, spec, frames } of films.filter(({ example }) =>
+  ['literature', 'timeline'].includes(example.key),
+)) {
+  const seconds = frames / spec.fps;
+  for (const [name, length, warning] of [
+    ['short', seconds - 2, /比视频短 [\d.]+ 秒.*结尾补静音/],
+    ['long', seconds + 3, /比视频长 [\d.]+ 秒.*超出部分截掉/],
+  ])
+    await check(
+      `${example.key}: --audio (${name}) keeps every decoded video frame; sound fitted to ${seconds} s`,
+      async () => {
+        const track = join(outputDir, `tone-${example.key}-${name}.wav`);
+        await tone(track, length);
+        const withAudio = join(outputDir, `${example.key}-audio-${name}.mp4`);
+        const { stderr } = await run(
+          process.execPath,
+          [relgraph, 'render', join(root, example.file), '--out', withAudio, '--audio', track],
+          { cwd: root, maxBuffer: 16 << 20 },
+        );
+        assert.match(stderr, warning, 'length mismatch is a warning');
+        assert.equal(await videoFrameMd5(withAudio), await videoFrameMd5(out), 'framemd5');
+        const [video, audio, ...rest] = await streamsOf(withAudio);
+        assert.equal(rest.length, 0);
+        assert.equal(video.codec_type, 'video');
+        assert.equal(Number(video.nb_frames), frames);
+        for (const key of ['color_space', 'color_primaries', 'color_transfer'])
+          assert.equal(video[key], 'bt709', key);
+        assert.equal(video.color_range, 'tv');
+        assert.equal(audio.codec_type, 'audio');
+        assert.equal(audio.codec_name, 'aac');
+        assert.ok(
+          Math.abs(Number(audio.duration) - seconds) <= 1 / spec.fps,
+          `audio ${audio.duration} s ≈ video ${seconds} s`,
+        );
+        console.log(
+          `    ${frames} frames identical by framemd5 · AAC ${Number(audio.duration).toFixed(3)} s from a ${length} s tone`,
+        );
+      },
+    );
+  await check(
+    `${example.key}: --audio on a frame range starts the sound at its first frame`,
+    async () => {
+      const first = 30,
+        last = 77;
+      const track = join(outputDir, `tone-${example.key}-long.wav`);
+      const plain = join(outputDir, `${example.key}-range.mp4`),
+        withAudio = join(outputDir, `${example.key}-range-audio.mp4`);
+      const range = ['--from', String(first), '--to', String(last)];
+      await run(process.execPath, [
+        relgraph,
+        'render',
+        join(root, example.file),
+        '--out',
+        plain,
+        ...range,
+      ]);
+      const { stderr } = await run(process.execPath, [
+        relgraph,
+        'render',
+        join(root, example.file),
+        '--out',
+        withAudio,
+        '--audio',
+        track,
+        ...range,
+      ]);
+      assert.match(stderr, /音轨（从第 1\.250 秒起）比视频长/);
+      assert.equal(await videoFrameMd5(withAudio), await videoFrameMd5(plain), 'framemd5');
+      const [, audio] = await streamsOf(withAudio);
+      assert.ok(Math.abs(Number(audio.duration) - (last - first + 1) / spec.fps) <= 1 / spec.fps);
+    },
+  );
+}
+
+await check('no temporary video is left beside the MP4s', async () => {
+  const { readdir } = await import('node:fs/promises');
+  const left = (await readdir(outputDir)).filter((name) => name.endsWith('.video.mp4'));
+  assert.deepEqual(left, []);
+});
 
 for (const example of examples.filter((e) => ['literature', 'biology', 'tree'].includes(e.key)))
   await check(

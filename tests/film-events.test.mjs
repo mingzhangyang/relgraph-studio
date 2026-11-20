@@ -358,7 +358,7 @@ test('events are ordered, deterministic and independent of how they are asked fo
   assert.match(invalid.out.stderr, /^relgraph events：.*文档校验失败，未导出。\n$/s);
 });
 
-test('events arguments', () => {
+test('events and audio arguments', () => {
   assert.deepEqual(parseCommand(['events', 'g.json']), {
     command: 'events',
     file: 'g.json',
@@ -368,15 +368,25 @@ test('events arguments', () => {
     parseCommand(['events', 'g.json', '--frame-spec', 'landscape-720p', '--out', 'e.json']),
     { command: 'events', file: 'g.json', frameSpec: 'landscape-720p', out: 'e.json' },
   );
-  assert.equal(
-    parseCommand(['render', 'g.json', '--out', 'f.mp4', '--events', 'e.json']).events,
+  const render = parseCommand([
+    'render',
+    'g.json',
+    '--out',
+    'f.mp4',
+    '--audio',
+    'm.wav',
+    '--events',
     'e.json',
-  );
+  ]);
+  assert.equal(render.audio, 'm.wav');
+  assert.equal(render.events, 'e.json');
   assert.equal(
     parseCommand(['render', 'g.json', '--frames', 'f%d.png', '--events', 'e.json']).events,
     'e.json',
   );
   for (const argv of [
+    ['render', 'g.json', '--frames', 'f%d.png', '--audio', 'm.wav'],
+    ['render', 'g.json', '--out', 'f.mp4', '--audio', ''],
     ['render', 'g.json', '--out', 'f.mp4', '--events', ''],
     ['events', 'g.json', '--out', ''],
     ['events', 'g.json', '--theme', 'dark'],

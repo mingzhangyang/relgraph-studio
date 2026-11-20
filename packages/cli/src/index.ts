@@ -49,7 +49,17 @@ export {
   type OmittedLabelReport,
   type ShotOmissions,
 } from './labels.js';
-export { encodeArgs, findFfmpeg, FfmpegError } from './ffmpeg.js';
+export {
+  audioLengthWarning,
+  encodeArgs,
+  findFfmpeg,
+  FfmpegError,
+  muxArgs,
+  parseAudioProbe,
+  probeAudio,
+  type AudioProbe,
+  type MuxSettings,
+} from './ffmpeg.js';
 export {
   exportEvents,
   EventsError,
@@ -198,7 +208,7 @@ export async function main(argv: readonly string[], io: Io = defaultIo): Promise
     io.stdout(
       `已渲染第 ${summary.first}–${summary.last} 帧（共 ${summary.frames} 帧，影片 ${summary.filmFrames} 帧）` +
         ` · ${summary.width}×${summary.height} · ${summary.fps} fps` +
-        `${summary.out ? ' · H.264 yuv420p' : ' · PNG RGBA'} · ${summary.seconds.toFixed(1)} 秒\n→ ${target}\n`,
+        `${summary.out ? ' · H.264 yuv420p' : ' · PNG RGBA'}${summary.audio ? ' · AAC 音轨' : ''} · ${summary.seconds.toFixed(1)} 秒\n→ ${target}\n`,
     );
     return 0;
   } catch (error) {
