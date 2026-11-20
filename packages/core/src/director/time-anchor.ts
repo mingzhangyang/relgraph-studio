@@ -225,6 +225,15 @@ export interface AnchorOptions {
   axis?: TimeAxis | null;
   /** The spacing the drawing was made with; it sets the height of a new lane. */
   spacing?: number;
+  /**
+   * Each node's neighbours (`prepare(graph).neighbours`). Given, an unplaced
+   * node takes the free lane nearest the mean lane of its placed neighbours
+   * (else of the placed members of its group): one of the drawing's lanes, or
+   * a new lane just above or below them. Without neighbours, or without
+   * either reference, it takes the first free lane, top down, as the player
+   * does (ADR 004, D2b leaves the player's fallback unchanged).
+   */
+  neighbours?: ReadonlyMap<string, readonly string[]>;
 }
 
 /**
@@ -239,6 +248,7 @@ export function anchorToTime(
     unplaced = new Set(),
     axis = timeAnchor(graph),
     spacing = graph.project?.layout?.spacing ?? LAYOUT_DEFAULTS.spacing,
+    neighbours,
   }: AnchorOptions = {},
 ): boolean {
   if (!axis) return false;
@@ -280,17 +290,51 @@ export function anchorToTime(
   const gap = (axis.to - axis.from) * TIMELINE_GAP,
     order = new Map(nodes.map((n, i) => [n.id, i]));
   waiting.sort((a, b) => extent(a)[0] - extent(b)[0] || order.get(a.id)! - order.get(b.id)!);
+  // A node counts as placed once it has its lane: unplaced ones only after this loop sets it.
+  const settled = new Set<string>();
+  const placedY = (id: string): number | undefined =>
+    unplaced.has(id) && !settled.has(id) ? undefined : positions.get(id)?.y;
+  const meanOf = (ys: (number | undefined)[]): number | undefined => {
+    const known = ys.filter((y): y is number => y !== undefined);
+    return known.length ? known.reduce((sum, y) => sum + y / known.length, 0) : undefined;
+  };
+  const target = (node: (typeof nodes)[number]): number | undefined => {
+    if (!neighbours) return undefined;
+    const near = meanOf((neighbours.get(node.id) ?? []).map(placedY));
+    if (near !== undefined || !node.groupId) return near;
+    return meanOf(nodes.filter((n) => n.groupId === node.groupId).map((n) => placedY(n.id)));
+  };
   for (const node of waiting) {
     const [from, to] = extent(node);
     const free = (y: number) =>
       bars.every(
         (b) => Math.abs(b.y - y) >= height / 2 || to + gap <= b.from || b.to + gap <= from,
       );
-    let y = lanes.find(free);
-    if (y === undefined) {
-      y = lanes.length ? roundPositionCoordinate(lanes[lanes.length - 1] + height) : 0;
-      lanes.push(y);
+    const wanted = target(node);
+    let y: number | undefined;
+    if (wanted === undefined) {
+      y = lanes.find(free);
+      if (y === undefined) {
+        y = lanes.length ? roundPositionCoordinate(lanes[lanes.length - 1] + height) : 0;
+        lanes.push(y);
+      }
+    } else {
+      // The free lane nearest the neighbours; a new lane above or below is always free.
+      const options: [number, number][] = lanes.filter(free).map((lane) => [lane, 0]);
+      options.push(
+        [lanes.length ? roundPositionCoordinate(lanes[0] - height) : 0, 1],
+        [lanes.length ? roundPositionCoordinate(lanes[lanes.length - 1] + height) : 0, 1],
+      );
+      options.sort(
+        (a, b) => Math.abs(a[0] - wanted) - Math.abs(b[0] - wanted) || a[1] - b[1] || a[0] - b[0],
+      );
+      y = options[0][0];
+      if (!lanes.includes(y)) {
+        lanes.push(y);
+        lanes.sort((a, b) => a - b);
+      }
     }
+    settled.add(node.id);
     bars.push({ y, from, to });
     positions.set(node.id, { x: pinned(node, axis)!, y });
     changed = true;

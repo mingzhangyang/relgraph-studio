@@ -181,10 +181,12 @@ no strategy was applied and the source does not say `"timeAxis": false`, or
 while it is drawn with the `auto` or `timeline` strategy. Then a dated node's x
 is its place in time and only its lane (y) is stored and edited: dragging a
 bar sideways does nothing, a changed `start` or `end` moves the bar to its new
-years, and a dated node added without coordinates (in the player or by
-`relgraph layout`) takes the first free lane, one of the drawing's own lane
-steps below the others when none is free. A lock holds a dated node's lane;
-its x is its date.
+years, and a dated node added without coordinates takes a free lane. In the
+player it takes the first free lane, one of the drawing's own lane steps below
+the others when none is free. `relgraph layout` and the layout panel's
+**只填补缺失坐标** put it in the free lane nearest the lanes of the nodes it is
+related to (else of its group's nodes), or in a new lane just above or below
+the others (ADR 004, D2b). A lock holds a dated node's lane; its x is its date.
 
 Because x is derived, the file stores the lane alone. A positioned source
 exported from the studio, and a node added by `relgraph layout`, write a dated

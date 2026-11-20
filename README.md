@@ -82,7 +82,7 @@ The document toolbar shows **未保存修改** when the current document differs
 
 ## Prepare deterministic coordinates before filming
 
-Use `relgraph layout` to fill **only missing** node coordinates with a seeded, fixed-iteration layout. Existing authored coordinates are never moved, including reaction/process positions. The layout runs before playback; it adds no physics to the renderer or timeline.
+Use `relgraph layout` to fill **only missing** node coordinates. Existing authored coordinates are never moved, including reaction/process positions. Each new node goes beside the nodes it is related to: it starts at their barycentre, offset in the direction the engine the player would choose gives it, and moves to the nearest place that keeps clear of other nodes and relations; on a timeline that keeps time it stays at its years, in the free lane nearest its neighbours' lanes (ADR 004, D2b). The layout runs before playback; it adds no physics to the renderer or timeline. `relgraph check-layout` checks the result as drawn.
 
 ```bash
 npm run build:packages

@@ -32,7 +32,7 @@ import {
   timeAnchor,
   timeCoordinate,
 } from '../packages/core/src/director/time-anchor.ts';
-import { layoutMissingNodes } from '../packages/core/src/director/seeded-layout.ts';
+import { placeIncrementally } from '../packages/core/src/director/incremental-placement.ts';
 import { styleForDrawing } from '../packages/core/src/style.ts';
 import { layoutFile } from '../packages/cli/src/layout.ts';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
@@ -441,10 +441,16 @@ test('#40 item 6: relgraph layout puts a new dated node at its years, in a free 
     // What the CLI wrote is what the player draws: the lane, with x from the dates (F6).
     const fresh = written.nodes.find((n) => n.id === '新').position;
     assert.deepEqual(Object.keys(fresh), ['y']);
-    // The point the CLI placed, computed as it does, independently of the file.
+    // The point the CLI placed, computed as it does, independently of the file
+    // (ADR 004, D2b). Without relations the new node takes the first free lane.
     const before = load(source),
-      placed = layoutMissingNodes(before, { seed: 0, ...LAYOUT_DEFAULTS });
-    anchorToTime(before, placed, { unplaced: new Set([byLabel(before, '新').id]) });
+      placed = placeIncrementally(
+        before,
+        new Map(before.nodes.filter((n) => n.position).map((n) => [n.id, n.position])),
+        { engine: 'timeline', seed: 0, ...LAYOUT_DEFAULTS, axis: timeAnchor(before) },
+      ),
+      player = layoutGraph(before);
+    assert.deepEqual(placed.get(byLabel(before, '新').id), player.get(byLabel(before, '新').id));
     const node = byLabel(graph, '新'),
       expected = { x: timeCoordinate(node, timeAnchor(graph)), y: fresh.y };
     assert.deepEqual(placed.get(byLabel(before, '新').id), expected);
