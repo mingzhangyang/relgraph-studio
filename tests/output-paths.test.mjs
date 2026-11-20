@@ -52,7 +52,8 @@ test('relgraph events refuses to write over its input', async () => {
     await assert.rejects(
       exportEvents({ file, frameSpec: 'landscape-1080p', out }),
       (error) =>
-        error instanceof EventsError && /输入文件 和 --out 指向同一个文件/.test(error.message),
+        error instanceof EventsError &&
+        /^输入文件(（.*）)? 和 --out|^输入文件（.*）和 --out/.test(error.message),
     );
   assert.equal(readFileSync(file, 'utf8'), graph, 'the document is untouched');
 
@@ -96,4 +97,51 @@ test('relgraph render refuses outputs that alias the document, the sound or each
   assert.equal(readFileSync(file, 'utf8'), graph);
   assert.equal(readFileSync(inFrames, 'utf8'), graph);
   assert.equal(readFileSync(track, 'utf8'), 'not really audio');
+});
+
+test('frame files are compared by identity, not by name', async () => {
+  // `0.png` is the document (or the events file) under another name: writing
+  // the frame through it would replace that file (review of #57).
+  const base = { frameSpec: 'landscape-720p', theme: 'light', locale: 'zh-CN', jobs: 1, to: 0 };
+  for (const link of ['symlink', 'hard link']) {
+    const { dir, file } = workspace();
+    (link === 'symlink' ? symlinkSync : linkSync)(file, join(dir, '0.png'));
+    await assert.rejects(
+      renderFilm({ ...base, file, frames: join(dir, '%d.png') }),
+      (error) =>
+        error instanceof RenderError && /--frames（.*0\.png）和 输入文件/.test(error.message),
+      link,
+    );
+    assert.equal(readFileSync(file, 'utf8'), graph, `${link}: document untouched`);
+    // Frame 5 of a longer range, too.
+    (link === 'symlink' ? symlinkSync : linkSync)(file, join(dir, 'f5.png'));
+    await assert.rejects(
+      renderFilm({ ...base, file, frames: join(dir, 'f%d.png'), to: 9 }),
+      (error) =>
+        error instanceof RenderError &&
+        /--frames（.*f5\.png）和 输入文件（.*graph\.json）/.test(error.message),
+      `${link} at frame 5`,
+    );
+    assert.equal(readFileSync(file, 'utf8'), graph);
+  }
+
+  // The events file, linked under a frame's name, and a dangling symlink to
+  // where the events file will be written.
+  const { dir, file } = workspace();
+  const events = join(dir, 'events.json');
+  writeFileSync(events, '{}');
+  linkSync(events, join(dir, '1.png'));
+  await assert.rejects(
+    renderFilm({ ...base, file, frames: join(dir, '%d.png'), to: 3, events }),
+    (error) =>
+      error instanceof RenderError && /--frames（.*1\.png）和 --events/.test(error.message),
+  );
+  const later = join(dir, 'later.json');
+  symlinkSync(later, join(dir, 'g2.png'));
+  await assert.rejects(
+    renderFilm({ ...base, file, frames: join(dir, 'g%d.png'), to: 3, events: later }),
+    (error) =>
+      error instanceof RenderError && /--frames（.*g2\.png）和 --events/.test(error.message),
+  );
+  assert.equal(readFileSync(events, 'utf8'), '{}');
 });

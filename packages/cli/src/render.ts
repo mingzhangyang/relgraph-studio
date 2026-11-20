@@ -23,7 +23,13 @@ import {
   type AudioProbe,
 } from './ffmpeg.js';
 import { frameFile, isFramePattern } from './frames.js';
-import { conflictingPaths, conflictMessage, sameFile, type PathUse } from './paths.js';
+import {
+  conflictingPaths,
+  conflictMessage,
+  fileIdentity,
+  sameIdentity,
+  type PathUse,
+} from './paths.js';
 import { formatOmissions, OmissionTally, type ShotOmissions } from './labels.js';
 import type { WorkerData, WorkerReply, WorkerRequest } from './worker.js';
 
@@ -224,20 +230,27 @@ export async function renderFilm(request: RenderRequest): Promise<RenderSummary>
 
   const frames = Array.from({ length: last - first + 1 }, (_, i) => first + i);
   if (request.frames !== undefined) {
-    // A frame file can name the document or the events file too. Only names
-    // that could match (ignoring case) are checked on disk.
+    // Any frame file can be the document or the events file under another
+    // name (a symlink or hard link such as 0.png): compare every one by
+    // identity, never by name.
     const pattern = request.frames;
-    for (const other of uses.filter((use) => use.path !== undefined && use.label !== '--out')) {
-      const name = basename(other.path!).toLowerCase();
-      for (const frame of frames) {
-        const file = frameFile(pattern, frame);
-        if (basename(file).toLowerCase() === name && (await sameFile(file, other.path!)))
-          throw new RenderError(
-            conflictMessage([{ label: '--frames', path: file, output: true }, other]),
-          );
-      }
+    const others = await Promise.all(
+      // With --frames there is no --out: the document, --audio and --events.
+      uses
+        .filter((use) => use.path !== undefined)
+        .map(async (use) => ({ use, identity: await fileIdentity(use.path!) })),
+    );
+    for (const frame of frames) {
+      const file = frameFile(pattern, frame);
+      const identity = await fileIdentity(file);
+      const other = others.find((entry) => sameIdentity(identity, entry.identity));
+      if (other)
+        throw new RenderError(
+          conflictMessage([{ label: '--frames', path: file, output: true }, other.use]),
+        );
     }
   }
+
   const settings: FilmSettings = {
     frameSpec: request.frameSpec,
     theme: request.theme,
