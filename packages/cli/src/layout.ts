@@ -19,6 +19,8 @@ export interface LayoutRequest {
   seed: number;
   write: boolean;
   out?: string;
+  /** Keep time in order along x while filling gaps (`placeIncrementally`). */
+  chronologyTolerance?: number;
 }
 export interface LayoutSummary {
   missing: number;
@@ -93,6 +95,9 @@ export async function layoutFile(request: LayoutRequest): Promise<LayoutSummary>
         seed: request.seed,
         ...LAYOUT_DEFAULTS,
         axis: timeAnchor(graph),
+        ...(request.chronologyTolerance !== undefined
+          ? { chronologyTolerance: request.chronologyTolerance }
+          : {}),
       });
     }
     const output = writeBackPositions(input, result.graph, positions);

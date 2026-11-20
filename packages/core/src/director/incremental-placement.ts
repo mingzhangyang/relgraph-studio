@@ -32,6 +32,11 @@
  *    much sparser or denser the anchors are drawn than the engine draws the
  *    same nodes (`typicalGap`), since the camera fits the whole drawing.
  *
+ * With `chronologyTolerance`, a new node also keeps time in order along x
+ * against every placed node, as `relgraph check-layout` checks it: its
+ * starting point is moved into the x its time allows and every candidate
+ * must lie there.
+ *
  * On a timeline that keeps time (`axis`), a dated node's x is its date, and
  * its lane is the free lane nearest its neighbours' lanes (`anchorToTime`
  * with `neighbours`). Only undated nodes go through the free-place search.
@@ -42,6 +47,7 @@
 import type { VisualGraph } from '../../types/visual-graph.js';
 import { compare, prepare } from '../graph/analysis.js';
 import { placeInTime, type TimeAxis } from '../graph/time-axis.js';
+import { nodeTimes } from './chronology.js';
 import type { LayoutEngine } from '../project-layout.js';
 import { runLayoutEngine } from './layout-engines.js';
 import { layoutMissingNodes, roundPositionCoordinate, type LayoutPoint } from './seeded-layout.js';
@@ -61,6 +67,15 @@ export interface PlacementOptions {
   iterations: number;
   /** The time axis the drawing keeps, if any (`timeAnchor`). */
   axis?: TimeAxis | null;
+  /**
+   * Keep time in order along x, as `relgraph check-layout
+   * --chronology-tolerance` checks it: a new node whose time (`nodeTimes`)
+   * differs from a placed node's by at least this much goes on the side of
+   * it that its time says. Opt-in, for drawings whose x means time without
+   * being a timeline that keeps time; ignored where existing nodes already
+   * leave no room in order (they are never moved).
+   */
+  chronologyTolerance?: number;
 }
 
 /**
@@ -215,8 +230,13 @@ function searchOrder(reach: number): [number, number][] {
 export function placeIncrementally(
   graph: PlacementGraph,
   anchors: ReadonlyMap<string, LayoutPoint>,
-  { engine, seed, spacing, iterations, axis = null }: PlacementOptions,
+  { engine, seed, spacing, iterations, axis = null, chronologyTolerance }: PlacementOptions,
 ): Map<string, LayoutPoint> {
+  if (
+    chronologyTolerance !== undefined &&
+    !(Number.isFinite(chronologyTolerance) && chronologyTolerance >= 0)
+  )
+    throw new RangeError('Chronology tolerance must be a finite number ≥ 0');
   const ids = graph.nodes.map((n) => n.id).sort(compare);
   const out = new Map<string, LayoutPoint>();
   for (const id of ids) {
@@ -317,6 +337,27 @@ export function placeIncrementally(
     return true;
   };
 
+  const times = chronologyTolerance === undefined ? null : nodeTimes(graph);
+  /**
+   * The open interval of x a node may take so that no placed node whose time
+   * differs by at least the tolerance is on the wrong side of it; null when
+   * there is no constraint or no room left between the placed nodes.
+   */
+  const inTime = (id: string): { lo: number; hi: number } | null => {
+    const t = times?.get(id);
+    if (t === undefined || !times) return null;
+    let lo = -Infinity,
+      hi = Infinity;
+    for (const [other, q] of out) {
+      const u = times.get(other);
+      if (u === undefined || u === t || Math.abs(u - t) < chronologyTolerance!) continue;
+      if (u < t) lo = Math.max(lo, q.x);
+      else hi = Math.min(hi, q.x);
+    }
+    if (lo === -Infinity && hi === Infinity) return null;
+    return hi - lo > 0.04 ? { lo, hi } : null;
+  };
+
   const waiting = new Set(fresh.filter((id) => !lanes.includes(id)));
   while (waiting.size) {
     // The node that knows the most placed nodes joins next.
@@ -352,18 +393,31 @@ export function placeIncrementally(
       x: bary.x + offset.x * align.weight + (bary.x - centre.x) * lean,
       y: bary.y + offset.y * align.weight + (bary.y - centre.y) * lean,
     };
+    // In time order, the node starts inside the x its time allows.
+    const allowed = inTime(id);
+    if (allowed) {
+      const margin = Math.min(step, (allowed.hi - allowed.lo) / 4);
+      ideal.x = Math.min(allowed.hi - margin, Math.max(allowed.lo + margin, ideal.x));
+    }
+    const inOrder = (q: LayoutPoint): boolean => !allowed || (q.x > allowed.lo && q.x < allowed.hi);
     let chosen: LayoutPoint | undefined;
     for (const strict of [true, false]) {
       for (const [i, j] of offsets) {
         const q = { x: round(ideal.x + i * step), y: round(ideal.y + j * step) };
-        if (roomy(q) && (!strict || clear(id, q, partners))) {
+        if (roomy(q) && inOrder(q) && (!strict || clear(id, q, partners))) {
           chosen = q;
           break;
         }
       }
       if (chosen) break;
     }
-    // Nothing free within reach: spiral outward until the room is free.
+    // Nothing free within reach. In time order, move up or down at the
+    // allowed x until the room is free; otherwise spiral outward.
+    for (let k = 1; allowed && !chosen; k++)
+      for (const sign of [1, -1]) {
+        const q = { x: round(ideal.x), y: round(ideal.y + sign * k * step) };
+        if (!chosen && roomy(q) && inOrder(q)) chosen = q;
+      }
     for (let attempt = 0; !chosen; attempt++) {
       const angle = attempt * 2.399963229728653,
         radius = room * (PLACEMENT_ROOM.reach + 0.5 * Math.sqrt(attempt + 1));

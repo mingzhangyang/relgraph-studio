@@ -31,6 +31,7 @@ import { placeInTime, timeAxis } from '../packages/core/src/graph/time-axis.ts';
 import { prepare } from '../packages/core/src/graph/analysis.ts';
 import { applyGraphPositions } from '../packages/core/src/director/position-writeback.ts';
 import { layoutFile } from '../packages/cli/src/layout.ts';
+import { chronologyInversions } from '../packages/core/src/director/chronology.ts';
 
 const SOURCES = { bookshop, tree, dynasties, flowchart, mindmap, egfr, literature };
 const load = (doc) => {
@@ -444,4 +445,93 @@ test('the room scales with the drawing: a sparse drawing gets proportionally mor
   const one = nearest(placeIncrementally(graph, scaled(1), options)),
     three = nearest(placeIncrementally(graph, scaled(3), options));
   assert.ok(three > one * 2, `${three} vs ${one}`);
+});
+
+test('with a chronology tolerance a new node keeps time in order along x', () => {
+  // x means time here, but the drawing is a network, not a timeline that keeps it.
+  const person = (id, from, x) => ({
+    id,
+    kind: 'person',
+    label: id,
+    visibility: { from },
+    position: { x, y: 0 },
+  });
+  const graph = {
+    domain: 'neutral',
+    meta: { title: 'generations' },
+    nodes: [
+      person('A', 0, 0),
+      person('B', 100, 1000),
+      person('C', 200, 2000),
+      { id: 'N', kind: 'person', label: 'N', visibility: { from: 150 } },
+    ],
+    // N knows only A, so its barycentre lies at A, before B in time.
+    edges: [{ id: 'NA', source: 'N', target: 'A', kind: 'knows' }],
+    groups: [],
+    scenes: [],
+  };
+  const anchors = new Map(graph.nodes.filter((n) => n.position).map((n) => [n.id, n.position]));
+  const options = { engine: 'force', seed: 0, ...LAYOUT_DEFAULTS };
+  const free = placeIncrementally(graph, anchors, options);
+  assert.ok(chronologyInversions(graph, free, 20).length > 0, 'without the option time inverts');
+  for (const tolerance of [0, 20, 49]) {
+    const kept = placeIncrementally(graph, anchors, { ...options, chronologyTolerance: tolerance });
+    assert.deepEqual(chronologyInversions(graph, kept, tolerance), [], String(tolerance));
+    const n = kept.get('N');
+    assert.ok(n.x > 1000 && n.x < 2000, JSON.stringify(n));
+    for (const [id, p] of anchors) assert.deepEqual(kept.get(id), p);
+  }
+  // Beyond the gap to B and C nothing constrains N.
+  const loose = placeIncrementally(graph, anchors, { ...options, chronologyTolerance: 51 });
+  assert.deepEqual(loose.get('N'), free.get('N'));
+  // Anchors already out of order leave no room: N is still placed, nothing moves.
+  const tangled = new Map(anchors).set('B', { x: 2500, y: 0 });
+  const placed = placeIncrementally(graph, tangled, { ...options, chronologyTolerance: 20 });
+  assert.ok(placed.get('N'));
+  for (const [id, p] of tangled) assert.deepEqual(placed.get(id), p);
+  assert.throws(
+    () => placeIncrementally(graph, anchors, { ...options, chronologyTolerance: -1 }),
+    RangeError,
+  );
+});
+
+test('relgraph layout --chronology-tolerance keeps time in order while filling gaps', async () => {
+  const folder = await mkdtemp(join(tmpdir(), 'relgraph-d2b-chrono-'));
+  try {
+    const source = {
+      format: 'relgraph.graph/1',
+      nodes: [
+        { id: 'A', visibleFrom: 0, position: { x: 0, y: 0 } },
+        { id: 'B', visibleFrom: 100, position: { x: 1000, y: 0 } },
+        { id: 'C', visibleFrom: 200, position: { x: 2000, y: 0 } },
+        { id: 'N', visibleFrom: 150 },
+      ],
+      edges: [{ source: 'N', target: 'A' }],
+    };
+    const file = join(folder, 'chrono.json');
+    await writeFile(file, JSON.stringify(source, null, 2) + '\n');
+    for (const [name, tolerance] of [
+      ['plain.json', undefined],
+      ['ordered.json', 20],
+    ]) {
+      const out = join(folder, name);
+      await layoutFile({
+        file,
+        out,
+        seed: 0,
+        write: false,
+        ...(tolerance === undefined ? {} : { chronologyTolerance: tolerance }),
+      });
+      const written = JSON.parse(await readFile(out, 'utf8')),
+        n = written.nodes.find((node) => node.id === 'N').position;
+      assert.deepEqual(
+        written.nodes.filter((node) => node.id !== 'N').map((node) => node.position),
+        source.nodes.filter((node) => node.position).map((node) => node.position),
+      );
+      if (tolerance === undefined) assert.ok(n.x < 1000, JSON.stringify(n));
+      else assert.ok(n.x > 1000 && n.x < 2000, JSON.stringify(n));
+    }
+  } finally {
+    await rm(folder, { recursive: true, force: true });
+  }
 });

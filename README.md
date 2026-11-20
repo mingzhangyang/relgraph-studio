@@ -89,7 +89,10 @@ npm run build:packages
 npm run relgraph -- layout story.json                    # preview, no write
 npm run relgraph -- layout story.json --seed 42 --out arranged.json
 npm run relgraph -- layout story.json --seed 42 --write # atomically replace source
+npm run relgraph -- layout poets.json --chronology-tolerance 20 --out placed.json
 ```
+
+`--chronology-tolerance N` is for drawings whose x means time without being a timeline that keeps time (the Tang poet networks): a new node whose time differs from a placed node's by at least `N` goes on the side of it that its time says, as `relgraph check-layout --chronology-tolerance N` checks. A node's time is the one `check-layout` uses. Existing coordinates still never move, so a node whose placed neighbours are already out of order is placed without the constraint.
 
 The same document and seed produce the same coordinates regardless of JSON node ordering. Literature positions go to `characters[].position`; biology positions go to `entities[].position` and `processes[].position`. The CLI validates the serialized document before writing, refuses to overwrite an existing `--out` destination, and leaves the source untouched by default. The existing `layoutGraph` fallback still handles imported documents without saved coordinates in the player.
 
