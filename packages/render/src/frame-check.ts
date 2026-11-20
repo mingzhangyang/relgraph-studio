@@ -200,10 +200,21 @@ function polygonPolygon(p: readonly Point[], q: readonly Point[]): number {
 /** A glyph as measured: its outline polygon, half its stroke, and its bounds. */
 interface Glyph {
   id: string;
+  /** Hit bounds, border included. */
   box: Rect;
   polygon: Point[];
   halfStroke: number;
+  /** Bounds of the outline itself, without its border: the glyph's body. */
+  body: Rect;
 }
+
+const boundsOf = (points: readonly Point[]): Rect => {
+  const xs = points.map((p) => p.x),
+    ys = points.map((p) => p.y);
+  const x = Math.min(...xs),
+    y = Math.min(...ys);
+  return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y };
+};
 
 const boxPolygon = (r: Rect): Point[] => [
   { x: r.x, y: r.y },
@@ -228,14 +239,16 @@ export function frameLayoutIssues(
   const nodes: Glyph[] = [];
   const edges: { id: string; points: Point[]; halfWidth: number }[] = [];
   for (const entry of list.selection ?? []) {
-    if (entry.kind === 'node' && entry.box && (!stage || intersects(entry.box, stage)))
+    if (entry.kind === 'node' && entry.box && (!stage || intersects(entry.box, stage))) {
+      const polygon = entry.outline?.length ? outlinePolygon(entry.outline) : boxPolygon(entry.box);
       nodes.push({
         id: entry.id,
         box: entry.box,
-        polygon: entry.outline?.length ? outlinePolygon(entry.outline) : boxPolygon(entry.box),
+        polygon,
         halfStroke: entry.outline?.length ? (entry.halfStroke ?? 0) : 0,
+        body: entry.outline?.length ? boundsOf(polygon) : entry.box,
       });
-    else if (entry.kind === 'edge' && entry.points && entry.points.length >= 2)
+    } else if (entry.kind === 'edge' && entry.points && entry.points.length >= 2)
       edges.push({ id: entry.id, points: entry.points, halfWidth: (entry.width ?? 0) / 2 });
   }
   nodes.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
@@ -285,9 +298,12 @@ export function frameLayoutIssues(
     for (let j = i + 1; j < nodes.length; j += 1) {
       const [a, b] = [nodes[i], nodes[j]];
       if (options.bars?.has(a.id) && options.bars.has(b.id)) {
-        // Bars may sit close or abut; overlapping, they hide each other.
-        const w = Math.min(a.box.x + a.box.w, b.box.x + b.box.w) - Math.max(a.box.x, b.box.x),
-          h = Math.min(a.box.y + a.box.h, b.box.y + b.box.h) - Math.max(a.box.y, b.box.y);
+        // Bars may sit close or abut; overlapping, they hide each other. Their
+        // bodies are compared, not their hit bounds: two bars that meet end
+        // to start overlap only by their borders.
+        const [p, q] = [a.body, b.body];
+        const w = Math.min(p.x + p.w, q.x + q.w) - Math.max(p.x, q.x),
+          h = Math.min(p.y + p.h, q.y + q.h) - Math.max(p.y, q.y);
         if (w > overlapTolerance && h > overlapTolerance)
           crowded.push({ nodes: [a.id, b.id], distance: 0 });
         continue;

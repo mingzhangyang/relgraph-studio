@@ -14,7 +14,8 @@ import { chronologyInversions, nodeTimes } from '../packages/core/src/director/c
 import { frameLayoutIssues } from '../packages/render/src/frame-check.ts';
 import { nodeOutline } from '../packages/render/src/node-geometry.ts';
 import { parseCommand, UsageError } from '../packages/cli/src/args.ts';
-import { main } from '../packages/cli/src/index.ts';
+import { checkLayout, main } from '../packages/cli/src/index.ts';
+import { createHeadlessRenderer } from '../packages/render/src/backends/skia.ts';
 
 const stage = { x: 0, y: 0, w: 1000, h: 600 };
 /** A glyph's hit geometry as composeNodes records it: bounds, outline, stroke. */
@@ -346,4 +347,46 @@ test('relgraph check-layout reports per shot and exits 1, 0 when the layout is c
   const clean = await run(['check-layout', 'examples/honglou-provisional.relgraph.json']);
   assert.equal(clean.code, 0, clean.stdout + clean.stderr);
   assert.match(clean.stdout, /没有发现布局问题。\n$/);
+});
+
+test('timeline bars in real composed frames: meeting end to start is fine, overlapping is not', async () => {
+  // Spans in one lane (authored y): 甲 300–400 and 乙 400–500 meet end to
+  // start; 戊 350–450 overlaps both. 丙 shares years with 乙 in another lane.
+  const doc = {
+    format: 'relgraph.graph/1',
+    diagram: 'timeline',
+    timeline: { unit: '年' },
+    nodes: [
+      { id: '甲', start: 300, end: 400, position: { y: 0 } },
+      { id: '乙', start: 400, end: 500, position: { y: 0 } },
+      { id: '丙', start: 450, end: 550, position: { y: 200 } },
+      { id: '丁', start: 300, end: 600, position: { y: 400 } },
+      { id: '戊', start: 350, end: 450, position: { y: 0 } },
+    ],
+    presentation: [{ id: 'all', title: '全部', durationSec: 3, domainAt: 600 }],
+  };
+  const dir = mkdtempSync(join(tmpdir(), 'relgraph-bars-'));
+  const file = join(dir, 'bars.graph.json');
+  writeFileSync(file, JSON.stringify(doc));
+  const summary = await checkLayout({ file, frameSpec: 'landscape-1080p', locale: 'zh-CN' });
+  const pairs = summary.shotIssues.flatMap((shot) =>
+    shot.issues.filter((issue) => issue.kind === 'crowded').map((issue) => issue.text),
+  );
+  assert.deepEqual(pairs.sort(), ['戊 与 乙 过挤', '戊 与 甲 过挤']);
+
+  // The case the review of #55 found: the real hit bounds include each
+  // bar's border, so those of 甲 and 乙 overlap by more than the tolerance.
+  const { graph, detailAt } = loadDocument(doc);
+  const renderer = createHeadlessRenderer(graph, layoutGraph(graph), {
+    detailAt,
+    frameSpec: 'landscape-1080p',
+  });
+  const list = renderer.displayListAt(36);
+  const box = (label) =>
+    list.selection.find(
+      (entry) =>
+        entry.kind === 'node' && entry.id === graph.nodes.find((n) => n.label === label).id,
+    ).box;
+  const [a, b] = [box('甲'), box('乙')];
+  assert.ok(a.x + a.w - b.x > 1.5, `bounds overlap by ${a.x + a.w - b.x}px`);
 });
