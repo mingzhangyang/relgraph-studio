@@ -582,3 +582,30 @@ test('filling one gap in a large drawing costs what its neighbourhood costs', ()
   assert.equal(typicalGap(Object.values(positions)), 110);
   assert.ok(performance.now() - started < 500);
 });
+
+test('on a timeline without dated lanes yet, a new dated node takes its neighbour’s lane', () => {
+  // An undated, positioned node and two dated ones without coordinates (review of #56).
+  const graph = load({
+    format: 'relgraph.graph/1',
+    diagram: 'timeline',
+    nodes: [
+      { id: 'U', position: { x: 0, y: 1000 } },
+      { id: 'D1', start: 600, end: 650 },
+      { id: 'D2', start: 700, end: 750 },
+    ],
+    edges: [{ source: 'D1', target: 'U' }],
+  });
+  const axis = timeAnchor(graph);
+  assert.ok(axis);
+  const id = (label) => byLabel(graph, label).id;
+  const placed = placeIncrementally(graph, new Map([[id('U'), { x: 0, y: 1000 }]]), {
+    engine: 'timeline',
+    seed: 0,
+    ...LAYOUT_DEFAULTS,
+    axis,
+  });
+  assert.equal(placed.get(id('D1')).y, 1000);
+  assert.deepEqual(placed.get(id('U')), { x: 0, y: 1000 });
+  // D2 knows nobody: the first free lane, which is now D1's.
+  assert.equal(placed.get(id('D2')).y, 1000);
+});

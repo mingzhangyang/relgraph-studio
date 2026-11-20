@@ -229,7 +229,8 @@ export interface AnchorOptions {
    * Each node's neighbours (`prepare(graph).neighbours`). Given, an unplaced
    * node takes the free lane nearest the mean lane of its placed neighbours
    * (else of the placed members of its group): one of the drawing's lanes, or
-   * a new lane just above or below them. Without neighbours, or without
+   * a new lane just above or below them; with no lane yet, a lane at that
+   * mean. Without neighbours, or without
    * either reference, it takes the first free lane, top down, as the player
    * does (ADR 004, D2b leaves the player's fallback unchanged).
    */
@@ -319,12 +320,15 @@ export function anchorToTime(
         lanes.push(y);
       }
     } else {
-      // The free lane nearest the neighbours; a new lane above or below is always free.
+      // The free lane nearest the neighbours; a new lane above or below is
+      // always free. Without any lane yet, the first one is the neighbours' own.
       const options: [number, number][] = lanes.filter(free).map((lane) => [lane, 0]);
-      options.push(
-        [lanes.length ? roundPositionCoordinate(lanes[0] - height) : 0, 1],
-        [lanes.length ? roundPositionCoordinate(lanes[lanes.length - 1] + height) : 0, 1],
-      );
+      if (lanes.length)
+        options.push(
+          [roundPositionCoordinate(lanes[0] - height), 1],
+          [roundPositionCoordinate(lanes[lanes.length - 1] + height), 1],
+        );
+      else options.push([roundPositionCoordinate(wanted) || 0, 1]);
       options.sort(
         (a, b) => Math.abs(a[0] - wanted) - Math.abs(b[0] - wanted) || a[1] - b[1] || a[0] - b[0],
       );
