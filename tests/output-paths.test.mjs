@@ -145,3 +145,39 @@ test('frame files are compared by identity, not by name', async () => {
   );
   assert.equal(readFileSync(events, 'utf8'), '{}');
 });
+
+test('outputs that differ only in case count as one file until the file system says otherwise', async () => {
+  // On Windows and default macOS `Film.mp4` and `film.mp4` are one file. Two
+  // outputs that do not exist yet have no inode to compare, so names equal
+  // but for case (or Unicode normalization) are refused everywhere (review of #57).
+  const { dir, file } = workspace();
+  assert.equal(await sameFile(join(dir, 'Film.mp4'), join(dir, 'film.mp4')), true);
+  assert.equal(await sameFile(join(dir, 'NEW', 'a.json'), join(dir, 'new', 'A.json')), true);
+  assert.equal(await sameFile(join(dir, 'caf\u00e9.json'), join(dir, 'cafe\u0301.json')), true);
+  // Two existing files that differ in case are two files where the file
+  // system keeps them apart (this one does): their inodes decide.
+  writeFileSync(join(dir, 'Upper.txt'), 'a');
+  writeFileSync(join(dir, 'upper.txt'), 'b');
+  if (readFileSync(join(dir, 'Upper.txt'), 'utf8') === 'a')
+    assert.equal(await sameFile(join(dir, 'Upper.txt'), join(dir, 'upper.txt')), false);
+
+  const base = { file, frameSpec: 'landscape-720p', theme: 'light', locale: 'zh-CN', jobs: 1 };
+  await assert.rejects(
+    renderFilm({ ...base, out: join(dir, 'Film.mp4'), events: join(dir, 'film.mp4') }),
+    (error) =>
+      error instanceof RenderError &&
+      /--out（.*Film\.mp4）和 --events（.*film\.mp4）只差大小写/.test(error.message),
+  );
+  await assert.rejects(
+    renderFilm({ ...base, frames: join(dir, 'F%d.png'), to: 0, events: join(dir, 'f0.PNG') }),
+    (error) =>
+      error instanceof RenderError && /--frames（.*F0\.png）和 --events/.test(error.message),
+  );
+  await assert.rejects(
+    exportEvents({ file, frameSpec: 'landscape-1080p', out: join(dir, 'GRAPH.json') }),
+    (error) => error instanceof EventsError && /只差大小写/.test(error.message),
+  );
+  assert.equal(readFileSync(file, 'utf8'), graph);
+  for (const name of ['Film.mp4', 'film.mp4', 'f0.PNG', 'F0.png'])
+    assert.throws(() => readFileSync(join(dir, name)), { code: 'ENOENT' }, `${name} not written`);
+});

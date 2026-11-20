@@ -41,11 +41,27 @@ export async function fileIdentity(path: string): Promise<FileIdentity> {
 }
 
 /**
- * Whether two identities are one file: the same real path, or the same file
- * on disk (hard links, symlinks, a file system that ignores case).
+ * A path as a file system that ignores case and Unicode normalization sees
+ * it (Windows, and macOS by default): `Film.mp4` and `film.mp4`, or a
+ * precomposed and a decomposed `é`, are one name there.
  */
-export const sameIdentity = (a: FileIdentity, b: FileIdentity): boolean =>
-  a.path === b.path || (a.inode !== null && a.inode === b.inode);
+export const foldedPath = (path: string): string => path.normalize('NFC').toLowerCase();
+
+/**
+ * Whether two identities may be one file. When both exist, the file system
+ * decides: the same device and inode (hard links, symlinks, case it
+ * ignores), else the same real path. When either does not exist yet there is
+ * no inode to ask, so names that differ only in case or normalization count
+ * as the same: on a case-insensitive file system they are, and writing one
+ * would replace the other. This refuses such pairs on case-sensitive file
+ * systems too, where they would be two files; outputs are easily renamed,
+ * data lost to an alias is not.
+ */
+export function sameIdentity(a: FileIdentity, b: FileIdentity): boolean {
+  if (a.path === b.path) return true;
+  if (a.inode !== null && b.inode !== null) return a.inode === b.inode;
+  return foldedPath(a.path) === foldedPath(b.path);
+}
 
 /** Whether two paths name the same file; see `sameIdentity`. */
 export async function sameFile(a: string, b: string): Promise<boolean> {
@@ -79,8 +95,15 @@ export async function conflictingPaths(
 
 /** The user-facing refusal for a conflict, naming both paths when they differ. */
 export const conflictMessage = ([a, b]: [PathUse, PathUse]): string => {
-  const same = resolve(a.path ?? '') === resolve(b.path ?? '');
-  return same
-    ? `${a.label} 和 ${b.label} 指向同一个文件（${b.path}），写出时会覆盖它；请换一个输出路径。`
-    : `${a.label}（${a.path}）和 ${b.label}（${b.path}）是同一个文件，写出时会覆盖它；请换一个输出路径。`;
+  const [x, y] = [resolve(a.path ?? ''), resolve(b.path ?? '')];
+  if (x === y)
+    return `${a.label} 和 ${b.label} 指向同一个文件（${b.path}），写出时会覆盖它；请换一个输出路径。`;
+  const caseOnly = foldedPath(x) === foldedPath(y);
+  return (
+    `${a.label}（${a.path}）和 ${b.label}（${b.path}）` +
+    (caseOnly
+      ? '只差大小写，在不区分大小写的文件系统（Windows、macOS 默认）上是同一个文件，'
+      : '是同一个文件，') +
+    '写出时会覆盖它；请换一个输出路径。'
+  );
 };
