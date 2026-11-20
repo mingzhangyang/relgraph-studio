@@ -1,5 +1,5 @@
 import type { DirectorFrameState, ProjectedVisualGraph, ResolvedHighlight } from '@relgraph/core';
-import type { DisplayItem, DisplayList } from './display-list.js';
+import type { DisplayItem, DisplayList, OmittedLabel } from './display-list.js';
 import { composeBackground } from './compose/background.js';
 import {
   attentionUnder,
@@ -56,6 +56,7 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
   );
   const glyphs = composeNodes(ctx, drawn);
   const legend = composeLegend(ctx, occupied);
+  const omitted: OmittedLabel[] = [];
   const nodeLabels = composeNodeLabels(
     ctx,
     {
@@ -66,8 +67,9 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
       relations: relations.obstacles,
     },
     occupied,
+    omitted,
   );
-  const tags = composeRelationLabels(ctx, relations.labels, occupied);
+  const tags = composeRelationLabels(ctx, relations.labels, occupied, omitted);
   items.push({
     type: 'group',
     clip: { ...stage },
@@ -90,5 +92,6 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
     a11y: frameText(ctx, card.detail),
     selection: [...relations.selection, ...glyphs.selection],
     selectionClip: { ...stage },
+    omitted,
   };
 }

@@ -77,6 +77,10 @@ export interface HeadlessRenderer extends CanvasRenderer {
   rgbaAt(frame: number): Uint8Array;
   /** Draw a frame and return it as a PNG. */
   pngAt(frame: number): Buffer;
+  /** Pixels of the frame drawn last (e.g. by `renderFrameWithList`), as `rgbaAt` returns them. */
+  readRgba(): Uint8Array;
+  /** The frame drawn last, as a PNG. */
+  readPng(): Buffer;
 }
 
 /**
@@ -104,17 +108,23 @@ export function createHeadlessRenderer(
   });
   const { width, height } = renderer.frameSpec;
   const ctx = canvas.getContext('2d');
+  const readRgba = (): Uint8Array => {
+    const { data } = ctx.getImageData(0, 0, width, height);
+    return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+  };
+  const readPng = (): Buffer => canvas.toBufferSync('png');
   return {
     ...renderer,
     canvas,
     rgbaAt(frame) {
       renderer.renderFrame(frame);
-      const { data } = ctx.getImageData(0, 0, width, height);
-      return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+      return readRgba();
     },
     pngAt(frame) {
       renderer.renderFrame(frame);
-      return canvas.toBufferSync('png');
+      return readPng();
     },
+    readRgba,
+    readPng,
   };
 }

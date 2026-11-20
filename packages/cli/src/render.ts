@@ -1,12 +1,13 @@
 import { mkdir } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { Worker } from 'node:worker_threads';
-import { frameCount, layoutGraph, type Locale } from '@relgraph/core';
+import { compileTimeline, frameCount, layoutGraph, type Locale } from '@relgraph/core';
 import { frameSpecFor, type FrameSpecName } from '@relgraph/render';
 import { uncoveredCharacters } from '@relgraph/render/skia';
 import { documentStrings, formatDiagnostics, loadFile } from './document.js';
 import { findFfmpeg, FfmpegError, startEncoder } from './ffmpeg.js';
 import { frameFile, isFramePattern } from './frames.js';
+import { formatOmissions, OmissionTally, type ShotOmissions } from './labels.js';
 import type { WorkerData, WorkerReply, WorkerRequest } from './worker.js';
 
 /** Inputs that, with the document and frame index, determine every pixel. */
@@ -27,6 +28,11 @@ export interface RenderRequest extends FilmSettings {
   to?: number;
   jobs: number;
   ffmpeg?: string;
+  /**
+   * Fail, after writing the output, when a shot's settled frames leave a
+   * label out (ADR 004, D1). Either way the omissions are logged and returned.
+   */
+  failOnOmittedLabels?: boolean;
   /** Progress and warnings; defaults to silence. */
   log?: (message: string) => void;
   progress?: (done: number, total: number) => void;
@@ -45,6 +51,8 @@ export interface RenderSummary {
   pattern?: string;
   ffmpeg?: string;
   uncovered: string[];
+  /** Labels missing from the settled frames rendered, per shot. */
+  omittedLabels: ShotOmissions[];
   seconds: number;
 }
 
@@ -180,6 +188,23 @@ export async function renderFilm(request: RenderRequest): Promise<RenderSummary>
   };
   let done = 0;
   const tick = (): void => request.progress?.(++done, frames.length);
+  const tally = new OmissionTally(compileTimeline(graph, fps), filmFrames);
+  const record = (frame: number, reply: WorkerReply): void => {
+    if ('omitted' in reply) tally.add(frame, reply.omitted);
+  };
+  // Report omitted labels once the output is complete, and fail if asked to.
+  const finish = <T extends object>(
+    result: T,
+    target: string,
+  ): T & { omittedLabels: ShotOmissions[] } => {
+    const omittedLabels = tally.report();
+    log(formatOmissions(omittedLabels));
+    if (request.failOnOmittedLabels && omittedLabels.length)
+      throw new RenderError(
+        `已写出 ${target}，但 ${omittedLabels.length} 个镜头的稳定画面省略了标签（--fail-on-omitted-labels）。`,
+      );
+    return { ...result, omittedLabels };
+  };
   const summary = {
     filmFrames,
     first,
@@ -197,8 +222,16 @@ export async function renderFilm(request: RenderRequest): Promise<RenderSummary>
     // create every directory the range writes to, not just the first.
     for (const dir of new Set(frames.map((frame) => dirname(frameFile(pattern, frame)))))
       await mkdir(dir, { recursive: true });
-    await renderInOrder({ ...settings, text, pattern }, frames, request.jobs, async () => tick());
-    return { ...summary, pattern, seconds: (performance.now() - started) / 1000 };
+    await renderInOrder(
+      { ...settings, text, pattern },
+      frames,
+      request.jobs,
+      async (frame, reply) => {
+        record(frame, reply);
+        tick();
+      },
+    );
+    return finish({ ...summary, pattern, seconds: (performance.now() - started) / 1000 }, pattern);
   }
 
   const out = resolve(request.out ?? '');
@@ -245,6 +278,7 @@ export async function renderFilm(request: RenderRequest): Promise<RenderSummary>
       if (!('pixels' in reply) || !reply.pixels)
         throw new RenderError(`第 ${frame} 帧没有像素数据`);
       await write(new Uint8Array(reply.pixels));
+      record(frame, reply);
       tick();
     });
   } catch (error) {
@@ -253,10 +287,13 @@ export async function renderFilm(request: RenderRequest): Promise<RenderSummary>
   }
   encoder.stdin.end();
   await finished;
-  return {
-    ...summary,
+  return finish(
+    {
+      ...summary,
+      out,
+      ffmpeg: ffmpeg.version,
+      seconds: (performance.now() - started) / 1000,
+    },
     out,
-    ffmpeg: ffmpeg.version,
-    seconds: (performance.now() - started) / 1000,
-  };
+  );
 }

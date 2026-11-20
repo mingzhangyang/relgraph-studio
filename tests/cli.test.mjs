@@ -35,6 +35,7 @@ test('render defaults: 1080p, light film theme, zh-CN, whole film', () => {
   assert.equal(command.from, undefined);
   assert.equal(command.to, undefined);
   assert.ok(command.jobs >= 1);
+  assert.equal(command.failOnOmittedLabels, false);
   const frames = parseCommand(
     ['render', 's.json', '--frames', 'out/%05d.png', '--theme', 'dark'].concat(
       ['--frame-spec', 'landscape-720p', '--locale', 'en', '--from', '3', '--to', '9'],
@@ -54,8 +55,11 @@ test('render defaults: 1080p, light film theme, zh-CN, whole film', () => {
       to: 9,
       jobs: 2,
       ffmpeg: '/opt/ffmpeg',
+      failOnOmittedLabels: false,
     },
   );
+  const strict = parseCommand(['render', 's.json', '--out', 'f.mp4', '--fail-on-omitted-labels']);
+  assert.equal(strict.failOnOmittedLabels, true);
 });
 
 test('invalid arguments are usage errors', () => {
@@ -68,6 +72,10 @@ test('invalid arguments are usage errors', () => {
     ['render', 's.json', '--out', 'a.mp4', '--theme', 'sepia'],
     ['render', 's.json', '--out', 'a.mp4', '--frame-spec', 'portrait'],
     ['render', 's.json', '--out', 'a.mp4', '--locale', 'fr'],
+    ['check-labels'],
+    ['check-labels', 's.json', '--theme', 'dark'],
+    ['check-labels', 's.json', '--frame-spec', 'portrait'],
+    ['check-labels', 's.json', '--fail-on-omitted-labels'],
     ['render', 's.json', '--out', 'a.mp4', '--from', '5', '--to', '2'],
     ['render', 's.json', '--out', 'a.mp4', '--from', '-1'],
     ['render', 's.json', '--out', 'a.mp4', '--jobs', '0'],

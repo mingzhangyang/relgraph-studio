@@ -1,6 +1,7 @@
 import { writeFileSync } from 'node:fs';
 import { parentPort, workerData } from 'node:worker_threads';
 import { layoutGraph, parseDocument } from '@relgraph/core';
+import type { OmittedLabel } from '@relgraph/render';
 import { createHeadlessRenderer } from '@relgraph/render/skia';
 import { frameFile } from './frames.js';
 import type { FilmSettings } from './render.js';
@@ -17,7 +18,8 @@ export interface WorkerData extends FilmSettings {
 }
 export type WorkerRequest = { frame: number } | { stop: true };
 export type WorkerReply =
-  { frame: number; pixels?: ArrayBuffer; file?: string } | { error: string; frame?: number };
+  | { frame: number; pixels?: ArrayBuffer; file?: string; omitted: OmittedLabel[] }
+  | { error: string; frame?: number };
 
 if (parentPort) {
   const port = parentPort;
@@ -38,15 +40,16 @@ if (parentPort) {
       }
       const { frame } = request;
       try {
+        // One composition gives both the pixels and the labels it left out.
+        const { omitted } = renderer.renderFrameWithList(frame).list;
         if (data.pattern) {
           const file = frameFile(data.pattern, frame);
-          writeFileSync(file, renderer.pngAt(frame));
-          port.postMessage({ frame, file } satisfies WorkerReply);
+          writeFileSync(file, renderer.readPng());
+          port.postMessage({ frame, file, omitted } satisfies WorkerReply);
         } else {
-          const pixels = renderer.rgbaAt(frame);
           // Copy into a transferable buffer that owns exactly the frame.
-          const buffer = pixels.slice().buffer;
-          port.postMessage({ frame, pixels: buffer } satisfies WorkerReply, [buffer]);
+          const buffer = renderer.readRgba().slice().buffer;
+          port.postMessage({ frame, pixels: buffer, omitted } satisfies WorkerReply, [buffer]);
         }
       } catch (error) {
         port.postMessage({ frame, error: String((error as Error)?.stack ?? error) });

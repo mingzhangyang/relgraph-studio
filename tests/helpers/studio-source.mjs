@@ -91,6 +91,7 @@ import {
 import { createShotsView } from '../../apps/studio/src/shots-view.ts';
 import { createDiagnosticsView } from '../../apps/studio/src/diagnostics-view.ts';
 import { createTranscriptView } from '../../apps/studio/src/transcript-view.ts';
+import { createOmittedLabelsView } from '../../apps/studio/src/omitted-labels-view.ts';
 import { createWorkspaceShellView } from '../../apps/studio/src/workspace-shell-view.ts';
 import { projectSelectionOverlay } from '../../apps/studio/src/selection-overlay-model.ts';
 import { createSelectionOverlayView } from '../../apps/studio/src/selection-overlay-view.ts';
@@ -181,6 +182,7 @@ export const studioImports = {
   createShotsView,
   createDiagnosticsView,
   createTranscriptView,
+  createOmittedLabelsView,
   createWorkspaceShellView,
   projectSelectionOverlay,
   createSelectionOverlayView,

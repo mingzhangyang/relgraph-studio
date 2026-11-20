@@ -4,6 +4,8 @@ import { parseCommand, USAGE, UsageError, type Command } from './args.js';
 import { formatDiagnostics, loadFile } from './document.js';
 import { renderFilm, RenderError } from './render.js';
 import { layoutFile, LayoutError } from './layout.js';
+import { checkLabels, CheckError } from './check-labels.js';
+import { formatOmissions } from './labels.js';
 
 export { parseCommand, USAGE, UsageError, type Command } from './args.js';
 export { documentStrings, formatDiagnostics, loadFile } from './document.js';
@@ -14,6 +16,20 @@ export {
   type LayoutRequest,
   type LayoutSummary,
 } from './layout.js';
+export {
+  checkLabels,
+  CheckError,
+  type CheckLabelsRequest,
+  type CheckLabelsSummary,
+} from './check-labels.js';
+export {
+  formatOmissions,
+  OmissionTally,
+  sampleSettledFrames,
+  settledFrameRanges,
+  type OmittedLabelReport,
+  type ShotOmissions,
+} from './labels.js';
 export { encodeArgs, findFfmpeg, FfmpegError } from './ffmpeg.js';
 export { frameFile, isFramePattern } from './frames.js';
 export {
@@ -87,6 +103,28 @@ export async function main(argv: readonly string[], io: Io = defaultIo): Promise
     } catch (error) {
       if (!(error instanceof LayoutError)) throw error;
       io.stderr('relgraph layout：' + error.message + '\n');
+      return 1;
+    }
+  }
+  if (command.command === 'check-labels') {
+    try {
+      const summary = await checkLabels({ ...command, log: io.stderr });
+      const { omittedLabels, unsettled } = summary;
+      if (command.json) io.stdout(JSON.stringify(summary, null, 2) + '\n');
+      else {
+        io.stdout(
+          `检查了 ${summary.shots} 个镜头的 ${summary.frames.length} 个稳定帧` +
+            (unsettled.length
+              ? `；镜头 ${unsettled.map((shot) => shot + 1).join('、')} 在转场或揭示结束前就已结束，未检查`
+              : '') +
+            '\n',
+        );
+        io.stdout(formatOmissions(omittedLabels) || '没有标签被省略。\n');
+      }
+      return omittedLabels.length ? 1 : 0;
+    } catch (error) {
+      if (!(error instanceof CheckError)) throw error;
+      io.stderr('relgraph check-labels：' + error.message + '\n');
       return 1;
     }
   }
