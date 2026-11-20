@@ -5,6 +5,12 @@ import { formatDiagnostics, loadFile } from './document.js';
 import { renderFilm, RenderError } from './render.js';
 import { layoutFile, LayoutError } from './layout.js';
 import { checkLabels, CheckError } from './check-labels.js';
+import {
+  checkLayout,
+  CheckLayoutError,
+  formatLayoutIssues,
+  layoutIssueCount,
+} from './check-layout.js';
 import { formatOmissions } from './labels.js';
 
 export { parseCommand, USAGE, UsageError, type Command } from './args.js';
@@ -22,6 +28,18 @@ export {
   type CheckLabelsRequest,
   type CheckLabelsSummary,
 } from './check-labels.js';
+export {
+  checkLayout,
+  CheckLayoutError,
+  formatLayoutIssues,
+  layoutIssueCount,
+  LAYOUT_CHECK_DEFAULTS,
+  type CheckLayoutRequest,
+  type CheckLayoutSummary,
+  type FrameIssue,
+  type FrameIssueReport,
+  type ShotLayoutIssues,
+} from './check-layout.js';
 export {
   formatOmissions,
   OmissionTally,
@@ -125,6 +143,19 @@ export async function main(argv: readonly string[], io: Io = defaultIo): Promise
     } catch (error) {
       if (!(error instanceof CheckError)) throw error;
       io.stderr('relgraph check-labels：' + error.message + '\n');
+      return 1;
+    }
+  }
+  if (command.command === 'check-layout') {
+    try {
+      const summary = await checkLayout({ ...command, log: io.stderr });
+      io.stdout(
+        command.json ? JSON.stringify(summary, null, 2) + '\n' : formatLayoutIssues(summary),
+      );
+      return layoutIssueCount(summary) ? 1 : 0;
+    } catch (error) {
+      if (!(error instanceof CheckLayoutError)) throw error;
+      io.stderr('relgraph check-layout：' + error.message + '\n');
       return 1;
     }
   }

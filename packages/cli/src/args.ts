@@ -11,6 +11,7 @@ export const USAGE = `用法：
   relgraph layout <file> [--seed N] [--write | --out output.json]
   relgraph render <file> (--out film.mp4 | --frames out/%05d.png) [选项]
   relgraph check-labels <file> [--frame-spec <name>] [--locale <语言>] [--json]
+  relgraph check-layout <file> [--frame-spec <name>] [--locale <语言>] [选项] [--json]
 
 layout 选项：
   --seed <N>             无符号 32 位整数，固定种子（默认 0）
@@ -31,6 +32,13 @@ render 选项：
 
 check-labels：不渲染，逐镜头检查画面稳定后（镜头切换和揭示动画结束之后）放不下的标签；
   每个镜头检查稳定段的首、中、末三帧，有省略时退出码为 1。--frame-spec 和 --locale 同 render。
+
+check-layout：在同样的稳定帧中检查连线贴近或穿过它不连接的节点、节点彼此过挤；
+  给出 --chronology-tolerance 时，再按存储的坐标检查时间先后在横向上是否颠倒。有问题时退出码为 1。
+  --clearance <px>        连线与无关节点之间的最小间隙，720p 像素（默认 4；相接总会报告）
+  --crowding <px>         两个节点图形之间的最小间隙，720p 像素（默认 2）
+  --chronology-tolerance <N>
+                          时间相差至少 N（领域时间单位）的两个节点，较早者必须画在左侧
 
 其他：
   relgraph --help | --version`;
@@ -56,6 +64,16 @@ export interface CheckLabelsCommand {
   locale: Locale;
   json: boolean;
 }
+export interface CheckLayoutCommand {
+  command: 'check-layout';
+  file: string;
+  frameSpec: FrameSpecName;
+  locale: Locale;
+  json: boolean;
+  clearance?: number;
+  crowding?: number;
+  chronologyTolerance?: number;
+}
 export interface RenderCommand {
   command: 'render';
   file: string;
@@ -75,6 +93,7 @@ export type Command =
   | LayoutCommand
   | RenderCommand
   | CheckLabelsCommand
+  | CheckLayoutCommand
   | { command: 'help' }
   | { command: 'version' };
 
@@ -101,7 +120,8 @@ export function parseCommand(argv: readonly string[]): Command {
     command !== 'validate' &&
     command !== 'layout' &&
     command !== 'render' &&
-    command !== 'check-labels'
+    command !== 'check-labels' &&
+    command !== 'check-layout'
   )
     throw new UsageError(`未知命令 ${JSON.stringify(command)}`);
   let parsed;
@@ -125,18 +145,27 @@ export function parseCommand(argv: readonly string[]): Command {
                   locale: { type: 'string', default: 'zh-CN' },
                   json: { type: 'boolean', default: false },
                 }
-              : {
-                  out: { type: 'string' },
-                  frames: { type: 'string' },
-                  'frame-spec': { type: 'string', default: 'landscape-1080p' },
-                  theme: { type: 'string', default: 'light' },
-                  locale: { type: 'string', default: 'zh-CN' },
-                  from: { type: 'string' },
-                  to: { type: 'string' },
-                  jobs: { type: 'string' },
-                  ffmpeg: { type: 'string' },
-                  'fail-on-omitted-labels': { type: 'boolean', default: false },
-                },
+              : command === 'check-layout'
+                ? {
+                    'frame-spec': { type: 'string', default: 'landscape-1080p' },
+                    locale: { type: 'string', default: 'zh-CN' },
+                    json: { type: 'boolean', default: false },
+                    clearance: { type: 'string' },
+                    crowding: { type: 'string' },
+                    'chronology-tolerance': { type: 'string' },
+                  }
+                : {
+                    out: { type: 'string' },
+                    frames: { type: 'string' },
+                    'frame-spec': { type: 'string', default: 'landscape-1080p' },
+                    theme: { type: 'string', default: 'light' },
+                    locale: { type: 'string', default: 'zh-CN' },
+                    from: { type: 'string' },
+                    to: { type: 'string' },
+                    jobs: { type: 'string' },
+                    ffmpeg: { type: 'string' },
+                    'fail-on-omitted-labels': { type: 'boolean', default: false },
+                  },
     });
   } catch (error) {
     throw new UsageError(error instanceof Error ? error.message : String(error));
@@ -167,6 +196,28 @@ export function parseCommand(argv: readonly string[]): Command {
   };
   const frameSpec = (): FrameSpecName =>
     oneOf('frame-spec', str('frame-spec') ?? '', Object.keys(FRAME_SPECS) as FrameSpecName[]);
+  if (command === 'check-layout') {
+    const amount = (name: string): number | undefined => {
+      const value = str(name);
+      if (value === undefined) return undefined;
+      if (!/^\d+(\.\d+)?$/.test(value))
+        throw new UsageError(`--${name} 需要不小于 0 的数，收到 ${JSON.stringify(value)}`);
+      return Number(value);
+    };
+    const clearance = amount('clearance'),
+      crowding = amount('crowding'),
+      chronologyTolerance = amount('chronology-tolerance');
+    return {
+      command,
+      file,
+      frameSpec: frameSpec(),
+      locale: oneOf('locale', str('locale') ?? '', LOCALES),
+      json: (values as Record<string, unknown>).json === true,
+      ...(clearance !== undefined ? { clearance } : {}),
+      ...(crowding !== undefined ? { crowding } : {}),
+      ...(chronologyTolerance !== undefined ? { chronologyTolerance } : {}),
+    };
+  }
   if (command === 'check-labels')
     return {
       command,

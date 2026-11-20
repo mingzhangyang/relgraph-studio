@@ -116,6 +116,12 @@ export interface DisplayList {
     id: string;
     box?: { x: number; y: number; w: number; h: number };
     points?: { x: number; y: number }[];
+    /** A node's glyph outline as drawn: the centre line of its stroke. */
+    outline?: PathCommand[];
+    /** Half the stroke width of that outline, in output pixels. */
+    halfStroke?: number;
+    /** A relation's stroke width, in output pixels. */
+    width?: number;
   }[];
   width: number;
   height: number;
