@@ -90,7 +90,7 @@ export const TEXT_SOURCES = [
   'examples/biology-signaling-synthetic.json',
   'examples/biology-egfr-mapk.json',
   'datasets/tang-poets-met/唐代诗人见面网络_30.graph.json',
-  'datasets/tang-poets-met/唐代诗人见面网络_50.graph.json',
+  'datasets/tang-poets-met/唐代诗人见面网络_64.graph.json',
   'packages/core/src/domains/biology.style.ts',
   'packages/core/src/domains/literature.style.ts',
   'packages/render/src/locale.ts',

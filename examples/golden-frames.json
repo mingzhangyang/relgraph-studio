@@ -2,7 +2,7 @@
   "note": "SHA-256 of RGBA pixels of headless key frames; regenerate with npm run check:export -- --update. Enforced only for the same skia-canvas version and font digest.",
   "environment": {
     "skiaCanvas": "4.0.0",
-    "fonts": "2fe071f9710c1d162506b253b0c2bb41342e5e23a312cc537235201c917ce403",
+    "fonts": "ce1a817712c18cd758565d009ff8717dbfbfca2dedbb652eea071b188dfbdeaa",
     "platform": "linux-x64"
   },
   "frameSpec": "landscape-1080p",

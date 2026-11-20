@@ -1,11 +1,11 @@
 # 唐代诗人交往网络 · Tang poet acquaintance network
 
-Two `relgraph.graph/1` documents built from [mingzhangyang/tangshi](https://github.com/mingzhangyang/tangshi) (`network/`). An edge links two contemporary poets when a poem, an official history, an original title note or a scholarly chronology shows that they **knew each other or interacted**. A physical meeting is not required, and a line does not claim that the two met. Living in the same era, being named together by a third person, or a one-way mention or letter is not enough on its own. The file names keep the historical "见面网络" (poets who met) for existing references; the content and `meta.title` say 交往网络.
+Two `relgraph.graph/1` documents built from [mingzhangyang/tangshi](https://github.com/mingzhangyang/tangshi) (`network/`). An edge links two contemporary poets when a poem, an official history, an original title note or a scholarly chronology shows that they **knew each other or interacted**. A physical meeting is not required, and a line does not claim that the two met. Living in the same era, being named together by a third person, or a one-way mention or letter is not enough on its own. The file names keep the historical "见面网络" (poets who met) for existing references; the content and `meta.title` say 交往网络. The number in a file name is the poet count, so the full version is now `_64`.
 
 | File                             | Poets | Edges | Shots | Length | `visibleFrom` |
 | -------------------------------- | ----: | ----: | ----: | -----: | ------------: |
 | `唐代诗人见面网络_30.graph.json` |    30 |    61 |    11 |  ~78 s |       730–845 |
-| `唐代诗人见面网络_50.graph.json` |    50 |   106 |    12 |  ~85 s |       724–895 |
+| `唐代诗人见面网络_64.graph.json` |    64 |   119 |    15 | ~106 s |       670–895 |
 
 ```bash
 npm run build:packages
@@ -24,9 +24,11 @@ npm run relgraph -- render datasets/tang-poets-met/唐代诗人见面网络_30.g
 
   Edges whose basis lies outside the repository carry `sources` with URLs.
 
-- **Time:** `visibleFrom` is in CE years; the storyboard's closing overview is at year 900. The years are approximate dates of the evidence, used for ordering only.
+- **Time:** `visibleFrom` is in CE years; the storyboard's closing overview is at year 900. The years are estimates of when the evidence was written, used for ordering only; the `visibleFrom` range is not a strict span of the poets' lives or careers.
 - **Layout:** positions are precomputed, with x roughly time and y a lane. The generator rejects a layout in which a straight relation passes within 55 units of an unrelated poet, two poets are too close for their names, or two poets whose mean relationship years differ by 20 years or more appear in reverse order. Both files report `meta.layoutQuality.status: "ok"`, with 0 near-passes, 0 crowded pairs and 0 chronological inversions. Relations are drawn slightly bowed, so check the film as well.
-- **Groups:** 盛唐, 大历前后, 元和前后, 晚唐. **Node kinds:** 诗人 and 诗僧 (monk poets).
+- **Unconnected poets:** the full version shows 王勃 and 卢照邻 as kind `待考` (square) with no edges. They rank with 杨炯 and 骆宾王 as the Four Talents, but no reliable evidence links them to anyone in the graph, and the absence is itself worth showing. Their x position comes from their lifetimes (~670), not from evidence; that is why the node `visibleFrom` starts at 670 while the earliest relation is dated 676. The generator places them last.
+- **Late additions:** 温庭筠, 崔颢, 王翰, 祖咏 and 韩翃 were added after the rest of the network was settled. They have one or two relations each, so the generator lays out everyone else first, with positions unchanged from before, and then places each of the five near the poets they knew. Every check still runs on the whole graph.
+- **Groups:** 初唐 (full version only), 盛唐, 大历前后, 元和前后, 晚唐. 初唐 carries its own `color` (`#2c8f99`), so it takes no palette slot and the other groups and the edge kinds keep the tones they had before. The 30-poet version has no early Tang poet and does not declare the group. **Node kinds:** 诗人, 诗僧 (monk poets) and, in the full version, 待考 (no attested interaction).
 - Extra fields (`evidence`, `evidenceTitles`, `workIds`, `year`, `place`, `sources`, `note`, `birth`, `death`, `works`, `meta.layoutQuality`) are ignored by the loader and kept for checking.
 
 Do not edit these files here. Regenerate them with `python3 network/build_met_network.py` in the tangshi repository, copy them over and run `npx prettier --write datasets/tang-poets-met/`. The evidence table, method and excluded pairs are documented in that repository's `network/README.md`.

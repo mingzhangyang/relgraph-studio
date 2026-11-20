@@ -11,13 +11,13 @@
   },
   "charset": {
     "file": "charset.txt",
-    "characters": 7849,
-    "sha256": "06f229861a45b5143570be054c5ae0ca470d7eaa58a44183a15e14606653d2c5"
+    "characters": 7855,
+    "sha256": "3411f39d2a40e3d301ee9ddc7ae10c036aab9992730ef65b161ffe2049e49ddb"
   },
   "coverage": {
     "file": "coverage.txt",
-    "characters": 7812,
-    "sha256": "8fcd853f318ae2cee1613632196ffd04c7091a0b80beb370a63803107c03dd41"
+    "characters": 7818,
+    "sha256": "34745ade56b5aca8d49e8f3ad58822143e35cfdd2a9b1ac0431d591fe91eb442"
   },
   "faces": [
     {
@@ -25,8 +25,8 @@
       "weight": 400,
       "style": "normal",
       "file": "NotoSansCJKsc-Regular.subset.woff2",
-      "bytes": 1965020,
-      "sha256": "2a161d28a3a82198aa41b2ed206e67dba2b703039007c871fba8329cd7eafd58",
+      "bytes": 1967620,
+      "sha256": "5c77e8039f06a03cbad1a5fb6f7e717d8895d6775f61f3ee99af3f6445d6a012",
       "source": {
         "path": "Sans/OTF/SimplifiedChinese/NotoSansCJKsc-Regular.otf",
         "sha256": "2c76254f6fc379fddfce0a7e84fb5385bb135d3e399294f6eeb6680d0365b74b"
@@ -37,8 +37,8 @@
       "weight": 500,
       "style": "normal",
       "file": "NotoSansCJKsc-Medium.subset.woff2",
-      "bytes": 1991596,
-      "sha256": "1587514997500326c8bf247adc0bfd8de589bca04c9f4a04f3a9bbfd991ddfe3",
+      "bytes": 1993840,
+      "sha256": "b01f4126cf3dc615240e9cedb3b8e11517b7784d4bea60ca79e102d745eeb7b7",
       "source": {
         "path": "Sans/OTF/SimplifiedChinese/NotoSansCJKsc-Medium.otf",
         "sha256": "ca094f6b0001fb048ca39ddd797a0cdb0179e1e55c6561e111c49c3e6a61d7b7"
@@ -49,8 +49,8 @@
       "weight": 700,
       "style": "normal",
       "file": "NotoSansCJKsc-Bold.subset.woff2",
-      "bytes": 2021408,
-      "sha256": "0172844eb07b0da6daa7e87c7f0be6061c0422a62bd4a5563f543eb731e568ed",
+      "bytes": 2023644,
+      "sha256": "94deeab7528be78e1338af812c9b19ff0fee7ba10d0b3f4ea17a38af91f60333",
       "source": {
         "path": "Sans/OTF/SimplifiedChinese/NotoSansCJKsc-Bold.otf",
         "sha256": "b5f0d1a190a7f9b43c310a8850630af12553df32c4c050543f9059732d9b4c0a"
@@ -61,8 +61,8 @@
       "weight": 600,
       "style": "normal",
       "file": "NotoSerifCJKsc-SemiBold.subset.woff2",
-      "bytes": 2675828,
-      "sha256": "66144a2c25288e155f9ac6915d56146e4a4e179f3d71cd7f978adce9dd712d2b",
+      "bytes": 2679496,
+      "sha256": "306c1d8d932000d3c062d828f89a8ff35fe9462c5740f5cc0708a059faa98d00",
       "source": {
         "path": "Serif/OTF/SimplifiedChinese/NotoSerifCJKsc-SemiBold.otf",
         "sha256": "d627b53dbcde61e07de1498d2623a8b287f78585ffbc90cc0618d0caaa2ed6b0"
@@ -73,8 +73,8 @@
       "weight": 400,
       "style": "normal",
       "file": "NotoSansMonoCJKsc-Regular.subset.woff2",
-      "bytes": 1956352,
-      "sha256": "3c7d66c70f3fb1b5d2691ebca593241c05253c2b16e3d02f7850c769b7d47227",
+      "bytes": 1957516,
+      "sha256": "1d5be894e4859ec51e4382220552af52838541da18f379ae9a8fdf17cc667e8e",
       "source": {
         "path": "Sans/Mono/NotoSansMonoCJKsc-Regular.otf",
         "sha256": "ec04cc376b34887cedbdf84074e2e226ed2761eeabdcb9173fc1dd7bfd153ef7"
