@@ -289,9 +289,18 @@ test('layout command requires an explicit write mode', () => {
     seed: 42,
     write: true,
   });
+  assert.deepEqual(parseCommand(['layout', 'story.json', '--chronology-tolerance', '20']), {
+    command: 'layout',
+    file: 'story.json',
+    seed: 0,
+    write: false,
+    chronologyTolerance: 20,
+  });
   for (const flags of [
     ['--seed', '-1'],
     ['--seed', '4294967296'],
+    ['--chronology-tolerance', '-1'],
+    ['--chronology-tolerance', 'soon'],
     ['--seed', 'xyz'],
     ['--write', '--out', 'x.json'],
   ]) {

@@ -2,12 +2,15 @@ import { randomUUID } from 'node:crypto';
 import { chmod, stat, realpath, rename, unlink, writeFile } from 'node:fs/promises';
 import { basename, dirname, join, resolve } from 'node:path';
 import {
-  anchorToTime,
   applyGraphPositions,
+  autoEngine,
+  chronologyInversions,
+  drawnEngine,
   LAYOUT_DEFAULTS,
-  layoutMissingNodes,
   parseDocument,
+  placeIncrementally,
   structuralLayout,
+  timeAnchor,
   type VisualGraph,
 } from '@relgraph/core';
 import { formatDiagnostics, loadFile } from './document.js';
@@ -17,6 +20,8 @@ export interface LayoutRequest {
   seed: number;
   write: boolean;
   out?: string;
+  /** Keep time in order along x while filling gaps (`placeIncrementally`). */
+  chronologyTolerance?: number;
 }
 export interface LayoutSummary {
   missing: number;
@@ -74,15 +79,47 @@ export async function layoutFile(request: LayoutRequest): Promise<LayoutSummary>
     const input: unknown = JSON.parse(text);
     // A document without any coordinates is arranged from its structure, as
     // the player would; otherwise only the gaps are filled around the
-    // author's own arrangement, with the player's spacing. On a timeline that
-    // keeps time a new dated node goes to its years, in the first free lane.
+    // author's own arrangement, with the player's spacing: each new node
+    // beside the nodes it is related to, in the direction the engine the
+    // player would choose gives it (ADR 004, D2b). On a timeline that keeps
+    // time a new dated node goes to its years, in the free lane nearest its
+    // neighbours' lanes.
     let positions: Map<string, { x: number; y: number }>;
-    if (missing === summary.total && summary.total > 1)
+    if (missing === summary.total && summary.total > 1) {
       positions = structuralLayout(result.graph, request.seed);
-    else {
-      positions = layoutMissingNodes(result.graph, { seed: request.seed, ...LAYOUT_DEFAULTS });
-      anchorToTime(result.graph, positions, {
-        unplaced: new Set(result.graph.nodes.filter((n) => !n.position).map((n) => n.id)),
+      // Nothing to keep order against: the structural drawing must already
+      // be in time order, or nothing is written.
+      if (request.chronologyTolerance !== undefined) {
+        const inverted = chronologyInversions(result.graph, positions, request.chronologyTolerance);
+        if (inverted.length) {
+          const label = (id: string) => result.graph.nodes.find((n) => n.id === id)?.label ?? id;
+          const first = inverted[0];
+          throw new LayoutError(
+            '--chronology-tolerance ' +
+              request.chronologyTolerance +
+              ': no node has coordinates, so the document is arranged from its structure, ' +
+              'which draws ' +
+              inverted.length +
+              ' pair(s) against time (' +
+              label(first.earlier) +
+              ' is earlier than ' +
+              label(first.later) +
+              ' but drawn at or to its right). Position some nodes first, or declare "diagram": "timeline".',
+          );
+        }
+      }
+    } else {
+      const graph = result.graph,
+        anchors = new Map<string, { x: number; y: number }>();
+      for (const node of graph.nodes) if (node.position) anchors.set(node.id, node.position);
+      positions = placeIncrementally(graph, anchors, {
+        engine: drawnEngine(graph.nodes, autoEngine(graph)).engine,
+        seed: request.seed,
+        ...LAYOUT_DEFAULTS,
+        axis: timeAnchor(graph),
+        ...(request.chronologyTolerance !== undefined
+          ? { chronologyTolerance: request.chronologyTolerance }
+          : {}),
       });
     }
     const output = writeBackPositions(input, result.graph, positions);

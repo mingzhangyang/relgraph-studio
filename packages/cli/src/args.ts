@@ -8,7 +8,7 @@ export const defaultJobs = (): number => Math.max(1, Math.min(availableParalleli
 
 export const USAGE = `用法：
   relgraph validate <file> [--json]
-  relgraph layout <file> [--seed N] [--write | --out output.json]
+  relgraph layout <file> [--seed N] [--chronology-tolerance N] [--write | --out output.json]
   relgraph render <file> (--out film.mp4 | --frames out/%05d.png) [选项]
   relgraph check-labels <file> [--frame-spec <name>] [--locale <语言>] [--json]
   relgraph check-layout <file> [--frame-spec <name>] [--locale <语言>] [选项] [--json]
@@ -17,6 +17,10 @@ layout 选项：
   --seed <N>             无符号 32 位整数，固定种子（默认 0）
   --write                验证后原子写回原文件；默认仅预览，不修改
   --out <file.json>      写入新文件；目标已存在时拒绝覆盖
+  --chronology-tolerance <N>
+                         补全时保持横向时间先后：与已放置节点时间相差至少 N 的新节点，
+                         较早者放在左侧（与 check-layout 的同名选项相同）；所有节点都没有坐标时，
+                         按结构排出的布局若时间颠倒则报错、不写文件
 
 render 选项：
   --out <file.mp4>        用 FFmpeg 编码为 H.264 MP4（yuv420p，BT.709）
@@ -56,6 +60,7 @@ export interface LayoutCommand {
   seed: number;
   write: boolean;
   out?: string;
+  chronologyTolerance?: number;
 }
 export interface CheckLabelsCommand {
   command: 'check-labels';
@@ -138,6 +143,7 @@ export function parseCommand(argv: readonly string[]): Command {
                 seed: { type: 'string', default: '0' },
                 write: { type: 'boolean', default: false },
                 out: { type: 'string' },
+                'chronology-tolerance': { type: 'string' },
               }
             : command === 'check-labels'
               ? {
@@ -182,12 +188,18 @@ export function parseCommand(argv: readonly string[]): Command {
     if (values.write && out !== undefined)
       throw new UsageError('layout 的 --write 和 --out 不能同时使用');
     if (out === '') throw new UsageError('--out 不能为空');
+    const tolerance = (values as Record<string, unknown>)['chronology-tolerance'];
+    if (typeof tolerance === 'string' && !/^\d+(\.\d+)?$/.test(tolerance))
+      throw new UsageError(
+        `--chronology-tolerance 需要不小于 0 的数，收到 ${JSON.stringify(tolerance)}`,
+      );
     return {
       command,
       file,
       seed: Number(seedValue),
       write: values.write === true,
       ...(out !== undefined ? { out } : {}),
+      ...(typeof tolerance === 'string' ? { chronologyTolerance: Number(tolerance) } : {}),
     };
   }
   const str = (key: string): string | undefined => {

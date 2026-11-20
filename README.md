@@ -82,14 +82,17 @@ The document toolbar shows **未保存修改** when the current document differs
 
 ## Prepare deterministic coordinates before filming
 
-Use `relgraph layout` to fill **only missing** node coordinates with a seeded, fixed-iteration layout. Existing authored coordinates are never moved, including reaction/process positions. The layout runs before playback; it adds no physics to the renderer or timeline.
+Use `relgraph layout` to fill **only missing** node coordinates. Existing authored coordinates are never moved, including reaction/process positions. Each new node goes beside the nodes it is related to: it starts at their barycentre, offset in the direction the engine the player would choose gives it, and moves to the nearest place that keeps clear of other nodes and relations; on a timeline that keeps time it stays at its years, in the free lane nearest its neighbours' lanes (ADR 004, D2b). The layout runs before playback; it adds no physics to the renderer or timeline. `relgraph check-layout` checks the result as drawn.
 
 ```bash
 npm run build:packages
 npm run relgraph -- layout story.json                    # preview, no write
 npm run relgraph -- layout story.json --seed 42 --out arranged.json
 npm run relgraph -- layout story.json --seed 42 --write # atomically replace source
+npm run relgraph -- layout poets.json --chronology-tolerance 20 --out placed.json
 ```
+
+`--chronology-tolerance N` is for drawings whose x means time without being a timeline that keeps time (the Tang poet networks): a new node whose time differs from a placed node's by at least `N` goes on the side of it that its time says, as `relgraph check-layout --chronology-tolerance N` checks. A node's time is the one `check-layout` uses. Existing coordinates still never move, so a node whose placed neighbours are already out of order is placed without the constraint. A document without any coordinates is arranged from its structure as usual; with the option, that drawing is written only if it is already in time order, and otherwise the command fails without writing.
 
 The same document and seed produce the same coordinates regardless of JSON node ordering. Literature positions go to `characters[].position`; biology positions go to `entities[].position` and `processes[].position`. The CLI validates the serialized document before writing, refuses to overwrite an existing `--out` destination, and leaves the source untouched by default. The existing `layoutGraph` fallback still handles imported documents without saved coordinates in the player.
 

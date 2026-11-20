@@ -13,6 +13,7 @@ import {
   type LayoutType,
 } from '../project-layout.js';
 import { anchorToTime, crowdedBy, offTime, timeAnchor } from './time-anchor.js';
+import { placeIncrementally } from './incremental-placement.js';
 
 export type LayoutSettings = NonNullable<ProjectConfig['layout']>;
 export const DEFAULT_LAYOUT_SETTINGS: LayoutSettings = {
@@ -293,8 +294,17 @@ export function planLayout(
         : undefined;
     if (fixed) anchors.set(node.id, { ...fixed });
   }
-  const nodes = graph.nodes.map((n) => ({ ...n, position: anchors.get(n.id) }));
   const { engine, reason } = strategyEngine(graph, type);
+  // Filling gaps keeps every existing coordinate, whatever the engine, and
+  // puts each new node beside the nodes it is related to (ADR 004, D2b).
+  if (mode === 'missing' && anchors.size)
+    return plan(
+      placeIncrementally(graph, anchors, { engine, seed, iterations, spacing, axis }),
+      engine,
+      reason,
+      Boolean(axis),
+    );
+  const nodes = graph.nodes.map((n) => ({ ...n, position: anchors.get(n.id) }));
   let result: Map<string, LayoutPoint>;
   if (engine === 'force') {
     // Anchors beyond any drawable range keep the overflow-safe incremental
