@@ -8,7 +8,7 @@ import { compileTimeline } from './timeline.js';
 import { GENERIC_FORMAT, inspectGenericDocument } from '../domains/generic.js';
 import { LOAD_WORDING, worded, type DiagnosticParams } from '../diagnostic-wording.js';
 import type { Bio } from '../../types/relationship-graph.js';
-import type { VisualGraph } from '../../types/visual-graph.js';
+import type { AuthoredIds, VisualGraph } from '../../types/visual-graph.js';
 
 export interface Diagnostic {
   level: 'error' | 'warning';
@@ -62,6 +62,8 @@ export type LoadResult =
       errors: Diagnostic[];
       warnings: Diagnostic[];
       detailAt: DetailAt;
+      /** The ids the source gives its objects, where they differ from the graph's (generic graphs). */
+      authoredIds?: AuthoredIds;
     }
   | { valid: false; errors: Diagnostic[]; warnings: Diagnostic[] };
 const object = (value: unknown): value is Record<string, unknown> =>
@@ -139,6 +141,7 @@ export function loadDocument(doc: unknown): LoadResult {
     let detailAt: DetailAt = () => undefined;
     // Literary and biology sources always author their shots; a generic one may not.
     let authoredScenes = true;
+    let authoredIds: AuthoredIds | undefined;
     if (object(doc) && Object.hasOwn(doc, 'schemaVersion')) {
       const inspected = inspectRelGraph(doc);
       if (!inspected.valid)
@@ -162,6 +165,7 @@ export function loadDocument(doc: unknown): LoadResult {
       const generic = inspected.adapted;
       adapted = generic;
       authoredScenes = generic.authoredScenes;
+      authoredIds = generic.authoredIds;
       detailAt = (id) => generic.detailAt(id);
     } else if (object(doc) && Object.hasOwn(doc, 'format')) {
       const sourceDiagnostics = validateBiologyDocument(doc);
@@ -217,7 +221,14 @@ export function loadDocument(doc: unknown): LoadResult {
           ),
           level: 'warning',
         });
-    return { valid: true, graph, errors: [], warnings, detailAt };
+    return {
+      valid: true,
+      graph,
+      errors: [],
+      warnings,
+      detailAt,
+      ...(authoredIds ? { authoredIds } : {}),
+    };
   } catch (error: unknown) {
     const issues: unknown = object(error) ? error.issues : undefined;
     const entries: Diagnostic[] =
