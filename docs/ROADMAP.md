@@ -106,7 +106,7 @@ Proposed in [ADR 004](ADR-004-evidence-claims-and-output-formats.md) from the Ta
 
 - [ ] **ADR 004 accepted** (this ADR and roadmap entry only)
 - [x] **P0 · D1** omitted-label diagnostics in `DisplayList`, `relgraph render` and the studio; reading-speed warning for captions
-- [ ] **P0 · D2a** `relgraph check-layout`: clearance, crowding and chronology checks on drawn (bowed) relations
+- [x] **P0 · D2a** `relgraph check-layout`: clearance, crowding and chronology checks on drawn (bowed) relations
 - [ ] **P0 · D2b** neighbour-aware `missing` placement for every engine; no existing coordinate moves
 - [ ] **P0 · D3** `relgraph.events/1` export and `--audio` mux with identical video frames
 - [ ] **P1 · D4** validated `evidence` in `relgraph.graph/1` and verbatim evidence cards for relations and nodes
