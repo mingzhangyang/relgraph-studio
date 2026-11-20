@@ -20,7 +20,7 @@ enforced only for the same font digest (see `examples/golden-frames.json`).
 
 ## Character set
 
-`charset.txt` is what is requested from the sources (7,852 characters), the
+`charset.txt` is what is requested from the sources (7,855 characters), the
 union of:
 
 - every character in the shipped examples and bundled datasets listed in
@@ -35,7 +35,7 @@ union of:
 - printable ASCII and Latin-1, general punctuation, arrows, CJK symbols and
   punctuation, and half- and full-width forms.
 
-`coverage.txt` is what every face actually contains: 7,815 characters, read
+`coverage.txt` is what every face actually contains: 7,818 characters, read
 from the output fonts' character maps. It differs from the request because 39
 requested punctuation marks in U+2017–U+205E (for example ‣ U+2023, ‽ U+203D,
 ⁄ U+2044) do not exist in Noto CJK, while feature closure keeps two extra
