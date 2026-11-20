@@ -40,13 +40,17 @@ interface EventBase {
   shot: number;
 }
 
-/** A shot begins. */
+/**
+ * A shot begins. A shot shorter than a frame is never on screen and has no
+ * event of any type; `shot` indices follow the presentation, so it shows as a
+ * gap in them.
+ */
 export interface ShotEvent extends EventBase {
   type: 'shot';
   /** The shot's authored id; null for a derived storyboard or a shot redacted for spoilers. */
   id: string | null;
   title: string;
-  /** Last frame of the shot, inclusive; `frame - 1` for a shot shorter than a frame. */
+  /** Last frame of the shot, inclusive. */
   lastFrame: number;
   frames: number;
   endSec: number;
@@ -64,7 +68,7 @@ export interface ShotEvent extends EventBase {
   redacted: boolean;
 }
 
-/** A shot's caption begins to fade in; it lasts as long as the shot. Shots without frames have none. */
+/** A shot's caption begins to fade in; it lasts as long as the shot. */
 export interface CaptionEvent extends EventBase {
   type: 'caption';
   /** The shot's id, as in its shot event. */
@@ -180,8 +184,8 @@ export function filmEvents(
     index === shots.length - 1 ? total - 1 : starts[index + 1] - 1;
   const settled = shotSettledSec(timeline);
   // Everything a shot shows, in document order, as the projection gives it.
-  // A shot shorter than a frame is never on screen (`frames: 0`): it keeps
-  // its shot event, but what only it would show is not an event.
+  // A shot shorter than a frame is never on screen: nothing it alone would
+  // show (its id, title, highlight, caption, domain time) is an event.
   const onScreen = shots.map((_, index) => lastFrameOf(index) >= starts[index]);
   const shown = new Map<string, ProjectedVisualGraph['nodes'][number]>();
   for (const [index, shot] of shots.entries())
@@ -213,6 +217,9 @@ export function filmEvents(
   for (const [index, shot] of shots.entries()) {
     const frame = starts[index],
       lastFrame = lastFrameOf(index);
+    // A shot no frame shows has no events at all, not even a shot event: its
+    // id, title and highlight come from a projection the film never shows.
+    if (!onScreen[index]) continue;
     const settledFrame = Math.max(frame, frameAtOrAfter(settled[index], fps));
     const highlight = timeline.highlight[index].value;
     events.push({
@@ -236,7 +243,6 @@ export function filmEvents(
       revealStep: shot.revealStep,
       redacted: shot.scene.redacted,
     });
-    if (!onScreen[index]) continue;
     if (shot.domainAt !== previousDomainAt) {
       events.push({
         frame,

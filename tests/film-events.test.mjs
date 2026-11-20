@@ -113,28 +113,39 @@ test('shot events cover exactly the frames timelinePlaybackAt gives each shot', 
     for (const fps of [24, 25, 30]) {
       const { result, timeline, events } = film(source, fps);
       const shots = events.events.filter((event) => event.type === 'shot');
-      assert.equal(shots.length, timeline.shots.length, name);
+      // Every shot a frame shows has its event; a shot no frame shows has none.
+      const starts = shotStartFrames(timeline);
+      const shown = timeline.shots.flatMap((_, index) => {
+        const next = index === timeline.shots.length - 1 ? events.frameCount : starts[index + 1];
+        return next > starts[index] ? [index] : [];
+      });
+      assert.deepEqual(
+        shots.map((shot) => shot.shot),
+        shown,
+        name,
+      );
       assert.equal(events.frameCount, frameCount(result.graph, fps));
       assert.equal(shots[0].frame, 0);
       assert.equal(shots.at(-1).lastFrame, events.frameCount - 1);
       for (const [index, shot] of shots.entries()) {
-        assert.equal(shot.shot, index);
-        assert.equal(shot.frames, Math.max(0, shot.lastFrame - shot.frame + 1));
+        assert.ok(shot.frames > 0);
+        assert.equal(shot.frames, shot.lastFrame - shot.frame + 1);
         if (index)
           assert.equal(shot.frame, shots[index - 1].lastFrame + 1, `${name} shot ${index}`);
       }
+      const byIndex = new Map(shots.map((shot) => [shot.shot, shot]));
       for (let frame = 0; frame < events.frameCount; frame += 1) {
-        const index = timelinePlaybackAt(timeline, frame / fps).index;
-        const shot = shots[index];
+        const shot = byIndex.get(timelinePlaybackAt(timeline, frame / fps).index);
+        assert.ok(shot, `${name}@${fps}: frame ${frame} has a shot event`);
         assert.ok(shot.frame <= frame && frame <= shot.lastFrame, `${name}@${fps}: frame ${frame}`);
       }
       // Settled frames are the ones the label and layout checks sample.
       const ranges = settledFrameRanges(timeline, events.frameCount);
-      for (const [index, shot] of shots.entries())
+      for (const shot of shots)
         assert.equal(
           shot.settledFrame,
-          ranges[index].first <= ranges[index].last ? ranges[index].first : null,
-          `${name} shot ${index} settles`,
+          ranges[shot.shot].first <= ranges[shot.shot].last ? ranges[shot.shot].first : null,
+          `${name} shot ${shot.shot} settles`,
         );
     }
 });
@@ -255,16 +266,11 @@ test('events are spoiler-safe: nothing appears before the projection shows it', 
   );
   assert.equal(unnamed.group, null, 'ends in different groups');
 
-  // The sub-frame shot keeps its shot event but has no frames, caption or
-  // domain time of its own: the frames go from 5 straight back to 2.
-  const blink = events.events.filter((e) => e.shot === 2);
+  // The sub-frame shot has no event at all: the frames go from 5 straight back to 2.
   assert.deepEqual(
-    blink.map((e) => e.type),
-    ['shot'],
+    events.events.filter((e) => e.shot === 2),
+    [],
   );
-  assert.equal(blink[0].frames, 0);
-  assert.equal(blink[0].frame, 44);
-  assert.equal(blink[0].lastFrame, 43);
   assert.deepEqual(
     events.events
       .filter((e) => e.type === 'domain-time')
@@ -285,7 +291,6 @@ test('a withdrawal no frame shows is neither an exit nor a second entrance', () 
     shots.map((e) => [e.id, e.frame, e.frames]),
     [
       ['a', 0, 27],
-      ['blink', 27, 0],
       ['b', 27, 48],
       ['c', 75, 24],
     ],
@@ -312,6 +317,51 @@ test('a withdrawal no frame shows is neither an exit nor a second entrance', () 
       [0, 5],
       [75, 3],
     ],
+  );
+});
+
+test('a shot no frame shows names nothing: no id, title or highlight of what only it projects', () => {
+  // 丙 is visible only at domain time 5, which only the 0.01 s shot sets,
+  // and that shot highlights it: a projection the film never shows.
+  const doc = {
+    format: 'relgraph.graph/1',
+    nodes: [
+      { id: '甲', visibleFrom: 1, position: { x: 0, y: 0 } },
+      { id: '乙', visibleFrom: 1, position: { x: 200, y: 0 } },
+      { id: '丙', visibleFrom: 5, position: { x: 100, y: 150 } },
+    ],
+    edges: [{ id: '乙—丙', source: '乙', target: '丙', visibleFrom: 5 }],
+    presentation: [
+      { id: 'early', title: '起初', durationSec: 1.1, domainAt: 1 },
+      {
+        id: 'secret-bing',
+        title: '丙登场',
+        narration: '丙与乙相识',
+        durationSec: 0.01,
+        domainAt: 5,
+        highlight: { nodeIds: ['丙'], edgeIds: ['乙—丙'] },
+      },
+      { id: 'again', title: '回到起初', durationSec: 2, domainAt: 1 },
+    ],
+  };
+  const { timeline, events } = film(doc);
+  // The compiled shot does project and highlight 丙 (unredacted)…
+  assert.equal(timeline.shots[1].scene.redacted, false);
+  assert.ok(timeline.shots[1].view.nodes.some((node) => node.label === '丙'));
+  // …but no frame shows that shot, so the events never mention it.
+  assert.deepEqual(
+    events.events.filter((e) => e.type === 'shot').map((e) => [e.shot, e.id]),
+    [
+      [0, 'early'],
+      [2, 'again'],
+    ],
+  );
+  const text = formatFilmEvents(events);
+  for (const hidden of ['丙', '乙—丙', 'secret-bing', '丙登场', '丙与乙相识'])
+    assert.ok(!text.includes(hidden), `${hidden} is never shown`);
+  assert.deepEqual(
+    events.nodes.map((node) => node.id),
+    ['甲', '乙'],
   );
 });
 
