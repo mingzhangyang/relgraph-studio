@@ -93,7 +93,11 @@ export interface RevealEvent extends EventBase {
   /** A relation's ends. */
   source?: string;
   target?: string;
-  /** When a later shot's projection withdraws the object again (domain time going back). */
+  /**
+   * The first frame that no longer shows it, when domain time going back
+   * withdraws it again. A withdrawal no frame shows (a shot shorter than a
+   * frame) is not one.
+   */
   outFrame?: number;
   outSec?: number;
 }
@@ -175,16 +179,6 @@ export function filmEvents(
   const lastFrameOf = (index: number): number =>
     index === shots.length - 1 ? total - 1 : starts[index + 1] - 1;
   const settled = shotSettledSec(timeline);
-  // Cues start and stop at shot starts; find the shot by its exact start.
-  const shotStarting = new Map<number, number>();
-  for (const [index, shot] of shots.entries())
-    if (!shotStarting.has(shot.startSec)) shotStarting.set(shot.startSec, index);
-  const shotAt = (second: number): number => {
-    const index = shotStarting.get(second);
-    if (index === undefined) throw new Error('A reveal cue does not start at a shot boundary');
-    return index;
-  };
-
   // Everything a shot shows, in document order, as the projection gives it.
   // A shot shorter than a frame is never on screen (`frames: 0`): it keeps
   // its shot event, but what only it would show is not an event.
@@ -276,9 +270,7 @@ export function filmEvents(
     object: 'node' | 'edge',
     item: View['nodes'][number] | View['edges'][number],
     shot: number,
-    effect: RevealEvent['effect'],
-    durationSec: number,
-    out: number | undefined,
+    cue: RevealCue | undefined,
   ): RevealEvent => {
     const edge = object === 'edge' ? (item as View['edges'][number]) : null;
     const group = groupOrNull(
@@ -290,52 +282,56 @@ export function filmEvents(
     );
     return {
       frame: starts[shot],
-      sec: seconds(shots[shot].startSec),
+      sec: seconds(cue?.inSec ?? shots[shot].startSec),
       shot,
       type: 'reveal',
       id: object === 'node' ? nodeId(item.id) : edgeId(item.id),
       object,
       kind: item.kind,
       group,
-      effect,
-      durationSec: seconds(durationSec),
+      effect: cue?.effect ?? 'none',
+      durationSec: seconds(cue?.durationSec ?? 0),
       ...(edge ? { source: nodeId(edge.source), target: nodeId(edge.target) } : {}),
-      ...(out === undefined ? {} : { outFrame: starts[out], outSec: seconds(shots[out].startSec) }),
     };
   };
-  // What the first shot shows needs no cue: it is there from frame 0. It stays
-  // until a later projection withdraws it, as cues end in compileTimeline.
-  if (shots.length) {
-    const first = shots[0].view;
-    const withdrawn = (object: 'node' | 'edge', id: string): number | undefined => {
-      const index = shots.findIndex((shot) =>
-        (object === 'node' ? shot.view.nodes : shot.view.edges).every((item) => item.id !== id),
-      );
-      return index < 0 ? undefined : index;
-    };
-    for (const [object, items] of [
-      ['node', first.nodes],
-      ['edge', first.edges],
-    ] as const)
+  // Entrances and exits as the frames show them: compare the projections of
+  // consecutive shots that have frames. What a shot shorter than a frame
+  // withdraws and the next shot restores never leaves the screen, so it has
+  // no exit and no second entrance. An entrance takes the latest cue started
+  // since the previous shot with frames (its fade or draw-on); without one,
+  // as in the first shot, the object is there outright.
+  const open = { node: new Map<string, RevealEvent>(), edge: new Map<string, RevealEvent>() };
+  let previousShown = -1;
+  for (const [index, shot] of shots.entries()) {
+    if (!onScreen[index]) continue;
+    const since = previousShown < 0 ? -Infinity : shots[previousShown].startSec;
+    for (const object of ['node', 'edge'] as const) {
+      const items: (View['nodes'][number] | View['edges'][number])[] =
+        object === 'node' ? shot.view.nodes : shot.view.edges;
+      const now = new Set(items.map((item) => item.id));
+      for (const [id, event] of open[object])
+        if (!now.has(id)) {
+          event.outFrame = starts[index];
+          event.outSec = seconds(shot.startSec);
+          open[object].delete(id);
+        }
       for (const item of items) {
-        const out = withdrawn(object, item.id);
-        if (out === undefined || starts[out] > 0)
-          events.push(reveal(object, item, 0, 'none', 0, out));
+        if (open[object].has(item.id)) continue;
+        let cue: RevealCue | undefined;
+        for (const candidate of timeline.reveal)
+          if (
+            candidate.kind === object &&
+            candidate.targetId === item.id &&
+            candidate.inSec > since &&
+            candidate.inSec <= shot.startSec
+          )
+            cue = candidate;
+        const event = reveal(object, item, index, cue);
+        events.push(event);
+        open[object].set(item.id, event);
       }
-  }
-  // compileTimeline lists a shot's node cues before its relation cues.
-  for (const cue of timeline.reveal) {
-    const shot = shotAt(cue.inSec);
-    const out = cue.outSec === undefined ? undefined : shotAt(cue.outSec);
-    // Revealed and withdrawn before a frame shows it.
-    if (out !== undefined && starts[out] <= starts[shot]) continue;
-    const view = shots[shot].view;
-    const item =
-      cue.kind === 'node'
-        ? view.nodes.find((node) => node.id === cue.targetId)
-        : view.edges.find((edge) => edge.id === cue.targetId);
-    if (!item) throw new Error(`Reveal cue for ${cue.targetId} outside its shot's projection`);
-    events.push(reveal(cue.kind, item, shot, cue.effect, cue.durationSec, out));
+    }
+    previousShown = index;
   }
 
   // A stable sort keeps document and cue order within one frame and type.

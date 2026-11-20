@@ -54,10 +54,32 @@ const edgeCase = {
   ],
 };
 
+/**
+ * Domain time 5 → 1 → 5 with the step back shorter than a frame (ADR 004,
+ * D3 review): frames 26 and 27 both project 甲, so 甲 never leaves the
+ * screen and is revealed once. 乙 is withdrawn for good by a shot with frames.
+ */
+const subFrameStepBack = {
+  format: 'relgraph.graph/1',
+  nodes: [
+    { id: '甲', visibleFrom: 3, position: { x: 0, y: 0 } },
+    { id: '乙', visibleFrom: 4, position: { x: 200, y: 0 } },
+    { id: '丙', position: { x: 100, y: 100 } },
+  ],
+  edges: [{ id: '甲—丙', source: '甲', target: '丙', visibleFrom: 3 }],
+  presentation: [
+    { id: 'a', title: '五', durationSec: 1.1, domainAt: 5 },
+    { id: 'blink', title: '一', durationSec: 0.01, domainAt: 1 },
+    { id: 'b', title: '五', durationSec: 2, domainAt: 5 },
+    { id: 'c', title: '三', durationSec: 1, domainAt: 3 },
+  ],
+};
+
 const DOCUMENTS = [
   ...manifest.map((entry) => ({ name: entry.file, source: read(`../examples/${entry.file}`) })),
   ...TANG.map((path) => ({ name: path.split('/').at(-1), source: read(path) })),
   { name: 'edge case', source: edgeCase },
+  { name: 'sub-frame step back', source: subFrameStepBack },
 ];
 
 function load(source) {
@@ -252,6 +274,43 @@ test('events are spoiler-safe: nothing appears before the projection shows it', 
       [1, 1, 5, '年'],
       [3, 5, 2, '年'],
       [4, 2, 6, '年'],
+    ],
+  );
+});
+
+test('a withdrawal no frame shows is neither an exit nor a second entrance', () => {
+  const { events, at, id } = film(subFrameStepBack);
+  const shots = events.events.filter((e) => e.type === 'shot');
+  assert.deepEqual(
+    shots.map((e) => [e.id, e.frame, e.frames]),
+    [
+      ['a', 0, 27],
+      ['blink', 27, 0],
+      ['b', 27, 48],
+      ['c', 75, 24],
+    ],
+  );
+  for (const frame of [26, 27]) {
+    const view = at(frame).view;
+    assert.ok(
+      view.nodes.some((node) => node.id === id('nodes', '甲')),
+      `甲 projected at ${frame}`,
+    );
+    assert.ok(
+      view.edges.some((edge) => edge.id === id('edges', '甲—丙')),
+      `甲—丙 at ${frame}`,
+    );
+  }
+  const reveals = events.events
+    .filter((e) => e.type === 'reveal')
+    .map((e) => `${e.id}@${e.frame}${e.outFrame === undefined ? '' : `→${e.outFrame}`}`);
+  assert.deepEqual(reveals, ['甲@0', '乙@0→75', '丙@0', '甲—丙@0']);
+  // Domain time as the frames show it: 5, then 3; the step to 1 is never on screen.
+  assert.deepEqual(
+    events.events.filter((e) => e.type === 'domain-time').map((e) => [e.frame, e.value]),
+    [
+      [0, 5],
+      [75, 3],
     ],
   );
 });
