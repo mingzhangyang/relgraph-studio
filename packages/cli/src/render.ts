@@ -23,6 +23,7 @@ import {
   type AudioProbe,
 } from './ffmpeg.js';
 import { frameFile, isFramePattern } from './frames.js';
+import { conflictingPaths, conflictMessage, sameFile, type PathUse } from './paths.js';
 import { formatOmissions, OmissionTally, type ShotOmissions } from './labels.js';
 import type { WorkerData, WorkerReply, WorkerRequest } from './worker.js';
 
@@ -189,6 +190,15 @@ export async function renderFilm(request: RenderRequest): Promise<RenderSummary>
   ] as const)
     if (value !== undefined && !(Number.isSafeInteger(value) && value >= min))
       throw new RenderError(`${name} 需要不小于 ${min} 的整数，收到 ${String(value)}`);
+  // Never write over the document, the sound or another output.
+  const uses: PathUse[] = [
+    { label: '输入文件', path: request.file, output: false },
+    { label: '--audio', path: request.audio, output: false },
+    { label: '--out', path: request.out, output: true },
+    { label: '--events', path: request.events, output: true },
+  ];
+  const conflict = await conflictingPaths(uses);
+  if (conflict) throw new RenderError(conflictMessage(conflict));
   const { text, result } = await loadFile(request.file);
   if (!result.valid) throw new RenderError(`${formatDiagnostics(result)}文档校验失败，未渲染。`);
   if (result.warnings.length) log(formatDiagnostics({ errors: [], warnings: result.warnings }));
@@ -213,6 +223,21 @@ export async function renderFilm(request: RenderRequest): Promise<RenderSummary>
     );
 
   const frames = Array.from({ length: last - first + 1 }, (_, i) => first + i);
+  if (request.frames !== undefined) {
+    // A frame file can name the document or the events file too. Only names
+    // that could match (ignoring case) are checked on disk.
+    const pattern = request.frames;
+    for (const other of uses.filter((use) => use.path !== undefined && use.label !== '--out')) {
+      const name = basename(other.path!).toLowerCase();
+      for (const frame of frames) {
+        const file = frameFile(pattern, frame);
+        if (basename(file).toLowerCase() === name && (await sameFile(file, other.path!)))
+          throw new RenderError(
+            conflictMessage([{ label: '--frames', path: file, output: true }, other]),
+          );
+      }
+    }
+  }
   const settings: FilmSettings = {
     frameSpec: request.frameSpec,
     theme: request.theme,

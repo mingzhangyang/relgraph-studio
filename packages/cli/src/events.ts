@@ -12,6 +12,7 @@ import {
 } from '@relgraph/core';
 import { frameSpecFor, type FrameSpecName } from '@relgraph/render';
 import { formatDiagnostics, loadFile } from './document.js';
+import { conflictingPaths, conflictMessage } from './paths.js';
 
 /**
  * `relgraph events` and `relgraph render --events` (ADR 004, D3): the film's
@@ -61,6 +62,11 @@ export async function writeAtomically(target: string, text: string): Promise<str
 export async function exportEvents(
   request: EventsRequest,
 ): Promise<{ events: FilmEvents; text: string; written?: string }> {
+  const conflict = await conflictingPaths([
+    { label: '输入文件', path: request.file, output: false },
+    { label: '--out', path: request.out, output: true },
+  ]);
+  if (conflict) throw new EventsError(conflictMessage(conflict));
   const { result } = await loadFile(request.file);
   if (!result.valid) throw new EventsError(`${formatDiagnostics(result)}文档校验失败，未导出。`);
   if (result.warnings.length)
