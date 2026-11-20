@@ -12,63 +12,128 @@ import { loadDocument } from '../packages/core/src/director/load.ts';
 import { layoutGraph } from '../packages/core/src/director/layout.ts';
 import { chronologyInversions, nodeTimes } from '../packages/core/src/director/chronology.ts';
 import { frameLayoutIssues } from '../packages/render/src/frame-check.ts';
+import { nodeOutline } from '../packages/render/src/node-geometry.ts';
 import { parseCommand, UsageError } from '../packages/cli/src/args.ts';
 import { main } from '../packages/cli/src/index.ts';
 
 const stage = { x: 0, y: 0, w: 1000, h: 600 };
-const circle = (id, x, y, r = 10) => ({
-  kind: 'node',
+/** A glyph's hit geometry as composeNodes records it: bounds, outline, stroke. */
+const glyph = (
   id,
-  box: { x: x - r, y: y - r, w: 2 * r, h: 2 * r },
-});
-const line = (id, from, to, n = 33) => ({
+  x,
+  y,
+  { shape = 'circle', half = 10, halfHeight, corner = 0, stroke = 0 } = {},
+) => {
+  const g = {
+    shape,
+    radius: half,
+    halfWidth: half,
+    halfHeight: halfHeight ?? half,
+    cornerRadius: corner,
+    halfStroke: stroke,
+  };
+  return {
+    kind: 'node',
+    id,
+    box: { x: x - g.halfWidth, y: y - g.halfHeight, w: 2 * g.halfWidth, h: 2 * g.halfHeight },
+    outline: nodeOutline({ x, y }, g),
+    halfStroke: stroke,
+  };
+};
+const circle = (id, x, y, r = 10) => glyph(id, x, y, { half: r });
+const line = (id, from, to, { n = 33, width } = {}) => ({
   kind: 'edge',
   id,
   points: Array.from({ length: n }, (_, i) => ({
     x: from.x + ((to.x - from.x) * i) / (n - 1),
     y: from.y + ((to.y - from.y) * i) / (n - 1),
   })),
+  ...(width === undefined ? {} : { width }),
 });
 const options = { clearance: 4, crowding: 2, typeScale: 1 };
+const ab = new Map([['ab', { source: 'a', target: 'b' }]]);
+const passes = (selection, extra = {}) =>
+  frameLayoutIssues({ selectionClip: stage, selection }, ab, { ...options, ...extra }).nearPasses;
 
 test('a relation through or beside a node it does not join is a near pass', () => {
-  const ends = new Map([['ab', { source: 'a', target: 'b' }]]);
-  const list = (cy) => ({
-    selectionClip: stage,
-    selection: [
+  const at = (cy) =>
+    passes([
       circle('a', 100, 300),
       circle('b', 500, 300),
       circle('c', 300, cy),
       line('ab', { x: 112, y: 300 }, { x: 488, y: 300 }),
-    ],
-  });
+    ]);
   // Through the glyph: touching, always reported.
-  assert.deepEqual(frameLayoutIssues(list(300), ends, options).nearPasses, [
-    { edge: 'ab', node: 'c', distance: 0 },
-  ]);
+  assert.deepEqual(at(300), [{ edge: 'ab', node: 'c', distance: 0 }]);
   // 3 px from the ring: within the 4 px clearance.
-  assert.deepEqual(frameLayoutIssues(list(313), ends, options).nearPasses, [
-    { edge: 'ab', node: 'c', distance: 3 },
-  ]);
+  assert.deepEqual(at(313), [{ edge: 'ab', node: 'c', distance: 3 }]);
   // 5 px: clear. Its own ends are never near passes.
-  assert.deepEqual(frameLayoutIssues(list(315), ends, options).nearPasses, []);
-  // Measured on a circle, not its square bound: the line passes the corner
-  // of the bound (distance 0 to the square) but is 2.4 px from the ring.
-  const corner = {
-    selectionClip: stage,
-    selection: [
+  assert.deepEqual(at(315), []);
+});
+
+test('glyphs are measured by the outline drawn, not by their bounds', () => {
+  const diagonal = line('ab', { x: 100, y: 100 }, { x: 500, y: 500 });
+  const ends = [circle('a', 92, 92), circle('b', 508, 508)];
+  // The line passes the corner of a circle's square bound, 3.4 px from its ring.
+  const [pass] = passes([...ends, circle('c', 309.46, 290.54), diagonal]);
+  assert.equal(pass?.distance, 3.4, JSON.stringify(pass));
+  // A 60 × 60 rounded square at (300, 300): the line through (325, 325)
+  // crosses its rounded corner (review of #55).
+  const square = glyph('c', 275, 325, { shape: 'square', half: 30, corner: 6 });
+  assert.equal(passes([...ends, square, diagonal])[0]?.distance, 0);
+  // Bounds alone (hit geometry without an outline) would read these as touching.
+  const boundsOnly = (entry) => ({ ...entry, outline: undefined });
+  // A diamond whose bounding corner (300, 300) lies on the line: the
+  // diamond itself is 21 px away (its corners of bounds are empty).
+  const diamond = glyph('c', 330, 270, { shape: 'diamond', half: 30 });
+  assert.deepEqual(passes([...ends, diamond, diagonal]), []);
+  assert.equal(passes([...ends, boundsOnly(diamond), diagonal])[0]?.distance, 0);
+  assert.equal(
+    passes([...ends, glyph('c', 300, 300, { shape: 'diamond', half: 30 }), diagonal])[0]?.distance,
+    0,
+  );
+  // A hexagon whose lower-left bounding corner (298, 298) lies on the line:
+  // its slanted sides keep it 10 px away.
+  const hexagon = glyph('c', 328, 272, { shape: 'hexagon', half: 30, halfHeight: 26 });
+  const [hexPass] = passes([...ends, hexagon, diagonal], { clearance: 12 });
+  assert.equal(hexPass?.distance, 10.6);
+  assert.equal(passes([...ends, boundsOnly(hexagon), diagonal])[0]?.distance, 0);
+  const horizontal = [
+    circle('a', 100, 300),
+    circle('b', 500, 300),
+    line('ab', { x: 112, y: 300 }, { x: 488, y: 300 }),
+  ];
+  // A box (round rectangle, wider than tall) by its sides and its corners.
+  const box = (y, corner) => glyph('c', 300, y, { shape: 'box', half: 40, halfHeight: 15, corner });
+  assert.equal(passes([...horizontal, box(317, 0)])[0]?.distance, 2);
+  assert.deepEqual(
+    passes([
       circle('a', 100, 100),
       circle('b', 500, 500),
-      circle('c', 300 + 9.46, 300 - 9.46),
-      line('ab', { x: 108, y: 108 }, { x: 492, y: 492 }),
-    ],
-  };
-  const [pass] = frameLayoutIssues(corner, ends, options).nearPasses;
-  assert.ok(pass && pass.distance > 0 && pass.distance < 4, JSON.stringify(pass));
+      line('ab', { x: 100, y: 100 }, { x: 500, y: 500 }),
+      // Its corner reaches toward the line; rounded off, it stays clear.
+      box(300 - 40 - 15 - 0.5, 15),
+    ]).length,
+    0,
+  );
+});
+
+test('the painted strokes count: a thick relation and a glyph border narrow the gap', () => {
+  const selection = (width, stroke) => [
+    circle('a', 100, 300),
+    circle('b', 500, 300),
+    glyph('c', 300, 315, { half: 10, stroke }),
+    line('ab', { x: 112, y: 300 }, { x: 488, y: 300 }, { width }),
+  ];
+  // The centre line is 5 px from the ring: clear for a hairline.
+  assert.deepEqual(passes(selection(0, 0)), []);
+  // A width-8 stroke leaves 1 px (review of #55).
+  assert.deepEqual(passes(selection(8, 0)), [{ edge: 'ab', node: 'c', distance: 1 }]);
+  // A border 2 px wide (1 px each side of the ring) closes the last 1 px.
+  assert.deepEqual(passes(selection(8, 1)), [{ edge: 'ab', node: 'c', distance: 0 }]);
 });
 
 test('distances are reported in 720p pixels whatever the output size', () => {
-  const ends = new Map([['ab', { source: 'a', target: 'b' }]]);
   const k = 1.5;
   const list = {
     selectionClip: { x: 0, y: 0, w: 1500, h: 900 },
@@ -79,59 +144,72 @@ test('distances are reported in 720p pixels whatever the output size', () => {
       line('ab', { x: 168, y: 450 }, { x: 732, y: 450 }),
     ],
   };
-  const [pass] = frameLayoutIssues(list, ends, { ...options, typeScale: k }).nearPasses;
+  const [pass] = frameLayoutIssues(list, ab, { ...options, typeScale: k }).nearPasses;
   assert.equal(pass.distance, 3);
 });
 
-test('a relation leaving its end may pass close to a neighbour of that end', () => {
-  const ends = new Map([['ab', { source: 'a', target: 'b' }]]);
-  // c sits right beside a, against the first sampled segment only.
-  const list = {
-    selectionClip: stage,
-    selection: [
+test('the whole drawn path is checked, up to the rims of its own ends', () => {
+  // A long relation: one of 32 sampled pieces spans 30 px, more than a glyph.
+  // C sits on the line just past A's rim (review of #55).
+  const long = (cx) =>
+    passes([
+      circle('a', 0, 200),
+      circle('b', 990, 200),
+      circle('c', cx, 200),
+      line('ab', { x: 15, y: 200 }, { x: 975, y: 200 }),
+    ]);
+  assert.deepEqual(long(30), [{ edge: 'ab', node: 'c', distance: 0 }]);
+  // A neighbour of A off the line is not a near pass.
+  assert.deepEqual(
+    passes([
       circle('a', 100, 300),
       circle('b', 500, 300),
-      circle('c', 112, 311, 6),
-      line('ab', { x: 110, y: 300 }, { x: 490, y: 300 }),
-    ],
-  };
-  assert.deepEqual(frameLayoutIssues(list, ends, options).nearPasses, []);
+      circle('c', 100, 330, 8),
+      line('ab', { x: 112, y: 300 }, { x: 488, y: 300 }),
+    ]),
+    [],
+  );
 });
 
-test('crowded glyphs; bars on a time axis may abut; nodes off the stage are ignored', () => {
-  const box = (id, x, y, w, h) => ({ kind: 'node', id, box: { x, y, w, h } });
-  const list = {
-    selectionClip: stage,
-    selection: [
-      circle('a', 100, 100),
-      circle('b', 121, 100), // 1 px from a
-      circle('c', 200, 100),
-      circle('d', 223, 100), // 3 px from c: clear
-      box('bar1', 300, 300, 100, 10),
-      box('bar2', 400.2, 300, 100, 10), // abuts bar1
-      circle('e', 505, 305), // overlaps the end of bar2: a bar and a point still count
-      circle('far1', 2000, 100),
-      circle('far2', 2001, 100),
-    ],
-  };
-  const crowded = frameLayoutIssues(list, new Map(), {
+test('crowded glyphs; bars on a time axis may abut but not overlap; off-stage ignored', () => {
+  const bar = (id, x, y, w, h = 12) =>
+    glyph(id, x + w / 2, y + h / 2, {
+      shape: 'span',
+      half: w / 2,
+      halfHeight: h / 2,
+      corner: 4,
+    });
+  const selection = [
+    circle('a', 100, 100),
+    circle('b', 121, 100), // 1 px from a
+    circle('c', 200, 100),
+    circle('d', 223, 100), // 3 px from c: clear
+    bar('bar1', 300, 300, 100),
+    bar('bar2', 400.2, 300, 100), // abuts bar1, end to start
+    bar('bar3', 300, 312.3, 100), // the lane below bar1
+    bar('over1', 300, 400, 100),
+    bar('over2', 350, 400, 100), // overlaps over1 by 50 px (review of #55)
+    circle('e', 506, 306), // overlaps the end of bar2: a bar and a point still count
+    circle('far1', 2000, 100),
+    circle('far2', 2001, 100),
+  ];
+  const bars = new Set(['bar1', 'bar2', 'bar3', 'over1', 'over2']);
+  const crowded = frameLayoutIssues({ selectionClip: stage, selection }, new Map(), {
     ...options,
-    bars: new Set(['bar1', 'bar2']),
+    bars,
   }).crowded;
   assert.deepEqual(
-    crowded.map((pair) => pair.nodes),
+    crowded.map((pair) => [...pair.nodes, pair.distance]),
     [
-      ['a', 'b'],
-      ['bar2', 'e'],
+      ['a', 'b', 1],
+      ['bar2', 'e', 0],
+      ['over1', 'over2', 0],
     ],
   );
-  assert.equal(crowded[0].distance, 1);
-  // Without the bars declared, abutting bars count.
-  assert.ok(
-    frameLayoutIssues(list, new Map(), options).crowded.some(
-      (pair) => pair.nodes.join() === 'bar1,bar2',
-    ),
-  );
+  // Without the bars declared, abutting bars count too.
+  const all = frameLayoutIssues({ selectionClip: stage, selection }, new Map(), options).crowded;
+  assert.ok(all.some((pair) => pair.nodes.join() === 'bar1,bar2'));
+  assert.ok(all.some((pair) => pair.nodes.join() === 'bar1,bar3'));
 });
 
 test("a node's time is the mean first appearance of its timed relations, else its own", () => {

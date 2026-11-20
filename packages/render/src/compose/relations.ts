@@ -391,7 +391,7 @@ export function composeRelations(
         const samples = Array.from({ length: 17 }, (_, i) =>
           on(first + (sweep * visibility * i) / 16),
         );
-        selection.push({ kind: 'edge', id: edge.id, points: samples });
+        selection.push({ kind: 'edge', id: edge.id, points: samples, width });
         // Node labels keep clear of the whole loop, not just of a line.
         for (const q of [...samples, centre])
           edgeObstacles.add({ x: q.x - u(4), y: q.y - u(4), w: u(8), h: u(8) });
@@ -508,7 +508,7 @@ export function composeRelations(
         const samples = Array.from({ length: 33 }, (_, i) =>
           pathPoint(segments, (i / 32) * visibility),
         );
-        selection.push({ kind: 'edge', id: edge.id, points: samples });
+        selection.push({ kind: 'edge', id: edge.id, points: samples, width });
         // A label appearing before halfway would disturb existing label layout.
         // Beyond halfway, only the drawn prefix participates in avoidance.
         for (let t = 0.1; t < visibility; t += 0.1) {

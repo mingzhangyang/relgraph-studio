@@ -140,14 +140,16 @@ export function composeNodes(
   const selection: Selection = [];
   const held = new Set<string>();
   for (const { node, custom, p, r, geometry, c, alpha, visibility, focus } of drawn) {
+    const outline = nodeOutline(p, geometry);
     if (visibility > 0.5)
       selection.push({
         kind: 'node',
         id: node.id,
         box: nodeGlyphBounds(node, p, cam.scale, spec, style, visibility, config),
+        outline,
+        halfStroke: geometry.halfStroke,
       });
     if (visibility <= 0) continue;
-    const outline = nodeOutline(p, geometry);
     const asset =
       custom.image && config?.assets && Object.hasOwn(config.assets, custom.image)
         ? config.assets[custom.image]
