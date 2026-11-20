@@ -413,10 +413,11 @@ export function placeIncrementally(
     }
     // Nothing free within reach. In time order, move up or down at the
     // allowed x until the room is free; otherwise spiral outward.
-    for (let k = 1; allowed && !chosen; k++)
+    const column = round(ideal.x);
+    for (let k = 1; allowed && inOrder({ x: column, y: 0 }) && !chosen; k++)
       for (const sign of [1, -1]) {
-        const q = { x: round(ideal.x), y: round(ideal.y + sign * k * step) };
-        if (!chosen && roomy(q) && inOrder(q)) chosen = q;
+        const q = { x: column, y: round(ideal.y + sign * k * step) };
+        if (!chosen && roomy(q)) chosen = q;
       }
     for (let attempt = 0; !chosen; attempt++) {
       const angle = attempt * 2.399963229728653,

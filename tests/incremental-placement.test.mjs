@@ -489,6 +489,15 @@ test('with a chronology tolerance a new node keeps time in order along x', () =>
   const placed = placeIncrementally(graph, tangled, { ...options, chronologyTolerance: 20 });
   assert.ok(placed.get('N'));
   for (const [id, p] of tangled) assert.deepEqual(placed.get(id), p);
+  // A window narrower than the room still holds the node, above or below.
+  const narrow = new Map([
+    ['A', { x: 0, y: 0 }],
+    ['B', { x: 10, y: 0 }],
+    ['C', { x: 20, y: 0 }],
+  ]);
+  const squeezed = placeIncrementally(graph, narrow, { ...options, chronologyTolerance: 20 });
+  assert.ok(squeezed.get('N').x > 10 && squeezed.get('N').x < 20, JSON.stringify(squeezed));
+  assert.deepEqual(chronologyInversions(graph, squeezed, 20), []);
   assert.throws(
     () => placeIncrementally(graph, anchors, { ...options, chronologyTolerance: -1 }),
     RangeError,
