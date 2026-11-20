@@ -4,6 +4,7 @@ import { basename, dirname, join, resolve } from 'node:path';
 import {
   applyGraphPositions,
   autoEngine,
+  chronologyInversions,
   drawnEngine,
   LAYOUT_DEFAULTS,
   parseDocument,
@@ -84,9 +85,30 @@ export async function layoutFile(request: LayoutRequest): Promise<LayoutSummary>
     // time a new dated node goes to its years, in the free lane nearest its
     // neighbours' lanes.
     let positions: Map<string, { x: number; y: number }>;
-    if (missing === summary.total && summary.total > 1)
+    if (missing === summary.total && summary.total > 1) {
       positions = structuralLayout(result.graph, request.seed);
-    else {
+      // Nothing to keep order against: the structural drawing must already
+      // be in time order, or nothing is written.
+      if (request.chronologyTolerance !== undefined) {
+        const inverted = chronologyInversions(result.graph, positions, request.chronologyTolerance);
+        if (inverted.length) {
+          const label = (id: string) => result.graph.nodes.find((n) => n.id === id)?.label ?? id;
+          const first = inverted[0];
+          throw new LayoutError(
+            '--chronology-tolerance ' +
+              request.chronologyTolerance +
+              ': no node has coordinates, so the document is arranged from its structure, ' +
+              'which draws ' +
+              inverted.length +
+              ' pair(s) against time (' +
+              label(first.earlier) +
+              ' is earlier than ' +
+              label(first.later) +
+              ' but drawn at or to its right). Position some nodes first, or declare "diagram": "timeline".',
+          );
+        }
+      }
+    } else {
       const graph = result.graph,
         anchors = new Map<string, { x: number; y: number }>();
       for (const node of graph.nodes) if (node.position) anchors.set(node.id, node.position);

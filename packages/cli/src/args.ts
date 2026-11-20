@@ -19,7 +19,8 @@ layout 选项：
   --out <file.json>      写入新文件；目标已存在时拒绝覆盖
   --chronology-tolerance <N>
                          补全时保持横向时间先后：与已放置节点时间相差至少 N 的新节点，
-                         较早者放在左侧（与 check-layout 的同名选项相同；只作用于补全）
+                         较早者放在左侧（与 check-layout 的同名选项相同）；所有节点都没有坐标时，
+                         按结构排出的布局若时间颠倒则报错、不写文件
 
 render 选项：
   --out <file.mp4>        用 FFmpeg 编码为 H.264 MP4（yuv420p，BT.709）

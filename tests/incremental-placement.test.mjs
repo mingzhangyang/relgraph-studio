@@ -609,3 +609,41 @@ test('on a timeline without dated lanes yet, a new dated node takes its neighbou
   // D2 knows nobody: the first free lane, which is now D1's.
   assert.equal(placed.get(id('D2')).y, 1000);
 });
+
+test('relgraph layout --chronology-tolerance on a document without coordinates writes only an ordered drawing', async () => {
+  const folder = await mkdtemp(join(tmpdir(), 'relgraph-d2b-bare-'));
+  try {
+    // Unconnected, so drawn as a grid in the authors' order: against time (review of #56).
+    const against = {
+      format: 'relgraph.graph/1',
+      nodes: [
+        { id: 'A', visibleFrom: 200 },
+        { id: 'B', visibleFrom: 100 },
+        { id: 'C', visibleFrom: 0 },
+      ],
+    };
+    const file = join(folder, 'against.json');
+    await writeFile(file, JSON.stringify(against, null, 2) + '\n');
+    // Without the option the structural drawing is written as before.
+    await layoutFile({ file, out: join(folder, 'plain.json'), seed: 0, write: false });
+    const plain = load(JSON.parse(await readFile(join(folder, 'plain.json'), 'utf8')));
+    assert.ok(chronologyInversions(plain, layoutGraph(plain), 20).length > 0);
+    // With it, nothing is written that check-layout would report.
+    const refused = join(folder, 'refused.json');
+    await assert.rejects(
+      layoutFile({ file, out: refused, seed: 0, write: false, chronologyTolerance: 20 }),
+      /against time/,
+    );
+    await assert.rejects(readFile(refused), { code: 'ENOENT' });
+    // A structural drawing already in time order is written.
+    const ordered = { format: 'relgraph.graph/1', nodes: [against.nodes[2], against.nodes[0]] };
+    const orderedFile = join(folder, 'ordered.json'),
+      out = join(folder, 'ordered.out.json');
+    await writeFile(orderedFile, JSON.stringify(ordered, null, 2) + '\n');
+    await layoutFile({ file: orderedFile, out, seed: 0, write: false, chronologyTolerance: 20 });
+    const written = load(JSON.parse(await readFile(out, 'utf8')));
+    assert.deepEqual(chronologyInversions(written, layoutGraph(written), 20), []);
+  } finally {
+    await rm(folder, { recursive: true, force: true });
+  }
+});
