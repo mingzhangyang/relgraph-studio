@@ -22,6 +22,7 @@ import { timeAxis as axisOf } from '../graph/time-axis.js';
 import { GENERIC_WORDING, worded, type DiagnosticParams } from '../diagnostic-wording.js';
 import { lanedNodes, sourceKeepsTime, timeCoordinate } from '../director/time-anchor.js';
 import type {
+  AuthoredIds,
   VisualEdge,
   VisualGroup,
   VisualNode,
@@ -125,6 +126,8 @@ export interface ParsedGenericSource {
   scenes: VisualScene[];
   /** Internal node id → the id written in the source. */
   sourceIds: Map<string, string>;
+  /** Internal id → the id written in the source, for every kind of object that has one. */
+  authoredIds: AuthoredIds;
 }
 
 type GenericKey = keyof typeof GENERIC_WORDING;
@@ -458,6 +461,8 @@ interface ParsedEdges {
   implicit: string[];
   /** Author relation id → internal id, for storyboard references. */
   lookup: Map<string, string>;
+  /** Author relation id → internal id, only for relations that have an id in the source. */
+  authored: Map<string, string>;
 }
 function parseEdges(
   rawEdges: unknown[],
@@ -524,7 +529,7 @@ function parseEdges(
   });
   const lookup = new Map<string, string>([...explicitEdgeIds]);
   for (const edge of edges) if (!lookup.has(edge.id)) lookup.set(edge.id, edge.id);
-  return { edges, strengths, implicit, lookup };
+  return { edges, strengths, implicit, lookup, authored: explicitEdgeIds };
 }
 
 /** Visual hierarchy: authored weights, otherwise how connected a node is. */
@@ -591,6 +596,8 @@ function parseScenes(
   ids: Ids,
   edgeLookup: ReadonlyMap<string, string>,
   r: Reader,
+  /** Filled with internal shot id → the shot's name in the source (authored or positional). */
+  names: Map<string, string>,
 ): VisualScene[] {
   const scenes: VisualScene[] = [];
   // A shot without an id is named after its place in the film. The name
@@ -609,6 +616,7 @@ function parseScenes(
   });
   const sceneIds = internalIds(sceneNames),
     sceneSeen = new Set<string>();
+  for (const [name, id] of sceneIds) names.set(id, name);
   rawScenes.forEach((s, i) => {
     const path = `presentation[${i}]`;
     if (!object(s)) {
@@ -782,7 +790,7 @@ export function parseGenericSource(
   const groups = parseGroups(raw.groups, ids, r);
   const parsedNodes = parseNodes(raw.nodes, ids, r);
   const { nodes, weights, sourceIds } = parsedNodes;
-  const { edges, strengths, implicit, lookup } = parseEdges(
+  const { edges, strengths, implicit, lookup, authored } = parseEdges(
     raw.edges,
     ids,
     parsedNodes.seen,
@@ -798,7 +806,8 @@ export function parseGenericSource(
   }
   rankHierarchy(nodes, edges, weights, strengths);
   const { meta, timeline } = parseMeta(doc, r);
-  const scenes = parseScenes(raw.scenes, ids, lookup, r);
+  const sceneNames = new Map<string, string>();
+  const scenes = parseScenes(raw.scenes, ids, lookup, r, sceneNames);
   if (implicit.length && raw.nodes.length)
     r.warn('IMPLICIT_NODES', 'edges', '', { count: implicit.length });
   const title = r.text(meta.title, 'meta.title', '') ?? '关系图';
@@ -819,5 +828,11 @@ export function parseGenericSource(
     groups,
     scenes,
     sourceIds,
+    authoredIds: {
+      nodes: sourceIds,
+      edges: new Map([...authored].map(([raw, id]) => [id, raw])),
+      groups: new Map([...ids.groups].map(([raw, id]) => [id, raw])),
+      scenes: sceneNames,
+    },
   };
 }

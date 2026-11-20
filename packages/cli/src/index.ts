@@ -12,6 +12,7 @@ import {
   layoutIssueCount,
 } from './check-layout.js';
 import { formatOmissions } from './labels.js';
+import { exportEvents, EventsError } from './events.js';
 
 export { parseCommand, USAGE, UsageError, type Command } from './args.js';
 export { documentStrings, formatDiagnostics, loadFile } from './document.js';
@@ -48,7 +49,24 @@ export {
   type OmittedLabelReport,
   type ShotOmissions,
 } from './labels.js';
-export { encodeArgs, findFfmpeg, FfmpegError } from './ffmpeg.js';
+export {
+  audioLengthWarning,
+  encodeArgs,
+  findFfmpeg,
+  FfmpegError,
+  muxArgs,
+  parseAudioProbe,
+  probeAudio,
+  type AudioProbe,
+  type MuxSettings,
+} from './ffmpeg.js';
+export {
+  exportEvents,
+  EventsError,
+  graphEvents,
+  writeAtomically,
+  type EventsRequest,
+} from './events.js';
 export { frameFile, isFramePattern } from './frames.js';
 export {
   renderFilm,
@@ -159,6 +177,21 @@ export async function main(argv: readonly string[], io: Io = defaultIo): Promise
       return 1;
     }
   }
+  if (command.command === 'events') {
+    try {
+      const { events, text, written } = await exportEvents({ ...command, log: io.stderr });
+      if (written)
+        io.stdout(
+          `事件 ${events.events.length} 个 · 节点 ${events.nodes.length} 个 · ${events.frameCount} 帧 · ${events.fps} fps\n→ ${written}\n`,
+        );
+      else io.stdout(text);
+      return 0;
+    } catch (error) {
+      if (!(error instanceof EventsError)) throw error;
+      io.stderr('relgraph events：' + error.message + '\n');
+      return 1;
+    }
+  }
   try {
     let lastShown = 0;
     const summary = await renderFilm({
@@ -175,7 +208,7 @@ export async function main(argv: readonly string[], io: Io = defaultIo): Promise
     io.stdout(
       `已渲染第 ${summary.first}–${summary.last} 帧（共 ${summary.frames} 帧，影片 ${summary.filmFrames} 帧）` +
         ` · ${summary.width}×${summary.height} · ${summary.fps} fps` +
-        `${summary.out ? ' · H.264 yuv420p' : ' · PNG RGBA'} · ${summary.seconds.toFixed(1)} 秒\n→ ${target}\n`,
+        `${summary.out ? ' · H.264 yuv420p' : ' · PNG RGBA'}${summary.audio ? ' · AAC 音轨' : ''} · ${summary.seconds.toFixed(1)} 秒\n→ ${target}\n`,
     );
     return 0;
   } catch (error) {

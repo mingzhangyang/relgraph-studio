@@ -1,12 +1,35 @@
-import { mkdir } from 'node:fs/promises';
-import { dirname, resolve } from 'node:path';
+import { randomUUID } from 'node:crypto';
+import { mkdir, rm } from 'node:fs/promises';
+import { basename, dirname, join, resolve } from 'node:path';
 import { Worker } from 'node:worker_threads';
-import { compileTimeline, frameCount, layoutGraph, type Locale } from '@relgraph/core';
+import {
+  compileTimeline,
+  formatFilmEvents,
+  frameCount,
+  layoutGraph,
+  type Locale,
+} from '@relgraph/core';
 import { frameSpecFor, type FrameSpecName } from '@relgraph/render';
 import { uncoveredCharacters } from '@relgraph/render/skia';
 import { documentStrings, formatDiagnostics, loadFile } from './document.js';
-import { findFfmpeg, FfmpegError, startEncoder } from './ffmpeg.js';
+import { graphEvents, writeAtomically } from './events.js';
+import {
+  audioLengthWarning,
+  findFfmpeg,
+  FfmpegError,
+  muxAudio,
+  probeAudio,
+  startEncoder,
+  type AudioProbe,
+} from './ffmpeg.js';
 import { frameFile, isFramePattern } from './frames.js';
+import {
+  conflictingPaths,
+  conflictMessage,
+  fileIdentity,
+  sameIdentity,
+  type PathUse,
+} from './paths.js';
 import { formatOmissions, OmissionTally, type ShotOmissions } from './labels.js';
 import type { WorkerData, WorkerReply, WorkerRequest } from './worker.js';
 
@@ -28,6 +51,14 @@ export interface RenderRequest extends FilmSettings {
   to?: number;
   jobs: number;
   ffmpeg?: string;
+  /**
+   * A sound file to add to the MP4 as AAC (ADR 004, D3); requires `out`. The
+   * video stream is the same as without it. The sound starts with the first
+   * rendered frame's time and is cut or padded with silence to the video.
+   */
+  audio?: string;
+  /** Also write the film's `relgraph.events/1` here, once the output is complete. */
+  events?: string;
   /**
    * Fail, after writing the output, when a shot's settled frames leave a
    * label out (ADR 004, D1). Either way the omissions are logged and returned.
@@ -53,6 +84,10 @@ export interface RenderSummary {
   uncovered: string[];
   /** Labels missing from the settled frames rendered, per shot. */
   omittedLabels: ShotOmissions[];
+  /** The sound file muxed into the MP4, and what FFmpeg read from it. */
+  audio?: { file: string } & AudioProbe;
+  /** Where the events were written. */
+  events?: string;
   seconds: number;
 }
 
@@ -152,6 +187,8 @@ export async function renderFilm(request: RenderRequest): Promise<RenderSummary>
       `--frames 需要恰好一个帧号占位符，例如 out/%05d.png；收到 ${request.frames}`,
     );
   // The CLI validates these too; the exported API must not trust its callers.
+  if (request.audio !== undefined && request.out === undefined)
+    throw new RenderError('--audio 只能和 --out 一起使用：PNG 帧序列没有音轨');
   for (const [name, value, min] of [
     ['from', request.from, 0],
     ['to', request.to, 0],
@@ -159,6 +196,15 @@ export async function renderFilm(request: RenderRequest): Promise<RenderSummary>
   ] as const)
     if (value !== undefined && !(Number.isSafeInteger(value) && value >= min))
       throw new RenderError(`${name} 需要不小于 ${min} 的整数，收到 ${String(value)}`);
+  // Never write over the document, the sound or another output.
+  const uses: PathUse[] = [
+    { label: '输入文件', path: request.file, output: false },
+    { label: '--audio', path: request.audio, output: false },
+    { label: '--out', path: request.out, output: true },
+    { label: '--events', path: request.events, output: true },
+  ];
+  const conflict = await conflictingPaths(uses);
+  if (conflict) throw new RenderError(conflictMessage(conflict));
   const { text, result } = await loadFile(request.file);
   if (!result.valid) throw new RenderError(`${formatDiagnostics(result)}文档校验失败，未渲染。`);
   if (result.warnings.length) log(formatDiagnostics({ errors: [], warnings: result.warnings }));
@@ -172,8 +218,10 @@ export async function renderFilm(request: RenderRequest): Promise<RenderSummary>
     throw new RenderError(
       `帧范围 ${first}–${last} 超出影片范围 0–${filmFrames - 1}（共 ${filmFrames} 帧）`,
     );
-  // Layout runs here too so a document the threads cannot lay out fails early.
+  // Layout runs here too so a document the threads cannot lay out fails early;
+  // the events come from the same layout and timeline the threads use.
   layoutGraph(graph);
+  const events = request.events === undefined ? null : graphEvents(result, fps);
   const uncovered = uncoveredCharacters(documentStrings(JSON.parse(text)));
   if (uncovered.length)
     log(
@@ -181,6 +229,28 @@ export async function renderFilm(request: RenderRequest): Promise<RenderSummary>
     );
 
   const frames = Array.from({ length: last - first + 1 }, (_, i) => first + i);
+  if (request.frames !== undefined) {
+    // Any frame file can be the document or the events file under another
+    // name (a symlink or hard link such as 0.png): compare every one by
+    // identity, never by name.
+    const pattern = request.frames;
+    const others = await Promise.all(
+      // With --frames there is no --out: the document, --audio and --events.
+      uses
+        .filter((use) => use.path !== undefined)
+        .map(async (use) => ({ use, identity: await fileIdentity(use.path!) })),
+    );
+    for (const frame of frames) {
+      const file = frameFile(pattern, frame);
+      const identity = await fileIdentity(file);
+      const other = others.find((entry) => sameIdentity(identity, entry.identity));
+      if (other)
+        throw new RenderError(
+          conflictMessage([{ label: '--frames', path: file, output: true }, other.use]),
+        );
+    }
+  }
+
   const settings: FilmSettings = {
     frameSpec: request.frameSpec,
     theme: request.theme,
@@ -192,18 +262,29 @@ export async function renderFilm(request: RenderRequest): Promise<RenderSummary>
   const record = (frame: number, reply: WorkerReply): void => {
     if ('omitted' in reply) tally.add(frame, reply.omitted);
   };
-  // Report omitted labels once the output is complete, and fail if asked to.
-  const finish = <T extends object>(
+  // Write the events and report omitted labels once the output is complete,
+  // and fail if asked to.
+  const finish = async <T extends object>(
     result: T,
     target: string,
-  ): T & { omittedLabels: ShotOmissions[] } => {
+  ): Promise<T & { omittedLabels: ShotOmissions[]; events?: string }> => {
+    let written: string | undefined;
+    if (events && request.events !== undefined)
+      try {
+        written = await writeAtomically(request.events, formatFilmEvents(events));
+      } catch (error) {
+        throw new RenderError(
+          `已写出 ${target}，但无法写入事件文件 ${request.events}：${(error as Error).message}`,
+        );
+      }
+    if (written) log(`事件 → ${written}\n`);
     const omittedLabels = tally.report();
     log(formatOmissions(omittedLabels));
     if (request.failOnOmittedLabels && omittedLabels.length)
       throw new RenderError(
         `已写出 ${target}，但 ${omittedLabels.length} 个镜头的稳定画面省略了标签（--fail-on-omitted-labels）。`,
       );
-    return { ...result, omittedLabels };
+    return { ...result, omittedLabels, ...(written ? { events: written } : {}) };
   };
   const summary = {
     filmFrames,
@@ -231,7 +312,10 @@ export async function renderFilm(request: RenderRequest): Promise<RenderSummary>
         tick();
       },
     );
-    return finish({ ...summary, pattern, seconds: (performance.now() - started) / 1000 }, pattern);
+    return await finish(
+      { ...summary, pattern, seconds: (performance.now() - started) / 1000 },
+      pattern,
+    );
   }
 
   const out = resolve(request.out ?? '');
@@ -242,56 +326,91 @@ export async function renderFilm(request: RenderRequest): Promise<RenderSummary>
     if (error instanceof FfmpegError) throw new RenderError(error.message);
     throw error;
   }
-  await mkdir(dirname(out), { recursive: true });
-  const encoder = startEncoder(ffmpeg.path, { width: spec.width, height: spec.height, fps, out });
-  let stderr = '';
-  encoder.stderr.setEncoding('utf8').on('data', (chunk: string) => (stderr += chunk));
-  const finished = new Promise<void>((resolveEncode, rejectEncode) => {
-    encoder.on('error', (error) =>
-      rejectEncode(new RenderError(`无法启动 FFmpeg：${error.message}`)),
-    );
-    encoder.on('close', (code) =>
-      code === 0
-        ? resolveEncode()
-        : rejectEncode(new RenderError(`FFmpeg 编码失败（退出码 ${code}）：\n${stderr.trim()}`)),
-    );
-  });
-  finished.catch(() => undefined);
-  // A write error (EPIPE) means FFmpeg exited; `finished` reports why.
-  encoder.stdin.on('error', () => undefined);
-  // Wait until each frame is handed to FFmpeg before sending the next, so at
-  // most one frame sits in the pipe buffer and nothing outlives its write.
-  // Only a failed write consults `finished`, for FFmpeg's own error message.
-  const write = (bytes: Uint8Array): Promise<void> =>
-    new Promise((resolveWrite, rejectWrite) => {
-      encoder.stdin.write(bytes, (error) => {
-        if (!error) resolveWrite();
-        else
-          finished.then(
-            () => rejectWrite(new RenderError(`FFmpeg 提前结束：${error.message}`)),
-            (reason: unknown) => rejectWrite(reason),
-          );
-      });
-    });
-  try {
-    await renderInOrder({ ...settings, text }, frames, request.jobs, async (frame, reply) => {
-      if (!('pixels' in reply) || !reply.pixels)
-        throw new RenderError(`第 ${frame} 帧没有像素数据`);
-      await write(new Uint8Array(reply.pixels));
-      record(frame, reply);
-      tick();
-    });
-  } catch (error) {
-    encoder.kill();
-    throw error;
+  // Check the sound before spending the render on it.
+  const offsetSec = first / fps,
+    durationSec = frames.length / fps;
+  let audio: ({ file: string } & AudioProbe) | undefined;
+  if (request.audio !== undefined) {
+    const file = resolve(request.audio);
+    try {
+      audio = { file, ...(await probeAudio(ffmpeg.path, file)) };
+    } catch (error) {
+      if (error instanceof FfmpegError) throw new RenderError(error.message);
+      throw error;
+    }
+    const warning = audioLengthWarning(audio, { offsetSec, durationSec, fps });
+    if (warning) log(warning);
   }
-  encoder.stdin.end();
-  await finished;
-  return finish(
+  await mkdir(dirname(out), { recursive: true });
+  // With sound, encode the video exactly as without it, then copy that video
+  // stream into the final MP4 beside the sound: the decoded frames are the same.
+  const video = audio ? join(dirname(out), `.${basename(out)}.${randomUUID()}.video.mp4`) : out;
+  try {
+    const encoder = startEncoder(ffmpeg.path, {
+      width: spec.width,
+      height: spec.height,
+      fps,
+      out: video,
+    });
+    let stderr = '';
+    encoder.stderr.setEncoding('utf8').on('data', (chunk: string) => (stderr += chunk));
+    const finished = new Promise<void>((resolveEncode, rejectEncode) => {
+      encoder.on('error', (error) =>
+        rejectEncode(new RenderError(`无法启动 FFmpeg：${error.message}`)),
+      );
+      encoder.on('close', (code) =>
+        code === 0
+          ? resolveEncode()
+          : rejectEncode(new RenderError(`FFmpeg 编码失败（退出码 ${code}）：\n${stderr.trim()}`)),
+      );
+    });
+    finished.catch(() => undefined);
+    // A write error (EPIPE) means FFmpeg exited; `finished` reports why.
+    encoder.stdin.on('error', () => undefined);
+    // Wait until each frame is handed to FFmpeg before sending the next, so at
+    // most one frame sits in the pipe buffer and nothing outlives its write.
+    // Only a failed write consults `finished`, for FFmpeg's own error message.
+    const write = (bytes: Uint8Array): Promise<void> =>
+      new Promise((resolveWrite, rejectWrite) => {
+        encoder.stdin.write(bytes, (error) => {
+          if (!error) resolveWrite();
+          else
+            finished.then(
+              () => rejectWrite(new RenderError(`FFmpeg 提前结束：${error.message}`)),
+              (reason: unknown) => rejectWrite(reason),
+            );
+        });
+      });
+    try {
+      await renderInOrder({ ...settings, text }, frames, request.jobs, async (frame, reply) => {
+        if (!('pixels' in reply) || !reply.pixels)
+          throw new RenderError(`第 ${frame} 帧没有像素数据`);
+        await write(new Uint8Array(reply.pixels));
+        record(frame, reply);
+        tick();
+      });
+    } catch (error) {
+      encoder.kill();
+      throw error;
+    }
+    encoder.stdin.end();
+    await finished;
+    if (audio)
+      try {
+        await muxAudio(ffmpeg.path, { video, audio: audio.file, out, offsetSec, durationSec });
+      } catch (error) {
+        if (error instanceof FfmpegError) throw new RenderError(error.message);
+        throw error;
+      }
+  } finally {
+    if (audio) await rm(video, { force: true });
+  }
+  return await finish(
     {
       ...summary,
       out,
       ffmpeg: ffmpeg.version,
+      ...(audio ? { audio } : {}),
       seconds: (performance.now() - started) / 1000,
     },
     out,

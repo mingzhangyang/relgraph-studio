@@ -12,6 +12,7 @@ export const USAGE = `用法：
   relgraph render <file> (--out film.mp4 | --frames out/%05d.png) [选项]
   relgraph check-labels <file> [--frame-spec <name>] [--locale <语言>] [--json]
   relgraph check-layout <file> [--frame-spec <name>] [--locale <语言>] [选项] [--json]
+  relgraph events <file> [--frame-spec <name>] [--out events.json]
 
 layout 选项：
   --seed <N>             无符号 32 位整数，固定种子（默认 0）
@@ -33,6 +34,10 @@ render 选项：
   --ffmpeg <path>         FFmpeg 可执行文件（默认在 PATH 中查找）
   --fail-on-omitted-labels
                           镜头画面稳定后仍有标签放不下时，写出结果后以失败退出
+  --audio <file>          用 FFmpeg 把现成的音轨（WAV 等）以 AAC 混入 MP4，只能与 --out 同用；
+                          视频流与不带音轨时相同。以视频长度为准：音轨过长截断、过短补静音，
+                          长度不一致时告警；只渲染部分帧时，音轨从第一帧的时刻起
+  --events <file.json>    写出结果后，另写一份 relgraph.events/1 事件文件（同 relgraph events）
 
 check-labels：不渲染，逐镜头检查画面稳定后（镜头切换和揭示动画结束之后）放不下的标签；
   每个镜头检查稳定段的首、中、末三帧，有省略时退出码为 1。--frame-spec 和 --locale 同 render。
@@ -43,6 +48,10 @@ check-layout：在同样的稳定帧中检查连线贴近或穿过它不连接�
   --crowding <px>         两个节点图形之间的最小间隙，720p 像素（默认 2）
   --chronology-tolerance <N>
                           时间相差至少 N（领域时间单位）的两个节点，较早者必须画在左侧
+
+events：不渲染，导出 relgraph.events/1：镜头、字幕、节点和关系的出现、领域时间的变化，
+  帧号与渲染完全一致，另附影片中出现过的节点表（标签、类型、分组、世界坐标）。
+  默认写到标准输出；--out 写入文件（覆盖已有文件）。只有 --frame-spec 的帧率影响结果。
 
 其他：
   relgraph --help | --version`;
@@ -79,6 +88,12 @@ export interface CheckLayoutCommand {
   crowding?: number;
   chronologyTolerance?: number;
 }
+export interface EventsCommand {
+  command: 'events';
+  file: string;
+  frameSpec: FrameSpecName;
+  out?: string;
+}
 export interface RenderCommand {
   command: 'render';
   file: string;
@@ -92,6 +107,8 @@ export interface RenderCommand {
   jobs: number;
   ffmpeg?: string;
   failOnOmittedLabels: boolean;
+  audio?: string;
+  events?: string;
 }
 export type Command =
   | ValidateCommand
@@ -99,6 +116,7 @@ export type Command =
   | RenderCommand
   | CheckLabelsCommand
   | CheckLayoutCommand
+  | EventsCommand
   | { command: 'help' }
   | { command: 'version' };
 
@@ -126,7 +144,8 @@ export function parseCommand(argv: readonly string[]): Command {
     command !== 'layout' &&
     command !== 'render' &&
     command !== 'check-labels' &&
-    command !== 'check-layout'
+    command !== 'check-layout' &&
+    command !== 'events'
   )
     throw new UsageError(`未知命令 ${JSON.stringify(command)}`);
   let parsed;
@@ -160,18 +179,25 @@ export function parseCommand(argv: readonly string[]): Command {
                     crowding: { type: 'string' },
                     'chronology-tolerance': { type: 'string' },
                   }
-                : {
-                    out: { type: 'string' },
-                    frames: { type: 'string' },
-                    'frame-spec': { type: 'string', default: 'landscape-1080p' },
-                    theme: { type: 'string', default: 'light' },
-                    locale: { type: 'string', default: 'zh-CN' },
-                    from: { type: 'string' },
-                    to: { type: 'string' },
-                    jobs: { type: 'string' },
-                    ffmpeg: { type: 'string' },
-                    'fail-on-omitted-labels': { type: 'boolean', default: false },
-                  },
+                : command === 'events'
+                  ? {
+                      'frame-spec': { type: 'string', default: 'landscape-1080p' },
+                      out: { type: 'string' },
+                    }
+                  : {
+                      out: { type: 'string' },
+                      audio: { type: 'string' },
+                      events: { type: 'string' },
+                      frames: { type: 'string' },
+                      'frame-spec': { type: 'string', default: 'landscape-1080p' },
+                      theme: { type: 'string', default: 'light' },
+                      locale: { type: 'string', default: 'zh-CN' },
+                      from: { type: 'string' },
+                      to: { type: 'string' },
+                      jobs: { type: 'string' },
+                      ffmpeg: { type: 'string' },
+                      'fail-on-omitted-labels': { type: 'boolean', default: false },
+                    },
     });
   } catch (error) {
     throw new UsageError(error instanceof Error ? error.message : String(error));
@@ -230,6 +256,11 @@ export function parseCommand(argv: readonly string[]): Command {
       ...(chronologyTolerance !== undefined ? { chronologyTolerance } : {}),
     };
   }
+  if (command === 'events') {
+    const out = str('out');
+    if (out === '') throw new UsageError('--out 不能为空');
+    return { command, file, frameSpec: frameSpec(), ...(out !== undefined ? { out } : {}) };
+  }
   if (command === 'check-labels')
     return {
       command,
@@ -248,6 +279,12 @@ export function parseCommand(argv: readonly string[]): Command {
     );
   if (out !== undefined && !/\.mp4$/i.test(out))
     throw new UsageError(`--out 只支持 .mp4 文件，收到 ${JSON.stringify(out)}`);
+  const audio = str('audio'),
+    events = str('events');
+  if (audio !== undefined && out === undefined)
+    throw new UsageError('--audio 只能和 --out 一起使用：PNG 帧序列没有音轨');
+  if (audio === '') throw new UsageError('--audio 不能为空');
+  if (events === '') throw new UsageError('--events 不能为空');
   const from = integer('from', str('from'), 0),
     to = integer('to', str('to'), 0);
   if (from !== undefined && to !== undefined && from > to)
@@ -265,5 +302,7 @@ export function parseCommand(argv: readonly string[]): Command {
     jobs: integer('jobs', str('jobs'), 1) ?? defaultJobs(),
     ...(str('ffmpeg') !== undefined ? { ffmpeg: str('ffmpeg') } : {}),
     failOnOmittedLabels: (values as Record<string, unknown>)['fail-on-omitted-labels'] === true,
+    ...(audio !== undefined ? { audio } : {}),
+    ...(events !== undefined ? { events } : {}),
   };
 }

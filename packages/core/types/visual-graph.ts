@@ -100,6 +100,21 @@ export interface VisualGraph {
   scenes: VisualScene[];
 }
 
+/**
+ * The ids a source document gives its objects, by the internal id the graph
+ * uses (internal id → authored id). A generic graph maps names, CJK text and
+ * other ids that are not lowercase slugs to hashes; exports that people read
+ * against their own file (`relgraph.events/1`) write the authored ids back.
+ * An object missing from a map has no authored id of its own (a relation or
+ * shot the author left unnamed) and keeps its internal one.
+ */
+export interface AuthoredIds {
+  nodes: ReadonlyMap<string, string>;
+  edges: ReadonlyMap<string, string>;
+  groups: ReadonlyMap<string, string>;
+  scenes: ReadonlyMap<string, string>;
+}
+
 /** A projection contains only the currently visible graph objects. */
 export type ProjectedVisualGraph = Omit<VisualGraph, 'scenes' | 'project' | 'kinds' | 'diagram'>;
 

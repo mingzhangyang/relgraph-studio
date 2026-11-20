@@ -125,5 +125,6 @@ function adaptParsed(parsed: ParsedGenericSource, warnings: GenericDiagnostic[])
       return summary ? { summary } : undefined;
     },
     sourceIds: parsed.sourceIds,
+    authoredIds: parsed.authoredIds,
   };
 }

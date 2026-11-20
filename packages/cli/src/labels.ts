@@ -1,4 +1,10 @@
-import { shotSettledSec, timelinePlaybackAt, type FilmTimeline } from '@relgraph/core';
+import {
+  frameAtOrAfter,
+  shotSettledSec,
+  shotStartFrames,
+  timelinePlaybackAt,
+  type FilmTimeline,
+} from '@relgraph/core';
 import type { OmittedLabel } from '@relgraph/render';
 
 /**
@@ -29,8 +35,6 @@ export interface ShotOmissions {
   labels: OmittedLabelReport[];
 }
 
-const tolerance = (second: number): number => 8 * Number.EPSILON * Math.max(1, Math.abs(second));
-
 /** The settled frames of each shot, as an inclusive range of frame indices (empty when first > last). */
 export function settledFrameRanges(
   timeline: FilmTimeline,
@@ -38,13 +42,10 @@ export function settledFrameRanges(
 ): { first: number; last: number }[] {
   const { fps } = timeline;
   const settled = shotSettledSec(timeline);
-  return timeline.shots.map((shot, index) => ({
-    // `|| 0` turns the -0 that a tolerance below zero rounds to into 0.
-    first: Math.ceil((settled[index] - tolerance(settled[index])) * fps) || 0,
-    last:
-      index === timeline.shots.length - 1
-        ? filmFrames - 1
-        : Math.ceil((shot.endSec - tolerance(shot.endSec)) * fps) - 1,
+  const starts = shotStartFrames(timeline);
+  return timeline.shots.map((_, index) => ({
+    first: Math.max(starts[index], frameAtOrAfter(settled[index], fps)),
+    last: index === timeline.shots.length - 1 ? filmFrames - 1 : starts[index + 1] - 1,
   }));
 }
 

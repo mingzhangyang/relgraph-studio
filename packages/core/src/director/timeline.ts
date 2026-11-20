@@ -219,6 +219,38 @@ export function shotSettledSec(timeline: FilmTimeline): number[] {
   });
 }
 
+/**
+ * The first frame on the `fps` grid at or after `second`: frame `f` shows the
+ * instant `f / fps`, and an instant within the boundary tolerance of
+ * `timelinePlaybackAt` counts as reached. Shot starts, reveal starts and
+ * settled instants all round this way.
+ */
+export function frameAtOrAfter(second: number, fps: number): number {
+  // `|| 0` turns the -0 that a tolerance below zero rounds to into 0.
+  return Math.ceil((second - 8 * Number.EPSILON * Math.max(1, Math.abs(second))) * fps) || 0;
+}
+
+/**
+ * The first frame of every shot: shot `i` shows frames `starts[i]` up to the
+ * next shot's first frame, and the last shot the rest of the film. These are
+ * exactly the frames `timelinePlaybackAt(timeline, frame / fps)` assigns to
+ * each shot, which is how frames are rendered; a shot shorter than a frame
+ * can have none (its first frame is then the next shot's).
+ */
+export function shotStartFrames(timeline: FilmTimeline): number[] {
+  const { fps, shots } = timeline;
+  const shotAt = (frame: number): number => timelinePlaybackAt(timeline, frame / fps).index;
+  return shots.map((shot, index) => {
+    if (index === 0) return 0;
+    // The rounded start is right but for instants within the tolerance of a
+    // boundary; confirm it against the playback that renders the frames.
+    let frame = frameAtOrAfter(shot.startSec, fps);
+    while (frame > 0 && shotAt(frame - 1) >= index) frame -= 1;
+    while (shotAt(frame) < index) frame += 1;
+    return frame;
+  });
+}
+
 /** Match the original half-open scene boundary tolerance (including final frame). */
 export function timelinePlaybackAt(
   timeline: FilmTimeline,
