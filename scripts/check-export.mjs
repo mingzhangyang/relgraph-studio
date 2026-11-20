@@ -19,7 +19,9 @@
 //    PSNR) and must match better than its neighbours. The PNG must equal the
 //    in-process render exactly, which also shows that frames do not depend on
 //    the worker or on previously drawn frames.
-// 4. Informational: pixel differences between the browser preview and the
+// 4. Events (ADR 004, D3): `relgraph events` and `render --events` must
+//    write the same bytes at any `--jobs`.
+// 5. Informational: pixel differences between the browser preview and the
 //    headless export at 720p, mid-shot frames of every example and theme.
 import assert from 'node:assert/strict';
 import { execFile, spawn } from 'node:child_process';
@@ -375,6 +377,46 @@ for (const { example, out, spec } of films) {
     assert.ok(scores[1] > scores[0] && scores[1] > scores[2], 'best match is the same index');
   });
 }
+
+// ---------------------------------------------------------- events (ADR 004, D3)
+
+for (const example of examples.filter((e) => ['literature', 'biology', 'tree'].includes(e.key)))
+  await check(
+    `${example.key}: events are the same bytes from relgraph events and render --events, at any --jobs`,
+    async () => {
+      const file = join(root, example.file);
+      const alone = join(outputDir, `${example.key}.events.json`);
+      await run(process.execPath, [relgraph, 'events', file, '--out', alone]);
+      const expected = await readFile(alone, 'utf8');
+      const parsed = JSON.parse(expected);
+      assert.equal(parsed.format, 'relgraph.events/1');
+      assert.equal(parsed.frameCount, frameCount(example.result.graph, parsed.fps));
+      const { stdout } = await run(process.execPath, [relgraph, 'events', file]);
+      assert.equal(stdout, expected, 'stdout');
+      for (const jobs of ['1', '3']) {
+        const events = join(outputDir, `${example.key}.events-jobs${jobs}.json`);
+        await run(process.execPath, [
+          relgraph,
+          'render',
+          file,
+          '--frames',
+          join(outputDir, `${example.key}-events-j${jobs}-%05d.png`),
+          '--from',
+          '0',
+          '--to',
+          '5',
+          '--jobs',
+          jobs,
+          '--events',
+          events,
+        ]);
+        assert.equal(await readFile(events, 'utf8'), expected, `--jobs ${jobs}`);
+      }
+      console.log(
+        `    ${parsed.events.length} events · ${parsed.nodes.length} nodes · ${parsed.frameCount} frames`,
+      );
+    },
+  );
 
 // ------------------------------------------------- browser vs headless (720p)
 

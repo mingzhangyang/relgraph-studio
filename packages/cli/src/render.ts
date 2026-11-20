@@ -1,10 +1,17 @@
 import { mkdir } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { Worker } from 'node:worker_threads';
-import { compileTimeline, frameCount, layoutGraph, type Locale } from '@relgraph/core';
+import {
+  compileTimeline,
+  formatFilmEvents,
+  frameCount,
+  layoutGraph,
+  type Locale,
+} from '@relgraph/core';
 import { frameSpecFor, type FrameSpecName } from '@relgraph/render';
 import { uncoveredCharacters } from '@relgraph/render/skia';
 import { documentStrings, formatDiagnostics, loadFile } from './document.js';
+import { graphEvents, writeAtomically } from './events.js';
 import { findFfmpeg, FfmpegError, startEncoder } from './ffmpeg.js';
 import { frameFile, isFramePattern } from './frames.js';
 import { formatOmissions, OmissionTally, type ShotOmissions } from './labels.js';
@@ -28,6 +35,8 @@ export interface RenderRequest extends FilmSettings {
   to?: number;
   jobs: number;
   ffmpeg?: string;
+  /** Also write the film's `relgraph.events/1` here, once the output is complete. */
+  events?: string;
   /**
    * Fail, after writing the output, when a shot's settled frames leave a
    * label out (ADR 004, D1). Either way the omissions are logged and returned.
@@ -53,6 +62,8 @@ export interface RenderSummary {
   uncovered: string[];
   /** Labels missing from the settled frames rendered, per shot. */
   omittedLabels: ShotOmissions[];
+  /** Where the events were written. */
+  events?: string;
   seconds: number;
 }
 
@@ -172,8 +183,10 @@ export async function renderFilm(request: RenderRequest): Promise<RenderSummary>
     throw new RenderError(
       `帧范围 ${first}–${last} 超出影片范围 0–${filmFrames - 1}（共 ${filmFrames} 帧）`,
     );
-  // Layout runs here too so a document the threads cannot lay out fails early.
+  // Layout runs here too so a document the threads cannot lay out fails early;
+  // the events come from the same layout and timeline the threads use.
   layoutGraph(graph);
+  const events = request.events === undefined ? null : graphEvents(result, fps);
   const uncovered = uncoveredCharacters(documentStrings(JSON.parse(text)));
   if (uncovered.length)
     log(
@@ -192,18 +205,29 @@ export async function renderFilm(request: RenderRequest): Promise<RenderSummary>
   const record = (frame: number, reply: WorkerReply): void => {
     if ('omitted' in reply) tally.add(frame, reply.omitted);
   };
-  // Report omitted labels once the output is complete, and fail if asked to.
-  const finish = <T extends object>(
+  // Write the events and report omitted labels once the output is complete,
+  // and fail if asked to.
+  const finish = async <T extends object>(
     result: T,
     target: string,
-  ): T & { omittedLabels: ShotOmissions[] } => {
+  ): Promise<T & { omittedLabels: ShotOmissions[]; events?: string }> => {
+    let written: string | undefined;
+    if (events && request.events !== undefined)
+      try {
+        written = await writeAtomically(request.events, formatFilmEvents(events));
+      } catch (error) {
+        throw new RenderError(
+          `已写出 ${target}，但无法写入事件文件 ${request.events}：${(error as Error).message}`,
+        );
+      }
+    if (written) log(`事件 → ${written}\n`);
     const omittedLabels = tally.report();
     log(formatOmissions(omittedLabels));
     if (request.failOnOmittedLabels && omittedLabels.length)
       throw new RenderError(
         `已写出 ${target}，但 ${omittedLabels.length} 个镜头的稳定画面省略了标签（--fail-on-omitted-labels）。`,
       );
-    return { ...result, omittedLabels };
+    return { ...result, omittedLabels, ...(written ? { events: written } : {}) };
   };
   const summary = {
     filmFrames,
@@ -231,7 +255,10 @@ export async function renderFilm(request: RenderRequest): Promise<RenderSummary>
         tick();
       },
     );
-    return finish({ ...summary, pattern, seconds: (performance.now() - started) / 1000 }, pattern);
+    return await finish(
+      { ...summary, pattern, seconds: (performance.now() - started) / 1000 },
+      pattern,
+    );
   }
 
   const out = resolve(request.out ?? '');
@@ -287,7 +314,7 @@ export async function renderFilm(request: RenderRequest): Promise<RenderSummary>
   }
   encoder.stdin.end();
   await finished;
-  return finish(
+  return await finish(
     {
       ...summary,
       out,
