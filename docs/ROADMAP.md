@@ -100,10 +100,26 @@ hashes and runtime rendering behavior remain unchanged.
 - [ ] Script a 60–90 second narration without premature spoilers
 - [ ] Add optional narration/audio sync, captions, credited licensed sounds and 1080p QA
 
+## ADR 004 — Evidence, claims and output formats
+
+Proposed in [ADR 004](ADR-004-evidence-claims-and-output-formats.md) from the Tang poet films ([dataset](../datasets/tang-poets-met/README.md)). One PR per item, each from current `main` and targeting `main`; the 236 landscape golden hashes are the acceptance line throughout.
+
+- [ ] **ADR 004 accepted** (this ADR and roadmap entry only)
+- [ ] **P0 · D1** omitted-label diagnostics in `DisplayList`, `relgraph render` and the studio; reading-speed warning for captions
+- [ ] **P0 · D2a** `relgraph check-layout`: clearance, crowding and chronology checks on drawn (bowed) relations
+- [ ] **P0 · D2b** neighbour-aware `missing` placement for every engine; no existing coordinate moves
+- [ ] **P0 · D3** `relgraph.events/1` export and `--audio` mux with identical video frames
+- [ ] **P1 · D4** validated `evidence` in `relgraph.graph/1` and verbatim evidence cards for relations and nodes
+- [ ] **P2 · D7.1** portrait, 3:4 and square specs with their own frame furniture and golden manifests
+- [ ] **P2 · D7.2** vertical time axis as an explicit project field (render-time transpose)
+- [ ] **P2 · D7.3 + D8** in-shot camera keyframes and `beats`
+- [ ] **P3 · D5** `relgraph.social/0.1-draft` for evidence-based social networks; form registry and per-kind allowlists
+- [ ] **P3 · D6** absence in the social format: people without attested relations, rejected pairs never drawn as lines
+
 ## B3 — Templates and output
 
 - [ ] Storyboard presets, cross-work typography and thematic palettes
-- [ ] 9:16 and square `FrameSpec` presets with their own safe areas; second work exported without core code edits
+- [ ] 9:16, 3:4 and square `FrameSpec` presets with their own safe areas (planned as [ADR 004](ADR-004-evidence-claims-and-output-formats.md) D7); second work exported without core code edits
 - [ ] Production batch video/image exports; defer a full graph editor until proven demand
 
 No GitHub Actions workflow is included; local verification only.
