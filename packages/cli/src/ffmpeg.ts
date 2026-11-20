@@ -136,13 +136,21 @@ export function startEncoder(ffmpeg: string, settings: EncodeSettings): Encoder 
 
 /** What `--audio` needs to know about a sound file before the film is rendered. */
 export interface AudioProbe {
-  /** Seconds, as FFmpeg reads them from the file's header; null when it states none. */
+  /**
+   * Where the first audio stream ends, in seconds from the start the mux
+   * reads it at: the end of its last packet. Only when no packet has a
+   * timestamp, the container's duration from the header; null without either.
+   */
   durationSec: number | null;
   /** FFmpeg's description of the first audio stream, e.g. `pcm_s16le, 48000 Hz, stereo, s16, 1536 kb/s`. */
   stream: string;
 }
 
-/** Parse the input description FFmpeg prints for `-i file`. */
+/**
+ * Parse the input description FFmpeg prints for `-i file`: the first audio
+ * stream, and the container's `Duration`, which covers every stream (a
+ * video file's picture may outlast its sound), so it is only a fallback.
+ */
 export function parseAudioProbe(stderr: string): AudioProbe | null {
   // Only the input's description: the copy to nothing describes its output too.
   const output = stderr.search(/^Output #/m);
@@ -156,23 +164,68 @@ export function parseAudioProbe(stderr: string): AudioProbe | null {
   };
 }
 
-/** Check that FFmpeg can read an audio stream from `file`, and how long it is. */
-export async function probeAudio(ffmpeg: string, file: string): Promise<AudioProbe> {
-  let stderr: string;
-  try {
-    // Copy the first audio stream to nothing: fails unless it can be read.
-    ({ stderr } = await run(
-      ffmpeg,
-      ['-hide_banner', '-nostdin', '-i', file, '-map', '0:a:0', '-c', 'copy', '-f', 'null', '-'],
-      { maxBuffer: 8 << 20 },
-    ));
-  } catch (error) {
-    const detail = (error as { stderr?: string }).stderr?.trim() || String(error);
-    throw new FfmpegError(`FFmpeg 读不出 --audio 文件中的音轨：${file}\n${detail}`);
+/**
+ * The end of a stream from FFmpeg's `framecrc` listing of its packets
+ * (`#tb 0: 1/48000`, then `0, dts, pts, duration, size, crc`): the latest
+ * pts + duration, in seconds; null when no packet has both.
+ */
+export function framecrcEndSec(lines: Iterable<string>): number | null {
+  let base: [number, number] | null = null;
+  let end: number | null = null;
+  for (const line of lines) {
+    const tb = /^#tb 0: (\d+)\/(\d+)/.exec(line);
+    if (tb) base = [Number(tb[1]), Number(tb[2])];
+    const packet = /^0,\s*-?\d+,\s*(-?\d+),\s*(\d+),/.exec(line);
+    if (!packet || !base) continue;
+    const stop = Number(packet[1]) + Number(packet[2]);
+    if (end === null || stop > end) end = stop;
   }
+  return end === null || !base ? null : (end * base[0]) / base[1];
+}
+
+/** Check that FFmpeg can read an audio stream from `file`, and where it ends. */
+export async function probeAudio(ffmpeg: string, file: string): Promise<AudioProbe> {
+  // List the first audio stream's packets: fails unless it can be read. The
+  // listing goes through the same input timestamp offset as the mux.
+  const child = spawn(
+    ffmpeg,
+    ['-hide_banner', '-nostdin', '-i', file, '-map', '0:a:0', '-c', 'copy', '-f', 'framecrc', '-'],
+    { stdio: ['ignore', 'pipe', 'pipe'] },
+  );
+  let stderr = '';
+  child.stderr.setEncoding('utf8').on('data', (chunk: string) => {
+    if (stderr.length < 1 << 20) stderr += chunk;
+  });
+  // Keep the timing, not the listing: one line per packet adds up for long files.
+  let base = '',
+    pending = '',
+    end: number | null = null;
+  const take = (line: string): void => {
+    if (line.startsWith('#tb 0:')) base = line;
+    else if (base && line.startsWith('0,')) {
+      const stop = framecrcEndSec([base, line]);
+      if (stop !== null && (end === null || stop > end)) end = stop;
+    }
+  };
+  child.stdout
+    .setEncoding('utf8')
+    .on('data', (chunk: string) => {
+      const lines = (pending + chunk).split('\n');
+      pending = lines.pop() ?? '';
+      lines.forEach(take);
+    })
+    .on('end', () => take(pending));
+  const code = await new Promise<number | null>((resolveExit, rejectExit) => {
+    child.on('error', rejectExit);
+    child.on('close', resolveExit);
+  }).catch((error: Error) => {
+    throw new FfmpegError(`无法运行 FFmpeg 读取 --audio 文件：${error.message}`);
+  });
+  if (code !== 0)
+    throw new FfmpegError(`FFmpeg 读不出 --audio 文件中的音轨：${file}\n${stderr.trim()}`);
   const probe = parseAudioProbe(stderr);
   if (!probe) throw new FfmpegError(`--audio 文件中没有音轨：${file}`);
-  return probe;
+  return end === null ? probe : { ...probe, durationSec: end };
 }
 
 export interface MuxSettings {

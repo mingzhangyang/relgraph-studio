@@ -499,6 +499,45 @@ for (const { example, out, spec, frames } of films.filter(({ example }) =>
   );
 }
 
+await check('--audio measures the sound stream, not a longer container', async () => {
+  // A video file whose picture lasts the whole film but whose sound stops
+  // after 1 s: the container says the full length, the stream does not.
+  const film = films.find(({ example }) => example.key === 'literature');
+  assert.ok(film, 'literature.mp4 exported');
+  const seconds = film.frames / film.spec.fps;
+  const mixed = join(outputDir, 'mixed-sound.mp4');
+  await run('ffmpeg', [
+    '-v',
+    'error',
+    '-y',
+    '-f',
+    'lavfi',
+    '-i',
+    `color=c=black:s=64x64:r=24:d=${seconds}`,
+    '-f',
+    'lavfi',
+    '-i',
+    'sine=frequency=440:sample_rate=48000:duration=1',
+    '-map',
+    '0:v',
+    '-map',
+    '1:a',
+    '-c:v',
+    'libx264',
+    '-c:a',
+    'aac',
+    mixed,
+  ]);
+  const out = join(outputDir, 'literature-mixed-sound.mp4');
+  const { stderr } = await run(
+    process.execPath,
+    [relgraph, 'render', join(root, film.example.file), '--out', out, '--audio', mixed],
+    { cwd: root, maxBuffer: 16 << 20 },
+  );
+  assert.match(stderr, /音轨比视频短 39\.\d+ 秒（1\.000 \/ 40\.000 秒），结尾补静音/);
+  assert.equal(await videoFrameMd5(out), await videoFrameMd5(film.out), 'framemd5');
+});
+
 await check('no temporary video is left beside the MP4s', async () => {
   const { readdir } = await import('node:fs/promises');
   const left = (await readdir(outputDir)).filter((name) => name.endsWith('.video.mp4'));

@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import {
   audioLengthWarning,
   encodeArgs,
+  framecrcEndSec,
   muxArgs,
   parseAudioProbe,
 } from '../packages/cli/src/ffmpeg.ts';
@@ -54,6 +55,34 @@ test('the audio probe reads the input stream and its duration', () => {
     ),
     null,
   );
+});
+
+test("the sound's length is where its stream ends, not the container's", () => {
+  // FFmpeg 6.1 framecrc of `-map 0:a:0 -c copy` for an MP4 with 4 s of video
+  // and 1 s of AAC: the header says 4 s, the audio stream ends at 1 s.
+  const mixed = [
+    '#tb 0: 1/48000',
+    '#media_type 0: audio',
+    '0,      -1024,      -1024,     1024,      212, 0x1f1766a3, F=0x5, S=1,       10',
+    '0,          0,          0,     1024,      196, 0x4cc0516d',
+    '0,      47104,      47104,      896,      158, 0x70a653a3',
+  ];
+  assert.equal(framecrcEndSec(mixed), 1);
+  // A WAV ends with a short packet; an MP3's time base is not its sample rate.
+  assert.equal(
+    framecrcEndSec([
+      '#tb 0: 1/44100',
+      '0, 0, 0, 2048, 4096, 0x0',
+      '0, 108544, 108544, 1706, 3412, 0x0',
+    ]),
+    2.5,
+  );
+  assert.equal(
+    framecrcEndSec(['#tb 0: 1/14112000', '0, 46463676, 46463676, 368640, 209, 0x0']),
+    46832316 / 14112000,
+  );
+  assert.equal(framecrcEndSec(['#tb 0: 1/48000']), null, 'no packets');
+  assert.equal(framecrcEndSec(['0, 0, 0, 1024, 4, 0x0']), null, 'no time base');
 });
 
 test('muxing copies the video stream and fits the sound to the video', () => {
