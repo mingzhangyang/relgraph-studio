@@ -34,7 +34,10 @@ export interface CaptionReading {
   needed: number;
   /** Seconds the caption is fully shown: the shot without its fades. */
   shown: number;
-  /** The shortest `durationSec`, in half seconds, that would leave enough time. */
+  /**
+   * The shortest `durationSec`, in half seconds, that would leave enough time,
+   * counting the same fades as `shown` (one for the last shot).
+   */
   suggestedSec: number;
 }
 
@@ -48,11 +51,14 @@ export function slowCaptions(
 ): { index: number; reading: CaptionReading }[] {
   return scenes.flatMap((scene, index) => {
     const needed = readingSeconds(`${scene.title}${scene.narration ?? ''}`);
+    const last = index === scenes.length - 1;
     const fade = Math.min(CAPTION_FADE_SEC, scene.durationSec / 2);
-    const fades = index === scenes.length - 1 ? fade : 2 * fade;
-    const shown = scene.durationSec - fades;
+    const shown = scene.durationSec - (last ? fade : 2 * fade);
     if (needed <= shown) return [];
-    const suggestedSec = Math.ceil((needed + 2 * CAPTION_FADE_SEC) * 2) / 2;
+    // Counted at full length: in a shot shorter than two fades they are
+    // shorter, which only leaves more time, so the suggestion always suffices.
+    const fades = (last ? 1 : 2) * CAPTION_FADE_SEC;
+    const suggestedSec = Math.max(0.5, Math.ceil((needed + fades) * 2) / 2);
     return [{ index, reading: { needed, shown, suggestedSec } }];
   });
 }

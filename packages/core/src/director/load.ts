@@ -4,6 +4,7 @@ import { inspectRelGraph } from '../relgraph.js';
 import { adaptBiologyDocument, validateBiologyDocument } from '../domains/biology.js';
 import { timeAnchor } from './time-anchor.js';
 import { slowCaptions } from './reading-speed.js';
+import { compileTimeline } from './timeline.js';
 import { GENERIC_FORMAT, inspectGenericDocument } from '../domains/generic.js';
 import { LOAD_WORDING, worded, type DiagnosticParams } from '../diagnostic-wording.js';
 import type { Bio } from '../../types/relationship-graph.js';
@@ -193,10 +194,15 @@ export function loadDocument(doc: unknown): LoadResult {
       );
     }
     const warnings = diagnostics.warnings.map((entry) => withOwner(doc, entry));
+    if (errors.length) return { valid: false, errors, warnings };
     // Only an authored storyboard: a derived one has no shots to edit. The
-    // source is not read again (one parse per load).
+    // source is not read again (one parse per load). Captions are measured as
+    // the film shows them, after spoiler projection: a shot that refers to an
+    // object not yet visible shows a placeholder title and no narration.
     if (authoredScenes)
-      for (const { index, reading } of slowCaptions(graph.scenes))
+      for (const { index, reading } of slowCaptions(
+        compileTimeline(graph).shots.map((shot) => shot.scene),
+      ))
         warnings.push({
           ...issue(
             'CAPTION_READING_SPEED',
@@ -211,7 +217,6 @@ export function loadDocument(doc: unknown): LoadResult {
           ),
           level: 'warning',
         });
-    if (errors.length) return { valid: false, errors, warnings };
     return { valid: true, graph, errors: [], warnings, detailAt };
   } catch (error: unknown) {
     const issues: unknown = object(error) ? error.issues : undefined;
