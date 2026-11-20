@@ -26,6 +26,19 @@ import { makeStudio } from './helpers/studio-harness.mjs';
 
 const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
 
+/**
+ * The biology fixture with one more second per shot: two of its captions are
+ * a little too long to read in their shots (CAPTION_READING_SPEED), and these
+ * tests need a document without any diagnostics.
+ */
+const roomyBiology = {
+  ...structuredClone(biology),
+  presentation: biology.presentation.map((shot) => ({
+    ...shot,
+    durationSec: shot.durationSec + 1,
+  })),
+};
+
 test('render defaults: 1080p, light film theme, zh-CN, whole film', () => {
   const command = parseCommand(['render', 'story.json', '--out', 'film.mp4']);
   assert.equal(command.command, 'render');
@@ -121,7 +134,7 @@ test('validate prints the workspace diagnostics text', async () => {
   assert.match(text, /^错误 · 1\n {2}✗ UNKNOWN_TARGET · r01\n {4}relations\[0\]\.target\n/);
   assert.match(text, /\n {4}建议：/);
   assert.match(text, /\n警告 · \d+\n/);
-  assert.equal(formatDiagnostics(loadDocument(biology)), '未发现校验问题。\n');
+  assert.equal(formatDiagnostics(loadDocument(roomyBiology)), '未发现校验问题。\n');
 
   // The workspace renders the same entries from the same helpers.
   const fetcher = async () => ({ ok: true, text: async () => JSON.stringify(invalid) });

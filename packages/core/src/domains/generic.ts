@@ -116,6 +116,8 @@ function adaptParsed(parsed: ParsedGenericSource, warnings: GenericDiagnostic[])
     throw Object.assign(new Error('Generic projection invalid'), { issues: check.errors });
   return {
     graph,
+    /** Whether the shots were written by the author rather than derived. */
+    authoredScenes: parsed.scenes.length > 0,
     diagnostics: { valid: true, errors, warnings },
     /** Node summaries are author display text and follow node visibility. */
     detailAt: (id: string): { summary: string } | undefined => {

@@ -181,6 +181,10 @@ export const LOAD_WORDING = {
     (p) => `为首个分镜设置 ${p.field}，以避免提前显示未来对象。`,
   ),
   INVALID_DATA: wording('数据无法转换为图谱。', '检查文件格式、字段类型和必填字段后重试。'),
+  CAPTION_READING_SPEED: wording(
+    (p) => `分镜标题和旁白约需 ${p.needed} 秒读完，完整显示只有 ${p.shown} 秒。`,
+    (p) => `把 durationSec 延长到至少 ${p.suggested} 秒，或缩短标题和旁白。`,
+  ),
 } as const satisfies Record<string, DiagnosticWording>;
 
 /** Every worded layer and its table. */

@@ -22,6 +22,19 @@ import { documentCommandFromShortcut } from '../apps/studio/src/document-command
 
 const readFile = (name, value) => ({ name, text: () => Promise.resolve(value) });
 
+/**
+ * The biology fixture with one more second per shot: two of its captions are
+ * a little too long to read in their shots (CAPTION_READING_SPEED), and these
+ * tests need a document without any diagnostics.
+ */
+const roomyBiology = {
+  ...structuredClone(biology),
+  presentation: biology.presentation.map((shot) => ({
+    ...shot,
+    durationSec: shot.durationSec + 1,
+  })),
+};
+
 test('startup does not replace a selection made while fonts are loading', async () => {
   const fonts = deferred();
   const fetched = [];
@@ -363,7 +376,7 @@ test('document switches reset cached text, and errors clear the transcript', asy
   await app.ready;
   assert.match(app.node('currentShot').textContent, /大观园/);
   const input = app.node('fileInput');
-  input.files = [readFile('other.json', JSON.stringify(biology))];
+  input.files = [readFile('other.json', JSON.stringify(roomyBiology))];
   await input.dispatch('change');
   await flush();
   assert.equal(app.node('sourceName').textContent, 'other.json');
@@ -409,7 +422,7 @@ test('pending and stale loads cannot expose outdated diagnostics', async () => {
 
   // The literary fixture intentionally warns about three importance-5 leads.
   // Use the warning-free biology fixture to exercise the empty state.
-  current.resolve(JSON.stringify(biology));
+  current.resolve(JSON.stringify(roomyBiology));
   await flush();
   assert.equal(app.node('sourceName').textContent, 'current.json');
   assert.equal(app.node('status').attributes['data-state'], 'ready');

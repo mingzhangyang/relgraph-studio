@@ -29,9 +29,14 @@ const graph = loaded.graph;
 const positions = layoutGraph(graph);
 const provenance = (record) => record.extra.provenance;
 
-test('bounded source-verified dataset validates and adapts without warnings or schema changes', () => {
+test('bounded source-verified dataset validates and adapts without schema changes; only its QA timeline warns', () => {
   assert.deepEqual(validateRelGraph(graphDocument), { valid: true, errors: [], warnings: [] });
-  assert.equal(loaded.warnings.length, 0);
+  // Its three-second presentation is a QA scaffold, not a film: the only
+  // warnings are that its captions cannot be read in such short shots.
+  assert.deepEqual(
+    [...new Set(loaded.warnings.map((entry) => entry.code))],
+    loaded.warnings.length ? ['CAPTION_READING_SPEED'] : [],
+  );
   assert.equal(graph.nodes.length, 6);
   assert.equal(graph.edges.length, 9);
   assert.equal(graph.domain, 'literature');

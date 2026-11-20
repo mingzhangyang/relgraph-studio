@@ -719,7 +719,13 @@ for (const theme of ['light', 'dark']) {
     await waitReady(page);
     assert.equal(await status(page), 'ready');
     assert.equal(await page.locator('#errors .diagnostic-item').count(), 0);
-    assert.equal(await page.locator('#warnings .diagnostic-item').count(), 0);
+    // Its three-second presentation is a QA scaffold, so its only warnings
+    // are that its captions cannot be read in such short shots.
+    const warnings = await page.locator('#warnings .diagnostic-item').allTextContents();
+    assert.deepEqual(
+      warnings.filter((text) => !text.includes('CAPTION_READING_SPEED')),
+      [],
+    );
     const names = ['林如海', '贾敏', '林黛玉', '贾母', '贾政', '贾宝玉'];
     for (const [frame, nodes, edges] of [
       [0, 0, 0],
