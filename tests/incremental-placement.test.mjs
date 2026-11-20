@@ -544,3 +544,41 @@ test('relgraph layout --chronology-tolerance keeps time in order while filling g
     await rm(folder, { recursive: true, force: true });
   }
 });
+
+test('filling one gap in a large drawing costs what its neighbourhood costs', () => {
+  // 5,000 positioned nodes in a chain drawn as a serpentine, so that
+  // neighbours sit side by side; one without coordinates (review of #56).
+  const n = 5000,
+    nodes = [],
+    edges = [];
+  const column = (i) => (Math.floor(i / 100) % 2 ? 99 - (i % 100) : i % 100);
+  for (let i = 0; i < n; i++)
+    nodes.push({
+      id: 'n' + i,
+      ...(i === 2550 ? {} : { position: { x: column(i) * 160, y: Math.floor(i / 100) * 110 } }),
+    });
+  for (let i = 1; i < n; i++) edges.push({ source: 'n' + (i - 1), target: 'n' + i });
+  const graph = load({ format: 'relgraph.graph/1', nodes, edges });
+  const positions = Object.fromEntries(
+    graph.nodes.filter((node) => node.position).map((node) => [node.id, node.position]),
+  );
+  const bare = { ...graph, nodes: graph.nodes.map((node) => ({ ...node, position: undefined })) };
+  const gap = byLabel(graph, 'n2550').id,
+    before = byLabel(graph, 'n2549').id;
+  // Whole-graph engines took 2 s (grid) to 86 s (layered) here before.
+  for (const type of ['grid', 'layered', 'force', 'circle']) {
+    const started = performance.now(),
+      plan = planLayout(bare, missing(type, positions));
+    const took = performance.now() - started;
+    assert.ok(took < 2000, `${type}: ${Math.round(took)} ms`);
+    for (const [id, p] of Object.entries(positions))
+      assert.deepEqual(plan.positions.get(id), p, id);
+    const q = plan.positions.get(gap),
+      r = plan.positions.get(before);
+    assert.ok(Math.hypot(q.x - r.x, q.y - r.y) < 1000, `${type}: ${JSON.stringify(q)}`);
+  }
+  // The typical gap of the regular grid, from a sample, is its row step.
+  const started = performance.now();
+  assert.equal(typicalGap(Object.values(positions)), 110);
+  assert.ok(performance.now() - started < 500);
+});

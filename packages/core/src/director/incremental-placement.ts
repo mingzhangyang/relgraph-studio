@@ -13,7 +13,9 @@
  *    known only to other new nodes waits until one of them is placed.
  * 2. The starting point: the barycentre of its placed neighbours, shifted by
  *    the offset the chosen engine gives it from those neighbours. The engine
- *    draws the whole graph once; that drawing is aligned to the anchors by a
+ *    draws the whole graph once (above `PLACEMENT_LOCAL_LIMIT` nodes, only
+ *    the new nodes' neighbourhood, so a few gaps in a large drawing stay
+ *    cheap); that drawing is aligned to the anchors by a
  *    least-squares similarity (rotation, reflection, uniform scale), and the
  *    offset counts as much as the alignment explains the anchors (R²), and
  *    never takes the node more than two rooms (below) from where it starts. A
@@ -45,7 +47,7 @@
  * (bowed, in screen space) is what `relgraph check-layout` checks.
  */
 import type { VisualGraph } from '../../types/visual-graph.js';
-import { compare, prepare } from '../graph/analysis.js';
+import { compare, prepare, type Prepared } from '../graph/analysis.js';
 import { placeInTime, type TimeAxis } from '../graph/time-axis.js';
 import { nodeTimes } from './chronology.js';
 import type { LayoutEngine } from '../project-layout.js';
@@ -95,6 +97,17 @@ export const PLACEMENT_ROOM = Object.freeze({
 
 /** Beyond this magnitude, differences of coordinates are not trusted to be finite. */
 const EXTREME = 1e9;
+/** `typicalGap` measures every point up to this many, else a sample of `GAP_SAMPLE`. */
+const GAP_SAMPLE_ABOVE = 400,
+  GAP_SAMPLE = 200;
+/**
+ * Up to this many nodes the engine draws the whole graph. Above it, it draws
+ * the new nodes and the nodes within `LOCAL_HOPS` relations of them, at most
+ * this many beyond twice the new ones, so filling a few gaps in a large
+ * drawing costs what the neighbourhood costs, not what the graph costs.
+ */
+export const PLACEMENT_LOCAL_LIMIT = 400;
+const LOCAL_HOPS = 2;
 
 interface Alignment {
   /** Maps an offset in the engine's drawing to an offset in the anchors' drawing. */
@@ -200,7 +213,13 @@ function passesBeside(p: LayoutPoint, a: LayoutPoint, b: LayoutPoint, limit: num
  */
 export function typicalGap(points: readonly LayoutPoint[]): number {
   if (points.length < 2) return 0;
-  const nearest = points.map((p, i) => {
+  // Above a few hundred points, the median over an evenly spaced sample (in
+  // the given order) against all points: O(sample × n), not O(n²).
+  const every = points.length > GAP_SAMPLE_ABOVE ? points.length / GAP_SAMPLE : 1;
+  const sample: number[] = [];
+  for (let k = 0; k < points.length; k += every) sample.push(Math.floor(k));
+  const nearest = sample.map((i) => {
+    const p = points[i];
     let best = Infinity;
     points.forEach((q, j) => {
       if (i !== j) best = Math.min(best, Math.hypot(p.x - q.x, p.y - q.y));
@@ -220,6 +239,29 @@ function searchOrder(reach: number): [number, number][] {
   return out.sort(
     (p, q) => p[0] * p[0] + p[1] * p[1] - (q[0] * q[0] + q[1] * q[1]) || p[1] - q[1] || p[0] - q[0],
   );
+}
+
+/**
+ * The nodes the engine draws: all of them in a graph of at most
+ * `PLACEMENT_LOCAL_LIMIT` nodes, else the new nodes and, breadth first in id
+ * order, the nodes within `LOCAL_HOPS` relations of them.
+ */
+function neighbourhood(p: Prepared, fresh: readonly string[]): Set<string> {
+  if (p.ids.length <= PLACEMENT_LOCAL_LIMIT) return new Set(p.ids);
+  const cap = Math.max(PLACEMENT_LOCAL_LIMIT, fresh.length * 2),
+    seen = new Set(fresh);
+  let frontier = [...fresh];
+  for (let hop = 0; hop < LOCAL_HOPS && frontier.length && seen.size < cap; hop++) {
+    const next: string[] = [];
+    for (const id of frontier)
+      for (const v of p.neighbours.get(id) ?? [])
+        if (!seen.has(v) && seen.size < cap) {
+          seen.add(v);
+          next.push(v);
+        }
+    frontier = next.sort(compare);
+  }
+  return seen;
 }
 
 /**
@@ -260,7 +302,18 @@ export function placeIncrementally(
     anchorToTime(graph, out, { axis, spacing });
     return sorted();
   }
-  const drawn = runLayoutEngine(graph, engine, { seed, spacing, iterations });
+  const p = prepare(graph);
+  const local = neighbourhood(p, fresh);
+  const drawn = runLayoutEngine(
+    local.size === ids.length
+      ? graph
+      : {
+          nodes: graph.nodes.filter((n) => local.has(n.id)),
+          edges: graph.edges.filter((e) => local.has(e.source) && local.has(e.target)),
+        },
+    engine,
+    { seed, spacing, iterations },
+  );
   // Nothing to keep: the engine's drawing is the placement.
   if (!out.size) {
     for (const id of ids) {
@@ -271,13 +324,16 @@ export function placeIncrementally(
     return sorted();
   }
 
-  const p = prepare(graph);
-  const kept = [...out.keys()];
+  // Anchors the engine drew: the alignment and the density compare them.
+  const kept = [...out.keys()].filter((id) => drawn.has(id));
   const align = alignDrawings(kept.map((id) => [drawn.get(id)!, out.get(id)!] as const));
   // The room a node needs scales with the drawing it joins: the camera fits
-  // the whole drawing, so a sparser drawing is shown smaller.
-  const engineGap = typicalGap(kept.map((id) => drawn.get(id)!)),
-    keptGap = typicalGap(kept.map((id) => out.get(id)!)),
+  // the whole drawing, so a sparser drawing is shown smaller. When the
+  // engine drew only a neighbourhood, its few anchors say little about
+  // density: its whole drawing is compared with all anchors instead.
+  const whole = local.size === ids.length,
+    engineGap = typicalGap((whole ? kept : [...drawn.keys()]).map((id) => drawn.get(id)!)),
+    keptGap = typicalGap((whole ? kept : [...out.keys()]).map((id) => out.get(id)!)),
     room =
       spacing *
       (engineGap > 0 && keptGap > 0 ? Math.min(4, Math.max(0.25, keptGap / engineGap)) : 1);
@@ -326,15 +382,46 @@ export function placeIncrementally(
   const segments: [string, string][] = p.pairs
     .filter((l) => out.has(l.source) && out.has(l.target))
     .map((l) => [l.source, l.target]);
-  const clear = (id: string, q: LayoutPoint, partners: readonly string[]): boolean => {
-    for (const [a, b] of segments)
-      if (passesBeside(q, out.get(a)!, out.get(b)!, clearance)) return false;
-    for (const m of partners) {
-      const end = out.get(m)!;
+  /**
+   * The relation test for candidates of one new node around `ideal`: no
+   * relation passes beside the candidate, and none of its relations to
+   * `partners` passes beside another node. Only relations and nodes near the
+   * search region can fail it, so only those are kept.
+   */
+  const clearAround = (
+    id: string,
+    ideal: LayoutPoint,
+    partners: readonly string[],
+  ): ((q: LayoutPoint) => boolean) => {
+    const reach = PLACEMENT_ROOM.reach * room + clearance,
+      x0 = ideal.x - reach,
+      x1 = ideal.x + reach,
+      y0 = ideal.y - reach,
+      y1 = ideal.y + reach;
+    const near = segments
+      .map(([a, b]) => [out.get(a)!, out.get(b)!] as const)
+      .filter(
+        ([a, b]) =>
+          Math.max(a.x, b.x) >= x0 &&
+          Math.min(a.x, b.x) <= x1 &&
+          Math.max(a.y, b.y) >= y0 &&
+          Math.min(a.y, b.y) <= y1,
+      );
+    const own = partners.map((m) => {
+      const end = out.get(m)!,
+        lx = Math.min(x0, end.x - clearance),
+        hx = Math.max(x1, end.x + clearance),
+        ly = Math.min(y0, end.y - clearance),
+        hy = Math.max(y1, end.y + clearance);
+      const others: LayoutPoint[] = [];
       for (const [other, r] of out)
-        if (other !== m && other !== id && passesBeside(r, q, end, clearance)) return false;
-    }
-    return true;
+        if (other !== m && other !== id && r.x >= lx && r.x <= hx && r.y >= ly && r.y <= hy)
+          others.push(r);
+      return { end, others };
+    });
+    return (q) =>
+      near.every(([a, b]) => !passesBeside(q, a, b, clearance)) &&
+      own.every(({ end, others }) => others.every((r) => !passesBeside(r, q, end, clearance)));
   };
 
   const times = chronologyTolerance === undefined ? null : nodeTimes(graph);
@@ -377,8 +464,12 @@ export function placeIncrementally(
     if (!reference.length && group)
       reference = [...out.keys()].filter((v) => byId.get(v)?.groupId === group);
     if (!reference.length) reference = [...out.keys()];
+    // Outside the drawn neighbourhood a reference node gives no direction.
+    const drawnReference = reference.filter((v) => drawn.has(v));
     const bary = mean(reference.map((v) => out.get(v)!)),
-      engineBary = mean(reference.map((v) => drawn.get(v)!)),
+      engineBary = drawnReference.length
+        ? mean(drawnReference.map((v) => drawn.get(v)!))
+        : drawn.get(id)!,
       own = drawn.get(id)!;
     const turned = align.apply({ x: own.x - engineBary.x, y: own.y - engineBary.y }),
       length = Math.hypot(turned.x, turned.y),
@@ -400,11 +491,13 @@ export function placeIncrementally(
       ideal.x = Math.min(allowed.hi - margin, Math.max(allowed.lo + margin, ideal.x));
     }
     const inOrder = (q: LayoutPoint): boolean => !allowed || (q.x > allowed.lo && q.x < allowed.hi);
-    let chosen: LayoutPoint | undefined;
+    let chosen: LayoutPoint | undefined, clear: ((q: LayoutPoint) => boolean) | undefined;
     for (const strict of [true, false]) {
       for (const [i, j] of offsets) {
         const q = { x: round(ideal.x + i * step), y: round(ideal.y + j * step) };
-        if (roomy(q) && inOrder(q) && (!strict || clear(id, q, partners))) {
+        if (!roomy(q) || !inOrder(q)) continue;
+        clear ??= clearAround(id, ideal, partners);
+        if (!strict || clear(q)) {
           chosen = q;
           break;
         }
