@@ -54,19 +54,19 @@ The smallest valid document:
 
 Everything else is optional.
 
-| Field          | Meaning                                                                                                                                                                                                                                                                                                                                                                                   |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `meta`         | `title`, `description`, `sourceNote`. The title defaults to `关系图`.                                                                                                                                                                                                                                                                                                                     |
-| `directed`     | Default direction of relations (`false`). A kind or a single relation may override it.                                                                                                                                                                                                                                                                                                    |
-| `diagram`      | What kind of picture this is: `network` (default), `tree`, `mindmap`, `flowchart` or `timeline`. See [Diagram kinds](#diagram-kinds).                                                                                                                                                                                                                                                     |
-| `unfold`       | `false` shows a tree, mind map or flowchart whole instead of revealing it level by level.                                                                                                                                                                                                                                                                                                 |
-| `nodes[]`      | `id` (required), `label`, `kind`, `group`, `weight` (≥ 0), `color` (`#RRGGBB`), `summary` (detail card text), `position` `{x, y}` (on a timeline that keeps time, a dated node may give `{y}` alone; see [Diagram kinds](#diagram-kinds)), `visibleFrom`, `visibleTo`, `start`, `end` (a span on the time axis; it never hides the node). A bare string or number is a node with that id. |
-| `edges[]`      | `source`, `target` (required), `id`, `kind`, `label`, `directed`, `weight` (≥ 0), `visibleFrom`, `visibleTo`. Endpoints that are not declared become nodes labelled by their id. `source === target` is a self-relation.                                                                                                                                                                  |
-| `groups[]`     | `id` (required), `label`, `kind`, `color`. Groups referenced only by nodes are created.                                                                                                                                                                                                                                                                                                   |
-| `kinds`        | `nodes.<kind>`: `label`, `color`, `shape` (`circle`, `pill`, `diamond`, `square`, `hexagon`, or the label-holding `box`, `capsule`, `decision`). `edges.<kind>`: `label`, `color`, `line` (`solid`, `dashed`, `dotted`), `head` (`arrow`, `bar`, `hollow-circle`, `none`), `directed`.                                                                                                    |
-| `timeline`     | `unit` and optional `total` of the domain time used by `visibleFrom` / `visibleTo`.                                                                                                                                                                                                                                                                                                       |
-| `timeAxis`     | `false` declares that a timeline's coordinates are not on its time axis: x is kept as written and no axis is drawn. Written by the studio when it exports a timeline drawn with another strategy. See [Diagram kinds](#diagram-kinds).                                                                                                                                                    |
-| `presentation` | Shots, as in the biology format: `id`, `title`, `narration`, `durationSec` (default 4), `transitionMs`, `domainAt`, `camera` (`focusNodeId` \| `fitIds`, `zoom`), `highlight` (`nodeIds`, `edgeIds`, `groupId`), `openDetailNodeId`.                                                                                                                                                      |
+| Field          | Meaning                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `meta`         | `title`, `description`, `sourceNote`. The title defaults to `关系图`.                                                                                                                                                                                                                                                                                                                                                                         |
+| `directed`     | Default direction of relations (`false`). A kind or a single relation may override it.                                                                                                                                                                                                                                                                                                                                                        |
+| `diagram`      | What kind of picture this is: `network` (default), `tree`, `mindmap`, `flowchart` or `timeline`. See [Diagram kinds](#diagram-kinds).                                                                                                                                                                                                                                                                                                         |
+| `unfold`       | `false` shows a tree, mind map or flowchart whole instead of revealing it level by level.                                                                                                                                                                                                                                                                                                                                                     |
+| `nodes[]`      | `id` (required), `label`, `kind`, `group`, `weight` (≥ 0), `color` (`#RRGGBB`), `summary` (detail card text), `position` `{x, y}` (on a timeline that keeps time, a dated node may give `{y}` alone; see [Diagram kinds](#diagram-kinds)), `visibleFrom`, `visibleTo`, `start`, `end` (a span on the time axis; it never hides the node), `evidence` (see [Evidence cards](#evidence-cards)). A bare string or number is a node with that id. |
+| `edges[]`      | `source`, `target` (required), `id`, `kind`, `label`, `directed`, `weight` (≥ 0), `visibleFrom`, `visibleTo`, `evidence`. Endpoints that are not declared become nodes labelled by their id. `source === target` is a self-relation.                                                                                                                                                                                                          |
+| `groups[]`     | `id` (required), `label`, `kind`, `color`. Groups referenced only by nodes are created.                                                                                                                                                                                                                                                                                                                                                       |
+| `kinds`        | `nodes.<kind>`: `label`, `color`, `shape` (`circle`, `pill`, `diamond`, `square`, `hexagon`, or the label-holding `box`, `capsule`, `decision`). `edges.<kind>`: `label`, `color`, `line` (`solid`, `dashed`, `dotted`), `head` (`arrow`, `bar`, `hollow-circle`, `none`), `directed`.                                                                                                                                                        |
+| `timeline`     | `unit` and optional `total` of the domain time used by `visibleFrom` / `visibleTo`.                                                                                                                                                                                                                                                                                                                                                           |
+| `timeAxis`     | `false` declares that a timeline's coordinates are not on its time axis: x is kept as written and no axis is drawn. Written by the studio when it exports a timeline drawn with another strategy. See [Diagram kinds](#diagram-kinds).                                                                                                                                                                                                        |
+| `presentation` | Shots, as in the biology format: `id`, `title`, `narration`, `durationSec` (default 4), `transitionMs`, `domainAt`, `camera` (`focusNodeId` \| `fitIds`, `zoom`), `highlight` (`nodeIds`, `edgeIds`, `groupId`), `openDetailNodeId`, `evidence` (`edgeId` \| `nodeId`, `items`).                                                                                                                                                              |
 
 Rules worth knowing:
 
@@ -96,6 +96,82 @@ Rules worth knowing:
 
 Coordinate export (`仅导出坐标 JSON`) and `relgraph layout` write back to the
 ids you authored and declare nodes that previously existed only as endpoints.
+
+## Evidence cards
+
+A node or relation may carry `evidence`: a list whose items are either a
+citation alone or an object with the source text.
+
+```json
+{
+  "source": "沈墨",
+  "target": "顾青",
+  "kind": "书信往来",
+  "evidence": [
+    {
+      "cite": "沈墨《寄顾青书》",
+      "quote": "春水初生，别来三载……",
+      "locator": "卷一",
+      "url": "https://…"
+    },
+    "顾青《答沈墨》"
+  ]
+}
+```
+
+- A string is a citation only (`"王维《送孟六归襄阳》"`); the Tang poet files
+  write evidence this way and stay valid.
+- An object needs a non-empty `cite`. `quote` is verbatim source text;
+  `locator` says where in the work; `url` is kept for the accessible text and
+  the transcript but not drawn. Unknown keys are ignored. Every text is at
+  most 2,000 characters.
+- A shot shows one evidence card with `"evidence": { "edgeId": … }` or
+  `{ "nodeId": … }`, using the ids you wrote. `items` lists the indices (from 0) of the items to show, in the order to show them; without it every item
+  is shown. A shot opens either a detail card (`openDetailNodeId`) or an
+  evidence card, not both.
+
+The card shows each quotation exactly as written, marked by a rule, followed
+by its citation (`——cite · locator`), or the citation alone. Nothing else is
+written on it but `EVIDENCE` and what the card is about (the node's label, or
+the relation's two ends). There is no free-text card, and a project's display
+copy never changes card text. Lines break between words, around CJK
+characters and never before closing punctuation; nothing is shortened.
+
+In a landscape frame the card stands at the right of the graph area, as tall
+as its items. While it is shown, the camera frames the shot into the area to
+its left (the whole view, the shot's `fitIds` together with the card's node
+or relation ends, or the shot's `focusNodeId` while keeping those ends in
+view), so the card never covers what it is about. Its node or relation is
+highlighted for the whole shot. The card fades in and out with the caption
+and, like the detail card, appears once its node or relation is half
+revealed.
+
+| Relation card, dark                                             | Node card, light                                          |
+| --------------------------------------------------------------- | --------------------------------------------------------- |
+| ![relation card, dark](visuals/evidence/relation-card-dark.png) | ![node card, light](visuals/evidence/node-card-light.png) |
+
+The fictional data behind these frames is
+`tests/fixtures/evidence-cards.graph.json`.
+
+**No silent truncation.** When the items do not fit the card at the chosen
+frame spec, the card is not drawn: `relgraph render` refuses the film before
+writing anything, naming the shot, the node or relation and the first item
+that does not fit; `relgraph check-labels` reports the same and exits with
+status 1; the studio says so under the preview. Choosing fewer items or a
+shorter quotation is the data owner's decision.
+
+**Spoilers.** A card whose node or relation is not yet visible is withheld,
+and so are the shot's title and narration, as for any other reference to a
+hidden object. Items that another format dates (a literary quotation's
+chapter) are left out before their time; a card that names such an item
+explicitly is withheld.
+
+Card text enters the frame's accessible text (`FrameText.evidence`), the
+studio transcript, and the film events (`evidence` events with the shot,
+`object`, `target` and the shown `items`). The literary format's relation
+quotations and the biology format's `{ source, recordId }` records map to the
+same evidence on the neutral graph; a shot `evidence` field for those two
+formats is not part of this step.
 
 ## Size
 

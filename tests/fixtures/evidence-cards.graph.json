@@ -1,0 +1,81 @@
+{
+  "format": "relgraph.graph/1",
+  "meta": {
+    "title": "虚构书信网络",
+    "description": "虚构的示例：人物、书信与引文均为杜撰，只用于测试证据卡片。"
+  },
+  "timeline": { "unit": "年" },
+  "nodes": [
+    { "id": "甲", "label": "沈墨", "group": "南社" },
+    { "id": "乙", "label": "顾青", "group": "南社" },
+    { "id": "丙", "label": "陆远", "group": "北社" },
+    { "id": "丁", "label": "林栖", "group": "北社" },
+    {
+      "id": "戊",
+      "label": "周寂",
+      "group": "北社",
+      "evidence": ["《虚构人物志》卷三：生平不详，未见与他人往来的记载。"]
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "source": "甲",
+      "target": "乙",
+      "kind": "书信往来",
+      "visibleFrom": 1,
+      "evidence": [
+        {
+          "cite": "沈墨《寄顾青书》",
+          "quote": "春水初生，别来三载，每读君诗，如对故人。",
+          "locator": "卷一"
+        },
+        "顾青《答沈墨》"
+      ]
+    },
+    {
+      "id": "e2",
+      "source": "乙",
+      "target": "丙",
+      "kind": "同游",
+      "visibleFrom": 2,
+      "evidence": [
+        {
+          "cite": "陆远《山行记》",
+          "quote": "与顾子同登西岭，风雨大作，宿于寺中。",
+          "url": "https://example.org/shanxing"
+        }
+      ]
+    },
+    { "id": "e3", "source": "丙", "target": "丁", "kind": "书信往来", "visibleFrom": 2 },
+    { "id": "e4", "source": "甲", "target": "丁", "kind": "同游", "visibleFrom": 3 }
+  ],
+  "presentation": [
+    { "id": "open", "title": "南社二人", "domainAt": 1, "durationSec": 4 },
+    {
+      "id": "letters",
+      "title": "书信为证",
+      "narration": "两封信都还在。",
+      "domainAt": 1,
+      "durationSec": 6,
+      "evidence": { "edgeId": "e1" }
+    },
+    {
+      "id": "trip",
+      "title": "西岭之行",
+      "domainAt": 2,
+      "durationSec": 6,
+      "camera": { "fitIds": ["乙"] },
+      "evidence": { "edgeId": "e2", "items": [0] }
+    },
+    {
+      "id": "alone",
+      "title": "无人提及",
+      "domainAt": 3,
+      "durationSec": 5,
+      "camera": { "focusNodeId": "戊" },
+      "evidence": { "nodeId": "戊" }
+    },
+    { "id": "all", "title": "全貌", "domainAt": 3, "durationSec": 4 }
+  ]
+}
