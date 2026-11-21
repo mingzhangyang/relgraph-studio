@@ -3,17 +3,22 @@
 //
 //   npm run check:export                  # build, check golden frames, export and probe MP4s
 //   npm run check:export -- --no-build    # reuse the built packages and studio
-//   npm run check:export -- --update      # rewrite examples/golden-frames.json
+//   npm run check:export -- --update      # rewrite the golden manifests
 //   npm run check:export -- --no-browser  # skip the informational browser comparison
 //
 // 1. Golden frames: key frames of every example in both film themes are
 //    rendered with the skia-canvas backend and their RGBA SHA-256 compared with
-//    examples/golden-frames.json. Hashes are enforced only when skia-canvas and
-//    the vendored fonts are the versions that produced them; otherwise the
-//    differences are reported without failing, as in check:browser.
-// 2. Export: `relgraph render` writes a complete MP4 of each example. ffprobe
-//    must report the codec, pixel format, frame rate, resolution, colour tags,
-//    frame count `frameCount(graph, fps)` and the matching duration.
+//    one manifest per frame spec: examples/golden-frames.json for
+//    landscape-1080p (unchanged by new specs) and
+//    examples/golden-frames.<spec>.json for portrait-1080x1920,
+//    portrait-1080x1440 and square-1080 (ADR 004, D7 step 1). Hashes are
+//    enforced only when skia-canvas and the vendored fonts are the versions
+//    that produced them; otherwise the differences are reported without
+//    failing, as in check:browser.
+// 2. Export: `relgraph render --frame-spec <spec>` writes a complete MP4 of
+//    each example at each of those specs. ffprobe must report the codec,
+//    pixel format, frame rate, colour tags, frame count `frameCount(graph,
+//    fps)`, the matching duration, and the resolution the spec declares.
 // 3. Round trip: a frame decoded from each MP4 is compared with the PNG that
 //    `relgraph render --frames` writes for the same index (lossy H.264, so by
 //    PSNR) and must match better than its neighbours. The PNG must equal the
@@ -38,11 +43,18 @@ import exampleManifest from '../examples/manifest.json' with { type: 'json' };
 const run = promisify(execFile);
 const root = fileURLToPath(new URL('..', import.meta.url));
 const outputDir = join(root, 'output/export-check');
-const manifestPath = join(root, 'examples/golden-frames.json');
+// The landscape manifest keeps its name; every other spec has its own file.
+const manifestPathFor = (spec) =>
+  join(
+    root,
+    spec === GOLDEN_SPEC ? 'examples/golden-frames.json' : `examples/golden-frames.${spec}.json`,
+  );
 const args = new Set(process.argv.slice(2));
 const update = args.has('--update');
 const relgraph = join(root, 'packages/cli/dist/bin.js');
 const GOLDEN_SPEC = 'landscape-1080p';
+/** Specs with golden manifests and full exports (ADR 004, D7 step 1). */
+const FILM_SPECS = [GOLDEN_SPEC, 'portrait-1080x1920', 'portrait-1080x1440', 'square-1080'];
 const LOCALE = 'zh-CN';
 const THEMES = ['light', 'dark'];
 // The round-trip frame must reproduce the render this closely through H.264.
@@ -188,67 +200,78 @@ await mkdir(outputDir, { recursive: true });
 console.log(
   `Golden frames · skia-canvas ${environment.skiaCanvas} · fonts ${environment.fonts.slice(0, 12)} · ${environment.platform}`,
 );
-let manifest = null;
-if (!update) {
-  try {
-    manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
-  } catch (error) {
-    if (error?.code !== 'ENOENT') throw error;
-    console.log('  No examples/golden-frames.json; run with --update to create it.');
-  }
-}
-const mismatched = manifest
-  ? Object.entries({ skiaCanvas: 'skia-canvas', fonts: 'vendored fonts' })
-      .filter(([key]) => manifest.environment?.[key] !== environment[key])
-      .map(([key, label]) => `${label} ${manifest.environment?.[key] ?? '?'} → ${environment[key]}`)
-  : [];
-const enforce = manifest !== null && mismatched.length === 0;
-if (manifest && !enforce)
-  console.log(`  Golden hashes are informational: ${mismatched.join('; ')}`);
-if (manifest && manifest.environment?.platform !== environment.platform)
-  console.log(
-    `  Note: hashes were recorded on ${manifest.environment?.platform}; this is ${environment.platform}.`,
-  );
-
-const golden = [];
-for (const example of examples) {
-  const fps = frameSpecFor(GOLDEN_SPEC).fps;
-  for (const theme of THEMES)
-    for (const key of keyFrames(example.result.graph, fps)) {
-      const pixels = headless(example, theme).rgbaAt(key.frame);
-      golden.push({
-        example: example.key,
-        theme,
-        shot: key.shot,
-        kind: key.kind,
-        frame: key.frame,
-        sha256: sha256(pixels),
-      });
+const goldenBySpec = new Map();
+for (const specName of FILM_SPECS) {
+  const manifestPath = manifestPathFor(specName);
+  const file = manifestPath.slice(root.length);
+  let manifest = null;
+  if (!update) {
+    try {
+      manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+    } catch (error) {
+      if (error?.code !== 'ENOENT') throw error;
+      console.log(`  No ${file}; run with --update to create it.`);
     }
-}
-const id = (entry) => `${entry.example}-${entry.theme}-f${entry.frame}`;
-if (manifest) {
-  const expected = new Map(manifest.frames.map((entry) => [id(entry), entry.sha256]));
-  const changed = golden.filter((entry) => expected.get(id(entry)) !== entry.sha256);
-  const missing = [...expected.keys()].filter((key) => !golden.some((e) => id(e) === key));
-  await check(
-    `${golden.length} golden frames ${enforce ? 'match' : 'compared with'} examples/golden-frames.json`,
-    async () => {
-      const problems = [
-        ...changed.map((entry) =>
-          expected.has(id(entry)) ? `${id(entry)} changed` : `${id(entry)} not in manifest`,
-        ),
-        ...missing.map((key) => `${key} no longer rendered`),
-      ];
-      if (!problems.length) return;
-      const summary = `${problems.join(', ')} (run with --update if the change is intended)`;
-      if (!enforce) {
-        console.log(`    (informational, different skia-canvas or fonts) ${summary}`);
-        return;
+  }
+  const mismatched = manifest
+    ? Object.entries({ skiaCanvas: 'skia-canvas', fonts: 'vendored fonts' })
+        .filter(([key]) => manifest.environment?.[key] !== environment[key])
+        .map(
+          ([key, label]) => `${label} ${manifest.environment?.[key] ?? '?'} → ${environment[key]}`,
+        )
+    : [];
+  const enforce = manifest !== null && mismatched.length === 0;
+  if (manifest && !enforce)
+    console.log(`  ${file}: golden hashes are informational: ${mismatched.join('; ')}`);
+  if (manifest && manifest.environment?.platform !== environment.platform)
+    console.log(
+      `  Note: ${file} was recorded on ${manifest.environment?.platform}; this is ${environment.platform}.`,
+    );
+  if (manifest && manifest.frameSpec !== specName)
+    await check(`${file} is the ${specName} manifest`, async () =>
+      assert.equal(manifest.frameSpec, specName),
+    );
+
+  const golden = [];
+  const fps = frameSpecFor(specName).fps;
+  for (const example of examples)
+    for (const theme of THEMES)
+      for (const key of keyFrames(example.result.graph, fps)) {
+        const pixels = headless(example, theme, specName).rgbaAt(key.frame);
+        golden.push({
+          example: example.key,
+          theme,
+          shot: key.shot,
+          kind: key.kind,
+          frame: key.frame,
+          sha256: sha256(pixels),
+        });
       }
-      assert.fail(summary);
-    },
-  );
+  goldenBySpec.set(specName, golden);
+  const id = (entry) => `${entry.example}-${entry.theme}-f${entry.frame}`;
+  if (manifest) {
+    const expected = new Map(manifest.frames.map((entry) => [id(entry), entry.sha256]));
+    const changed = golden.filter((entry) => expected.get(id(entry)) !== entry.sha256);
+    const missing = [...expected.keys()].filter((key) => !golden.some((e) => id(e) === key));
+    await check(
+      `${golden.length} golden frames ${enforce ? 'match' : 'compared with'} ${file}`,
+      async () => {
+        const problems = [
+          ...changed.map((entry) =>
+            expected.has(id(entry)) ? `${id(entry)} changed` : `${id(entry)} not in manifest`,
+          ),
+          ...missing.map((key) => `${key} no longer rendered`),
+        ];
+        if (!problems.length) return;
+        const summary = `${problems.join(', ')} (run with --update if the change is intended)`;
+        if (!enforce) {
+          console.log(`    (informational, different skia-canvas or fonts) ${summary}`);
+          return;
+        }
+        assert.fail(summary);
+      },
+    );
+  }
 }
 
 // ------------------------------------------------------- export and ffprobe
@@ -302,42 +325,47 @@ function decodeFrame(file, index, width, height) {
 }
 
 const films = [];
-for (const example of examples) {
-  const spec = frameSpecFor(GOLDEN_SPEC);
-  const expectedFrames = frameCount(example.result.graph, spec.fps);
-  const out = join(outputDir, `${example.key}.mp4`);
-  await check(`relgraph render exports ${example.key}.mp4 (${expectedFrames} frames)`, async () => {
-    const started = performance.now();
-    await run(process.execPath, [relgraph, 'render', join(root, example.file), '--out', out], {
-      cwd: root,
-      maxBuffer: 16 << 20,
+for (const specName of FILM_SPECS)
+  for (const example of examples) {
+    const spec = frameSpecFor(specName);
+    const expectedFrames = frameCount(example.result.graph, spec.fps);
+    // The default spec keeps its file names; the audio checks below use them.
+    const stem = specName === GOLDEN_SPEC ? example.key : `${example.key}.${specName}`;
+    const out = join(outputDir, `${stem}.mp4`);
+    await check(`relgraph render exports ${stem}.mp4 (${expectedFrames} frames)`, async () => {
+      const started = performance.now();
+      const args = [relgraph, 'render', join(root, example.file), '--out', out];
+      if (specName !== GOLDEN_SPEC) args.push('--frame-spec', specName);
+      await run(process.execPath, args, {
+        cwd: root,
+        maxBuffer: 16 << 20,
+      });
+      console.log(`    exported in ${((performance.now() - started) / 1000).toFixed(1)} s`);
+      const { streams, format } = await ffprobe(
+        out,
+        'stream=codec_name,profile,width,height,pix_fmt,r_frame_rate,avg_frame_rate,nb_read_frames,duration,color_space,color_primaries,color_transfer,color_range:format=duration,format_name',
+      );
+      const [stream] = streams;
+      assert.equal(stream.codec_name, 'h264');
+      assert.equal(stream.pix_fmt, 'yuv420p');
+      assert.equal(`${stream.width}×${stream.height}`, `${spec.width}×${spec.height}`);
+      assert.equal(stream.r_frame_rate, `${spec.fps}/1`);
+      assert.equal(stream.avg_frame_rate, `${spec.fps}/1`);
+      assert.equal(Number(stream.nb_read_frames), expectedFrames, 'decoded frame count');
+      assert.ok(
+        Math.abs(Number(stream.duration) - expectedFrames / spec.fps) < 1e-6,
+        `stream duration ${stream.duration} s = ${expectedFrames} / ${spec.fps}`,
+      );
+      assert.ok(Math.abs(Number(format.duration) - expectedFrames / spec.fps) < 0.05);
+      for (const key of ['color_space', 'color_primaries', 'color_transfer'])
+        assert.equal(stream[key], 'bt709', key);
+      assert.equal(stream.color_range, 'tv');
+      console.log(
+        `    ${stream.codec_name} ${stream.profile} · ${stream.width}×${stream.height} · ${stream.pix_fmt} · ${stream.r_frame_rate} fps · ${stream.nb_read_frames} frames · ${Number(stream.duration).toFixed(3)} s`,
+      );
+      films.push({ example, out, spec, frames: expectedFrames });
     });
-    console.log(`    exported in ${((performance.now() - started) / 1000).toFixed(1)} s`);
-    const { streams, format } = await ffprobe(
-      out,
-      'stream=codec_name,profile,width,height,pix_fmt,r_frame_rate,avg_frame_rate,nb_read_frames,duration,color_space,color_primaries,color_transfer,color_range:format=duration,format_name',
-    );
-    const [stream] = streams;
-    assert.equal(stream.codec_name, 'h264');
-    assert.equal(stream.pix_fmt, 'yuv420p');
-    assert.equal(`${stream.width}×${stream.height}`, `${spec.width}×${spec.height}`);
-    assert.equal(stream.r_frame_rate, `${spec.fps}/1`);
-    assert.equal(stream.avg_frame_rate, `${spec.fps}/1`);
-    assert.equal(Number(stream.nb_read_frames), expectedFrames, 'decoded frame count');
-    assert.ok(
-      Math.abs(Number(stream.duration) - expectedFrames / spec.fps) < 1e-6,
-      `stream duration ${stream.duration} s = ${expectedFrames} / ${spec.fps}`,
-    );
-    assert.ok(Math.abs(Number(format.duration) - expectedFrames / spec.fps) < 0.05);
-    for (const key of ['color_space', 'color_primaries', 'color_transfer'])
-      assert.equal(stream[key], 'bt709', key);
-    assert.equal(stream.color_range, 'tv');
-    console.log(
-      `    ${stream.codec_name} ${stream.profile} · ${stream.width}×${stream.height} · ${stream.pix_fmt} · ${stream.r_frame_rate} fps · ${stream.nb_read_frames} frames · ${Number(stream.duration).toFixed(3)} s`,
-    );
-    films.push({ example, out, spec, frames: expectedFrames });
-  });
-}
+  }
 
 // ----------------------------------------------------------------- round trip
 
@@ -346,8 +374,9 @@ for (const { example, out, spec } of films) {
   const frame = keyFrames(example.result.graph, spec.fps).find(
     (k) => k.kind === 'transition',
   ).frame;
-  await check(`${example.key}: frame ${frame} of the MP4 matches its PNG render`, async () => {
-    const pattern = join(outputDir, `${example.key}-%05d.png`);
+  const stem = spec.name === GOLDEN_SPEC ? example.key : `${example.key}.${spec.name}`;
+  await check(`${stem}: frame ${frame} of the MP4 matches its PNG render`, async () => {
+    const pattern = join(outputDir, `${stem}-%05d.png`);
     await run(
       process.execPath,
       [relgraph, 'render', join(root, example.file)].concat([
@@ -359,6 +388,7 @@ for (const { example, out, spec } of films) {
         String(frame + 1),
         '--jobs',
         '3',
+        ...(spec.name === GOLDEN_SPEC ? [] : ['--frame-spec', spec.name]),
       ]),
     );
     const pngs = [];
@@ -369,7 +399,7 @@ for (const { example, out, spec } of films) {
     const png = pngs[1];
     assert.equal(`${png.width}×${png.height}`, `${spec.width}×${spec.height}`);
     // The worker's PNG is the in-process render, byte for byte in RGBA.
-    const direct = headless(example, 'light').rgbaAt(frame);
+    const direct = headless(example, 'light', spec.name).rgbaAt(frame);
     assert.equal(sha256(png.data), sha256(direct), 'PNG pixels equal the in-process render');
     const decoded = await decodeFrame(out, frame, spec.width, spec.height);
     const scores = pngs.map((p) => psnr(decoded, p.data));
@@ -425,8 +455,9 @@ async function tone(file, seconds) {
   ]);
 }
 
-for (const { example, out, spec, frames } of films.filter(({ example }) =>
-  ['literature', 'timeline'].includes(example.key),
+for (const { example, out, spec, frames } of films.filter(
+  ({ example, spec }) =>
+    spec.name === GOLDEN_SPEC && ['literature', 'timeline'].includes(example.key),
 )) {
   const seconds = frames / spec.fps;
   for (const [name, length, warning] of [
@@ -502,7 +533,9 @@ for (const { example, out, spec, frames } of films.filter(({ example }) =>
 await check('--audio measures the sound stream, not a longer container', async () => {
   // A video file whose picture lasts the whole film but whose sound stops
   // after 1 s: the container says the full length, the stream does not.
-  const film = films.find(({ example }) => example.key === 'literature');
+  const film = films.find(
+    ({ example, spec }) => spec.name === GOLDEN_SPEC && example.key === 'literature',
+  );
   assert.ok(film, 'literature.mp4 exported');
   const seconds = film.frames / film.spec.fps;
   const mixed = join(outputDir, 'mixed-sound.mp4');
@@ -661,10 +694,10 @@ if (!args.has('--no-browser') && !update) {
   );
 }
 
-// Saved custom projects must survive worker/CLI export in both film sizes/themes.
+// Saved custom projects must survive worker/CLI export in every film spec and theme.
 for (const example of examples)
   for (const theme of THEMES)
-    for (const size of ['landscape-720p', 'landscape-1080p']) {
+    for (const size of ['landscape-720p', ...FILM_SPECS]) {
       await check(`custom project ${example.key}/${theme}/${size}`, async () => {
         const source = JSON.parse(await readFile(join(root, example.file), 'utf8'));
         const node = example.result.graph.nodes[0];
@@ -752,21 +785,25 @@ const failed = results.filter((result) => !result.ok);
 if (update && failed.length) {
   console.log(`Golden frames not saved: ${failed.length} checks failed.`);
 } else if (update) {
-  await writeFile(
-    manifestPath,
-    JSON.stringify(
-      {
-        note: 'SHA-256 of RGBA pixels of headless key frames; regenerate with npm run check:export -- --update. Enforced only for the same skia-canvas version and font digest.',
-        environment,
-        frameSpec: GOLDEN_SPEC,
-        locale: LOCALE,
-        frames: golden,
-      },
-      null,
-      2,
-    ) + '\n',
-  );
-  console.log(`Saved ${golden.length} golden frame hashes to examples/golden-frames.json`);
+  for (const [specName, golden] of goldenBySpec) {
+    await writeFile(
+      manifestPathFor(specName),
+      JSON.stringify(
+        {
+          note: 'SHA-256 of RGBA pixels of headless key frames; regenerate with npm run check:export -- --update. Enforced only for the same skia-canvas version and font digest.',
+          environment,
+          frameSpec: specName,
+          locale: LOCALE,
+          frames: golden,
+        },
+        null,
+        2,
+      ) + '\n',
+    );
+    console.log(
+      `Saved ${golden.length} golden frame hashes to ${manifestPathFor(specName).slice(root.length)}`,
+    );
+  }
 }
 
 console.log(

@@ -28,15 +28,20 @@ export function createWorkspaceShellView(
       colors = EMPTY_STAGE[theme];
     emptyMessage = message;
     if (!ctx) throw new Error('Canvas 2D context is unavailable');
+    const { width, height } = elements.canvas;
     ctx.fillStyle = colors.bg;
-    ctx.fillRect(0, 0, elements.canvas.width, elements.canvas.height);
+    ctx.fillRect(0, 0, width, height);
+    // Centred on the canvas of any frame spec. The 720p landscape preview
+    // keeps its sizes; portrait and square previews are larger bitmaps shown
+    // smaller, so the type grows with the shorter side.
+    const k = Math.max(1, Math.min(width, height) / 720);
     ctx.textAlign = 'center';
     ctx.fillStyle = colors.kicker;
-    ctx.font = '600 13px system-ui';
-    ctx.fillText('RELGRAPH  /  DIRECTOR STUDIO', 640, 330);
+    ctx.font = `600 ${13 * k}px system-ui`;
+    ctx.fillText('RELGRAPH  /  DIRECTOR STUDIO', width / 2, height / 2 - 30 * k);
     ctx.fillStyle = colors.text;
-    ctx.font = '22px system-ui';
-    ctx.fillText(uiText(message), 640, 372);
+    ctx.font = `${22 * k}px system-ui`;
+    ctx.fillText(uiText(message), width / 2, height / 2 + 12 * k);
     ctx.textAlign = 'left';
   }
   return {

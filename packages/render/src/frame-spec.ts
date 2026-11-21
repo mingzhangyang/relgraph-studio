@@ -25,10 +25,55 @@ export interface FrameSpec {
     graph: Rect;
     /** Caption band: scene label, scene title, narration and progress. */
     caption: Rect;
+    /**
+     * Strip of the stage that holds the legend, clear of the graph area and
+     * the evidence card. Without it the legend sits at the bottom left of
+     * the stage, as in the landscape specs.
+     */
+    legend?: Rect;
+    /**
+     * Where the evidence card is drawn (ADR 004, D7 step 1). Without it the
+     * card is the right of the graph area (`evidenceCardRegion`).
+     */
+    card?: Rect;
   };
   /** Size of text, strokes and spacing relative to the 720p design. */
   typeScale: number;
+  /** How the frame furniture is laid out; landscape when absent (`furnitureOf`). */
+  furniture?: Partial<FrameFurniture>;
 }
+
+/**
+ * The layout of a spec's frame furniture (ADR 004, D7 step 1). The landscape
+ * specs use the defaults, `LANDSCAPE_FURNITURE`.
+ */
+export interface FrameFurniture {
+  /**
+   * `inline`: the film title shares its row with the domain time, and the
+   * kicker with the frame number, at the top of the band. `stacked`: kicker
+   * and frame number, film title, and domain time each on a row of their
+   * own, at the bottom of the band so the space above stays clear.
+   */
+  title: 'inline' | 'stacked';
+  /** Lines of narration the caption band holds before it ends in an ellipsis. */
+  narrationLines: number;
+  /**
+   * `beside`: the card holds the right of the graph area and the camera
+   * frames into the left. `below`: the card holds the bottom of the graph
+   * area, just above the caption band, and the camera frames into the top.
+   */
+  card: 'beside' | 'below';
+}
+export const LANDSCAPE_FURNITURE: Readonly<FrameFurniture> = Object.freeze({
+  title: 'inline',
+  narrationLines: 2,
+  card: 'beside',
+});
+/** The furniture of a spec, defaults filled in. */
+export const furnitureOf = (spec: Pick<FrameSpec, 'furniture'>): FrameFurniture => ({
+  ...LANDSCAPE_FURNITURE,
+  ...spec.furniture,
+});
 
 const LANDSCAPE_720P: FrameSpec = {
   name: 'landscape-720p',
@@ -42,6 +87,18 @@ const LANDSCAPE_720P: FrameSpec = {
     caption: { x: 62, y: 548, w: 1156, h: 172 },
   },
   typeScale: 1,
+};
+
+/** A spec from rectangles in 720p reference units, at `typeScale`. */
+const referenceSpec = (spec: FrameSpec): FrameSpec => {
+  const k = spec.typeScale;
+  return {
+    ...spec,
+    stage: scaleRect(spec.stage, k),
+    safe: Object.fromEntries(
+      Object.entries(spec.safe).map(([band, r]) => [band, scaleRect(r, k)]),
+    ) as FrameSpec['safe'],
+  };
 };
 
 const scaleRect = (r: Rect, k: number): Rect => ({
@@ -66,6 +123,8 @@ export function scaleFrameSpec(spec: FrameSpec, factor: number, name: string): F
       title: scaleRect(spec.safe.title, factor),
       graph: scaleRect(spec.safe.graph, factor),
       caption: scaleRect(spec.safe.caption, factor),
+      ...(spec.safe.legend ? { legend: scaleRect(spec.safe.legend, factor) } : {}),
+      ...(spec.safe.card ? { card: scaleRect(spec.safe.card, factor) } : {}),
     },
     typeScale: spec.typeScale * factor,
   };
@@ -78,13 +137,72 @@ const deepFreeze = <T extends object>(value: T): Readonly<T> => {
 };
 
 /**
- * 16:9 presets. Portrait and square frames need their own safe areas and
- * caption layout; they arrive with the B3 recrop work rather than as a
- * mechanical rescale.
+ * Portrait, 3:4 and square presets (ADR 004, D7 step 1), each with its own
+ * safe areas. Rectangles are given in 720p reference units across a 720-unit
+ * width and scaled by the type scale, 1.5: every text is as many pixels tall
+ * as in landscape-1080p, so the same phone held either way shows the same
+ * type size; narrow bands take more lines (four of narration), not smaller
+ * type. See the D7 step 1 note in ADR 004 for the measurements.
+ */
+const PORTRAIT_1080X1920 = referenceSpec({
+  name: 'portrait-1080x1920',
+  width: 1080,
+  height: 1920,
+  fps: 24,
+  stage: { x: 16, y: 156, w: 688, h: 818 },
+  safe: {
+    title: { x: 40, y: 0, w: 640, h: 150 },
+    legend: { x: 40, y: 182, w: 640, h: 62 },
+    graph: { x: 40, y: 252, w: 640, h: 708 },
+    card: { x: 40, y: 680, w: 640, h: 280 },
+    caption: { x: 40, y: 980, w: 640, h: 300 },
+  },
+  typeScale: 1.5,
+  furniture: { title: 'stacked', narrationLines: 4, card: 'below' },
+});
+const PORTRAIT_1080X1440 = referenceSpec({
+  name: 'portrait-1080x1440',
+  width: 1080,
+  height: 1440,
+  fps: 24,
+  stage: { x: 16, y: 134, w: 688, h: 600 },
+  safe: {
+    title: { x: 40, y: 0, w: 640, h: 128 },
+    legend: { x: 40, y: 160, w: 640, h: 62 },
+    graph: { x: 40, y: 230, w: 640, h: 488 },
+    card: { x: 40, y: 478, w: 640, h: 240 },
+    caption: { x: 40, y: 740, w: 640, h: 220 },
+  },
+  typeScale: 1.5,
+  furniture: { title: 'stacked', narrationLines: 4, card: 'below' },
+});
+const SQUARE_1080 = referenceSpec({
+  name: 'square-1080',
+  width: 1080,
+  height: 1080,
+  fps: 24,
+  stage: { x: 16, y: 102, w: 688, h: 392 },
+  safe: {
+    title: { x: 40, y: 0, w: 640, h: 96 },
+    legend: { x: 40, y: 128, w: 640, h: 30 },
+    graph: { x: 40, y: 164, w: 640, h: 324 },
+    card: { x: 370, y: 164, w: 320, h: 324 },
+    caption: { x: 40, y: 500, w: 640, h: 220 },
+  },
+  typeScale: 1.5,
+  furniture: { title: 'inline', narrationLines: 4, card: 'beside' },
+});
+
+/**
+ * The 16:9 presets, scaled from the 720p design, and the portrait, 3:4 and
+ * square presets with their own safe areas and furniture.
  */
 export const FRAME_SPECS = deepFreeze({
   'landscape-720p': LANDSCAPE_720P,
   'landscape-1080p': scaleFrameSpec(LANDSCAPE_720P, 1.5, 'landscape-1080p'),
+  'portrait-1080x1920': PORTRAIT_1080X1920,
+  'portrait-1080x1440': PORTRAIT_1080X1440,
+  'square-1080': SQUARE_1080,
 });
 export type FrameSpecName = keyof typeof FRAME_SPECS;
 export const DEFAULT_FRAME_SPEC: Readonly<FrameSpec> = FRAME_SPECS['landscape-720p'];
@@ -93,11 +211,35 @@ export const DEFAULT_FRAME_SPEC: Readonly<FrameSpec> = FRAME_SPECS['landscape-72
 const EPSILON = 1e-6;
 
 /**
- * Smallest band heights, in 720p reference units, that hold the composer's
+ * Smallest band heights, in 720p reference units, that hold the landscape
  * band layout: the title band's two text rows and rule, and the caption
- * band's scene label, title, two narration lines and progress track.
+ * band's scene label, title, two narration lines and progress track. Other
+ * furniture needs other heights: see `minBandHeight`.
  */
 export const MIN_BAND_HEIGHT = Object.freeze({ title: 88, caption: 158 });
+
+/**
+ * Smallest band heights of a spec, in 720p reference units (ADR 004, D7
+ * step 1): a stacked title band holds three rows (kicker and frame number,
+ * film title, domain time) and its rule; the caption band grows by one
+ * narration line, 21 units, for each line past two.
+ */
+export function minBandHeight(spec: Pick<FrameSpec, 'furniture'>): {
+  title: number;
+  caption: number;
+} {
+  const furniture = furnitureOf(spec);
+  return {
+    title: furniture.title === 'stacked' ? 120 : MIN_BAND_HEIGHT.title,
+    caption: MIN_BAND_HEIGHT.caption + (furniture.narrationLines - 2) * 21,
+  };
+}
+
+const overlaps = (a: Rect, b: Rect): boolean =>
+  a.x < b.x + b.w - EPSILON &&
+  b.x < a.x + a.w - EPSILON &&
+  a.y < b.y + b.h - EPSILON &&
+  b.y < a.y + a.h - EPSILON;
 
 const contains = (outer: Rect, inner: Rect): boolean =>
   inner.x >= outer.x - EPSILON &&
@@ -114,7 +256,8 @@ export function frameSpecFor(spec: FrameSpecName | FrameSpec | undefined): Reado
     if (!isFrameSpecName(spec)) throw new RangeError(`Unknown frame spec ${spec}`);
     return FRAME_SPECS[spec];
   }
-  const rects = [spec.stage, spec.safe?.title, spec.safe?.graph, spec.safe?.caption];
+  const optional = [spec.safe?.legend, spec.safe?.card].filter((r) => r !== undefined);
+  const rects = [spec.stage, spec.safe?.title, spec.safe?.graph, spec.safe?.caption, ...optional];
   const positive = (n: unknown): boolean => typeof n === 'number' && Number.isFinite(n) && n > 0;
   if (
     !Number.isInteger(spec.width) ||
@@ -143,46 +286,98 @@ export function frameSpecFor(spec: FrameSpecName | FrameSpec | undefined): Reado
     throw new RangeError(
       `Invalid frame spec ${String(spec.name)}: safe.graph must lie within the stage`,
     );
+  const invalid = (why: string): RangeError =>
+    new RangeError(`Invalid frame spec ${String(spec.name)}: ${why}`);
+  const f = spec.furniture ?? {};
+  if (
+    (f.title !== undefined && f.title !== 'inline' && f.title !== 'stacked') ||
+    (f.card !== undefined && f.card !== 'beside' && f.card !== 'below') ||
+    (f.narrationLines !== undefined &&
+      !(Number.isInteger(f.narrationLines) && f.narrationLines >= 1 && f.narrationLines <= 6))
+  )
+    throw invalid('unknown furniture');
+  const least = minBandHeight(spec);
   for (const band of ['title', 'caption'] as const)
-    if (spec.safe[band].h < MIN_BAND_HEIGHT[band] * spec.typeScale - EPSILON)
-      throw new RangeError(
-        `Invalid frame spec ${String(spec.name)}: safe.${band} is shorter than ${MIN_BAND_HEIGHT[band] * spec.typeScale}px`,
-      );
+    if (spec.safe[band].h < least[band] * spec.typeScale - EPSILON)
+      throw invalid(`safe.${band} is shorter than ${least[band] * spec.typeScale}px`);
+  // The stage clips the graph and its labels, so labels never enter a band.
+  for (const band of ['title', 'caption'] as const)
+    if (overlaps(spec.stage, spec.safe[band])) throw invalid(`the stage overlaps safe.${band}`);
+  if (overlaps(spec.safe.title, spec.safe.caption)) throw invalid('the bands overlap');
+  const { legend, card } = spec.safe;
+  if (legend && !contains(spec.stage, legend)) throw invalid('safe.legend must lie on the stage');
+  if (legend && overlaps(legend, spec.safe.graph)) throw invalid('safe.legend overlaps safe.graph');
+  // The legend is drawn in whole rows; a strip that holds none would let a
+  // row's plate reach past it, over the graph.
+  if (legend && legend.h < LEGEND_ROW_HEIGHT * spec.typeScale - EPSILON)
+    throw invalid(
+      `safe.legend is shorter than one legend row (${LEGEND_ROW_HEIGHT * spec.typeScale}px)`,
+    );
+  if (card) {
+    if (!contains(spec.stage, card)) throw invalid('safe.card must lie on the stage');
+    if (legend && overlaps(legend, card)) throw invalid('safe.legend overlaps safe.card');
+  }
+  // The camera frames into what the card leaves of the graph area, which
+  // must be more than the gap kept to the card.
+  const region = evidenceCardRegion(spec),
+    g = spec.safe.graph,
+    gap = EVIDENCE_CARD_GAP * spec.typeScale;
+  const room = furnitureOf(spec).card === 'below' ? region.y - gap - g.y : region.x - gap - g.x;
+  if (!(room > 0)) throw invalid('the card leaves no room for the graph');
   return spec;
 }
 
 /**
- * Where a landscape frame shows an evidence card (ADR 004, D4): the right of
- * the graph safe area, the full height of it, reaching 10 reference pixels
- * past its right edge like the detail card. The camera frames the graph into
- * what is left, `EVIDENCE_CARD_GAP` short of the card, so the card never
- * covers the nodes it is about.
+ * Where a frame shows an evidence card (ADR 004, D4 and D7 step 1): the
+ * spec's `safe.card` when it has one (portrait, 3:4 and square), otherwise,
+ * as in landscape, the right of the graph safe area, the full height of it,
+ * reaching 10 reference pixels past its right edge like the detail card. The
+ * camera frames the graph into what is left (`cardFreeArea`), so the card
+ * never covers the nodes it is about. The drawn card is as tall as its
+ * items, from the top of the region, or from its bottom for a card below
+ * the graph.
  */
 export function evidenceCardRegion(spec: FrameSpec): Rect {
+  if (spec.safe.card) return spec.safe.card;
   const g = spec.safe.graph,
     u = spec.typeScale;
   const w = Math.min(EVIDENCE_CARD_WIDTH * u, g.w / 2);
   return { x: g.x + g.w + 10 * u - w, y: g.y, w, h: g.h };
 }
+/** Height of one legend row (its plate), in 720p reference pixels. */
+export const LEGEND_ROW_HEIGHT = 28;
 /** Width of the evidence card, in 720p reference pixels. */
 export const EVIDENCE_CARD_WIDTH = 370;
 /** Least space between the evidence card and the area the camera frames into. */
 export const EVIDENCE_CARD_GAP = 20;
 
+/**
+ * The part of the graph area the camera frames into while a card is shown:
+ * left of the card when it is beside the graph, above it when it is below,
+ * `EVIDENCE_CARD_GAP` short of it.
+ */
+export function cardFreeArea(spec: FrameSpec): Rect {
+  const g = spec.safe.graph,
+    u = spec.typeScale;
+  const card = evidenceCardRegion(spec);
+  if (furnitureOf(spec).card === 'below')
+    return { x: g.x, y: g.y, w: g.w, h: Math.max(u, card.y - EVIDENCE_CARD_GAP * u - g.y) };
+  return { x: g.x, y: g.y, w: Math.max(u, card.x - EVIDENCE_CARD_GAP * u - g.x), h: g.h };
+}
+
 /** Camera fit extents in the 720p reference units used by core. */
 export const cameraFitFor = (spec: FrameSpec): CameraFit => {
   const g = spec.safe.graph,
     u = spec.typeScale;
-  const card = evidenceCardRegion(spec);
-  const free = { x: g.x, w: Math.max(u, card.x - EVIDENCE_CARD_GAP * u - g.x) };
+  const free = cardFreeArea(spec);
   return {
     halfWidth: g.w / 2 / u,
     halfHeight: g.h / 2 / u,
     card: {
       halfWidth: free.w / 2 / u,
-      halfHeight: g.h / 2 / u,
+      halfHeight: free.h / 2 / u,
       offsetX: (free.x + free.w / 2 - (g.x + g.w / 2)) / u,
-      offsetY: 0,
+      offsetY: (free.y + free.h / 2 - (g.y + g.h / 2)) / u,
     },
   };
 };

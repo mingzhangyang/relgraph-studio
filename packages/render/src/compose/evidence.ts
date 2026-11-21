@@ -6,7 +6,7 @@ import type {
   FontRef,
   FrameText,
 } from '../display-list.js';
-import { evidenceCardRegion, type Rect } from '../frame-spec.js';
+import { evidenceCardRegion, furnitureOf, type Rect } from '../frame-spec.js';
 import { nodeGlyphBounds, rectsIntersect } from '../node-geometry.js';
 import type { FrameContext, Selection } from './context.js';
 import { wrapAllText } from './text.js';
@@ -145,12 +145,16 @@ export function composeEvidenceCard(
   const subjectFont = serif(19, 600);
   const subjectLines = wrapAllText(measure, subject, subjectFont, textWidth);
   const subjectExtra = u(26) * Math.max(0, subjectLines.length - 1);
-  const contentTop = region.y + u(84) + subjectExtra;
-  const laid = layoutCard(ctx, card, textWidth, region.y + region.h - u(20) - contentTop);
+  const laid = layoutCard(ctx, card, textWidth, region.h - u(20) - (u(84) + subjectExtra));
   if (!laid.lines)
     return { items: [], evidence, overflow: laid.overflow, covers: null, obstacle: null };
-  // The card is as tall as its items, up to the whole region.
-  const box = { ...region, h: Math.min(region.h, contentTop - region.y + laid.height + pad) };
+  // The card is as tall as its items, up to the whole region: from the top
+  // of the region, or for a card below the graph, from its bottom, so the
+  // card sits just above the caption band.
+  const height = Math.min(region.h, u(84) + subjectExtra + laid.height + pad);
+  const top = furnitureOf(spec).card === 'below' ? region.y + region.h - height : region.y;
+  const contentTop = top + u(84) + subjectExtra;
+  const box = { ...region, y: top, h: height };
   const cardItems: DisplayItem[] = [
     {
       type: 'path',
@@ -163,7 +167,7 @@ export function composeEvidenceCard(
       type: 'text',
       text: 'EVIDENCE',
       x: textX,
-      y: region.y + u(32),
+      y: top + u(32),
       font: sans(11, 600),
       fill: P.kicker,
     },
@@ -171,15 +175,15 @@ export function composeEvidenceCard(
       type: 'text',
       text,
       x: textX,
-      y: region.y + u(60) + u(26) * i,
+      y: top + u(60) + u(26) * i,
       font: subjectFont,
       fill: P.cardTitle,
     })),
     {
       type: 'path',
       d: [
-        ['M', textX, region.y + u(72) + subjectExtra],
-        ['L', textX + textWidth, region.y + u(72) + subjectExtra],
+        ['M', textX, top + u(72) + subjectExtra],
+        ['L', textX + textWidth, top + u(72) + subjectExtra],
       ],
       stroke: P.cardStroke,
       width: u(1),

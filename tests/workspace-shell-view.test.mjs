@@ -74,7 +74,7 @@ for (const theme of ['dark', 'light']) {
       },
     };
     const { id, view } = makeView({ canvasContext: () => context });
-    // Use non-default dimensions so a hard-coded clear cannot pass.
+    // Use non-default dimensions so a hard-coded clear or position cannot pass.
     id('stage').width = 960;
     id('stage').height = 540;
     function assertPaint(message, paintedTheme) {
@@ -86,14 +86,14 @@ for (const theme of ['dark', 'light']) {
         { method: 'fillRect', bounds: [0, 0, 960, 540], fillStyle: background },
         {
           method: 'fillText',
-          text: ['RELGRAPH  /  DIRECTOR STUDIO', 640, 330],
+          text: ['RELGRAPH  /  DIRECTOR STUDIO', 480, 240],
           fillStyle: kicker,
           font: '600 13px system-ui',
           textAlign: 'center',
         },
         {
           method: 'fillText',
-          text: [message, 640, 372],
+          text: [message, 480, 282],
           fillStyle: text,
           font: '22px system-ui',
           textAlign: 'center',
@@ -112,3 +112,30 @@ for (const theme of ['dark', 'light']) {
     assertPaint('加载失败，请重试', theme);
   });
 }
+
+test('the empty Canvas message is centred, and larger, on portrait and square previews', () => {
+  const calls = [];
+  const context = {
+    fillRect() {},
+    fillText(...text) {
+      calls.push({ text, font: this.font });
+    },
+  };
+  const { id, view } = makeView({ canvasContext: () => context });
+  const cases = [
+    // The 720p landscape preview draws exactly as before.
+    [1280, 720, [640, 330], [640, 372], '600 13px system-ui', '22px system-ui'],
+    [1080, 1920, [540, 915], [540, 978], '600 19.5px system-ui', '33px system-ui'],
+    [1080, 1440, [540, 675], [540, 738], '600 19.5px system-ui', '33px system-ui'],
+    [1080, 1080, [540, 495], [540, 558], '600 19.5px system-ui', '33px system-ui'],
+  ];
+  for (const [width, height, kicker, message, kickerFont, messageFont] of cases) {
+    id('stage').width = width;
+    id('stage').height = height;
+    view.paintEmptyStage('未加载', 'dark');
+    assert.deepEqual(calls.splice(0), [
+      { text: ['RELGRAPH  /  DIRECTOR STUDIO', ...kicker], font: kickerFont },
+      { text: ['未加载', ...message], font: messageFont },
+    ]);
+  }
+});

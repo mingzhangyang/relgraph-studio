@@ -218,6 +218,7 @@ export function createSimulatedStudioDom({
     ...Object.fromEntries(examples.map(({ id }) => [id, HTMLButtonElement])),
     themeToggle: HTMLButtonElement,
     languageSelect: HTMLSelectElement,
+    frameSpecSelect: HTMLSelectElement,
     layoutToggle: HTMLButtonElement,
     layoutReset: HTMLButtonElement,
     layoutExport: HTMLButtonElement,

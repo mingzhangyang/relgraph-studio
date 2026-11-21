@@ -13,6 +13,7 @@ export type StudioMode = 'idle' | 'playing' | 'positionEdit' | 'layoutPreview';
 export type StudioModeIntent =
   | 'navigate'
   | 'theme'
+  | 'frameSpec'
   | 'play'
   | 'pause'
   | 'commitEdit'
@@ -57,7 +58,8 @@ export function planStudioModeTransition(
       next = from === 'positionEdit' ? 'positionEdit' : 'idle';
       break;
     case 'theme':
-      // Theme changes intentionally preserve an already-playing film.
+    case 'frameSpec':
+      // Theme and frame-spec changes intentionally preserve an already-playing film.
       next = from === 'playing' ? 'playing' : 'idle';
       break;
     case 'play':
