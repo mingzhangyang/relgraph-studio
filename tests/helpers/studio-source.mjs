@@ -51,6 +51,7 @@ import {
 import { readFileSync } from 'node:fs';
 import { transpileModule, ModuleKind, ScriptTarget } from 'typescript';
 import { FILM_FONT_FACES, filmFontQuery } from '../../packages/render/src/fonts.ts';
+import { FRAME_SPECS } from '../../packages/render/src/frame-spec.ts';
 import {
   editableNodes,
   layoutHasChanges,
@@ -151,6 +152,7 @@ export const studioImports = {
   validateProjectConfig,
   FILM_FONT_FACES,
   filmFontQuery,
+  FRAME_SPECS,
   editableNodes,
   layoutHasChanges,
   parseCoordinateInputs,

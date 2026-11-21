@@ -6,7 +6,7 @@ import { drawingOrigin, layoutGraph } from '../../packages/core/src/director/lay
 import { styleForGraph } from '../../packages/core/src/style.ts';
 import { applyGraphPositions } from '../../packages/core/src/director/position-writeback.ts';
 import { roundPositionCoordinate } from '../../packages/core/src/director/seeded-layout.ts';
-import { DEFAULT_FRAME_SPEC } from '../../packages/render/src/frame-spec.ts';
+import { cameraFitFor, frameSpecFor } from '../../packages/render/src/frame-spec.ts';
 import { canvasPoint, graphPosition, hitVisibleNode } from '../../apps/studio/src/position-tool.ts';
 import { directorFrameAt, frameCount } from '../../packages/core/src/director/state.ts';
 import { composeFrame, drawingStyle } from '../../packages/render/src/compose.ts';
@@ -121,12 +121,18 @@ export function makeStudio({
       callback();
     },
     frameCount,
-    createCanvasRenderer: (_canvas, graph, layout, options) => {
+    createCanvasRenderer: (canvas, graph, layout, options) => {
       themes.push(options.theme);
+      // As createCanvasRenderer: the canvas takes the frame spec's size.
+      const spec = frameSpecFor(options.frameSpec);
+      canvas.width = spec.width;
+      canvas.height = spec.height;
       // As createCanvasRenderer: the given style, else the graph's own sheet.
       const resolvedStyle = options.style ?? styleForGraph(graph);
       const renderFrameWithList = (frame) => {
-        const evaluated = directorFrameAt(graph, layout, frame, options.fps);
+        const evaluated = directorFrameAt(graph, layout, frame, options.fps, {
+          fit: cameraFitFor(spec),
+        });
         const state = options.cameraOverride
           ? { ...evaluated, cameraResolved: { ...options.cameraOverride } }
           : evaluated;
@@ -136,6 +142,7 @@ export function makeStudio({
           frame,
           fps: options.fps,
           measure,
+          frameSpec: spec,
           style: resolvedStyle,
           detailAt: options.detailAt,
         });
@@ -146,7 +153,7 @@ export function makeStudio({
       return {
         renderFrame: (frame) => renderFrameWithList(frame).state,
         renderFrameWithList,
-        frameSpec: DEFAULT_FRAME_SPEC,
+        frameSpec: spec,
         // As the real renderer: the style of the drawing at its current positions.
         get style() {
           return drawingStyle({ graph, positions: layout, style: resolvedStyle });

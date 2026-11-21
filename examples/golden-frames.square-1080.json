@@ -1,0 +1,1900 @@
+{
+  "note": "SHA-256 of RGBA pixels of headless key frames; regenerate with npm run check:export -- --update. Enforced only for the same skia-canvas version and font digest.",
+  "environment": {
+    "skiaCanvas": "4.0.0",
+    "fonts": "ce1a817712c18cd758565d009ff8717dbfbfca2dedbb652eea071b188dfbdeaa",
+    "platform": "linux-x64"
+  },
+  "frameSpec": "square-1080",
+  "locale": "zh-CN",
+  "frames": [
+    {
+      "example": "literature",
+      "theme": "light",
+      "shot": 1,
+      "kind": "mid",
+      "frame": 84,
+      "sha256": "bed7fb414ae8fbb6f7e9b998808b23d2213a17a1b67afc2b50f34673dc351faf"
+    },
+    {
+      "example": "literature",
+      "theme": "light",
+      "shot": 2,
+      "kind": "reveal",
+      "frame": 176,
+      "sha256": "04ad278d602b839418301cf1f390652a1e91f8500965e0378b1382d424dd7965"
+    },
+    {
+      "example": "literature",
+      "theme": "light",
+      "shot": 2,
+      "kind": "transition",
+      "frame": 183,
+      "sha256": "3604b41d0cd83c28a1a80f8de301d0602680f29e3a7f96aee8e9ea2f43edc3fb"
+    },
+    {
+      "example": "literature",
+      "theme": "light",
+      "shot": 2,
+      "kind": "mid",
+      "frame": 264,
+      "sha256": "2c95522f3b5c38c6ecc963949360ea19f066b766b892334025132c8689481a5a"
+    },
+    {
+      "example": "literature",
+      "theme": "light",
+      "shot": 3,
+      "kind": "reveal",
+      "frame": 368,
+      "sha256": "a3bde8017ae1159ce1e2e4292420861e77cbd1f75dfaa5e4e7f18bf65bb9fafd"
+    },
+    {
+      "example": "literature",
+      "theme": "light",
+      "shot": 3,
+      "kind": "transition",
+      "frame": 375,
+      "sha256": "77684fd6d295e453e58ab8e469805ba12a22880b318ade6e8ffb0828475981d4"
+    },
+    {
+      "example": "literature",
+      "theme": "light",
+      "shot": 3,
+      "kind": "mid",
+      "frame": 468,
+      "sha256": "6aa9002c0686162b0c86613e6b91a2ec8cf04a1cbe66f12f535384efe641dc98"
+    },
+    {
+      "example": "literature",
+      "theme": "light",
+      "shot": 4,
+      "kind": "reveal",
+      "frame": 584,
+      "sha256": "6c225d41ed5bab27d6320253c486a54c6a6ff09cff9771c7f534e89fff24616f"
+    },
+    {
+      "example": "literature",
+      "theme": "light",
+      "shot": 4,
+      "kind": "transition",
+      "frame": 591,
+      "sha256": "63205dc9449df023e62d7b779c05b85fe4728a4f6a21c68123aec09c4c246131"
+    },
+    {
+      "example": "literature",
+      "theme": "light",
+      "shot": 4,
+      "kind": "mid",
+      "frame": 672,
+      "sha256": "2c12150f199d9c65e83e3a23b45476d96ba07aa4117622caab0c88042512c76a"
+    },
+    {
+      "example": "literature",
+      "theme": "light",
+      "shot": 5,
+      "kind": "reveal",
+      "frame": 776,
+      "sha256": "ba32ef0947eab2ef49068b2a19ec86088cb6a3f61b510f20a699ecc25fd7e65a"
+    },
+    {
+      "example": "literature",
+      "theme": "light",
+      "shot": 5,
+      "kind": "transition",
+      "frame": 783,
+      "sha256": "74a26f7eb24759ab753552783cf267fcce1b1160261598e97c15fb86cb7cf833"
+    },
+    {
+      "example": "literature",
+      "theme": "light",
+      "shot": 5,
+      "kind": "mid",
+      "frame": 864,
+      "sha256": "6d5f64af234bc3ae01f9d90c04470c50adbb14cc1cc9d0fee93efd8761f2b18d"
+    },
+    {
+      "example": "literature",
+      "theme": "light",
+      "shot": 5,
+      "kind": "last",
+      "frame": 959,
+      "sha256": "750052d25ada6f229feb8c72df7bfecf32ba3302860a00cb20cfecc0a0ea417a"
+    },
+    {
+      "example": "literature",
+      "theme": "dark",
+      "shot": 1,
+      "kind": "mid",
+      "frame": 84,
+      "sha256": "f4649038f410e5e2892da9270ff81323df556083f882f7278bb12855dc08511c"
+    },
+    {
+      "example": "literature",
+      "theme": "dark",
+      "shot": 2,
+      "kind": "reveal",
+      "frame": 176,
+      "sha256": "52ced64dc7bcd7638cab586a4a5f677e4a911b9bf34aa9178979cca70059a9a1"
+    },
+    {
+      "example": "literature",
+      "theme": "dark",
+      "shot": 2,
+      "kind": "transition",
+      "frame": 183,
+      "sha256": "5fc1a0e4b8988d7c5962d1ada9debe61d5d5547be24ec94e07962d8b91b90679"
+    },
+    {
+      "example": "literature",
+      "theme": "dark",
+      "shot": 2,
+      "kind": "mid",
+      "frame": 264,
+      "sha256": "c502cd5c0f17f34d7a1dcbf8727701d5f1dbd971c41048f95d942b2779e4d14a"
+    },
+    {
+      "example": "literature",
+      "theme": "dark",
+      "shot": 3,
+      "kind": "reveal",
+      "frame": 368,
+      "sha256": "78e1d31c92f5b99dc0b761bc19aaf356e29cfe9c8ed414983a613dcd60075eaf"
+    },
+    {
+      "example": "literature",
+      "theme": "dark",
+      "shot": 3,
+      "kind": "transition",
+      "frame": 375,
+      "sha256": "dd11dbd42bc22448cf02c394f054cf36b4c67af79730423598f13a3033626bc8"
+    },
+    {
+      "example": "literature",
+      "theme": "dark",
+      "shot": 3,
+      "kind": "mid",
+      "frame": 468,
+      "sha256": "6539af1615621d7e83dfa9db8fa00b91a48300c165c03c36678187fb405e4b27"
+    },
+    {
+      "example": "literature",
+      "theme": "dark",
+      "shot": 4,
+      "kind": "reveal",
+      "frame": 584,
+      "sha256": "5e5a706b4601f65b538c94f7ca2f9702fc750d141d92ea6e8a85954c876ee8e6"
+    },
+    {
+      "example": "literature",
+      "theme": "dark",
+      "shot": 4,
+      "kind": "transition",
+      "frame": 591,
+      "sha256": "b2773a52780557d5d3edbe611ba20ef33a494decdcfe02e6540d04f05ef8dc70"
+    },
+    {
+      "example": "literature",
+      "theme": "dark",
+      "shot": 4,
+      "kind": "mid",
+      "frame": 672,
+      "sha256": "99ab4441281002db861af9fca1e2bf953bc66357b8b3d183044cc79f2decbd65"
+    },
+    {
+      "example": "literature",
+      "theme": "dark",
+      "shot": 5,
+      "kind": "reveal",
+      "frame": 776,
+      "sha256": "01c9e2316900c57ed53467d71718a467c5c386dead69eb6acce963d129daf781"
+    },
+    {
+      "example": "literature",
+      "theme": "dark",
+      "shot": 5,
+      "kind": "transition",
+      "frame": 783,
+      "sha256": "7e3e24930c8b41847741ab46eef158e7cbe6b0bb70a8f4a2c5100001b74c8eb8"
+    },
+    {
+      "example": "literature",
+      "theme": "dark",
+      "shot": 5,
+      "kind": "mid",
+      "frame": 864,
+      "sha256": "2c6c4a2a5fbc746f0763c281e5c3689e8e83b600a228fde95ee0f0d985f61952"
+    },
+    {
+      "example": "literature",
+      "theme": "dark",
+      "shot": 5,
+      "kind": "last",
+      "frame": 959,
+      "sha256": "b699f249373d95740a7ce51a054b4582fe258f0ad424c2e90fac254aed3ccb3e"
+    },
+    {
+      "example": "biology",
+      "theme": "light",
+      "shot": 1,
+      "kind": "mid",
+      "frame": 48,
+      "sha256": "701c0ecfc6039bd2fc0604610824fac38d4c5495d8afab053c7aef2e56019bd2"
+    },
+    {
+      "example": "biology",
+      "theme": "light",
+      "shot": 2,
+      "kind": "reveal",
+      "frame": 104,
+      "sha256": "0fc63ef3ab87d6d37b3b21c36d31359184e3441c2b55e23e856a1dfe7a5390e5"
+    },
+    {
+      "example": "biology",
+      "theme": "light",
+      "shot": 2,
+      "kind": "transition",
+      "frame": 111,
+      "sha256": "c7a4009bf72460a4cd7fca7be6e0e28711b2598b84629675b521e72428363686"
+    },
+    {
+      "example": "biology",
+      "theme": "light",
+      "shot": 2,
+      "kind": "mid",
+      "frame": 156,
+      "sha256": "5bd5ae16255d1791698c1ddd353643b8efa1973c7cb6c46db9443c0979650df5"
+    },
+    {
+      "example": "biology",
+      "theme": "light",
+      "shot": 3,
+      "kind": "reveal",
+      "frame": 224,
+      "sha256": "04269cf46bbe292aa3f99bdf5775f1ab01aef136f0813bea40d9b24d75211660"
+    },
+    {
+      "example": "biology",
+      "theme": "light",
+      "shot": 3,
+      "kind": "transition",
+      "frame": 231,
+      "sha256": "946d0b01fc79c46270822cea136dbec88ea73324a0a515225334b83ba88e4025"
+    },
+    {
+      "example": "biology",
+      "theme": "light",
+      "shot": 3,
+      "kind": "mid",
+      "frame": 276,
+      "sha256": "8c9e8af21a35fadd9e9bd92a66198b5276e1e8c924994c61faa4492bcefea1a7"
+    },
+    {
+      "example": "biology",
+      "theme": "light",
+      "shot": 4,
+      "kind": "reveal",
+      "frame": 344,
+      "sha256": "77f4b57520e047dca5ff0fc2affcfc7b5611e7f642ea516f59186bc04899c379"
+    },
+    {
+      "example": "biology",
+      "theme": "light",
+      "shot": 4,
+      "kind": "transition",
+      "frame": 351,
+      "sha256": "6e5917ec1ce10e4ecffabdc2c46dcf80b87d404493a8aaf54612504dca8cfa66"
+    },
+    {
+      "example": "biology",
+      "theme": "light",
+      "shot": 4,
+      "kind": "mid",
+      "frame": 396,
+      "sha256": "934f2c499b8781e0c116b4f3d49eefa2b33e0788d2fc599c88709d892e82946d"
+    },
+    {
+      "example": "biology",
+      "theme": "light",
+      "shot": 5,
+      "kind": "reveal",
+      "frame": 464,
+      "sha256": "50b1dce9209b0013732b88709c9e38053ca62a2bf8ae576d82ee8b58f7a2f9df"
+    },
+    {
+      "example": "biology",
+      "theme": "light",
+      "shot": 5,
+      "kind": "transition",
+      "frame": 471,
+      "sha256": "a645199401d6dd01480c3d9c6d4ece37a8f89b505b021c1f23152c5aa079211a"
+    },
+    {
+      "example": "biology",
+      "theme": "light",
+      "shot": 5,
+      "kind": "mid",
+      "frame": 516,
+      "sha256": "7b46fbb0f9429decba2ebfeec12c51f34fec42c433c7538d3736edeb4cb83265"
+    },
+    {
+      "example": "biology",
+      "theme": "light",
+      "shot": 6,
+      "kind": "reveal",
+      "frame": 584,
+      "sha256": "cb1978d1bbaf2131aae934e38f1f7e63da67e888a56abc4842bcc69cc717c6e3"
+    },
+    {
+      "example": "biology",
+      "theme": "light",
+      "shot": 6,
+      "kind": "transition",
+      "frame": 591,
+      "sha256": "f801264ef16d1d183dd444a23cc41563f7880fc65b0e1dffb17235796365c46b"
+    },
+    {
+      "example": "biology",
+      "theme": "light",
+      "shot": 6,
+      "kind": "mid",
+      "frame": 648,
+      "sha256": "8dc9848b2409126bc01c7f12300ac934e9aec3fa96fe3ed1e9a61d8e41629236"
+    },
+    {
+      "example": "biology",
+      "theme": "light",
+      "shot": 6,
+      "kind": "last",
+      "frame": 719,
+      "sha256": "7b9680ac036550bc3ed8ea0c69acb3d0692524f711ce36fa90990f742e58d56f"
+    },
+    {
+      "example": "biology",
+      "theme": "dark",
+      "shot": 1,
+      "kind": "mid",
+      "frame": 48,
+      "sha256": "efacecb1d5744d78dbeb4209f5f3421958eb3d9134033cead1772ec9eb81424f"
+    },
+    {
+      "example": "biology",
+      "theme": "dark",
+      "shot": 2,
+      "kind": "reveal",
+      "frame": 104,
+      "sha256": "613baaceaa8ef4cd18a10f31b8a14b63071084c38f38487adfdfedb33f771e4b"
+    },
+    {
+      "example": "biology",
+      "theme": "dark",
+      "shot": 2,
+      "kind": "transition",
+      "frame": 111,
+      "sha256": "cf4a182ded576dd92cb209ffecfd4bcf1cf47cb8d5d41f904053ac87c822432d"
+    },
+    {
+      "example": "biology",
+      "theme": "dark",
+      "shot": 2,
+      "kind": "mid",
+      "frame": 156,
+      "sha256": "600e409f9f79376a002d03ec60cc3e1e98a52d22d9df8def829650b3e3f016c9"
+    },
+    {
+      "example": "biology",
+      "theme": "dark",
+      "shot": 3,
+      "kind": "reveal",
+      "frame": 224,
+      "sha256": "3eb79ab0684c40bd0e6fae98474acef1062eb06a3b8fa853e9fe88c522b3000a"
+    },
+    {
+      "example": "biology",
+      "theme": "dark",
+      "shot": 3,
+      "kind": "transition",
+      "frame": 231,
+      "sha256": "f00f079e19a9fa84b4f4bd0e638f4872646ebb4d6d2487e11f53116bcf9947cc"
+    },
+    {
+      "example": "biology",
+      "theme": "dark",
+      "shot": 3,
+      "kind": "mid",
+      "frame": 276,
+      "sha256": "55d60a67c447197bc91e0e3cb48e1fe53072f97c2fa13906adc3da8c280d9641"
+    },
+    {
+      "example": "biology",
+      "theme": "dark",
+      "shot": 4,
+      "kind": "reveal",
+      "frame": 344,
+      "sha256": "8ea6ecb7bb703f45b17650e47f0aa3077189f057346d9e7cd43ffb9049ec224a"
+    },
+    {
+      "example": "biology",
+      "theme": "dark",
+      "shot": 4,
+      "kind": "transition",
+      "frame": 351,
+      "sha256": "dc0e9692982d3d259a66a3569b2d5d1ee3b72001c35786a04d2d7b3909295d55"
+    },
+    {
+      "example": "biology",
+      "theme": "dark",
+      "shot": 4,
+      "kind": "mid",
+      "frame": 396,
+      "sha256": "c5f8f641e6748f37dd274d8af0aec91216b2e545687e25a4fedbb295b3f1b52b"
+    },
+    {
+      "example": "biology",
+      "theme": "dark",
+      "shot": 5,
+      "kind": "reveal",
+      "frame": 464,
+      "sha256": "8f8b4e21a5753dd0fd445f774a4b1a467f78c6d09d3006c1c8177258a9338afb"
+    },
+    {
+      "example": "biology",
+      "theme": "dark",
+      "shot": 5,
+      "kind": "transition",
+      "frame": 471,
+      "sha256": "faf614b7a7c6f01798f83f2787651920e21eea0f8646b3351e619b0cae03b0c8"
+    },
+    {
+      "example": "biology",
+      "theme": "dark",
+      "shot": 5,
+      "kind": "mid",
+      "frame": 516,
+      "sha256": "edbf2a7e9eceadfc7357c641b9f424dc404b63984a5ff6ae044d2c97fd211b7f"
+    },
+    {
+      "example": "biology",
+      "theme": "dark",
+      "shot": 6,
+      "kind": "reveal",
+      "frame": 584,
+      "sha256": "773822635a2a3bed36a81a158080959f4a6259e8b25c8a7c54950934e47f4aa0"
+    },
+    {
+      "example": "biology",
+      "theme": "dark",
+      "shot": 6,
+      "kind": "transition",
+      "frame": 591,
+      "sha256": "a8f77159983e76a6fc5fafe396157ec9fd9db1d63c2ac69adbe34c5dff6793ef"
+    },
+    {
+      "example": "biology",
+      "theme": "dark",
+      "shot": 6,
+      "kind": "mid",
+      "frame": 648,
+      "sha256": "c3b5b64a07976c645b52d72858a18e849142d855c61a72a6f43c6d86563aa711"
+    },
+    {
+      "example": "biology",
+      "theme": "dark",
+      "shot": 6,
+      "kind": "last",
+      "frame": 719,
+      "sha256": "f95d3f5045e9fb361d2c89b48ede2f76d150068ab086173275fda84d8616be18"
+    },
+    {
+      "example": "graph",
+      "theme": "light",
+      "shot": 1,
+      "kind": "mid",
+      "frame": 60,
+      "sha256": "56a5ae2da2c9908c3b8f469f4d2dd7389b5a811d1ddd74ad93df92772cee39df"
+    },
+    {
+      "example": "graph",
+      "theme": "light",
+      "shot": 2,
+      "kind": "reveal",
+      "frame": 128,
+      "sha256": "8a7963198168371cc69170e6853469a2061443826294089dc132599bb98748ca"
+    },
+    {
+      "example": "graph",
+      "theme": "light",
+      "shot": 2,
+      "kind": "transition",
+      "frame": 131,
+      "sha256": "e09fc36421928c3be04298c233eb4d052d9c908635d09bfeaf4852fffb0edcc1"
+    },
+    {
+      "example": "graph",
+      "theme": "light",
+      "shot": 2,
+      "kind": "mid",
+      "frame": 162,
+      "sha256": "1eb451c9cce7ca2f1a5f2212dcde85a4a91dd7906227ce0588aa741dada502e2"
+    },
+    {
+      "example": "graph",
+      "theme": "light",
+      "shot": 3,
+      "kind": "reveal",
+      "frame": 212,
+      "sha256": "1303bf2ba1eaa89b1b96c4a1cd1f7c76785aa4d4f7d190d27166a3c9d308420b"
+    },
+    {
+      "example": "graph",
+      "theme": "light",
+      "shot": 3,
+      "kind": "transition",
+      "frame": 215,
+      "sha256": "d242aacfc4719845f43c3cb98a0ab20b5965efacc35af9574b582f978a1550b1"
+    },
+    {
+      "example": "graph",
+      "theme": "light",
+      "shot": 3,
+      "kind": "mid",
+      "frame": 246,
+      "sha256": "6f0a6bb8e6748a16dddf098be79da53995436f99ac080b8ae1984343168abf38"
+    },
+    {
+      "example": "graph",
+      "theme": "light",
+      "shot": 4,
+      "kind": "reveal",
+      "frame": 296,
+      "sha256": "3c9ce807256a99a8d50ee71ec750668a8fdc46099678735e5d30d9ac4c2f6589"
+    },
+    {
+      "example": "graph",
+      "theme": "light",
+      "shot": 4,
+      "kind": "transition",
+      "frame": 299,
+      "sha256": "0306c6e2db54258032d7a46e2e090898d3546f2a2e922b6198b16ba1aae4f3a4"
+    },
+    {
+      "example": "graph",
+      "theme": "light",
+      "shot": 4,
+      "kind": "mid",
+      "frame": 330,
+      "sha256": "bdfece0dee208835fc7d42763762550d67eee02dcdeb56f1e3ba7988b65f82b6"
+    },
+    {
+      "example": "graph",
+      "theme": "light",
+      "shot": 5,
+      "kind": "reveal",
+      "frame": 380,
+      "sha256": "7932155f0ec180b96ce29b2f1992b42bc4b7e45b484c5c8a5d7f2c3a3cf4e1d6"
+    },
+    {
+      "example": "graph",
+      "theme": "light",
+      "shot": 5,
+      "kind": "transition",
+      "frame": 383,
+      "sha256": "c43ce07df9066a920170805cef13701cc08ff7d21525fd7fdcf9d0293f929919"
+    },
+    {
+      "example": "graph",
+      "theme": "light",
+      "shot": 5,
+      "kind": "mid",
+      "frame": 414,
+      "sha256": "d15e64cab838669aae17131211ed12d4ba0fd7dd1640f546ac240910404d43df"
+    },
+    {
+      "example": "graph",
+      "theme": "light",
+      "shot": 6,
+      "kind": "reveal",
+      "frame": 464,
+      "sha256": "2f728556646a3efb8b41dc77d3836bcef265bc2aa34d8b7b04c8d7870dd3c724"
+    },
+    {
+      "example": "graph",
+      "theme": "light",
+      "shot": 6,
+      "kind": "transition",
+      "frame": 467,
+      "sha256": "73e268468c56ffd84119ccdb4923a81d25ffd25fc6f861beccf6250741414dc1"
+    },
+    {
+      "example": "graph",
+      "theme": "light",
+      "shot": 6,
+      "kind": "mid",
+      "frame": 510,
+      "sha256": "6ece822b5c0f3fbda444bb55343f9bbfb3bec2d79c49c0e4fcc9493871b29201"
+    },
+    {
+      "example": "graph",
+      "theme": "light",
+      "shot": 7,
+      "kind": "reveal",
+      "frame": 572,
+      "sha256": "5e7ffbc6bce82e4201addf92bdb9308ecac9246375e94b8572aeb1ebaef2ea89"
+    },
+    {
+      "example": "graph",
+      "theme": "light",
+      "shot": 7,
+      "kind": "transition",
+      "frame": 575,
+      "sha256": "acc7864b0f16a640738aa24f33082e5572ee6a1b3c541f4c279df88b90cdea42"
+    },
+    {
+      "example": "graph",
+      "theme": "light",
+      "shot": 7,
+      "kind": "mid",
+      "frame": 606,
+      "sha256": "925eb44bd7b81b3e9acb6e6873d245cc5522cf8d08df7acd1a53644e340fcc82"
+    },
+    {
+      "example": "graph",
+      "theme": "light",
+      "shot": 7,
+      "kind": "last",
+      "frame": 647,
+      "sha256": "af6a23ca57288f06dbff0ec72be2cd288d44f5cf5aabd7bc6291f9513431d46d"
+    },
+    {
+      "example": "graph",
+      "theme": "dark",
+      "shot": 1,
+      "kind": "mid",
+      "frame": 60,
+      "sha256": "fdf4abef2dfde1c24559c54c3ec4020c6ee9f278635a9171c26594eeb5ea6218"
+    },
+    {
+      "example": "graph",
+      "theme": "dark",
+      "shot": 2,
+      "kind": "reveal",
+      "frame": 128,
+      "sha256": "0229dd9a5337b75b67278c87e53feb299c2d2f5edd293ace0bcfcc9b30524ea2"
+    },
+    {
+      "example": "graph",
+      "theme": "dark",
+      "shot": 2,
+      "kind": "transition",
+      "frame": 131,
+      "sha256": "0b3013f3b0e40fa1ad4d8d88ad6fd6b0663869d29053feb742eaf1748c373606"
+    },
+    {
+      "example": "graph",
+      "theme": "dark",
+      "shot": 2,
+      "kind": "mid",
+      "frame": 162,
+      "sha256": "40bac3b8dd6e42ddd214d5a4bfb4af0fef64dece0ae517f2c371459cfb793acb"
+    },
+    {
+      "example": "graph",
+      "theme": "dark",
+      "shot": 3,
+      "kind": "reveal",
+      "frame": 212,
+      "sha256": "3561581926fae635c77b6a2d0a93b40b9429dbc07ff5ed1923f40b1b5053f4d1"
+    },
+    {
+      "example": "graph",
+      "theme": "dark",
+      "shot": 3,
+      "kind": "transition",
+      "frame": 215,
+      "sha256": "c6bba5557e701002ff08b413574e5bc0198f499c39ccef5a7455fbba39479b27"
+    },
+    {
+      "example": "graph",
+      "theme": "dark",
+      "shot": 3,
+      "kind": "mid",
+      "frame": 246,
+      "sha256": "8044cae158ea93f634c91b8ef0f6ad37ef6570130b898f37b63adf5cbc9646bc"
+    },
+    {
+      "example": "graph",
+      "theme": "dark",
+      "shot": 4,
+      "kind": "reveal",
+      "frame": 296,
+      "sha256": "c375b0734303d9eea77e93eb99e3df2415c62b0e71454d5d276dfced16147672"
+    },
+    {
+      "example": "graph",
+      "theme": "dark",
+      "shot": 4,
+      "kind": "transition",
+      "frame": 299,
+      "sha256": "a41db7d51c982686fa63d93c3e1dfe723b70d00c9a5e0a5e85e59fa461aa2560"
+    },
+    {
+      "example": "graph",
+      "theme": "dark",
+      "shot": 4,
+      "kind": "mid",
+      "frame": 330,
+      "sha256": "b6346dbda3022baec46a77c854649d474e554a74d32e795523ed7e096db311dd"
+    },
+    {
+      "example": "graph",
+      "theme": "dark",
+      "shot": 5,
+      "kind": "reveal",
+      "frame": 380,
+      "sha256": "72c260b4e290d2a4f3a3d0dd9badcceef8e1bfc1d2aeaecca9c808404eef5c64"
+    },
+    {
+      "example": "graph",
+      "theme": "dark",
+      "shot": 5,
+      "kind": "transition",
+      "frame": 383,
+      "sha256": "d35e7769807bd591bbb90e3ad77b8d3f2a9cbdd65bae3038c975582ec9f53470"
+    },
+    {
+      "example": "graph",
+      "theme": "dark",
+      "shot": 5,
+      "kind": "mid",
+      "frame": 414,
+      "sha256": "6da0672bcc264403925d7e5e23bfcdb14de68e7fa3fa8c5356d895853d1650c3"
+    },
+    {
+      "example": "graph",
+      "theme": "dark",
+      "shot": 6,
+      "kind": "reveal",
+      "frame": 464,
+      "sha256": "9e671052ddb6491457a0a2df2bc9f60cd8840844764a32c6bcfdce3570667642"
+    },
+    {
+      "example": "graph",
+      "theme": "dark",
+      "shot": 6,
+      "kind": "transition",
+      "frame": 467,
+      "sha256": "829a7205c4bd59cb936a4eebeee186cf06ed3bbf08a1d5532b46ca36b147dd2e"
+    },
+    {
+      "example": "graph",
+      "theme": "dark",
+      "shot": 6,
+      "kind": "mid",
+      "frame": 510,
+      "sha256": "69dfbb41c417873829bebf1c6e1e6d68822d4d0baa097b0b84fa213253653eba"
+    },
+    {
+      "example": "graph",
+      "theme": "dark",
+      "shot": 7,
+      "kind": "reveal",
+      "frame": 572,
+      "sha256": "ffa95dbf5b12165491899bc00b0118ba0d7f9dd63a7e3bbc1b799f267d5bd4a0"
+    },
+    {
+      "example": "graph",
+      "theme": "dark",
+      "shot": 7,
+      "kind": "transition",
+      "frame": 575,
+      "sha256": "8f081c0cb48f737f23c4ceec759c71a86c6006b6eda7e7a40d46bfb7784fe9c6"
+    },
+    {
+      "example": "graph",
+      "theme": "dark",
+      "shot": 7,
+      "kind": "mid",
+      "frame": 606,
+      "sha256": "8723ead7509e2429178d750957f3fde5e0a4f696e32e626518cff82dca0b9810"
+    },
+    {
+      "example": "graph",
+      "theme": "dark",
+      "shot": 7,
+      "kind": "last",
+      "frame": 647,
+      "sha256": "0bb2e50360502de788d1aac96c106a7190c40a7b65a2aafc869b964f1fa74b08"
+    },
+    {
+      "example": "tree",
+      "theme": "light",
+      "shot": 1,
+      "kind": "mid",
+      "frame": 36,
+      "sha256": "c7a2a4265f12d09c45dca18390f3207fc5dbb7290d983e619e2f1d4eee963b8b"
+    },
+    {
+      "example": "tree",
+      "theme": "light",
+      "shot": 2,
+      "kind": "reveal",
+      "frame": 80,
+      "sha256": "f5b6054c482d93cad078edab1537ff26dee12f83b5199c66cae0e456057850a3"
+    },
+    {
+      "example": "tree",
+      "theme": "light",
+      "shot": 2,
+      "kind": "transition",
+      "frame": 83,
+      "sha256": "d8d6bfb17434be2da32ec15d9e0db4ea576828c31743a6f21b373c26f6d7f458"
+    },
+    {
+      "example": "tree",
+      "theme": "light",
+      "shot": 2,
+      "kind": "mid",
+      "frame": 108,
+      "sha256": "2526bc634e3b628892dfe34e8c7ff430d9054d7a720ccce4b2af6abbc3194288"
+    },
+    {
+      "example": "tree",
+      "theme": "light",
+      "shot": 3,
+      "kind": "reveal",
+      "frame": 152,
+      "sha256": "2bd87042fdd9f572d8a5bae85e52d03d77f77473be56539975175732aae904da"
+    },
+    {
+      "example": "tree",
+      "theme": "light",
+      "shot": 3,
+      "kind": "transition",
+      "frame": 155,
+      "sha256": "3ce308833f060f1fbd57f8387e1bd5aba90b2132f15bc20650fb5829f8ca4ac4"
+    },
+    {
+      "example": "tree",
+      "theme": "light",
+      "shot": 3,
+      "kind": "mid",
+      "frame": 180,
+      "sha256": "4786d7200174677039734973bd25ffc644cda4454eb3927e6b07827bd992d4c2"
+    },
+    {
+      "example": "tree",
+      "theme": "light",
+      "shot": 4,
+      "kind": "reveal",
+      "frame": 224,
+      "sha256": "3e1847f9cc815519bcecb2e603ed25b1ef7ea643bf9fd78ffedc412a39cc9551"
+    },
+    {
+      "example": "tree",
+      "theme": "light",
+      "shot": 4,
+      "kind": "transition",
+      "frame": 227,
+      "sha256": "ceee633d8f477e7a8fd947ac1a72dcee6095a0ecf1c0fac38e0e353b8e34e5f8"
+    },
+    {
+      "example": "tree",
+      "theme": "light",
+      "shot": 4,
+      "kind": "mid",
+      "frame": 252,
+      "sha256": "669fc82216387171585dbd845aa7d2e3ae8e76310d0997838c244ba0e7042c6d"
+    },
+    {
+      "example": "tree",
+      "theme": "light",
+      "shot": 5,
+      "kind": "reveal",
+      "frame": 296,
+      "sha256": "48c7b2686e964727f55487a049cfbf35ce5005027b3742fd8a0a12d758e59824"
+    },
+    {
+      "example": "tree",
+      "theme": "light",
+      "shot": 5,
+      "kind": "transition",
+      "frame": 299,
+      "sha256": "bad4fe1b33aca55837da85660e8a6ee36bb85766e93aab9ef14f5b4a166077e5"
+    },
+    {
+      "example": "tree",
+      "theme": "light",
+      "shot": 5,
+      "kind": "mid",
+      "frame": 324,
+      "sha256": "abd14aed33dbb29aedf15d566f55d5a78cccbc50d94aea33b1a92f601b38972f"
+    },
+    {
+      "example": "tree",
+      "theme": "light",
+      "shot": 6,
+      "kind": "reveal",
+      "frame": 368,
+      "sha256": "51b9d21881243a6453dfec9c09a4bfe065f29398c6a2e1ee81dc552b5257d48d"
+    },
+    {
+      "example": "tree",
+      "theme": "light",
+      "shot": 6,
+      "kind": "transition",
+      "frame": 371,
+      "sha256": "ba8b39e1a996a384f490036d3564899d5112add8f87b8ccb62f22f081a8cb738"
+    },
+    {
+      "example": "tree",
+      "theme": "light",
+      "shot": 6,
+      "kind": "mid",
+      "frame": 396,
+      "sha256": "cc60f3cd271e175450f59d12a0974daa0db577959af26f78f7204ac03ca52c25"
+    },
+    {
+      "example": "tree",
+      "theme": "light",
+      "shot": 7,
+      "kind": "reveal",
+      "frame": 440,
+      "sha256": "6223460ff4b021b214a43eeffbab5b22a93d3f4dba3dbe9eab7e8cf1f3baed4d"
+    },
+    {
+      "example": "tree",
+      "theme": "light",
+      "shot": 7,
+      "kind": "transition",
+      "frame": 443,
+      "sha256": "3821881550e8b4e52e33093a9618b859a3a1b450e8eb753ed82d3a24f42446f0"
+    },
+    {
+      "example": "tree",
+      "theme": "light",
+      "shot": 7,
+      "kind": "mid",
+      "frame": 468,
+      "sha256": "e4c697d194c1150d935e0eba127accc62f454c39fcf889aee7a1ae4a9095d829"
+    },
+    {
+      "example": "tree",
+      "theme": "light",
+      "shot": 8,
+      "kind": "reveal",
+      "frame": 512,
+      "sha256": "cb335b9af380b83c9fc11147359538dd2e89b48aa661f55f5cb7199ec3b8af46"
+    },
+    {
+      "example": "tree",
+      "theme": "light",
+      "shot": 8,
+      "kind": "transition",
+      "frame": 515,
+      "sha256": "877f3f6953d6066ecc89bf309f70af703d97c959a55d59027bbe7a37e8b04ac5"
+    },
+    {
+      "example": "tree",
+      "theme": "light",
+      "shot": 8,
+      "kind": "mid",
+      "frame": 540,
+      "sha256": "ef2e7d71b66ea849b75732ad730d82e211cf07ddb09eafcc13f0ad1a34f0248b"
+    },
+    {
+      "example": "tree",
+      "theme": "light",
+      "shot": 9,
+      "kind": "reveal",
+      "frame": 584,
+      "sha256": "df0f100b71df4b9b40e8e4b79ab49933d5aec7bef0a4a2674ba8d6234e333c72"
+    },
+    {
+      "example": "tree",
+      "theme": "light",
+      "shot": 9,
+      "kind": "transition",
+      "frame": 587,
+      "sha256": "509b063d775d555c4865acda8412b4527b20718563bc9cf13dce831df0637853"
+    },
+    {
+      "example": "tree",
+      "theme": "light",
+      "shot": 9,
+      "kind": "mid",
+      "frame": 612,
+      "sha256": "6d3cc5be611124d7bf6354ddf3c22b83638305c74ba4173db3e9c6453a9fb8f1"
+    },
+    {
+      "example": "tree",
+      "theme": "light",
+      "shot": 10,
+      "kind": "reveal",
+      "frame": 656,
+      "sha256": "7c702d72fe0d92ccf5a3a37843afb1ddd4aa8d047461c08312cbc212e9646b51"
+    },
+    {
+      "example": "tree",
+      "theme": "light",
+      "shot": 10,
+      "kind": "transition",
+      "frame": 662,
+      "sha256": "2f671ad7896129771d2992775d09cf198169c86fcde38df546adaf9b98b91f68"
+    },
+    {
+      "example": "tree",
+      "theme": "light",
+      "shot": 10,
+      "kind": "mid",
+      "frame": 702,
+      "sha256": "99b51adeffb56970bf0f57481594877499426b08f59459ca4dd0b09f2b1f02f8"
+    },
+    {
+      "example": "tree",
+      "theme": "light",
+      "shot": 10,
+      "kind": "last",
+      "frame": 755,
+      "sha256": "2ad9702080fd4c008864e09791045cd258bd96264be3eabb2442168b6881d915"
+    },
+    {
+      "example": "tree",
+      "theme": "dark",
+      "shot": 1,
+      "kind": "mid",
+      "frame": 36,
+      "sha256": "56f38237cf42c690feb735a9d0b3d71f0ada1136ad7cc25cebff7e0a028f6647"
+    },
+    {
+      "example": "tree",
+      "theme": "dark",
+      "shot": 2,
+      "kind": "reveal",
+      "frame": 80,
+      "sha256": "2e8b7014b759d609f32c04a320ef86f59135a4977f5461f36520480c21c64a13"
+    },
+    {
+      "example": "tree",
+      "theme": "dark",
+      "shot": 2,
+      "kind": "transition",
+      "frame": 83,
+      "sha256": "8fe8001629a7b324579775677a354674f234dd89e0c8c9819970d35aaa7b9844"
+    },
+    {
+      "example": "tree",
+      "theme": "dark",
+      "shot": 2,
+      "kind": "mid",
+      "frame": 108,
+      "sha256": "9308bb3078fa06138b8ffa4da0766d4c4724a21972d2abe1dce8e92299f9dab6"
+    },
+    {
+      "example": "tree",
+      "theme": "dark",
+      "shot": 3,
+      "kind": "reveal",
+      "frame": 152,
+      "sha256": "66ca1902bb33c22c99494ff446cb961f9930c467be8a753515a5d76a35a2dd10"
+    },
+    {
+      "example": "tree",
+      "theme": "dark",
+      "shot": 3,
+      "kind": "transition",
+      "frame": 155,
+      "sha256": "3f77de8bd2ad0ba45891d7a4eae209477e06aee69c794de25ff8e3db0e082a8b"
+    },
+    {
+      "example": "tree",
+      "theme": "dark",
+      "shot": 3,
+      "kind": "mid",
+      "frame": 180,
+      "sha256": "a05368f0fb829b8d82ea98a4965190101c2942e1dd77af521432592dd74e1e3d"
+    },
+    {
+      "example": "tree",
+      "theme": "dark",
+      "shot": 4,
+      "kind": "reveal",
+      "frame": 224,
+      "sha256": "e098b757f044ba67817032ff0e8f87fcf75cd6eac4a76e399d84bce8eb4b8f09"
+    },
+    {
+      "example": "tree",
+      "theme": "dark",
+      "shot": 4,
+      "kind": "transition",
+      "frame": 227,
+      "sha256": "53b1be08d711e698ab1268534c3609be3ab7cbbdd6d68ff762cf7720d5e330dd"
+    },
+    {
+      "example": "tree",
+      "theme": "dark",
+      "shot": 4,
+      "kind": "mid",
+      "frame": 252,
+      "sha256": "c1462f05491ef5d70cd7ad79c799710aedbac5bd39627e396b19dc7a86e262af"
+    },
+    {
+      "example": "tree",
+      "theme": "dark",
+      "shot": 5,
+      "kind": "reveal",
+      "frame": 296,
+      "sha256": "33e411150b7170e8575dc4bdf192ffd95d16539d4745c7c642f36a5fa7b87c69"
+    },
+    {
+      "example": "tree",
+      "theme": "dark",
+      "shot": 5,
+      "kind": "transition",
+      "frame": 299,
+      "sha256": "7f62df4989d9a45be7c51cfebee05129bf2693e2a5ffe24dea01f0e27e828ca4"
+    },
+    {
+      "example": "tree",
+      "theme": "dark",
+      "shot": 5,
+      "kind": "mid",
+      "frame": 324,
+      "sha256": "3a6d9d3f8392eb5d517968631a5b42634990581f73c2e207ee00f105f54da151"
+    },
+    {
+      "example": "tree",
+      "theme": "dark",
+      "shot": 6,
+      "kind": "reveal",
+      "frame": 368,
+      "sha256": "6c73da90060adfc1d36fe6dcc3b2b1d67b6e7557e7fe16156df35d4ab0e6e828"
+    },
+    {
+      "example": "tree",
+      "theme": "dark",
+      "shot": 6,
+      "kind": "transition",
+      "frame": 371,
+      "sha256": "ebce772f608586d0f299cb3dc42ddc5ee91b3431a1f057646007e12a9c81ec59"
+    },
+    {
+      "example": "tree",
+      "theme": "dark",
+      "shot": 6,
+      "kind": "mid",
+      "frame": 396,
+      "sha256": "56ee88820ca82272d4acd5254af5d78aed0ea6edcd7b5362bedb18bf08850a00"
+    },
+    {
+      "example": "tree",
+      "theme": "dark",
+      "shot": 7,
+      "kind": "reveal",
+      "frame": 440,
+      "sha256": "0548d337b35b55a6d363269b7bb2787308d1fd349554c5dc3178170f075b9fdd"
+    },
+    {
+      "example": "tree",
+      "theme": "dark",
+      "shot": 7,
+      "kind": "transition",
+      "frame": 443,
+      "sha256": "f898c9c4b05a06c356aa60f1669c7c1f6690e2dbea092ed0bd1ef6af9fa41358"
+    },
+    {
+      "example": "tree",
+      "theme": "dark",
+      "shot": 7,
+      "kind": "mid",
+      "frame": 468,
+      "sha256": "c0fa7db383ad6f3cdf220b3e09b52addbea71beb4600682b58ea1bac6d6e27af"
+    },
+    {
+      "example": "tree",
+      "theme": "dark",
+      "shot": 8,
+      "kind": "reveal",
+      "frame": 512,
+      "sha256": "8f6df447041ad770c51e84c9c81a32b76604dcf2af36d0dfb73e401b96694ac7"
+    },
+    {
+      "example": "tree",
+      "theme": "dark",
+      "shot": 8,
+      "kind": "transition",
+      "frame": 515,
+      "sha256": "62c5bcc06463ff6b95c0a9f91b4e5c790ff3fd386df8235d078870a48476de50"
+    },
+    {
+      "example": "tree",
+      "theme": "dark",
+      "shot": 8,
+      "kind": "mid",
+      "frame": 540,
+      "sha256": "7ccc405362bc62922c7df50ef8f79d59bfd6ede78a7f20da61025cf097183aa7"
+    },
+    {
+      "example": "tree",
+      "theme": "dark",
+      "shot": 9,
+      "kind": "reveal",
+      "frame": 584,
+      "sha256": "848c0e3f31025c8d52d5820f440d11529c88f6d564636c370645c2a2c8457ada"
+    },
+    {
+      "example": "tree",
+      "theme": "dark",
+      "shot": 9,
+      "kind": "transition",
+      "frame": 587,
+      "sha256": "3a85d7e01a154ee1d43da22647ff460be01057caffce93d7b5c60f8c44f9c19e"
+    },
+    {
+      "example": "tree",
+      "theme": "dark",
+      "shot": 9,
+      "kind": "mid",
+      "frame": 612,
+      "sha256": "c2ac22758781bce5918def6f40310e603c10f303f7cf411069bc03565f40e62f"
+    },
+    {
+      "example": "tree",
+      "theme": "dark",
+      "shot": 10,
+      "kind": "reveal",
+      "frame": 656,
+      "sha256": "201ce344873a1b78e062549233096b4b64025e219c5626373dcec1f4c29a39f7"
+    },
+    {
+      "example": "tree",
+      "theme": "dark",
+      "shot": 10,
+      "kind": "transition",
+      "frame": 662,
+      "sha256": "359778274a4f1be3afa10bca1bbcd4e63d99dbcfaf073cbaae0c3089dbdc659a"
+    },
+    {
+      "example": "tree",
+      "theme": "dark",
+      "shot": 10,
+      "kind": "mid",
+      "frame": 702,
+      "sha256": "765bf3396faa1814bfd20def017a539bc52dffb857935337f4492073513237a8"
+    },
+    {
+      "example": "tree",
+      "theme": "dark",
+      "shot": 10,
+      "kind": "last",
+      "frame": 755,
+      "sha256": "1cd0319f012460c630bd6b305fb3c05084c1c54c0050d01600e1a30611da25d2"
+    },
+    {
+      "example": "timeline",
+      "theme": "light",
+      "shot": 1,
+      "kind": "mid",
+      "frame": 36,
+      "sha256": "da47bfd246573d1436804dbe69d1f9a730a031a4412015270f346b456faee05e"
+    },
+    {
+      "example": "timeline",
+      "theme": "light",
+      "shot": 2,
+      "kind": "reveal",
+      "frame": 80,
+      "sha256": "daed868b068f8d4d04cd2f653c9a05f7da9a273b9febab09e6a860598f6e0dd0"
+    },
+    {
+      "example": "timeline",
+      "theme": "light",
+      "shot": 2,
+      "kind": "transition",
+      "frame": 83,
+      "sha256": "2339c291922fbd28ee8bcca5e02420a1aeade35839245042e237f803c9bb2a3a"
+    },
+    {
+      "example": "timeline",
+      "theme": "light",
+      "shot": 2,
+      "kind": "mid",
+      "frame": 108,
+      "sha256": "a3b90bd06fb408cb241fc7edd876390a4a274262289bd0df9fc29e6fe4cc5d06"
+    },
+    {
+      "example": "timeline",
+      "theme": "light",
+      "shot": 3,
+      "kind": "reveal",
+      "frame": 152,
+      "sha256": "841f1c62d73ba59351a3265eb6b77844d8d9a7427319a7cdb6a474842e4272b8"
+    },
+    {
+      "example": "timeline",
+      "theme": "light",
+      "shot": 3,
+      "kind": "transition",
+      "frame": 155,
+      "sha256": "6fdc651f552620bdd765787d30887d75be07b05a8be6366efb3392b0576ffe82"
+    },
+    {
+      "example": "timeline",
+      "theme": "light",
+      "shot": 3,
+      "kind": "mid",
+      "frame": 180,
+      "sha256": "82213fad9f20c462ed75c9a39c78e6e5bae7082174c6eb9dec01436452816ee1"
+    },
+    {
+      "example": "timeline",
+      "theme": "light",
+      "shot": 4,
+      "kind": "reveal",
+      "frame": 224,
+      "sha256": "46647a4f4d4482113c0c5c083ac6fa499da1514bdb9831519c9b8a4dc6fb0cd8"
+    },
+    {
+      "example": "timeline",
+      "theme": "light",
+      "shot": 4,
+      "kind": "transition",
+      "frame": 227,
+      "sha256": "d32189570cd36b732a06652e0bde3255c31df1e3be73e35a42ac062aba7395d5"
+    },
+    {
+      "example": "timeline",
+      "theme": "light",
+      "shot": 4,
+      "kind": "mid",
+      "frame": 252,
+      "sha256": "a4c13d1e25ec6bb4b3f7647ea636ae67f7b2dd57a0865f388f150c6f7e1c41e1"
+    },
+    {
+      "example": "timeline",
+      "theme": "light",
+      "shot": 5,
+      "kind": "reveal",
+      "frame": 296,
+      "sha256": "1c41ad4261499219533c9ef68c77901caf68f2053b6086f097c342bc9fcc0db2"
+    },
+    {
+      "example": "timeline",
+      "theme": "light",
+      "shot": 5,
+      "kind": "transition",
+      "frame": 299,
+      "sha256": "6fabdf3ba6801ced16c291d92c0c12bfc7145eb4b1f864b4c487938a22a56387"
+    },
+    {
+      "example": "timeline",
+      "theme": "light",
+      "shot": 5,
+      "kind": "mid",
+      "frame": 324,
+      "sha256": "31ceb1bb3e306ac1d38e90c258657f948efc80903dfc53b00cf3d30e4423cbb1"
+    },
+    {
+      "example": "timeline",
+      "theme": "light",
+      "shot": 6,
+      "kind": "reveal",
+      "frame": 368,
+      "sha256": "c4327489ff08b4ac82846083e6a5121754564dd3b560fcfc600c6892935fece9"
+    },
+    {
+      "example": "timeline",
+      "theme": "light",
+      "shot": 6,
+      "kind": "transition",
+      "frame": 371,
+      "sha256": "3b941b77e744334bb320181b329e12d2c52736e8643aca2b3f16fb34f82672ba"
+    },
+    {
+      "example": "timeline",
+      "theme": "light",
+      "shot": 6,
+      "kind": "mid",
+      "frame": 396,
+      "sha256": "66335456712d7782ef322392c44d9a1edc7d0cd2ba581bbcb1102d508fd2dff0"
+    },
+    {
+      "example": "timeline",
+      "theme": "light",
+      "shot": 7,
+      "kind": "reveal",
+      "frame": 440,
+      "sha256": "cebbc5e0d4d8626a35e2801ecff08e22b1e97eeb5bbb5e61be85c93e7de6bf69"
+    },
+    {
+      "example": "timeline",
+      "theme": "light",
+      "shot": 7,
+      "kind": "transition",
+      "frame": 443,
+      "sha256": "5fe2104319c91d08faf8d80102b4ae1cbd3705ab1b60ed5ac9764ea9aba62c4f"
+    },
+    {
+      "example": "timeline",
+      "theme": "light",
+      "shot": 7,
+      "kind": "mid",
+      "frame": 468,
+      "sha256": "0cd1e6cc3425250111779557c19fe050e9a4912695d650f933aaca2e03f38ee4"
+    },
+    {
+      "example": "timeline",
+      "theme": "light",
+      "shot": 8,
+      "kind": "reveal",
+      "frame": 512,
+      "sha256": "f10d9fa9343da01ad619cd2c1ae27e1217f9bb05df6a40e1b75c8013a326123f"
+    },
+    {
+      "example": "timeline",
+      "theme": "light",
+      "shot": 8,
+      "kind": "transition",
+      "frame": 515,
+      "sha256": "8dcdbfd0cf7fb84f2a85be3ed79e64d921bcb1781410f32f52265bbfeb92c33d"
+    },
+    {
+      "example": "timeline",
+      "theme": "light",
+      "shot": 8,
+      "kind": "mid",
+      "frame": 540,
+      "sha256": "54ca82c484bbfaa89e7c3763b265d44fcfb9782d5c6d8e484cfeae9a02f46f9d"
+    },
+    {
+      "example": "timeline",
+      "theme": "light",
+      "shot": 9,
+      "kind": "reveal",
+      "frame": 584,
+      "sha256": "9adcb6215ff3a1038a929b5c126ddd38a32aa91cadefe63c1aee610f549400e9"
+    },
+    {
+      "example": "timeline",
+      "theme": "light",
+      "shot": 9,
+      "kind": "transition",
+      "frame": 587,
+      "sha256": "4a2c7718655349e9a188e0bcaecd5614461bf364d6298162171471bcc0298220"
+    },
+    {
+      "example": "timeline",
+      "theme": "light",
+      "shot": 9,
+      "kind": "mid",
+      "frame": 612,
+      "sha256": "791c47ace3e9a10591bb7301d4552c40554ca3ccb958370acbc7fe0ac8fd703c"
+    },
+    {
+      "example": "timeline",
+      "theme": "light",
+      "shot": 10,
+      "kind": "reveal",
+      "frame": 656,
+      "sha256": "b3e1d35cb35480ee78da686901e5a269388c1287db63bca7d5f31f29b82b96aa"
+    },
+    {
+      "example": "timeline",
+      "theme": "light",
+      "shot": 10,
+      "kind": "transition",
+      "frame": 659,
+      "sha256": "528c90d28dbf1901d7ee84251801dbdb83cfaaee01422241e92a353ef91e33be"
+    },
+    {
+      "example": "timeline",
+      "theme": "light",
+      "shot": 10,
+      "kind": "mid",
+      "frame": 684,
+      "sha256": "a4d9b768dac7f56d26c01fcd73006c2a7e43bdf8c8f1e886dcaefb4a3b4faff1"
+    },
+    {
+      "example": "timeline",
+      "theme": "light",
+      "shot": 11,
+      "kind": "reveal",
+      "frame": 728,
+      "sha256": "0fd4ebf638d8b2243bb3c34c3d524f7f5f33adf31c2b7cf09615c4aed2a0167a"
+    },
+    {
+      "example": "timeline",
+      "theme": "light",
+      "shot": 11,
+      "kind": "transition",
+      "frame": 731,
+      "sha256": "e5f2cf43703e2bd9d34feb0b2132799a9c73f964bde05f9f4c4b69926fd878c4"
+    },
+    {
+      "example": "timeline",
+      "theme": "light",
+      "shot": 11,
+      "kind": "mid",
+      "frame": 756,
+      "sha256": "61f66cdfdd4e71cce2d4171dd40068472552d0adc4eb6e6185d8e5d196d0eecd"
+    },
+    {
+      "example": "timeline",
+      "theme": "light",
+      "shot": 12,
+      "kind": "reveal",
+      "frame": 800,
+      "sha256": "96f6b78900ad4865c23b002650a5975633d1a9f07349f72146658b62a551f4c7"
+    },
+    {
+      "example": "timeline",
+      "theme": "light",
+      "shot": 12,
+      "kind": "transition",
+      "frame": 803,
+      "sha256": "26cfbed6a222342a93f91f18ea84b5232e7c21cd36e5830940de4b7eb8c161f1"
+    },
+    {
+      "example": "timeline",
+      "theme": "light",
+      "shot": 12,
+      "kind": "mid",
+      "frame": 828,
+      "sha256": "7dbc13cf6fe9ca22df0839649ee30c674e395bcc691970a3a5f1ae4f76f714fe"
+    },
+    {
+      "example": "timeline",
+      "theme": "light",
+      "shot": 13,
+      "kind": "reveal",
+      "frame": 872,
+      "sha256": "7a8ceed8ba8816e8cbc7e8c9b6632baf19058151e3a654619f3f260fd07b76d6"
+    },
+    {
+      "example": "timeline",
+      "theme": "light",
+      "shot": 13,
+      "kind": "transition",
+      "frame": 878,
+      "sha256": "0c1afb8e6ddc9a09d51d73aeba67e1e302c8fb9683626211a56b07e3d28ad54f"
+    },
+    {
+      "example": "timeline",
+      "theme": "light",
+      "shot": 13,
+      "kind": "mid",
+      "frame": 918,
+      "sha256": "8b2c2b911bee9e9151364bd005a949c516984fecbfdc4f8d98bb9eb749bb01bf"
+    },
+    {
+      "example": "timeline",
+      "theme": "light",
+      "shot": 13,
+      "kind": "last",
+      "frame": 971,
+      "sha256": "f2316ab422e066ff42830783f907435388a60c8e12c01685ff435cf09d8f070a"
+    },
+    {
+      "example": "timeline",
+      "theme": "dark",
+      "shot": 1,
+      "kind": "mid",
+      "frame": 36,
+      "sha256": "d1cc35b48d02479be46b404b3017c25f5123e0b77107846b8a8e2eae3fc4661f"
+    },
+    {
+      "example": "timeline",
+      "theme": "dark",
+      "shot": 2,
+      "kind": "reveal",
+      "frame": 80,
+      "sha256": "c009b63c2fdb231d7d93d0a1fd02c19c775210ebe45fa721c5dd4eac92b8fac2"
+    },
+    {
+      "example": "timeline",
+      "theme": "dark",
+      "shot": 2,
+      "kind": "transition",
+      "frame": 83,
+      "sha256": "ea736a963d5b5cd798802eb61ae18625ab813a8b1200e939a68c62f2068cc9df"
+    },
+    {
+      "example": "timeline",
+      "theme": "dark",
+      "shot": 2,
+      "kind": "mid",
+      "frame": 108,
+      "sha256": "0f55ead66ad4e77ab6273c5d5eb2733247ec61546255aaf28d2e38003aadbd52"
+    },
+    {
+      "example": "timeline",
+      "theme": "dark",
+      "shot": 3,
+      "kind": "reveal",
+      "frame": 152,
+      "sha256": "4aef922a5d46877ff167933341e8932a88523af3ce64f38a5bcd84563138f5bd"
+    },
+    {
+      "example": "timeline",
+      "theme": "dark",
+      "shot": 3,
+      "kind": "transition",
+      "frame": 155,
+      "sha256": "f2e1b4d21c0f15640ca7c8ee3801630bbc706d7b0f8effcb17edb85b45fb7d09"
+    },
+    {
+      "example": "timeline",
+      "theme": "dark",
+      "shot": 3,
+      "kind": "mid",
+      "frame": 180,
+      "sha256": "3885d74a80af55fff60fd4fa6aa736a2bd444c73d39863f3304d858c76665050"
+    },
+    {
+      "example": "timeline",
+      "theme": "dark",
+      "shot": 4,
+      "kind": "reveal",
+      "frame": 224,
+      "sha256": "d8c84a06343bd7630275fd6e3333ab156fc8a87d61c98f5adf4d5c43f21ef358"
+    },
+    {
+      "example": "timeline",
+      "theme": "dark",
+      "shot": 4,
+      "kind": "transition",
+      "frame": 227,
+      "sha256": "467ad08e614683583840b9967d2c893a1941de079469110511c2d63eb21660c9"
+    },
+    {
+      "example": "timeline",
+      "theme": "dark",
+      "shot": 4,
+      "kind": "mid",
+      "frame": 252,
+      "sha256": "7f446087cc540ce9451258ec84f91dfeb6dd8e47239b3e1a6849d460511557fc"
+    },
+    {
+      "example": "timeline",
+      "theme": "dark",
+      "shot": 5,
+      "kind": "reveal",
+      "frame": 296,
+      "sha256": "615c31c2f1d86308f3cd8542d9240ac21c2217472b8f43adebb17fb12e1aae71"
+    },
+    {
+      "example": "timeline",
+      "theme": "dark",
+      "shot": 5,
+      "kind": "transition",
+      "frame": 299,
+      "sha256": "985f0e88d0e6c4e728ca5ff0dd9a9cd919fd968f4479724911660b07d5f7fc62"
+    },
+    {
+      "example": "timeline",
+      "theme": "dark",
+      "shot": 5,
+      "kind": "mid",
+      "frame": 324,
+      "sha256": "329619efd7bdf7c52d7c6b9dfe0b837e79e6ee106d8f0ab74afd04d7d7014162"
+    },
+    {
+      "example": "timeline",
+      "theme": "dark",
+      "shot": 6,
+      "kind": "reveal",
+      "frame": 368,
+      "sha256": "28fa1f15d7ba569be0464ea5a7dd189205675ba699e062a899a51793b8c30b86"
+    },
+    {
+      "example": "timeline",
+      "theme": "dark",
+      "shot": 6,
+      "kind": "transition",
+      "frame": 371,
+      "sha256": "1753ed84a02ea60efa7df7751cc79e552abc84b72d9e8302699f712ba0a1a6b8"
+    },
+    {
+      "example": "timeline",
+      "theme": "dark",
+      "shot": 6,
+      "kind": "mid",
+      "frame": 396,
+      "sha256": "4310e9286a76cf7aba0b8c8b8939ee367cd67d85b62cf66df8e40cd96e331a0c"
+    },
+    {
+      "example": "timeline",
+      "theme": "dark",
+      "shot": 7,
+      "kind": "reveal",
+      "frame": 440,
+      "sha256": "c4b8c6612aa827d79e3a3d8e7388ac9fc4e8f49d6c1e79c2fd78185d6bd00759"
+    },
+    {
+      "example": "timeline",
+      "theme": "dark",
+      "shot": 7,
+      "kind": "transition",
+      "frame": 443,
+      "sha256": "3370e057e0bd0fd57871e855209ab7780cd46489525c6f3cffbaa2fffc2832f2"
+    },
+    {
+      "example": "timeline",
+      "theme": "dark",
+      "shot": 7,
+      "kind": "mid",
+      "frame": 468,
+      "sha256": "39dffc0180fd627056b8b1bb5149af141b15cdfe5c26166ddcccd0f19dd93c73"
+    },
+    {
+      "example": "timeline",
+      "theme": "dark",
+      "shot": 8,
+      "kind": "reveal",
+      "frame": 512,
+      "sha256": "a970faf9e10f00ea951315f0bafbbc929bfa894667fba414e7a44b28b74674cc"
+    },
+    {
+      "example": "timeline",
+      "theme": "dark",
+      "shot": 8,
+      "kind": "transition",
+      "frame": 515,
+      "sha256": "b435272fdda403f13690336ac2d05c74cd4b8d197ee185b70bb69fc8c7d9b78a"
+    },
+    {
+      "example": "timeline",
+      "theme": "dark",
+      "shot": 8,
+      "kind": "mid",
+      "frame": 540,
+      "sha256": "fc1f66126a5127de7857bfe9b21e1320720c1ae526f317eacbcca05d8880aff5"
+    },
+    {
+      "example": "timeline",
+      "theme": "dark",
+      "shot": 9,
+      "kind": "reveal",
+      "frame": 584,
+      "sha256": "2a6f17c9b26981fedc8288834e48b9750bd1f03322ffcf6f6d3ddfe5abc9aca0"
+    },
+    {
+      "example": "timeline",
+      "theme": "dark",
+      "shot": 9,
+      "kind": "transition",
+      "frame": 587,
+      "sha256": "87779908855a6a8093a30ae79f0bf82c8983d8ea74929b177647bd2df419953f"
+    },
+    {
+      "example": "timeline",
+      "theme": "dark",
+      "shot": 9,
+      "kind": "mid",
+      "frame": 612,
+      "sha256": "c893384f16d8291f8b4353c7b775472536f0ce99c6d0c695a3e9e92446f5097c"
+    },
+    {
+      "example": "timeline",
+      "theme": "dark",
+      "shot": 10,
+      "kind": "reveal",
+      "frame": 656,
+      "sha256": "a14774d0e99ef6496b2f66d8747b12f1bae1ef527d3ddf49cac98755d893f211"
+    },
+    {
+      "example": "timeline",
+      "theme": "dark",
+      "shot": 10,
+      "kind": "transition",
+      "frame": 659,
+      "sha256": "801f839946ee14163c7f1b8b741aaca3336d7d3bdd2c1d1901baef8fabb981ac"
+    },
+    {
+      "example": "timeline",
+      "theme": "dark",
+      "shot": 10,
+      "kind": "mid",
+      "frame": 684,
+      "sha256": "769d6109b7ec7749bcc88a72a34cd3d643328605421c08eb85895ffcc54cede5"
+    },
+    {
+      "example": "timeline",
+      "theme": "dark",
+      "shot": 11,
+      "kind": "reveal",
+      "frame": 728,
+      "sha256": "026c4bbc12032b0bac0d4a78b6aa843d1cd80a79e3c94e284062b076862eb657"
+    },
+    {
+      "example": "timeline",
+      "theme": "dark",
+      "shot": 11,
+      "kind": "transition",
+      "frame": 731,
+      "sha256": "909f29096fcf717595e8cc2983619e5463f97bb50c8be34d50e0e81a31667163"
+    },
+    {
+      "example": "timeline",
+      "theme": "dark",
+      "shot": 11,
+      "kind": "mid",
+      "frame": 756,
+      "sha256": "9066f07c9fcd6ffee617849b6d60b01057df0add54a003b3ca59add81ff48d88"
+    },
+    {
+      "example": "timeline",
+      "theme": "dark",
+      "shot": 12,
+      "kind": "reveal",
+      "frame": 800,
+      "sha256": "429d916a5cf6bb8e9c1b392e4724034bdf3cf7503e1b2ed28f86ed2b2e527ceb"
+    },
+    {
+      "example": "timeline",
+      "theme": "dark",
+      "shot": 12,
+      "kind": "transition",
+      "frame": 803,
+      "sha256": "239bbc983de1027adfab3ded777b355fac9eb32ac933db1cd0ac857bcef18247"
+    },
+    {
+      "example": "timeline",
+      "theme": "dark",
+      "shot": 12,
+      "kind": "mid",
+      "frame": 828,
+      "sha256": "c61e6e9c18c5df518a429d7c362c67773bc47c1f13ea6d2fcbcb68f2c1685129"
+    },
+    {
+      "example": "timeline",
+      "theme": "dark",
+      "shot": 13,
+      "kind": "reveal",
+      "frame": 872,
+      "sha256": "a64f0abdb86581f5fd6550e4a5ee60b9f329ec7e043b68df58dbc3594324205b"
+    },
+    {
+      "example": "timeline",
+      "theme": "dark",
+      "shot": 13,
+      "kind": "transition",
+      "frame": 878,
+      "sha256": "ad488958e86033aff27b4a2b5f025cd256c735be0677f187220e8ae26d47eef2"
+    },
+    {
+      "example": "timeline",
+      "theme": "dark",
+      "shot": 13,
+      "kind": "mid",
+      "frame": 918,
+      "sha256": "32f08554d3c199cbca99e768574488709274782e215e916e32a328ccde4db1ee"
+    },
+    {
+      "example": "timeline",
+      "theme": "dark",
+      "shot": 13,
+      "kind": "last",
+      "frame": 971,
+      "sha256": "fe5b7d8882d85250d13b816beed824031dc8c63bdd4297b69664502abc33015b"
+    }
+  ]
+}

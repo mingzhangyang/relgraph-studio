@@ -111,7 +111,8 @@ Accepted in [ADR 004](ADR-004-evidence-claims-and-output-formats.md) from the Ta
 - [x] **P0 · D3** `relgraph.events/1` export (`relgraph events`, `render --events`) and `--audio` mux with identical video frames
 - [x] **P1 · D4** validated `evidence` in `relgraph.graph/1` and verbatim evidence cards for relations and nodes
   - Landscape card region, camera framing beside the card, no truncation (`render` refuses, `check-labels` reports), `evidence` events, transcript; literary and biology evidence mapped to the neutral shape. Follow-ups: shot `evidence` in the literary and biology formats; Tang cards with quotations once tangshi emits `{cite, quote, url}` items
-- [ ] **P2 · D7.1** portrait, 3:4 and square specs with their own frame furniture and golden manifests
+- [x] **P2 · D7.1** portrait, 3:4 and square specs with their own frame furniture and golden manifests
+  - `portrait-1080x1920`, `portrait-1080x1440` and `square-1080` with stacked or inline title rows, four narration lines, a legend strip and per-spec band minimums; the evidence card below the graph in portrait and 3:4, beside it in square; `--frame-spec`, the studio's frame menu and `check:export` read the spec; `examples/golden-frames.<spec>.json` per spec, landscape output byte-identical. Not yet: time transpose (D7.2) and in-shot motion (D7.3); engines still target 2.8:1
 - [ ] **P2 · D7.2** vertical time axis as an explicit project field (render-time transpose)
 - [ ] **P2 · D7.3 + D8** in-shot camera keyframes and `beats`
 - [ ] **P3 · D5** `relgraph.social/0.1-draft` for evidence-based social networks; form registry and per-kind allowlists
@@ -120,7 +121,7 @@ Accepted in [ADR 004](ADR-004-evidence-claims-and-output-formats.md) from the Ta
 ## B3 — Templates and output
 
 - [ ] Storyboard presets, cross-work typography and thematic palettes
-- [ ] 9:16, 3:4 and square `FrameSpec` presets with their own safe areas (planned as [ADR 004](ADR-004-evidence-claims-and-output-formats.md) D7); second work exported without core code edits
+- [ ] 9:16, 3:4 and square `FrameSpec` presets with their own safe areas (presets and furniture landed as [ADR 004](ADR-004-evidence-claims-and-output-formats.md) D7 step 1; time transpose and in-shot motion follow in D7 steps 2–3); second work exported without core code edits
 - [ ] Production batch video/image exports; defer a full graph editor until proven demand
 
 No GitHub Actions workflow is included; local verification only.
