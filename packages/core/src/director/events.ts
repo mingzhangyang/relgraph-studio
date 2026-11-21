@@ -3,7 +3,6 @@ import {
   compileTimeline,
   frameCount,
   evidenceFrames,
-  evidenceShownSec,
   frameAtOrAfter,
   shotSettledSec,
   shotStartFrames,
@@ -206,7 +205,7 @@ export function filmEvents(
     index === shots.length - 1 ? total - 1 : starts[index + 1] - 1;
   const settled = shotSettledSec(timeline);
   const cardFrames = evidenceFrames(timeline, total);
-  const shownSec = evidenceShownSec(timeline);
+  const shownSec = timeline.cardShownSec;
   // Everything a shot shows, in document order, as the projection gives it.
   // A shot shorter than a frame is never on screen: nothing it alone would
   // show (its id, title, highlight, caption, domain time) is an event.

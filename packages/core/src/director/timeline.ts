@@ -77,6 +77,11 @@ export interface FilmTimeline {
   captions: CaptionCue[];
   /** Pre-projected, safe shot payloads; no source scenes are retained. */
   shots: CompiledShot[];
+  /**
+   * When each shot's evidence card begins to fade in, or null without one
+   * (`evidenceShownSec`), computed once so frames only look it up.
+   */
+  cardShownSec: (number | null)[];
 }
 
 export const NODE_REVEAL_SEC = 0.6;
@@ -176,10 +181,12 @@ export function compileTimeline(graph: VisualGraph, fps = 24): FilmTimeline {
     reveal,
     captions,
     shots,
+    cardShownSec: [],
   };
   // Which shots have frames depends only on the shot tracks compiled above,
   // so the cues can follow the frames the film is rendered with.
   reveal.push(...revealCues(timeline, frameCount(graph, fps)));
+  timeline.cardShownSec = evidenceShownSec(timeline);
   return timeline;
 }
 
@@ -439,19 +446,25 @@ export function captionOpacity(timeline: FilmTimeline, sceneIndex: number, secon
  * and once the object is half revealed, as the detail card waits for its
  * node. Until then the card could cover what it is about.
  */
-export function evidenceShownSec(timeline: FilmTimeline): (number | null)[] {
+export function evidenceShownSec(timeline: Omit<FilmTimeline, 'cardShownSec'>): (number | null)[] {
+  // The cues of the cards' objects only, by object: one pass over the cues.
+  const targets = new Set(
+    timeline.shots.flatMap((shot) =>
+      shot.evidence ? [`${shot.evidence.object}:${shot.evidence.id}`] : [],
+    ),
+  );
+  const cues = new Map<string, RevealCue[]>();
+  for (const cue of timeline.reveal) {
+    const key = `${cue.kind}:${cue.targetId}`;
+    if (targets.has(key)) cues.set(key, [...(cues.get(key) ?? []), cue]);
+  }
   return timeline.shots.map((shot, index) => {
     const card = shot.evidence;
     if (!card) return null;
     let shown = shot.startSec + (index > 0 ? timeline.camera[index].transitionSec : 0);
     // The object's cue under way in this shot, if it is being revealed.
-    for (const cue of timeline.reveal)
-      if (
-        cue.kind === card.object &&
-        cue.targetId === card.id &&
-        cue.inSec < shot.endSec &&
-        (cue.outSec === undefined || cue.outSec > shot.startSec)
-      )
+    for (const cue of cues.get(`${card.object}:${card.id}`) ?? [])
+      if (cue.inSec < shot.endSec && (cue.outSec === undefined || cue.outSec > shot.startSec))
         shown = Math.max(shown, cue.inSec + cue.durationSec / 2);
     return shown;
   });
@@ -459,13 +472,14 @@ export function evidenceShownSec(timeline: FilmTimeline): (number | null)[] {
 
 /**
  * Opacity (0–1) of shot `index`'s evidence card at `second`: it fades in over
- * `CAPTION_FADE_SEC` from `evidenceShownSec` and out with the caption.
+ * `CAPTION_FADE_SEC` from `evidenceShownSec` (as compiled into the timeline:
+ * a lookup, not a scan of the cues) and out with the caption.
  */
 export function evidenceOpacity(
   timeline: FilmTimeline,
   index: number,
   second: number,
-  shownSec: number | null = evidenceShownSec(timeline)[index] ?? null,
+  shownSec: number | null = timeline.cardShownSec[index] ?? null,
 ): number {
   if (shownSec === null) return 0;
   const fadeIn = clamp((second - shownSec) / CAPTION_FADE_SEC);
@@ -483,9 +497,8 @@ export function evidenceFrames(
   filmFrames: number,
 ): ({ shown: true; first: number; last: number } | { shown: false } | null)[] {
   const starts = shotStartFrames(timeline);
-  const shownSec = evidenceShownSec(timeline);
   return timeline.shots.map((_, index) => {
-    const shown = shownSec[index];
+    const shown = timeline.cardShownSec[index] ?? null;
     if (shown === null) return null;
     const last = index === timeline.shots.length - 1 ? filmFrames - 1 : starts[index + 1] - 1;
     // The first frame after the instant the fade starts, when it is past 0.

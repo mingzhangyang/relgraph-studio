@@ -62,6 +62,13 @@ const ease = (t: number): number => {
 const mix = (a: number, b: number, t: number): number => a * (1 - t) + b * t;
 
 /**
+ * Room, in reference pixels, kept between an evidence card's node or relation
+ * ends and the edge of the area the card leaves free: a glyph's radius and
+ * its outline, as the focus framing keeps for highlighted nodes.
+ */
+const CARD_END_MARGIN = Object.freeze({ x: 40, y: 35 });
+
+/**
  * The nodes an evidence card is about, among those in view: its node, or its
  * relation's two ends. The camera keeps them in the area the card leaves free.
  */
@@ -121,6 +128,16 @@ function cameraFor(
         fit.halfHeight / 2 / (halfDy + 35),
       );
     }
+  }
+  // Whatever the shot's zoom, the card's node or relation ends stay inside
+  // the area the card leaves free, with room for their glyphs: an authored
+  // zoom may not push them under the card.
+  if (ends.length) {
+    const points = ends.map((id) => positions.get(id)).filter((p): p is Position => Boolean(p));
+    const halfDx = Math.max(0, ...points.map((p) => Math.abs(p.x / 2 - x / 2))),
+      halfDy = Math.max(0, ...points.map((p) => Math.abs(p.y / 2 - y / 2)));
+    if (halfDx > 0) scale = Math.min(scale, (fit.halfWidth - CARD_END_MARGIN.x) / 2 / halfDx);
+    if (halfDy > 0) scale = Math.min(scale, (fit.halfHeight - CARD_END_MARGIN.y) / 2 / halfDy);
   }
   // Do not clamp away a necessary zoom-out for widely separated coordinates.
   const clamped = clamp(scale, Number.MIN_VALUE, 1.6);

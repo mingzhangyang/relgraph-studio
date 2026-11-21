@@ -4,7 +4,7 @@ import { inspectRelGraph } from '../relgraph.js';
 import { adaptBiologyDocument, validateBiologyDocument } from '../domains/biology.js';
 import { timeAnchor } from './time-anchor.js';
 import { slowCaptions } from './reading-speed.js';
-import { compileTimeline, evidenceFrames, evidenceShownSec, frameCount } from './timeline.js';
+import { compileTimeline, evidenceFrames, frameCount } from './timeline.js';
 import { GENERIC_FORMAT, inspectGenericDocument } from '../domains/generic.js';
 import { LOAD_WORDING, worded, type DiagnosticParams } from '../diagnostic-wording.js';
 import type { Bio } from '../../types/relationship-graph.js';
@@ -225,7 +225,7 @@ export function loadDocument(doc: unknown): LoadResult {
     // reveal; a shot that ends first never shows it (ADR 004, D4).
     if (graph.scenes.some((scene) => scene.evidence)) {
       const timeline = compileTimeline(graph);
-      const shown = evidenceShownSec(timeline);
+      const shown = timeline.cardShownSec;
       evidenceFrames(timeline, frameCount(graph)).forEach((card, index) => {
         if (card && !card.shown)
           warnings.push({

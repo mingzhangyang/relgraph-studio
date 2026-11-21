@@ -15,7 +15,12 @@ import biology from '../examples/biology-egfr-mapk.json' with { type: 'json' };
 import { loadDocument } from '../packages/core/src/director/load.ts';
 import { layoutGraph } from '../packages/core/src/director/layout.ts';
 import { directorFrameAt, frameCount } from '../packages/core/src/director/state.ts';
-import { compileTimeline, shotStartFrames } from '../packages/core/src/director/timeline.ts';
+import {
+  compileTimeline,
+  evidenceFrames,
+  evidenceOpacity,
+  shotStartFrames,
+} from '../packages/core/src/director/timeline.ts';
 import { filmEvents } from '../packages/core/src/director/events.ts';
 import { validateGenericDocument } from '../packages/core/src/domains/generic.ts';
 import { validateVisualGraph } from '../packages/core/src/graph/core.ts';
@@ -607,4 +612,62 @@ test('biology entity evidence is validated and mapped, without an evidence statu
   assert.ok(
     invalid.errors.some((e) => e.code === 'EVIDENCE_REF' && e.path === 'entities[0].evidence[0]'),
   );
+});
+
+test('an authored zoom never pushes the card relation under the card (review: zoom 2)', () => {
+  const zoomed = clone(pan);
+  zoomed.presentation[1].camera = { zoom: 2 };
+  for (const frameSpec of [spec, FRAME_SPECS['landscape-1080p']]) {
+    const { compose, state, starts, lastOf, positions, timeline } = film(zoomed, frameSpec);
+    const free = evidenceCardRegion(frameSpec).x - EVIDENCE_CARD_GAP * frameSpec.typeScale;
+    const edge = timeline.shots[1].view.edges.find((e) => e.id === 'cd');
+    const xs = (frame) =>
+      [edge.source, edge.target].map(
+        (id) => projectCameraPoint(positions.get(id), state(frame).cameraResolved, frameSpec).x,
+      );
+    // Settled: both ends inside the free area, with room for their glyphs.
+    for (const x of xs(lastOf(1))) assert.ok(x <= free - 39 * frameSpec.typeScale, `x ${x}`);
+    // And on every frame the card is drawn.
+    for (let frame = starts[1]; frame <= lastOf(1); frame++)
+      if (drawnTexts(compose(frame)).includes('EVIDENCE'))
+        for (const x of xs(frame)) assert.ok(x < free, `frame ${frame}: x ${x}`);
+    // The zoom still counts as far as the card allows.
+    const plain = film(pan, frameSpec).state(lastOf(1)).cameraResolved.scale;
+    assert.ok(state(lastOf(1)).cameraResolved.scale > plain);
+  }
+});
+
+test('card start times are compiled once; a frame only looks them up (review: per-frame cost)', () => {
+  // A card-heavy film: 300 card shots over 600 timed relations.
+  const nodes = Array.from({ length: 601 }, (_, i) => ({
+    id: `n${i}`,
+    position: { x: i * 40, y: (i % 7) * 30 },
+  }));
+  const edges = Array.from({ length: 600 }, (_, i) => ({
+    id: `e${i}`,
+    source: `n${i}`,
+    target: `n${i + 1}`,
+    visibleFrom: i,
+    evidence: ['某书'],
+  }));
+  const presentation = Array.from({ length: 300 }, (_, i) => ({
+    id: `s${i}`,
+    title: `${i}`,
+    durationSec: 3,
+    domainAt: 2 * i,
+    evidence: { edgeId: `e${2 * i}` },
+  }));
+  const { timeline, graph } = film({ format: 'relgraph.graph/1', nodes, edges, presentation });
+  assert.equal(timeline.cardShownSec.length, 300);
+  assert.ok(timeline.cardShownSec.every((sec, i) => sec >= timeline.shots[i].startSec));
+  // Opacity and the card frames read the compiled start times, never the cues.
+  const lookupOnly = {
+    ...timeline,
+    get reveal() {
+      throw new Error('reveal cues scanned per frame');
+    },
+  };
+  for (let i = 0; i < timeline.shots.length; i++)
+    evidenceOpacity(lookupOnly, i, timeline.shots[i].endSec - 0.5);
+  assert.equal(evidenceFrames(lookupOnly, frameCount(graph, 24)).length, 300);
 });
