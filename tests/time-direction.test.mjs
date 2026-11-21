@@ -36,6 +36,7 @@ import { VIDEO_THEMES } from '../packages/render/src/theme.ts';
 import { timeAxisWarning } from '../packages/cli/src/render.ts';
 import { checkLayout, formatLayoutIssues } from '../packages/cli/src/check-layout.ts';
 import { readTimeAxis, timeDirectionProblems } from './helpers/time-direction.mjs';
+import { readFrame } from './helpers/frame-furniture.mjs';
 import { measure } from './helpers/display-list.mjs';
 
 const project = (source, timeAxis) =>
@@ -326,8 +327,9 @@ const linked = {
   diagram: 'timeline',
   groups: [{ id: 'g1' }, { id: 'g2' }],
   nodes: [
-    { id: 'a', label: '前朝', start: 0, end: 40, group: 'g1' },
-    { id: 'b', label: '后朝', start: 50, end: 100, group: 'g2' },
+    // Lanes far apart, so the relation is an elbow whichever way time runs.
+    { id: 'a', label: '前朝', start: 0, end: 40, group: 'g1', position: { y: 0 } },
+    { id: 'b', label: '后朝', start: 50, end: 100, group: 'g2', position: { y: 600 } },
   ],
   edges: [{ id: 'r', source: 'a', target: 'b' }],
   presentation: [{ id: 'all', title: '全', durationSec: 3, domainAt: 100 }],
@@ -386,5 +388,52 @@ test('a timeline relation leaves its bar along time, and the legend bar runs wit
       const [w, h] = [mark.d[0][3], mark.d[0][4]];
       assert.ok(timeAxis === 'vertical' ? h > w : w > h, `${timeAxis}: legend bar ${w}×${h}`);
     }
+  }
+});
+
+test('with time running down, no axis label is left under the evidence card', () => {
+  // One shot framing an early era whose card it shows: the later years run
+  // on down the stage, under the card below the graph.
+  const doc = structuredClone(dynasties);
+  const cited = doc.nodes.find((node) => node.id === '东汉');
+  cited.evidence = [{ cite: '某书', locator: '卷一', quote: '一朝一代，各有始终。' }];
+  doc.presentation = [
+    {
+      id: 'era',
+      title: '东汉',
+      durationSec: 6,
+      domainAt: 1912,
+      camera: { focusNodeId: cited.id },
+      evidence: { nodeId: cited.id },
+    },
+  ];
+  for (const specName of ['portrait-1080x1920', 'portrait-1080x1440']) {
+    const spec = FRAME_SPECS[specName];
+    const { graph } = loaded(project(doc, 'vertical'));
+    const positions = layoutGraph(graph);
+    const renderer = createHeadlessRenderer(graph, positions, {
+      frameSpec: specName,
+      theme: 'dark',
+      locale: 'zh-CN',
+    });
+    // While the card is fully shown: after the camera settles, before the caption fades.
+    const list = renderer.displayListAt(Math.round(4.5 * spec.fps));
+    assert.ok(
+      readFrame(list, VIDEO_THEMES.dark, measure).cards.evidence,
+      `${specName}: card drawn`,
+    );
+    assert.equal(list.evidenceOverflow, null, specName);
+    assert.equal(list.evidenceCovers, null, specName);
+    const drawn = readTimeAxis(list, VIDEO_THEMES.dark);
+    assert.ok(drawn.labels.length > 0, `${specName}: the axis is labelled`);
+    const problems = timeDirectionProblems(list, spec, VIDEO_THEMES.dark, measure, {
+      vertical: true,
+      positions,
+    });
+    assert.ok(
+      problems.some((p) => /evidence card/.test(p)) === false,
+      `${specName}: ${problems.join('; ')}`,
+    );
+    assert.deepEqual(problems, [], specName);
   }
 });
