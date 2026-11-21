@@ -364,6 +364,13 @@ button { cursor: pointer; }
   border-radius: 10px;
   background: var(--stage-bg);
 }
+/* Portrait and square frame specs (ADR 004, D7 step 1): the canvas keeps its
+   spec's shape and the preview is capped in height, centred in the stage. */
+.stage-image[data-frame] {
+  width: min(100%, calc(78vh * var(--stage-ratio, 1)));
+  margin-inline: auto;
+}
+.stage-image[data-frame] #stage { aspect-ratio: var(--stage-aspect, 1 / 1); }
 .stage-selection {
   position: absolute;
   inset: 0;

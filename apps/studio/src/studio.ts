@@ -64,7 +64,9 @@ import {
   createCanvasRenderer,
   FILM_FONT_FACES,
   filmFontQuery,
+  FRAME_SPECS,
   type CanvasRenderer,
+  type FrameSpecName,
 } from '@relgraph/render';
 import { canvasPoint } from './position-tool.js';
 import {
@@ -155,6 +157,7 @@ const canvas = requiredElement('stage', HTMLCanvasElement),
   })),
   themeToggle = requiredElement('themeToggle', HTMLButtonElement),
   languageSelect = requiredElement('languageSelect', HTMLSelectElement),
+  frameSpecSelect = requiredElement('frameSpecSelect', HTMLSelectElement),
   layoutToggle = requiredElement('layoutToggle', HTMLButtonElement),
   layoutReset = requiredElement('layoutReset', HTMLButtonElement),
   layoutExport = requiredElement('layoutExport', HTMLButtonElement),
@@ -784,6 +787,7 @@ function applyResult(result: LoadResult, name: string, sourceText?: string, exam
     fps: FPS,
     detailAt: currentDetailAt,
     theme,
+    frameSpec: previewSpec,
   });
   playback = createPlaybackState(frameCount(graph, FPS), FPS);
   enablePlaybackView(playbackControls, playback.totalFrames);
@@ -941,6 +945,43 @@ window.addEventListener('keydown', (event) => {
     setFrame(playback.frame - FPS);
   }
 });
+/**
+ * The preview's frame spec (ADR 004, D7 step 1): the canvas takes its size
+ * from the spec, so the preview composes exactly what `relgraph render
+ * --frame-spec` draws. Landscape previews at 720p, as before.
+ */
+let previewSpec: FrameSpecName = 'landscape-720p';
+function renderStageShape(): void {
+  const { width, height } = FRAME_SPECS[previewSpec];
+  const shell = canvas.parentElement;
+  if (width > height) {
+    shell?.removeAttribute('data-frame');
+    shell?.style?.removeProperty('--stage-aspect');
+    shell?.style?.removeProperty('--stage-ratio');
+  } else {
+    shell?.setAttribute('data-frame', width === height ? 'square' : 'portrait');
+    shell?.style?.setProperty('--stage-aspect', `${width} / ${height}`);
+    shell?.style?.setProperty('--stage-ratio', String(width / height));
+  }
+}
+function applyFrameSpec(next: string): void {
+  if (!Object.hasOwn(FRAME_SPECS, next) || next === previewSpec) {
+    frameSpecSelect.value = previewSpec;
+    return;
+  }
+  // Like a theme change: exits editing and preview, keeps the playback clock.
+  transitionStudio('frameSpec');
+  previewSpec = next as FrameSpecName;
+  frameSpecSelect.value = previewSpec;
+  renderStageShape();
+  if (renderer && graph && currentLayout) rebuildRenderer();
+  else {
+    canvas.width = FRAME_SPECS[previewSpec].width;
+    canvas.height = FRAME_SPECS[previewSpec].height;
+    shellView.repaintEmptyStage(theme);
+  }
+}
+
 function applyTheme(next: Theme, persist: boolean): void {
   // A theme transition exits editing and preview but preserves playback clock.
   transitionStudio('theme');
@@ -1097,6 +1138,7 @@ function rebuildRenderer(): void {
     fps: FPS,
     detailAt: currentDetailAt,
     theme,
+    frameSpec: previewSpec,
     ...(editCamera ? { cameraOverride: editCamera } : {}),
   });
   setFrame(playback.frame, false);
@@ -1384,6 +1426,8 @@ languageSelect.addEventListener('change', () => {
   applyLanguage(next);
 });
 themeToggle.addEventListener('click', () => applyTheme(theme === 'light' ? 'dark' : 'light', true));
+frameSpecSelect.value = previewSpec;
+frameSpecSelect.addEventListener('change', () => applyFrameSpec(frameSpecSelect.value));
 lightQuery?.addEventListener?.('change', (event) => {
   if (!pinnedTheme) applyTheme(event.matches ? 'light' : 'dark', false);
 });

@@ -30,6 +30,7 @@ import { parseCommand, USAGE } from '../packages/cli/src/args.ts';
 import { createHeadlessRenderer } from '../packages/render/src/backends/skia.ts';
 import { measure } from './helpers/display-list.mjs';
 import { readFrame } from './helpers/frame-furniture.mjs';
+import { makeStudio } from './helpers/studio-harness.mjs';
 
 const NEW = ['portrait-1080x1920', 'portrait-1080x1440', 'square-1080'];
 const clone = (value) => JSON.parse(JSON.stringify(value));
@@ -305,4 +306,28 @@ test('the headless renderer the CLI workers use draws at the size of the chosen 
     assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [width, height], name);
     assert.equal(renderer.rgbaAt(40).length, width * height * 4, name);
   }
+});
+
+test('the studio preview takes its canvas size from the chosen frame spec (simulated DOM)', async () => {
+  const app = makeStudio();
+  await app.ready;
+  const canvas = app.node('stage'),
+    select = app.node('frameSpecSelect');
+  assert.equal(select.value, 'landscape-720p');
+  assert.deepEqual([canvas.width, canvas.height], [1280, 720]);
+  assert.equal(app.window.renderAt(48), true);
+  for (const name of [...NEW, 'landscape-720p']) {
+    select.value = name;
+    await select.dispatch('change');
+    const { width, height } = FRAME_SPECS[name];
+    assert.deepEqual([canvas.width, canvas.height], [width, height], name);
+    // The same frame is shown, composed at the new size.
+    assert.equal(Number(app.node('scrubber').value), 48, name);
+    assert.equal(app.window.renderAt(48), true);
+  }
+  // An unknown value is refused and the selector shows the spec in use.
+  select.value = 'portrait';
+  await select.dispatch('change');
+  assert.equal(select.value, 'landscape-720p');
+  assert.deepEqual([canvas.width, canvas.height], [1280, 720]);
 });
