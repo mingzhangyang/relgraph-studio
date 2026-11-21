@@ -96,8 +96,13 @@ export function createCanvasRenderer(
   const rate = fps ?? spec.fps;
   const resolvedStyle = style ?? styleForGraph(graph);
   // Glyph sizes let a card shot frame its node or relation clear of the card.
-  const fit = evidenceCameraFit(spec, graph, () =>
-    drawingStyle({ graph, positions, style: resolvedStyle }),
+  // The drawing's style follows the positions (an authoring drag moves them),
+  // so it is worked out once per composed frame, not once per glyph asked for.
+  let frameStyle: DomainStyle | undefined;
+  const fit = evidenceCameraFit(
+    spec,
+    graph,
+    () => (frameStyle ??= drawingStyle({ graph, positions, style: resolvedStyle })),
   );
   const resolvedLocale = localeFor(locale);
   // Safe compilation depends on the input document, never on playback order.
@@ -106,6 +111,7 @@ export function createCanvasRenderer(
   canvas.width = spec.width;
   canvas.height = spec.height;
   function compose(frame: number): { state: DirectorFrameState; list: DisplayList } {
+    frameStyle = undefined;
     const evaluated = directorFrameAt(graph, positions, frame, rate, { fit, timeline });
     const state = cameraOverride
       ? { ...evaluated, cameraResolved: { ...cameraOverride } }

@@ -818,3 +818,33 @@ test('check-labels lists covering cards (none for the review case, framed by gly
   assert.deepEqual(json.evidenceOverflows, []);
   assert.deepEqual(json.hiddenEvidence, []);
 });
+
+test('a long timeline bar is zoomed out until it clears the card (PR #60, fourth review)', () => {
+  // A span grows with the camera scale, and a single node sits at the centre
+  // of the framing: only a smaller scale can clear it.
+  const era = {
+    format: 'relgraph.graph/1',
+    diagram: 'timeline',
+    nodes: [{ id: 'era', start: 0, end: 100, evidence: [{ cite: 'A', quote: '甲'.repeat(100) }] }],
+    presentation: [{ title: 'Era', domainAt: 100, durationSec: 4, evidence: { nodeId: 'era' } }],
+  };
+  for (const frameSpec of [spec, FRAME_SPECS['landscape-1080p']]) {
+    const { compose, lastOf } = film(era, frameSpec);
+    const list = compose(lastOf(0));
+    assert.equal(list.evidenceCovers, null);
+    assert.equal(list.evidenceOverflow, null);
+    assert.ok(drawnTexts(list).includes('EVIDENCE'));
+    const bar = list.selection.find((entry) => entry.kind === 'node').box;
+    const card = evidenceCardRegion(frameSpec);
+    assert.ok(bar.x >= frameSpec.safe.graph.x - 1, `bar starts at ${bar.x}`);
+    assert.ok(bar.x + bar.w < card.x, `bar ends at ${bar.x + bar.w}, card at ${card.x}`);
+  }
+  // The native renderer frames it the same way.
+  const result = loadDocument(era);
+  const renderer = createHeadlessRenderer(result.graph, layoutGraph(result.graph), {
+    frameSpec: 'landscape-720p',
+  });
+  const native = renderer.displayListAt(90);
+  assert.equal(native.evidenceCovers, null);
+  assert.ok(drawnTexts(native).includes('EVIDENCE'));
+});

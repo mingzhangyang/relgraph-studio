@@ -144,26 +144,42 @@ function cameraFor(
   // the area the card leaves free, with room for their glyphs: an authored
   // zoom may not push them under the card.
   // Each end's outline must fit: |offset| × scale + its half extent ≤ the
-  // free half extent. Extents never shrink as the scale grows, so taking
-  // them at the scale before this limit gives a scale at which they fit.
+  // free half extent, in both directions. A glyph's extent may grow with the
+  // scale (a timeline bar is as long as its years at that scale), but never
+  // shrinks as it grows, so the ends fit at every scale up to the largest
+  // that fits: found by bisection when the shot's own scale is too large.
   if (ends.length) {
-    const before = clamp(scale, Number.MIN_VALUE, 1.6);
-    for (const id of ends) {
+    const placed = ends.flatMap((id) => {
       const p = positions.get(id);
-      if (!p) continue;
-      const extent = fullFit.glyphExtent?.(id, before);
-      const reach = extent
-        ? { x: extent.halfWidth + CARD_END_GAP, y: extent.halfHeight + CARD_END_GAP }
-        : CARD_END_MARGIN;
-      const halfDx = Math.abs(p.x / 2 - x / 2),
-        halfDy = Math.abs(p.y / 2 - y / 2);
-      // An end that cannot be framed clear (a glyph wider than the free area)
-      // makes the renderer withhold the card and report it.
-      // Zooming out cannot help a glyph wider than the free area itself.
-      const roomX = fit.halfWidth - reach.x,
-        roomY = fit.halfHeight - reach.y;
-      if (halfDx > 0 && roomX > 0) scale = Math.min(scale, roomX / 2 / halfDx);
-      if (halfDy > 0 && roomY > 0) scale = Math.min(scale, roomY / 2 / halfDy);
+      return p
+        ? [{ id, halfDx: Math.abs(p.x / 2 - x / 2), halfDy: Math.abs(p.y / 2 - y / 2) }]
+        : [];
+    });
+    const fits = (s: number): boolean =>
+      placed.every(({ id, halfDx, halfDy }) => {
+        const extent = fullFit.glyphExtent?.(id, s);
+        const reach = extent
+          ? { x: extent.halfWidth + CARD_END_GAP, y: extent.halfHeight + CARD_END_GAP }
+          : CARD_END_MARGIN;
+        return (
+          2 * halfDx * s + reach.x <= fit.halfWidth && 2 * halfDy * s + reach.y <= fit.halfHeight
+        );
+      });
+    const shot = clamp(scale, Number.MIN_VALUE, 1.6);
+    if (!fits(shot)) {
+      // Search six orders of magnitude below the shot's scale. If even the
+      // smallest does not fit (a label-holding glyph wider than the free
+      // area), the scale is left alone and the renderer withholds the card.
+      let low = shot * 1e-6,
+        high = shot;
+      if (fits(low)) {
+        for (let step = 0; step < 48; step++) {
+          const mid = Math.sqrt(low * high);
+          if (fits(mid)) low = mid;
+          else high = mid;
+        }
+        scale = low;
+      }
     }
   }
   // Do not clamp away a necessary zoom-out for widely separated coordinates.
