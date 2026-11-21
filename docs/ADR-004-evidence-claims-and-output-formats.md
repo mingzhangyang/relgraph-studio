@@ -1,6 +1,6 @@
 # ADR 004 — Evidence, claims and output formats
 
-Status: **Proposed** · 2026-11-20 · Refines [ADR 003](ADR-003-render-pipeline-and-foundations.md); supersedes nothing
+Status: **Accepted** · proposed 2026-11-20 (#53), accepted 2026-11-21 after P0 (#54–#58) was implemented as decided · Refines [ADR 003](ADR-003-render-pipeline-and-foundations.md); supersedes nothing
 
 ## Context
 
@@ -41,6 +41,7 @@ Everything ADR 003 keeps, in particular:
 - `relgraph render` reports omissions per shot (shot id, frames, labels) from the workers' compositions at no extra cost; `--fail-on-omitted-labels` turns them into an error. `relgraph validate --frames-check` (name open) composes the settled frames without drawing, so a dataset can be checked before rendering. The studio lists the same diagnostics.
 - A warning when a shot's title plus narration exceeds a reading rate over its `durationSec` (starting point: about 5 CJK characters or 3 Latin words per second, after the caption fade-in; configurable, final numbers in the PR). Warning only; durations stay authored.
 - These two may land in one PR as distinct commits: both are diagnostics without pixel changes.
+  *As shipped (#54):* the pre-render check is its own command, `relgraph check-labels <file>`, not a `validate` flag. Reading rates are 9 CJK characters and 17 other letters or digits per second (`READING_RATE` in `director/reading-speed.ts`), counted over the time the caption is fully shown; the warning suggests the shortest sufficient `durationSec` in half seconds.
 
 ### D2. Layout check and neighbour-aware incremental placement (P0)
 
@@ -167,5 +168,6 @@ P3 touches the source formats and style sheets rather than the frame furniture, 
 
 Resolved while drafting: the social format covers any evidence-based social network; `beats` and the shot's `evidence` keep their names; node evidence uses the evidence card; the time-axis direction is an explicit project field.
 
-1. Card region per spec: beside the graph in landscape, between graph and caption in portrait? Fixed in the D4 PR's design note.
-2. Reading-rate defaults for D1. Fixed in the D1 PR.
+1. Card region per spec: beside the graph in landscape, between graph and caption in portrait? Fixed in the D4 PR's design note for the landscape specs; the portrait, 3:4 and square regions are fixed in D7 step 1.
+
+Resolved since acceptance: the D1 reading-rate defaults (#54, see D1).
