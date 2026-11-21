@@ -7,6 +7,7 @@ import {
   type ComposeOptions,
   type DrawItem,
 } from './compose/context.js';
+import { composeEvidenceCard } from './compose/evidence.js';
 import { composeDetailCard, composeFurniture, frameText } from './compose/furniture.js';
 import { composeGroups } from './compose/groups.js';
 import { composeNodeLabels, composeRelationLabels } from './compose/labels.js';
@@ -34,8 +35,8 @@ export function shotAttention(
  *
  * The frame is built by passes over one shared context (`frameContext`), in
  * this order: background, the nodes' shared geometry, time axis, group
- * hulls, relations, glyphs, legend, node labels, relation tags, detail card
- * and frame furniture. Label space is the one state they share: each pass
+ * hulls, relations, glyphs, legend, node labels, relation tags, detail card,
+ * evidence card and frame furniture. Label space is the one state they share: each pass
  * that places text or a plate takes its room in `occupied`, so a later pass
  * can only use what the earlier ones left free.
  */
@@ -84,14 +85,16 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
     ],
   });
   const card = composeDetailCard(ctx);
-  items.push(...card.items, ...composeFurniture(ctx));
+  const evidence = composeEvidenceCard(ctx);
+  items.push(...card.items, ...evidence.items, ...composeFurniture(ctx));
   return {
     width,
     height,
     items,
-    a11y: frameText(ctx, card.detail),
+    a11y: frameText(ctx, card.detail, evidence.evidence),
     selection: [...relations.selection, ...glyphs.selection],
     selectionClip: { ...stage },
     omitted,
+    evidenceOverflow: evidence.overflow,
   };
 }

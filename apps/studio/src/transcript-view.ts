@@ -1,6 +1,7 @@
 import { studioLanguage, uiText } from './i18n.js';
 import type { FrameText } from '@relgraph/render';
 import {
+  evidenceLines,
   liveFrameDescription,
   sameTranscriptSemantics,
   snapshotTranscriptSemantics,
@@ -80,6 +81,9 @@ export function createTranscriptView(
           summary.textContent = a11y.detail.label + '：' + a11y.detail.summary;
           elements.transcript.append(heading, summary);
         }
+        const [subject, ...items] = evidenceLines(a11y.evidence, language);
+        if (subject !== undefined)
+          addList(uiText('当前证据') + (language === 'en' ? ': ' : '：') + subject, items);
         addList(uiText('当前可见节点'), a11y.nodes);
         addList(uiText('当前可见关系'), a11y.relations);
         previous = snapshotTranscriptSemantics(a11y);
@@ -92,7 +96,8 @@ export function createTranscriptView(
             '. ' +
             scene.narration +
             ` Currently: ${a11y.nodes.length} nodes, ${a11y.relations.length} relationships. ` +
-            (a11y.detail ? a11y.detail.label + ': ' + a11y.detail.summary : '')
+            (a11y.detail ? a11y.detail.label + ': ' + a11y.detail.summary : '') +
+            (a11y.evidence ? 'Evidence: ' + evidenceLines(a11y.evidence, 'en').join('; ') : '')
           : liveFrameDescription(a11y);
       if (liveText !== lastLiveText || scene.index !== lastLiveScene) {
         // Setting textContent on role=status triggers a screen-reader

@@ -93,6 +93,14 @@ export interface FrameText {
   scene: { index: number; count: number; title: string; narration: string };
   domainTime: string;
   detail: { label: string; summary: string } | null;
+  /**
+   * The shot's evidence card (ADR 004, D4): what it is about and its items as
+   * written, from the start of the shot, like the caption.
+   */
+  evidence: {
+    subject: string;
+    items: { quote?: string; cite?: string; locator?: string; url?: string }[];
+  } | null;
   nodes: string[];
   relations: string[];
 }
@@ -107,6 +115,21 @@ export interface OmittedLabel {
   kind: 'node-label' | 'edge-label';
   id: string;
   text: string;
+}
+
+/**
+ * An evidence card that does not fit its region at this frame spec. The card
+ * is not drawn: its text is never cut, so the data owner chooses fewer items
+ * or a shorter quotation (ADR 004, D4).
+ */
+export interface EvidenceOverflow {
+  object: 'node' | 'edge';
+  id: string;
+  /** Index, in the object's evidence, of the first item that does not fit. */
+  item: number;
+  /** Height the items up to that one need, and the height the card has, in 720p pixels. */
+  needed: number;
+  available: number;
 }
 
 export interface DisplayList {
@@ -129,6 +152,8 @@ export interface DisplayList {
   a11y: FrameText;
   /** Labels this frame had to leave out, in placement order (ADR 004, D1). */
   omitted: OmittedLabel[];
+  /** The shot's evidence card, when it does not fit and is therefore not drawn. */
+  evidenceOverflow: EvidenceOverflow | null;
 }
 
 /** Width of `text` in pixels when drawn with `font`. */

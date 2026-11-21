@@ -705,7 +705,7 @@ function setFrame(next: number, updatePosition = true): DirectorFrameState | und
   );
   renderPlaybackFrame(playbackControls, playbackDisplay(playback, p.index, p.totalSec));
   transcriptView.render(list.a11y);
-  omittedLabelsView.render(list.omitted);
+  omittedLabelsView.render(list.omitted, list.evidenceOverflow);
   projectEditor.render(state, projectHistory.value);
   renderDocumentToolbar();
   refreshSelectionFeedback();
@@ -1336,7 +1336,7 @@ function applyLanguage(next: StudioLanguage): void {
     );
     projectEditor.render(currentFrameState, projectHistory.value);
     transcriptView.render(lastDisplayList.a11y);
-    omittedLabelsView.render(lastDisplayList.omitted);
+    omittedLabelsView.render(lastDisplayList.omitted, lastDisplayList.evidenceOverflow);
     shotsView.refreshLanguage();
     shotsView.render(frame.index, lastDisplayList.a11y.scene.title, frame.progress);
     shellView.renderDomainTime(frame.domainAt, currentFrameState.view.timeline?.unit);

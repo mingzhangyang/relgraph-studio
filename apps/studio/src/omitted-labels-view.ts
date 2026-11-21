@@ -1,4 +1,4 @@
-import type { OmittedLabel } from '@relgraph/render';
+import type { EvidenceOverflow, OmittedLabel } from '@relgraph/render';
 import { studioLanguage } from './i18n.js';
 
 /**
@@ -8,10 +8,25 @@ import { studioLanguage } from './i18n.js';
  * announce it on each frame. Moving a node redraws the frame, so the notice
  * follows position edits. `relgraph check-labels` reports the same omissions
  * for a whole film, counting only the frames in which a shot holds.
+ *
+ * It also says when the shot's evidence card does not fit and is therefore
+ * not drawn (`DisplayList.evidenceOverflow`, ADR 004 D4); `relgraph render`
+ * refuses such a film.
  */
 export interface OmittedLabelsView {
   reset(): void;
-  render(omitted: readonly OmittedLabel[]): void;
+  render(omitted: readonly OmittedLabel[], overflow?: EvidenceOverflow | null): void;
+}
+
+/** The notice for an evidence card that does not fit, or ''. */
+export function evidenceOverflowText(
+  overflow: EvidenceOverflow | null | undefined,
+  language: 'zh-CN' | 'en',
+): string {
+  if (!overflow) return '';
+  return language === 'en'
+    ? `The evidence card does not fit from evidence index ${overflow.item} on and is not drawn; export will refuse it. Show fewer items or a shorter quotation.`
+    : `证据卡片从证据序号 ${overflow.item} 起放不下，未画出，导出时会报错；请少选几条或改用较短的引文。`;
 }
 
 /** The notice text, or '' when nothing was left out. */
@@ -43,6 +58,13 @@ export function createOmittedLabelsView(element: HTMLElement): OmittedLabelsView
   };
   return {
     reset: () => show(''),
-    render: (omitted) => show(omittedLabelsText(omitted, studioLanguage())),
+    render: (omitted, overflow) => {
+      const language = studioLanguage();
+      show(
+        [evidenceOverflowText(overflow, language), omittedLabelsText(omitted, language)]
+          .filter(Boolean)
+          .join(' '),
+      );
+    },
   };
 }

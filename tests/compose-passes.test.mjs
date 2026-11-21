@@ -18,6 +18,7 @@ import {
   composeFurniture,
   frameText,
 } from '../packages/render/src/compose/furniture.ts';
+import { composeEvidenceCard } from '../packages/render/src/compose/evidence.ts';
 import { composeGroups } from '../packages/render/src/compose/groups.ts';
 import { composeNodeLabels, composeRelationLabels } from '../packages/render/src/compose/labels.ts';
 import { composeLegend } from '../packages/render/src/compose/legend.ts';
@@ -99,6 +100,7 @@ test('composeFrame is its passes, run in order over one context', () => {
     );
     const tags = composeRelationLabels(ctx, relations.labels, occupied, omitted);
     const card = composeDetailCard(ctx);
+    const evidence = composeEvidenceCard(ctx);
     const expected = {
       width: spec.width,
       height: spec.height,
@@ -118,12 +120,14 @@ test('composeFrame is its passes, run in order over one context', () => {
           ],
         },
         ...card.items,
+        ...evidence.items,
         ...composeFurniture(ctx),
       ],
-      a11y: frameText(ctx, card.detail),
+      a11y: frameText(ctx, card.detail, evidence.evidence),
       selection: [...relations.selection, ...glyphs.selection],
       selectionClip: { ...spec.stage },
       omitted,
+      evidenceOverflow: evidence.overflow,
     };
     assert.deepEqual(composeFrame(state, options), expected);
   }

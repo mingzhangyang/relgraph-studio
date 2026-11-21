@@ -177,7 +177,11 @@ export function composeFurniture(ctx: FrameContext): DisplayItem[] {
 }
 
 /** The frame's accessible text: what it shows, in words. */
-export function frameText(ctx: FrameContext, detail: FrameText['detail']): FrameText {
+export function frameText(
+  ctx: FrameContext,
+  detail: FrameText['detail'],
+  evidence: FrameText['evidence'] = null,
+): FrameText {
   const { view, playback, graph, style, locale, messages } = ctx;
   const labels = new Map(view.nodes.map((node) => [node.id, ctx.nodeLabel(node)]));
   return {
@@ -190,6 +194,7 @@ export function frameText(ctx: FrameContext, detail: FrameText['detail']): Frame
     },
     domainTime: domainTimeText(ctx),
     detail,
+    evidence,
     nodes: view.nodes.map(ctx.nodeLabel),
     relations: view.edges.map((edge) => {
       const caption = edgeStyleFor(style, edge.kind).caption;
