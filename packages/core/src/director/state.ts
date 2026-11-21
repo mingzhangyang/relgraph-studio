@@ -182,4 +182,3 @@ export function directorFrameAt(
     captionOpacity: captionOpacity(timeline, playback.index, second),
   });
 }
-
