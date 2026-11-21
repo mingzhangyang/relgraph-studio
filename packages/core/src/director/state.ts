@@ -40,6 +40,15 @@ export interface CameraFit {
    * framed like any other.
    */
   card?: { halfWidth: number; halfHeight: number; offsetX: number; offsetY: number };
+  /**
+   * Half extents, in the same reference pixels, of a node's glyph as drawn at
+   * a camera scale, stroke included; never smaller at a larger scale. The
+   * renderer supplies it (`evidenceCameraFit`) so the card's node or relation
+   * ends are framed clear of the card by their outlines, not just their
+   * centres, while core knows nothing of shapes. Without it a glyph counts as
+   * `CARD_END_MARGIN`.
+   */
+  glyphExtent?: (nodeId: string, cameraScale: number) => { halfWidth: number; halfHeight: number };
 }
 export interface DirectorFrameOptions {
   fit?: CameraFit;
@@ -62,11 +71,13 @@ const ease = (t: number): number => {
 const mix = (a: number, b: number, t: number): number => a * (1 - t) + b * t;
 
 /**
- * Room, in reference pixels, kept between an evidence card's node or relation
- * ends and the edge of the area the card leaves free: a glyph's radius and
- * its outline, as the focus framing keeps for highlighted nodes.
+ * Half extents, in reference pixels, assumed for an evidence card's node or
+ * relation ends when the renderer gives no glyph sizes: a compact glyph's
+ * radius and outline, as the focus framing keeps for highlighted nodes.
  */
 const CARD_END_MARGIN = Object.freeze({ x: 40, y: 35 });
+/** Space kept between a measured glyph outline and the edge of the free area. */
+const CARD_END_GAP = 6;
 
 /**
  * The nodes an evidence card is about, among those in view: its node, or its
@@ -132,12 +143,28 @@ function cameraFor(
   // Whatever the shot's zoom, the card's node or relation ends stay inside
   // the area the card leaves free, with room for their glyphs: an authored
   // zoom may not push them under the card.
+  // Each end's outline must fit: |offset| × scale + its half extent ≤ the
+  // free half extent. Extents never shrink as the scale grows, so taking
+  // them at the scale before this limit gives a scale at which they fit.
   if (ends.length) {
-    const points = ends.map((id) => positions.get(id)).filter((p): p is Position => Boolean(p));
-    const halfDx = Math.max(0, ...points.map((p) => Math.abs(p.x / 2 - x / 2))),
-      halfDy = Math.max(0, ...points.map((p) => Math.abs(p.y / 2 - y / 2)));
-    if (halfDx > 0) scale = Math.min(scale, (fit.halfWidth - CARD_END_MARGIN.x) / 2 / halfDx);
-    if (halfDy > 0) scale = Math.min(scale, (fit.halfHeight - CARD_END_MARGIN.y) / 2 / halfDy);
+    const before = clamp(scale, Number.MIN_VALUE, 1.6);
+    for (const id of ends) {
+      const p = positions.get(id);
+      if (!p) continue;
+      const extent = fullFit.glyphExtent?.(id, before);
+      const reach = extent
+        ? { x: extent.halfWidth + CARD_END_GAP, y: extent.halfHeight + CARD_END_GAP }
+        : CARD_END_MARGIN;
+      const halfDx = Math.abs(p.x / 2 - x / 2),
+        halfDy = Math.abs(p.y / 2 - y / 2);
+      // An end that cannot be framed clear (a glyph wider than the free area)
+      // makes the renderer withhold the card and report it.
+      // Zooming out cannot help a glyph wider than the free area itself.
+      const roomX = fit.halfWidth - reach.x,
+        roomY = fit.halfHeight - reach.y;
+      if (halfDx > 0 && roomX > 0) scale = Math.min(scale, roomX / 2 / halfDx);
+      if (halfDy > 0 && roomY > 0) scale = Math.min(scale, roomY / 2 / halfDy);
+    }
   }
   // Do not clamp away a necessary zoom-out for widely separated coordinates.
   const clamped = clamp(scale, Number.MIN_VALUE, 1.6);

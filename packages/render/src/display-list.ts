@@ -132,6 +132,19 @@ export interface EvidenceOverflow {
   available: number;
 }
 
+/**
+ * An evidence card withheld because, even after the camera framed the card's
+ * node or relation ends into the area it leaves free, one end's glyph would
+ * still lie under it (ADR 004, D4): typically a label-holding shape wider
+ * than that area.
+ */
+export interface EvidenceCovers {
+  object: 'node' | 'edge';
+  id: string;
+  /** The node whose glyph the card would cover. */
+  node: string;
+}
+
 export interface DisplayList {
   selectionClip?: { x: number; y: number; w: number; h: number };
   selection?: {
@@ -154,6 +167,8 @@ export interface DisplayList {
   omitted: OmittedLabel[];
   /** The shot's evidence card, when it does not fit and is therefore not drawn. */
   evidenceOverflow: EvidenceOverflow | null;
+  /** The shot's evidence card, when it would cover its own node or relation end and is not drawn. */
+  evidenceCovers: EvidenceCovers | null;
 }
 
 /** Width of `text` in pixels when drawn with `font`. */

@@ -5,7 +5,9 @@ import { formatDiagnostics, loadFile } from './document.js';
 import {
   authoredId,
   evidenceOverflows,
+  evidenceCovering,
   hiddenEvidenceCards,
+  type ShotEvidenceCovers,
   type ShotEvidenceOverflow,
   type ShotHiddenEvidence,
 } from './evidence.js';
@@ -35,6 +37,8 @@ export interface CheckLabelsSummary {
   evidenceOverflows: ShotEvidenceOverflow[];
   /** Evidence cards their shot ends before showing; `relgraph render` refuses these too. */
   hiddenEvidence: ShotHiddenEvidence[];
+  /** Evidence cards that would cover their own node or relation end; `relgraph render` refuses these too. */
+  evidenceCovering: ShotEvidenceCovers[];
 }
 
 /** A user-facing failure; `main` prints the message without a stack. */
@@ -75,6 +79,9 @@ export async function checkLabels(request: CheckLabelsRequest): Promise<CheckLab
       authoredId(result, kind, id),
     ),
     hiddenEvidence: hiddenEvidenceCards(timeline, filmFrames, (kind, id) =>
+      authoredId(result, kind, id),
+    ),
+    evidenceCovering: evidenceCovering(timeline, filmFrames, renderer.displayListAt, (kind, id) =>
       authoredId(result, kind, id),
     ),
   };

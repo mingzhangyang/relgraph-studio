@@ -128,6 +128,7 @@ test('composeFrame is its passes, run in order over one context', () => {
       selectionClip: { ...spec.stage },
       omitted,
       evidenceOverflow: evidence.overflow,
+      evidenceCovers: evidence.covers,
     };
     assert.deepEqual(composeFrame(state, options), expected);
   }

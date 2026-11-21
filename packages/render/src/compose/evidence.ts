@@ -1,6 +1,13 @@
 import type { EvidenceCard, VisualEvidence } from '@relgraph/core';
-import type { DisplayItem, EvidenceOverflow, FontRef, FrameText } from '../display-list.js';
+import type {
+  DisplayItem,
+  EvidenceCovers,
+  EvidenceOverflow,
+  FontRef,
+  FrameText,
+} from '../display-list.js';
 import { evidenceCardRegion } from '../frame-spec.js';
+import { nodeGlyphBounds, rectsIntersect } from '../node-geometry.js';
 import type { FrameContext } from './context.js';
 import { wrapAllText } from './text.js';
 
@@ -96,17 +103,19 @@ function layoutCard(
  * The shot's evidence card (ADR 004, D4), in the card region of the frame
  * spec, and its accessible text. The card shows each quotation exactly as
  * written followed by its citation, or a citation alone. It fades in once
- * the camera has stopped and its object is half revealed, so it never
- * covers its object, and out with the caption. A card that does not fit is not drawn: the frame
- * reports it in `evidenceOverflow` instead of cutting the text.
+ * the camera has stopped and its object is half revealed, and out with the
+ * caption. A card that does not fit is not drawn: the frame reports it in
+ * `evidenceOverflow` instead of cutting the text. One that would still cover
+ * its own node or relation end is withheld too (`evidenceCovers`).
  */
 export function composeEvidenceCard(ctx: FrameContext): {
   items: DisplayItem[];
   evidence: FrameText['evidence'];
   overflow: EvidenceOverflow | null;
+  covers: EvidenceCovers | null;
 } {
   const card = ctx.state.evidence;
-  if (!card) return { items: [], evidence: null, overflow: null };
+  if (!card) return { items: [], evidence: null, overflow: null, covers: null };
   const { spec, theme: P, u, sans, serif, measure } = ctx;
   const region = evidenceCardRegion(spec);
   const pad = u(22);
@@ -129,7 +138,7 @@ export function composeEvidenceCard(ctx: FrameContext): {
   const subjectExtra = u(26) * Math.max(0, subjectLines.length - 1);
   const contentTop = region.y + u(84) + subjectExtra;
   const laid = layoutCard(ctx, card, textWidth, region.y + region.h - u(20) - contentTop);
-  if (!laid.lines) return { items: [], evidence, overflow: laid.overflow };
+  if (!laid.lines) return { items: [], evidence, overflow: laid.overflow, covers: null };
   // The card is as tall as its items, up to the whole region.
   const box = { ...region, h: Math.min(region.h, contentTop - region.y + laid.height + pad) };
   const cardItems: DisplayItem[] = [
@@ -198,10 +207,48 @@ export function composeEvidenceCard(ctx: FrameContext): {
   // Core decides when the card may show: after the camera move that clears
   // its object and once the object is half revealed (`evidenceShownSec`).
   const alpha = ctx.state.evidenceOpacity ?? 1;
-  if (alpha <= 0) return { items: [], evidence, overflow: null };
+  if (alpha <= 0) return { items: [], evidence, overflow: null, covers: null };
+  // The camera frames the card's node or relation ends clear of the card by
+  // their drawn outlines. Should one still reach under it (a glyph wider
+  // than the free area), the card is withheld and reported, never drawn over
+  // what it is about.
+  const covered = cardEnds(ctx, card).find((node) =>
+    rectsIntersect(
+      nodeGlyphBounds(
+        node,
+        ctx.pointFor(node.id),
+        ctx.cam.scale,
+        spec,
+        ctx.style,
+        ctx.nodeProgress(node.id),
+        ctx.config,
+      ),
+      box,
+    ),
+  );
+  if (covered)
+    return {
+      items: [],
+      evidence,
+      overflow: null,
+      covers: { object: card.object, id: card.id, node: covered.id },
+    };
   return {
     items: alpha >= 1 ? cardItems : [{ type: 'group', alpha, items: cardItems }],
     evidence,
     overflow: null,
+    covers: null,
   };
+}
+
+/** The nodes in view an evidence card is about: its node, or its relation's ends. */
+function cardEnds(ctx: FrameContext, card: EvidenceCard): FrameContext['view']['nodes'] {
+  const ids =
+    card.object === 'node'
+      ? [card.id]
+      : (() => {
+          const edge = ctx.view.edges.find((e) => e.id === card.id);
+          return edge ? [edge.source, edge.target] : [];
+        })();
+  return ctx.view.nodes.filter((node) => ids.includes(node.id));
 }

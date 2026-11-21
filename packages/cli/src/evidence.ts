@@ -123,3 +123,61 @@ export function formatHiddenEvidence(report: readonly ShotHiddenEvidence[]): str
     '\n建议：延长这些分镜的 durationSec，或缩短 transitionMs。\n'
   );
 }
+
+/** A shot whose evidence card would cover its own node or relation end (`DisplayList.evidenceCovers`). */
+export interface ShotEvidenceCovers {
+  shot: number;
+  shots: number;
+  id?: string;
+  title: string;
+  object: 'node' | 'edge';
+  target: string;
+  /** The node, as the source writes it, whose glyph the card would cover. */
+  node: string;
+}
+
+/**
+ * The shots whose evidence card would cover its own node or relation end,
+ * from each card's last drawn frame: the camera has stopped by the time the
+ * card shows, and its ends are fully revealed there, so that frame shows them
+ * at their largest.
+ */
+export function evidenceCovering(
+  timeline: FilmTimeline,
+  filmFrames: number,
+  displayListAt: (frame: number) => Pick<DisplayList, 'evidenceCovers'>,
+  authored: (kind: 'nodes' | 'edges' | 'scenes', id: string) => string = (_, id) => id,
+): ShotEvidenceCovers[] {
+  const frames = evidenceFrames(timeline, filmFrames);
+  return timeline.shots.flatMap((shot, index) => {
+    const card = frames[index];
+    if (!shot.evidence || !card?.shown) return [];
+    const covers = displayListAt(card.last).evidenceCovers;
+    if (!covers) return [];
+    return [
+      {
+        shot: index,
+        shots: timeline.shots.length,
+        ...(shot.scene.id === undefined ? {} : { id: authored('scenes', shot.scene.id) }),
+        title: shot.scene.title,
+        object: covers.object,
+        target: authored(covers.object === 'node' ? 'nodes' : 'edges', covers.id),
+        node: authored('nodes', covers.node),
+      },
+    ];
+  });
+}
+
+/** The report as the CLI prints it; empty when no card covers its own object. */
+export function formatEvidenceCovering(report: readonly ShotEvidenceCovers[]): string {
+  if (!report.length) return '';
+  const lines = report.map(
+    (entry) =>
+      `  镜头 ${entry.shot + 1}/${entry.shots}「${entry.title}」：${entry.object === 'node' ? '节点' : '关系'} ${entry.target} 的证据卡片会盖住节点 ${entry.node}`,
+  );
+  return (
+    `错误：${report.length} 张证据卡片即使在镜头取景后也会盖住自己引证的节点，未画出：\n` +
+    lines.join('\n') +
+    '\n建议：缩短该节点的标签（框形节点随文字变宽），或改用较窄的形状；也可以去掉这些分镜的 camera.zoom。\n'
+  );
+}

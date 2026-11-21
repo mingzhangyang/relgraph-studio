@@ -143,8 +143,12 @@ In a landscape frame the card stands at the right of the graph area, as tall
 as its items. While it is shown, the camera frames the shot into the area to
 its left (the whole view, the shot's `fitIds` together with the card's node
 or relation ends, or the shot's `focusNodeId` while keeping those ends in
-view); a shot's `zoom` applies only as far as those ends stay in that area, so
-the card never covers what it is about. Its node or relation is
+view); those ends are kept in that area by their drawn outlines, so a
+label-holding box counts as wide as its words, and a shot's `zoom` applies
+only as far as that allows. The card never covers what it is about: if an
+end still could not be framed clear (a glyph wider than the area), the card
+is not drawn, `relgraph render` refuses the film and `check-labels` reports
+it. Its node or relation is
 highlighted for the whole shot. The card waits until the camera has finished
 moving to that framing and its node or relation is half revealed, then fades
 in over 0.3 seconds; it fades out with the caption. A shot that ends before

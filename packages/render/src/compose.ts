@@ -96,5 +96,6 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
     selectionClip: { ...stage },
     omitted,
     evidenceOverflow: evidence.overflow,
+    evidenceCovers: evidence.covers,
   };
 }

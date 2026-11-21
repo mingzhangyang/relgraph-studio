@@ -25,7 +25,10 @@ import { filmEvents } from '../packages/core/src/director/events.ts';
 import { validateGenericDocument } from '../packages/core/src/domains/generic.ts';
 import { validateVisualGraph } from '../packages/core/src/graph/core.ts';
 import { styleForGraph } from '../packages/core/src/style.ts';
-import { composeFrame } from '../packages/render/src/compose.ts';
+import { composeFrame, drawingStyle } from '../packages/render/src/compose.ts';
+import { evidenceCameraFit } from '../packages/render/src/camera-fit.ts';
+import { nodeGlyphBounds } from '../packages/render/src/node-geometry.ts';
+import { createHeadlessRenderer } from '../packages/render/src/backends/skia.ts';
 import { wrapAllText } from '../packages/render/src/compose/text.ts';
 import { walkDisplayItems } from '../packages/render/src/display-list.ts';
 import {
@@ -38,21 +41,30 @@ import {
 import { VIDEO_THEMES } from '../packages/render/src/theme.ts';
 import { main } from '../packages/cli/src/index.ts';
 import { renderFilm, RenderError } from '../packages/cli/src/render.ts';
+import { evidenceCovering, formatEvidenceCovering } from '../packages/cli/src/evidence.ts';
 import { evidenceLines, linkableUrl } from '../apps/studio/src/transcript-model.ts';
-import { evidenceOverflowText } from '../apps/studio/src/omitted-labels-view.ts';
+import {
+  evidenceCoversText,
+  evidenceOverflowText,
+} from '../apps/studio/src/omitted-labels-view.ts';
 import { measure } from './helpers/display-list.mjs';
 import { makeStudio } from './helpers/studio-harness.mjs';
 
 const spec = FRAME_SPECS['landscape-720p'];
 const clone = (value) => JSON.parse(JSON.stringify(value));
 
-function film(doc, frameSpec = spec) {
+/** The film as the renderers frame it: with glyph extents (`evidenceCameraFit`), unless `plainFit`. */
+function film(doc, frameSpec = spec, { plainFit = false } = {}) {
   const result = loadDocument(doc);
   assert.equal(result.valid, true, JSON.stringify(result.errors));
   const { graph } = result;
   const positions = layoutGraph(graph);
   const timeline = compileTimeline(graph, frameSpec.fps);
-  const fit = cameraFitFor(frameSpec);
+  const fit = plainFit
+    ? cameraFitFor(frameSpec)
+    : evidenceCameraFit(frameSpec, graph, () =>
+        drawingStyle({ graph, positions, style: styleForGraph(graph) }),
+      );
   const state = (frame) =>
     directorFrameAt(graph, positions, frame, frameSpec.fps, { fit, timeline });
   const compose = (frame) =>
@@ -618,15 +630,22 @@ test('an authored zoom never pushes the card relation under the card (review: zo
   const zoomed = clone(pan);
   zoomed.presentation[1].camera = { zoom: 2 };
   for (const frameSpec of [spec, FRAME_SPECS['landscape-1080p']]) {
-    const { compose, state, starts, lastOf, positions, timeline } = film(zoomed, frameSpec);
+    const { compose, state, starts, lastOf, positions, timeline, graph } = film(zoomed, frameSpec);
     const free = evidenceCardRegion(frameSpec).x - EVIDENCE_CARD_GAP * frameSpec.typeScale;
     const edge = timeline.shots[1].view.edges.find((e) => e.id === 'cd');
     const xs = (frame) =>
       [edge.source, edge.target].map(
         (id) => projectCameraPoint(positions.get(id), state(frame).cameraResolved, frameSpec).x,
       );
-    // Settled: both ends inside the free area, with room for their glyphs.
-    for (const x of xs(lastOf(1))) assert.ok(x <= free - 39 * frameSpec.typeScale, `x ${x}`);
+    // Settled: both ends' drawn outlines inside the free area.
+    const style = drawingStyle({ graph, positions, style: styleForGraph(graph) });
+    const settled = state(lastOf(1)).cameraResolved;
+    for (const id of [edge.source, edge.target]) {
+      const node = graph.nodes.find((n) => n.id === id);
+      const p = projectCameraPoint(positions.get(id), settled, frameSpec);
+      const box = nodeGlyphBounds(node, p, settled.scale, frameSpec, style, 1, graph.project);
+      assert.ok(box.x + box.w <= free, `${id} reaches ${box.x + box.w}`);
+    }
     // And on every frame the card is drawn.
     for (let frame = starts[1]; frame <= lastOf(1); frame++)
       if (drawnTexts(compose(frame)).includes('EVIDENCE'))
@@ -670,4 +689,132 @@ test('card start times are compiled once; a frame only looks them up (review: pe
   for (let i = 0; i < timeline.shots.length; i++)
     evidenceOpacity(lookupOnly, i, timeline.shots[i].endSec - 0.5);
   assert.equal(evidenceFrames(lookupOnly, frameCount(graph, 24)).length, 300);
+});
+
+/** The review's case: a wide flowchart box at a card end, with zoom 2 (PR #60, third review). */
+const wide = clone(pan);
+wide.diagram = 'flowchart';
+wide.nodes.find((node) => node.id === 'D').label = 'MMMMMMMMMMMMMM';
+wide.presentation[1].camera = { zoom: 2 };
+// A long quotation makes the card tall enough to reach the ends' height.
+wide.edges.find((edge) => edge.id === 'cd').evidence = [
+  { cite: '某书', quote: '二人同行，自西岭至东湖，往返三日，途中唱和诗十余首。'.repeat(4) },
+];
+
+test('the card frames its ends clear by their drawn outlines: a wide flowchart box with zoom 2', () => {
+  for (const frameSpec of [spec, FRAME_SPECS['landscape-1080p']]) {
+    const { compose, state, starts, lastOf, positions, timeline, graph } = film(wide, frameSpec);
+    const style = drawingStyle({ graph, positions, style: styleForGraph(graph) });
+    const edge = timeline.shots[1].view.edges.find((e) => e.id === 'cd');
+    const ends = [edge.source, edge.target].map((id) => graph.nodes.find((n) => n.id === id));
+    const d = ends.find((node) => node.label === 'MMMMMMMMMMMMMM');
+    let drawn = 0;
+    for (let frame = starts[1]; frame <= lastOf(1); frame++) {
+      const list = compose(frame);
+      if (!drawnTexts(list).includes('EVIDENCE')) continue;
+      drawn++;
+      const plate = [...walkDisplayItems(list.items)].find(
+        (item) =>
+          item.type === 'path' &&
+          item.d[0][0] === 'RR' &&
+          item.d[0][1] === evidenceCardRegion(frameSpec).x,
+      );
+      const card = { x: plate.d[0][1], y: plate.d[0][2], w: plate.d[0][3], h: plate.d[0][4] };
+      const camera = state(frame).cameraResolved;
+      for (const node of ends) {
+        const box = nodeGlyphBounds(
+          node,
+          projectCameraPoint(positions.get(node.id), camera, frameSpec),
+          camera.scale,
+          frameSpec,
+          style,
+          1,
+          graph.project,
+        );
+        assert.ok(
+          box.x + box.w < card.x,
+          `frame ${frame}: ${node.label} reaches ${box.x + box.w}, card at ${card.x}`,
+        );
+      }
+      assert.equal(list.evidenceCovers, null);
+    }
+    assert.ok(drawn > 0, 'the card is shown');
+    // The box really is wide: far more than the old 40-pixel allowance.
+    const settled = state(lastOf(1)).cameraResolved;
+    const dBox = nodeGlyphBounds(
+      d,
+      { x: 0, y: 0 },
+      settled.scale,
+      frameSpec,
+      style,
+      1,
+      graph.project,
+    );
+    assert.ok(dBox.w / 2 / frameSpec.typeScale > 70);
+  }
+});
+
+test('the native renderer frames with glyph extents too', () => {
+  const { lastOf } = film(wide);
+  const result = loadDocument(wide);
+  const renderer = createHeadlessRenderer(result.graph, layoutGraph(result.graph), {
+    frameSpec: 'landscape-720p',
+    detailAt: result.detailAt,
+  });
+  const list = renderer.displayListAt(lastOf(1));
+  assert.ok(drawnTexts(list).includes('EVIDENCE'));
+  assert.equal(list.evidenceCovers, null);
+  const cardX = evidenceCardRegion(spec).x;
+  for (const entry of list.selection.filter((e) => e.kind === 'node' && e.box))
+    if (['C', 'D'].includes(result.graph.nodes.find((n) => n.id === entry.id)?.label))
+      assert.ok(
+        entry.box.x + entry.box.w < cardX,
+        `${entry.id} reaches ${entry.box.x + entry.box.w}`,
+      );
+});
+
+test('a card that would still cover its own end is withheld and reported, never drawn over it', () => {
+  // A caller that frames without glyph extents keeps only the 40-pixel
+  // allowance: the wide box then reaches under the card, which the composer
+  // catches.
+  const { compose, lastOf, result } = film(wide, spec, { plainFit: true });
+  const list = compose(lastOf(1));
+  assert.ok(!drawnTexts(list).includes('EVIDENCE'));
+  const d = result.graph.nodes.find((node) => node.label === 'MMMMMMMMMMMMMM');
+  assert.deepEqual(list.evidenceCovers, { object: 'edge', id: 'cd', node: d.id });
+  assert.ok(list.a11y.evidence, 'the card text stays accessible');
+
+  const { timeline, graph } = film(wide);
+  const report = evidenceCovering(
+    timeline,
+    frameCount(graph, 24),
+    () => ({ evidenceCovers: list.evidenceCovers }),
+    (kind, id) =>
+      kind === 'nodes'
+        ? (result.authoredIds.nodes.get(id) ?? id)
+        : kind === 'edges'
+          ? (result.authoredIds.edges.get(id) ?? id)
+          : (result.authoredIds.scenes.get(id) ?? id),
+  );
+  assert.deepEqual(
+    report.map(({ shot, id, target, node }) => ({ shot, id, target, node })),
+    [{ shot: 1, id: 'right', target: 'cd', node: 'D' }],
+  );
+  assert.match(formatEvidenceCovering(report), /镜头 2\/2「右」：关系 cd 的证据卡片会盖住节点 D/);
+  assert.equal(evidenceCoversText(null, 'en'), '');
+  assert.match(
+    evidenceCoversText(list.evidenceCovers, 'zh-CN'),
+    /证据卡片会盖住它引证的节点，未画出/,
+  );
+  assert.match(evidenceCoversText(list.evidenceCovers, 'en'), /would cover the node it cites/);
+});
+
+test('check-labels lists covering cards (none for the review case, framed by glyph extents)', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'relgraph-wide-card-'));
+  const file = join(dir, 'wide.graph.json');
+  writeFileSync(file, JSON.stringify(wide));
+  const json = JSON.parse((await run(['check-labels', file, '--json'])).stdout);
+  assert.deepEqual(json.evidenceCovering, []);
+  assert.deepEqual(json.evidenceOverflows, []);
+  assert.deepEqual(json.hiddenEvidence, []);
 });

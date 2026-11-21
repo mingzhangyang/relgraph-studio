@@ -16,6 +16,8 @@ import { graphEvents, writeAtomically } from './events.js';
 import {
   authoredId,
   evidenceOverflows,
+  evidenceCovering,
+  formatEvidenceCovering,
   formatEvidenceOverflows,
   formatHiddenEvidence,
   hiddenEvidenceCards,
@@ -229,8 +231,9 @@ export async function renderFilm(request: RenderRequest): Promise<RenderSummary>
   // the events come from the same layout and timeline the threads use.
   layoutGraph(graph);
   const events = request.events === undefined ? null : graphEvents(result, fps);
-  // An evidence card that does not fit, or that its shot ends before showing,
-  // is never cut or silently dropped: refuse before rendering (ADR 004, D4).
+  // An evidence card that does not fit, that its shot ends before showing or
+  // that would cover its own node or relation end is never cut, drawn over
+  // its object or silently dropped: refuse before rendering (ADR 004, D4).
   const timeline = compileTimeline(graph, fps);
   if (timeline.shots.some((shot) => shot.evidence)) {
     const probe = createHeadlessRenderer(graph, layoutGraph(graph), {
@@ -245,9 +248,12 @@ export async function renderFilm(request: RenderRequest): Promise<RenderSummary>
     const hidden = hiddenEvidenceCards(timeline, filmFrames, (kind, id) =>
       authoredId(result, kind, id),
     );
-    if (overflows.length || hidden.length)
+    const covering = evidenceCovering(timeline, filmFrames, probe.displayListAt, (kind, id) =>
+      authoredId(result, kind, id),
+    );
+    if (overflows.length || hidden.length || covering.length)
       throw new RenderError(
-        `${formatEvidenceOverflows(overflows)}${formatHiddenEvidence(hidden)}未渲染。`,
+        `${formatEvidenceOverflows(overflows)}${formatHiddenEvidence(hidden)}${formatEvidenceCovering(covering)}未渲染。`,
       );
   }
   const uncovered = uncoveredCharacters(documentStrings(JSON.parse(text)));
