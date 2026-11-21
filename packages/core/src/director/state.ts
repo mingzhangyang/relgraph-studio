@@ -1,6 +1,8 @@
 import { frameStateAt } from '../graph/core.js';
 import { captionOpacity, compileTimeline, revealStateAt, timelinePlaybackAt } from './timeline.js';
 import type { FilmTimeline } from './timeline.js';
+// Defined beside compileTimeline, which needs it to tell which shots have frames.
+export { frameCount } from './timeline.js';
 import type {
   DirectorFrameState,
   FrameState,
@@ -179,11 +181,4 @@ export function directorFrameAt(
     reveal: revealStateAt(timeline, view, second),
     captionOpacity: captionOpacity(timeline, playback.index, second),
   });
-}
-
-export function frameCount(graph: VisualGraph, fps = 24): number {
-  return Math.max(
-    1,
-    Math.ceil(graph.scenes.reduce((sum, scene) => sum + scene.durationSec, 0) * fps - 1e-9),
-  );
 }

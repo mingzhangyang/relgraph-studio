@@ -1,7 +1,7 @@
 import { displayNodeText } from '../project.js';
-import { frameCount } from './state.js';
 import {
   compileTimeline,
+  frameCount,
   frameAtOrAfter,
   shotSettledSec,
   shotStartFrames,
@@ -301,16 +301,20 @@ export function filmEvents(
     };
   };
   // Entrances and exits as the frames show them: compare the projections of
-  // consecutive shots that have frames. What a shot shorter than a frame
-  // withdraws and the next shot restores never leaves the screen, so it has
-  // no exit and no second entrance. An entrance takes the latest cue started
-  // since the previous shot with frames (its fade or draw-on); without one,
-  // as in the first shot, the object is there outright.
+  // consecutive shots that have frames, as `compileTimeline` does for its
+  // reveal cues. Each entrance after the first shot with frames has the
+  // object's next cue (its fade or draw-on); what the first such shot shows
+  // without one is there outright. An exit is on the first frame without
+  // the object, at the start of the shot that frame shows.
+  const cues = { node: new Map<string, RevealCue[]>(), edge: new Map<string, RevealCue[]>() };
+  for (const cue of timeline.reveal) {
+    const queue = cues[cue.kind].get(cue.targetId);
+    if (queue) queue.push(cue);
+    else cues[cue.kind].set(cue.targetId, [cue]);
+  }
   const open = { node: new Map<string, RevealEvent>(), edge: new Map<string, RevealEvent>() };
-  let previousShown = -1;
   for (const [index, shot] of shots.entries()) {
     if (!onScreen[index]) continue;
-    const since = previousShown < 0 ? -Infinity : shots[previousShown].startSec;
     for (const object of ['node', 'edge'] as const) {
       const items: (View['nodes'][number] | View['edges'][number])[] =
         object === 'node' ? shot.view.nodes : shot.view.edges;
@@ -323,21 +327,13 @@ export function filmEvents(
         }
       for (const item of items) {
         if (open[object].has(item.id)) continue;
-        let cue: RevealCue | undefined;
-        for (const candidate of timeline.reveal)
-          if (
-            candidate.kind === object &&
-            candidate.targetId === item.id &&
-            candidate.inSec > since &&
-            candidate.inSec <= shot.startSec
-          )
-            cue = candidate;
+        const queue = cues[object].get(item.id);
+        const cue = queue?.[0] && queue[0].inSec <= shot.startSec ? queue.shift() : undefined;
         const event = reveal(object, item, index, cue);
         events.push(event);
         open[object].set(item.id, event);
       }
     }
-    previousShown = index;
   }
 
   // A stable sort keeps document and cue order within one frame and type.
