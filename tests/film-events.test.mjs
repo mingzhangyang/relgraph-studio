@@ -13,6 +13,7 @@ import { directorFrameAt, frameCount } from '../packages/core/src/director/state
 import {
   compileTimeline,
   frameAtOrAfter,
+  revealStateAt,
   shotStartFrames,
   timelinePlaybackAt,
 } from '../packages/core/src/director/timeline.ts';
@@ -75,11 +76,29 @@ const subFrameStepBack = {
   ],
 };
 
+// 5 → 1 (no frame) → 5 after a fade-in: the blink withdraws 甲 and its
+// relation, and the next shot restores them before any frame shows it.
+const subFrameBlink = {
+  format: 'relgraph.graph/1',
+  nodes: [
+    { id: '甲', visibleFrom: 3, position: { x: 0, y: 0 } },
+    { id: '乙', visibleFrom: 0, position: { x: 99, y: 0 } },
+  ],
+  edges: [{ id: '甲—乙', source: '甲', target: '乙', visibleFrom: 3 }],
+  presentation: [
+    { id: 'early', title: '一', durationSec: 1.1, domainAt: 1 },
+    { id: 'meet', title: '五', durationSec: 1, domainAt: 5 },
+    { id: 'blink', title: '一', durationSec: 0.01, domainAt: 1 },
+    { id: 'again', title: '五', durationSec: 2, domainAt: 5 },
+  ],
+};
+
 const DOCUMENTS = [
   ...manifest.map((entry) => ({ name: entry.file, source: read(`../examples/${entry.file}`) })),
   ...TANG.map((path) => ({ name: path.split('/').at(-1), source: read(path) })),
   { name: 'edge case', source: edgeCase },
   { name: 'sub-frame step back', source: subFrameStepBack },
+  { name: 'sub-frame blink', source: subFrameBlink },
 ];
 
 function load(source) {
@@ -192,6 +211,73 @@ test('a reveal event is the first frame its object is drawn from; the frame befo
         );
       }
     }
+  }
+});
+
+test('events and rendered reveals agree on every frame: present means drawn, settled means full', () => {
+  for (const { name, source } of DOCUMENTS) {
+    const { events, timeline, at, id } = film(source);
+    const reveals = events.events.filter((event) => event.type === 'reveal');
+    // directorFrameAt's view and reveal, without its camera work, for every
+    // frame of the longer films; spot frames are checked against it below.
+    const stateAt = (frame) => {
+      const view = timeline.shots[timelinePlaybackAt(timeline, frame / events.fps).index].view;
+      return { view, reveal: revealStateAt(timeline, view, frame / events.fps) };
+    };
+    for (const frame of [0, events.frameCount >> 1, events.frameCount - 1]) {
+      const { view, reveal } = at(frame);
+      assert.deepEqual(stateAt(frame), { view, reveal }, `${name}: frame ${frame}`);
+    }
+    let previous = null;
+    for (let frame = 0; frame < events.frameCount; frame += 1) {
+      const state = stateAt(frame);
+      for (const object of ['node', 'edge']) {
+        const kind = `${object}s`;
+        // What the events say is on screen at this frame, and since when.
+        const present = new Map();
+        for (const event of reveals)
+          if (
+            event.object === object &&
+            event.frame <= frame &&
+            (event.outFrame === undefined || frame < event.outFrame)
+          )
+            present.set(id(kind, event.id), event);
+        assert.deepEqual(
+          state.view[kind].map((item) => item.id).sort(),
+          [...present.keys()].sort(),
+          `${name}: ${kind} on frame ${frame}`,
+        );
+        for (const [target, event] of present) {
+          const progress = state.reveal[kind][target];
+          const where = `${name}: ${object} ${event.id} on frame ${frame}`;
+          const done = frameAtOrAfter(event.sec + event.durationSec, events.fps);
+          if (frame >= done) assert.equal(progress, 1, `${where} is fully drawn`);
+          else assert.ok(progress < 1, `${where} is still being drawn`);
+          if (frame > event.frame)
+            assert.ok(progress >= previous.reveal[kind][target], `${where} never restarts`);
+        }
+      }
+      previous = state;
+    }
+  }
+});
+
+test('a sub-frame blink after a fade-in: one entrance, no exit, fully drawn throughout', () => {
+  const { events, timeline, at, id } = film(subFrameBlink);
+  const reveals = events.events
+    .filter((e) => e.type === 'reveal')
+    .map((e) => `${e.id}@${e.frame}${e.outFrame === undefined ? '' : `→${e.outFrame}`}`);
+  assert.deepEqual(reveals, ['乙@0', '甲@27', '甲—乙@27']);
+  assert.deepEqual(
+    timeline.reveal.map((cue) => [cue.targetId, cue.inSec, cue.outSec]),
+    [
+      [id('nodes', '甲'), 1.1, undefined],
+      [id('edges', '甲—乙'), 1.1, undefined],
+    ],
+  );
+  for (const frame of [50, 51, 52]) {
+    assert.equal(at(frame).reveal.nodes[id('nodes', '甲')], 1, `甲 on ${frame}`);
+    assert.equal(at(frame).reveal.edges[id('edges', '甲—乙')], 1, `甲—乙 on ${frame}`);
   }
 });
 

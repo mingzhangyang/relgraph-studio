@@ -15,11 +15,13 @@ import tree from '../examples/vertebrates-tree-provisional.graph.json' with { ty
 import {
   compileTimeline,
   captionOpacity,
+  frameAtOrAfter,
   revealProgress,
   revealStateAt,
+  shotStartFrames,
   timelinePlaybackAt,
 } from '../packages/core/src/director/timeline.ts';
-import { directorFrameAt } from '../packages/core/src/director/state.ts';
+import { directorFrameAt, frameCount } from '../packages/core/src/director/state.ts';
 import { createCanvasRenderer } from '../packages/render/src/canvas.ts';
 import { quadraticPrefix } from '../packages/render/src/compose.ts';
 import { measuringCanvas, texts } from './helpers/display-list.mjs';
@@ -522,4 +524,163 @@ test('S3: a graph can unfold and carry domain time, each on its own track', () =
     validateVisualGraph({ ...graph, scenes: [{ ...graph.scenes[0], revealStep: NaN }] }).valid,
     false,
   );
+});
+
+// A shot shorter than a frame is never on screen (`shotStartFrames`): what it
+// alone withdraws or adds must not restart a reveal.
+const subFrameDoc = (presentation, nodes) => {
+  const result = loadDocument({ format: 'relgraph.graph/1', nodes, presentation });
+  assert.equal(result.valid, true, JSON.stringify(result.errors));
+  const timeline = compileTimeline(result.graph, 24);
+  const positions = layoutGraph(result.graph);
+  const at = (frame) => directorFrameAt(result.graph, positions, frame, 24, { timeline });
+  return { graph: result.graph, timeline, at };
+};
+const blinkNodes = [
+  { id: 'a', visibleFrom: 3, position: { x: 0, y: 0 } },
+  { id: 'b', visibleFrom: 0, position: { x: 99, y: 0 } },
+];
+
+test('a withdrawal no frame shows leaves the reveal as it was: no exit, no second cue', () => {
+  // 5 → 1 (0.01 s, no frame) → 5: frames 26 and 27 both project a.
+  const { timeline, at } = subFrameDoc(
+    [
+      { id: 's0', title: '0', durationSec: 1.1, domainAt: 5 },
+      { id: 's1', title: '1', durationSec: 0.01, domainAt: 1 },
+      { id: 's2', title: '2', durationSec: 2, domainAt: 5 },
+    ],
+    blinkNodes,
+  );
+  assert.deepEqual(shotStartFrames(timeline), [0, 27, 27]);
+  for (const frame of [26, 27, 28]) {
+    assert.ok(
+      at(frame).view.nodes.some((node) => node.id === 'a'),
+      `a projected at ${frame}`,
+    );
+    assert.equal(at(frame).reveal.nodes.a, 1, `a fully shown at ${frame}`);
+  }
+  // The first shot shows a outright: it never has a cue.
+  assert.deepEqual(timeline.reveal, []);
+
+  // The same blink after a has faded in: its one cue keeps running, no outSec.
+  const faded = subFrameDoc(
+    [
+      { id: 's0', title: '0', durationSec: 1.1, domainAt: 1 },
+      { id: 's1', title: '1', durationSec: 1, domainAt: 5 },
+      { id: 's2', title: '2', durationSec: 0.01, domainAt: 1 },
+      { id: 's3', title: '3', durationSec: 2, domainAt: 5 },
+    ],
+    blinkNodes,
+  );
+  assert.deepEqual(faded.timeline.reveal, [
+    { targetId: 'a', kind: 'node', inSec: 1.1, durationSec: 0.6, effect: 'fade' },
+  ]);
+  // Shot 1 runs frames 27–50, shot 3 starts on 51: a is fully shown throughout.
+  assert.deepEqual(shotStartFrames(faded.timeline), [0, 27, 51, 51]);
+  for (const frame of [50, 51, 52]) assert.equal(faded.at(frame).reveal.nodes.a, 1, `${frame}`);
+});
+
+test('an object entering in a shot no frame shows fades in from the first frame that shows it', () => {
+  // 1 → 5 (0.01 s, no frame) → 5: a enters in the blink and stays.
+  const { timeline, at } = subFrameDoc(
+    [
+      { id: 's0', title: '0', durationSec: 1.1, domainAt: 1 },
+      { id: 's1', title: '1', durationSec: 0.01, domainAt: 5 },
+      { id: 's2', title: '2', durationSec: 2, domainAt: 5 },
+    ],
+    blinkNodes,
+  );
+  assert.deepEqual(timeline.reveal, [
+    { targetId: 'a', kind: 'node', inSec: 1.1, durationSec: 0.6, effect: 'fade' },
+  ]);
+  assert.ok(!at(26).view.nodes.some((node) => node.id === 'a'));
+  // Frame 27 (1.125 s) is the first to show a, under a frame into its fade.
+  const first = at(27).reveal.nodes.a;
+  assert.ok(first > 0 && first < 1 / (24 * 0.6), `${first}`);
+  assert.ok(at(28).reveal.nodes.a > first);
+  assert.equal(at(27 + Math.ceil(0.6 * 24)).reveal.nodes.a, 1);
+});
+
+/** Deterministic xorshift32 in [0, 1). */
+const random = (seed) => () => {
+  seed ^= seed << 13;
+  seed ^= seed >>> 17;
+  seed ^= seed << 5;
+  return (seed >>> 0) / 2 ** 32;
+};
+
+test('reveal cues start and stop exactly on the frames whose projections enter and leave', () => {
+  // Random films with shots shorter than, about and exactly one frame long:
+  // every cue boundary falls on a frame where the rendered projection changes,
+  // every such change has its cue, and a reveal never restarts while an
+  // object stays on screen.
+  const next = random(0x5eed);
+  const pick = (items) => items[Math.floor(next() * items.length)];
+  const durations = [0.01, 0.02, 1 / 48, 1 / 30, 1 / 25, 1 / 24, 0.05, 0.1, 0.3, 0.7, 1.1];
+  for (let doc = 0; doc < 40; doc += 1) {
+    const nodes = Array.from({ length: 5 }, (_, i) => ({
+      id: `n${i}`,
+      visibleFrom: i,
+      position: { x: i * 100, y: 0 },
+    }));
+    const edges = Array.from({ length: 4 }, (_, i) => ({
+      id: `e${i}`,
+      source: `n${i}`,
+      target: `n${i + 1}`,
+      visibleFrom: pick([0, 1, 2, 3, 4, 5]),
+    }));
+    const presentation = Array.from({ length: 4 + Math.floor(next() * 8) }, (_, i) => ({
+      id: `s${i}`,
+      title: `${i}`,
+      durationSec: pick(durations),
+      domainAt: pick([0, 1, 2, 3, 4, 5]),
+    }));
+    const result = loadDocument({ format: 'relgraph.graph/1', nodes, edges, presentation });
+    assert.equal(result.valid, true, JSON.stringify(result.errors));
+    for (const fps of [24, 25, 30]) {
+      const where = `doc ${doc} @${fps}: ${presentation.map((s) => `${s.domainAt}/${s.durationSec}`)}`;
+      const timeline = compileTimeline(result.graph, fps);
+      const positions = layoutGraph(result.graph);
+      const frames = frameCount(result.graph, fps);
+      const states = Array.from({ length: frames }, (_, frame) =>
+        directorFrameAt(result.graph, positions, frame, fps, { timeline }),
+      );
+      const shown = (frame, kind, id) =>
+        frame >= 0 && states[frame].view[kind].some((item) => item.id === id);
+      const kinds = { node: 'nodes', edge: 'edges' };
+      const cueFrames = new Map();
+      for (const cue of timeline.reveal) {
+        const kind = kinds[cue.kind];
+        const start = frameAtOrAfter(cue.inSec, fps);
+        assert.ok(start > 0, `${where}: ${cue.targetId} cue on frame 0`);
+        assert.ok(
+          shown(start, kind, cue.targetId) && !shown(start - 1, kind, cue.targetId),
+          `${where}: ${cue.targetId} enters on ${start}`,
+        );
+        const key = `${kind}:${cue.targetId}`;
+        cueFrames.set(key, [...(cueFrames.get(key) ?? []), start]);
+        if (cue.outSec !== undefined) {
+          const end = frameAtOrAfter(cue.outSec, fps);
+          assert.ok(
+            !shown(end, kind, cue.targetId) && shown(end - 1, kind, cue.targetId),
+            `${where}: ${cue.targetId} leaves on ${end}`,
+          );
+        }
+      }
+      for (let frame = 1; frame < frames; frame += 1)
+        for (const kind of ['nodes', 'edges'])
+          for (const item of states[frame].view[kind]) {
+            const progress = states[frame].reveal[kind][item.id];
+            const before = shown(frame - 1, kind, item.id);
+            const entersHere = (cueFrames.get(`${kind}:${item.id}`) ?? []).includes(frame);
+            assert.equal(entersHere, !before, `${where}: ${item.id} cue at ${frame}`);
+            if (before)
+              assert.ok(
+                progress >= states[frame - 1].reveal[kind][item.id],
+                `${where}: ${item.id} restarts at ${frame}`,
+              );
+            else assert.ok(progress < 1, `${where}: ${item.id} pops in at ${frame}`);
+          }
+    }
+  }
 });
