@@ -147,7 +147,11 @@ view); those ends are kept in that area by their drawn outlines, so a
 label-holding box counts as wide as its words and a timeline bar as long as
 its years (the camera zooms out until the bar fits), and a shot's `zoom`
 applies only as far as that allows. The card never covers what it is about:
-if an end still could not be framed clear (a label-holding glyph wider than
+on every frame that draws it, it covers neither end's glyph, the relation's
+line, either end's name nor the relation's label. Labels are placed after the
+card takes its room, so they keep out of it (a name with no room left is
+reported like any omitted label), and the frame verifies the glyphs and the
+line against the drawn card. If an end still could not be framed clear (a label-holding glyph wider than
 the area at any scale), the card is not drawn, `relgraph render` refuses the film and `check-labels` reports
 it. Its node or relation is
 highlighted for the whole shot. The card waits until the camera has finished

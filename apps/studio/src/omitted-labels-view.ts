@@ -39,9 +39,17 @@ export function evidenceCoversText(
   language: 'zh-CN' | 'en',
 ): string {
   if (!covers) return '';
+  const what =
+    covers.node === undefined
+      ? language === 'en'
+        ? 'the relation it cites'
+        : '它引证的关系'
+      : language === 'en'
+        ? 'the node it cites'
+        : '它引证的节点';
   return language === 'en'
-    ? 'The evidence card would cover the node it cites and is not drawn; export will refuse it. Shorten that node’s label or use a narrower shape.'
-    : '证据卡片会盖住它引证的节点，未画出，导出时会报错；请缩短该节点的标签或改用较窄的形状。';
+    ? `The evidence card would cover ${what} and is not drawn; export will refuse it. Shorten that node’s label or use a narrower shape.`
+    : `证据卡片会盖住${what}，未画出，导出时会报错；请缩短该节点的标签或改用较窄的形状。`;
 }
 
 /** The notice text, or '' when nothing was left out. */

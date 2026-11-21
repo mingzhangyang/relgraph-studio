@@ -91,6 +91,8 @@ test('composeFrame is its passes, run in order over one context', () => {
     );
     const glyphs = composeNodes(ctx, drawn);
     const legend = composeLegend(ctx, occupied);
+    const evidence = composeEvidenceCard(ctx, relations.selection);
+    if (evidence.obstacle) occupied.add(evidence.obstacle);
     const omitted = [];
     const labels = composeNodeLabels(
       ctx,
@@ -100,7 +102,6 @@ test('composeFrame is its passes, run in order over one context', () => {
     );
     const tags = composeRelationLabels(ctx, relations.labels, occupied, omitted);
     const card = composeDetailCard(ctx);
-    const evidence = composeEvidenceCard(ctx);
     const expected = {
       width: spec.width,
       height: spec.height,

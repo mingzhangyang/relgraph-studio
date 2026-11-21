@@ -6,9 +6,9 @@ import type {
   FontRef,
   FrameText,
 } from '../display-list.js';
-import { evidenceCardRegion } from '../frame-spec.js';
+import { evidenceCardRegion, type Rect } from '../frame-spec.js';
 import { nodeGlyphBounds, rectsIntersect } from '../node-geometry.js';
-import type { FrameContext } from './context.js';
+import type { FrameContext, Selection } from './context.js';
 import { wrapAllText } from './text.js';
 
 /** The card's lines, laid out from its top, in output pixels. */
@@ -108,14 +108,23 @@ function layoutCard(
  * `evidenceOverflow` instead of cutting the text. One that would still cover
  * its own node or relation end is withheld too (`evidenceCovers`).
  */
-export function composeEvidenceCard(ctx: FrameContext): {
+export function composeEvidenceCard(
+  ctx: FrameContext,
+  /** The frame's drawn relations (`composeRelations`), to verify the card's relation is clear. */
+  relations: Selection = [],
+): {
   items: DisplayItem[];
   evidence: FrameText['evidence'];
   overflow: EvidenceOverflow | null;
   covers: EvidenceCovers | null;
+  /**
+   * The card's box for the whole shot, drawn yet or not: labels placed after
+   * this pass keep out of it, so no name or relation label lies under it.
+   */
+  obstacle: Rect | null;
 } {
   const card = ctx.state.evidence;
-  if (!card) return { items: [], evidence: null, overflow: null, covers: null };
+  if (!card) return { items: [], evidence: null, overflow: null, covers: null, obstacle: null };
   const { spec, theme: P, u, sans, serif, measure } = ctx;
   const region = evidenceCardRegion(spec);
   const pad = u(22);
@@ -138,7 +147,8 @@ export function composeEvidenceCard(ctx: FrameContext): {
   const subjectExtra = u(26) * Math.max(0, subjectLines.length - 1);
   const contentTop = region.y + u(84) + subjectExtra;
   const laid = layoutCard(ctx, card, textWidth, region.y + region.h - u(20) - contentTop);
-  if (!laid.lines) return { items: [], evidence, overflow: laid.overflow, covers: null };
+  if (!laid.lines)
+    return { items: [], evidence, overflow: laid.overflow, covers: null, obstacle: null };
   // The card is as tall as its items, up to the whole region.
   const box = { ...region, h: Math.min(region.h, contentTop - region.y + laid.height + pad) };
   const cardItems: DisplayItem[] = [
@@ -207,11 +217,13 @@ export function composeEvidenceCard(ctx: FrameContext): {
   // Core decides when the card may show: after the camera move that clears
   // its object and once the object is half revealed (`evidenceShownSec`).
   const alpha = ctx.state.evidenceOpacity ?? 1;
-  if (alpha <= 0) return { items: [], evidence, overflow: null, covers: null };
-  // The camera frames the card's node or relation ends clear of the card by
-  // their drawn outlines. Should one still reach under it (a glyph wider
-  // than the free area), the card is withheld and reported, never drawn over
-  // what it is about.
+  if (alpha <= 0) return { items: [], evidence, overflow: null, covers: null, obstacle: box };
+  // The invariant, checked on what this frame draws: the card covers neither
+  // end's glyph nor the relation's stroke (labels already keep out of
+  // `obstacle`). The camera frames the ends clear of the card by their
+  // outlines, so this holds unless an end cannot be framed clear (a glyph
+  // wider than the free area); the card is then withheld and reported,
+  // never drawn over what it is about.
   const covered = cardEnds(ctx, card).find((node) =>
     rectsIntersect(
       nodeGlyphBounds(
@@ -226,19 +238,63 @@ export function composeEvidenceCard(ctx: FrameContext): {
       box,
     ),
   );
-  if (covered)
+  const stroke =
+    card.object === 'edge'
+      ? relations.find((entry) => entry.kind === 'edge' && entry.id === card.id)
+      : undefined;
+  const strokeCovered = Boolean(
+    stroke?.points && pathMeetsRect(stroke.points, (stroke.width ?? 0) / 2, box),
+  );
+  if (covered || strokeCovered)
     return {
       items: [],
       evidence,
       overflow: null,
-      covers: { object: card.object, id: card.id, node: covered.id },
+      covers: { object: card.object, id: card.id, ...(covered ? { node: covered.id } : {}) },
+      obstacle: box,
     };
   return {
     items: alpha >= 1 ? cardItems : [{ type: 'group', alpha, items: cardItems }],
     evidence,
     overflow: null,
     covers: null,
+    obstacle: box,
   };
+}
+
+/** Whether a polyline, drawn `half` thick on each side, meets a rectangle. */
+function pathMeetsRect(
+  points: readonly { x: number; y: number }[],
+  half: number,
+  r: Rect,
+): boolean {
+  const g = { x: r.x - half, y: r.y - half, w: r.w + 2 * half, h: r.h + 2 * half };
+  const inside = (p: { x: number; y: number }): boolean =>
+    p.x >= g.x && p.x <= g.x + g.w && p.y >= g.y && p.y <= g.y + g.h;
+  // Liang-Barsky: clip each segment against the grown rectangle.
+  const crosses = (a: { x: number; y: number }, b: { x: number; y: number }): boolean => {
+    let t0 = 0,
+      t1 = 1;
+    const dx = b.x - a.x,
+      dy = b.y - a.y;
+    for (const [p, q] of [
+      [-dx, a.x - g.x],
+      [dx, g.x + g.w - a.x],
+      [-dy, a.y - g.y],
+      [dy, g.y + g.h - a.y],
+    ] as const) {
+      if (p === 0) {
+        if (q < 0) return false;
+      } else {
+        const t = q / p;
+        if (p < 0) t0 = Math.max(t0, t);
+        else t1 = Math.min(t1, t);
+        if (t0 > t1) return false;
+      }
+    }
+    return true;
+  };
+  return points.some(inside) || points.some((p, i) => i > 0 && crosses(points[i - 1], p));
 }
 
 /** The nodes in view an evidence card is about: its node, or its relation's ends. */

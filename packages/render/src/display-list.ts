@@ -141,8 +141,8 @@ export interface EvidenceOverflow {
 export interface EvidenceCovers {
   object: 'node' | 'edge';
   id: string;
-  /** The node whose glyph the card would cover. */
-  node: string;
+  /** The node whose glyph the card would cover; absent when it is the relation's stroke. */
+  node?: string;
 }
 
 export interface DisplayList {

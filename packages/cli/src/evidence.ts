@@ -132,8 +132,8 @@ export interface ShotEvidenceCovers {
   title: string;
   object: 'node' | 'edge';
   target: string;
-  /** The node, as the source writes it, whose glyph the card would cover. */
-  node: string;
+  /** The node, as the source writes it, whose glyph the card would cover; absent for the relation's stroke. */
+  node?: string;
 }
 
 /**
@@ -162,7 +162,7 @@ export function evidenceCovering(
         title: shot.scene.title,
         object: covers.object,
         target: authored(covers.object === 'node' ? 'nodes' : 'edges', covers.id),
-        node: authored('nodes', covers.node),
+        ...(covers.node === undefined ? {} : { node: authored('nodes', covers.node) }),
       },
     ];
   });
@@ -173,10 +173,10 @@ export function formatEvidenceCovering(report: readonly ShotEvidenceCovers[]): s
   if (!report.length) return '';
   const lines = report.map(
     (entry) =>
-      `  镜头 ${entry.shot + 1}/${entry.shots}「${entry.title}」：${entry.object === 'node' ? '节点' : '关系'} ${entry.target} 的证据卡片会盖住节点 ${entry.node}`,
+      `  镜头 ${entry.shot + 1}/${entry.shots}「${entry.title}」：${entry.object === 'node' ? '节点' : '关系'} ${entry.target} 的证据卡片会盖住${entry.node === undefined ? '这条关系' : `节点 ${entry.node}`}`,
   );
   return (
-    `错误：${report.length} 张证据卡片即使在镜头取景后也会盖住自己引证的节点，未画出：\n` +
+    `错误：${report.length} 张证据卡片即使在镜头取景后也会盖住自己引证的对象，未画出：\n` +
     lines.join('\n') +
     '\n建议：缩短该节点的标签（框形节点随文字变宽），或改用较窄的形状；也可以去掉这些分镜的 camera.zoom。\n'
   );
