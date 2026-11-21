@@ -289,17 +289,51 @@ export function frameAtOrAfter(second: number, fps: number): number {
  * can have none (its first frame is then the next shot's).
  */
 export function shotStartFrames(timeline: FilmTimeline): number[] {
-  const { fps, shots } = timeline;
-  const shotAt = (frame: number): number => timelinePlaybackAt(timeline, frame / fps).index;
-  return shots.map((shot, index) => {
-    if (index === 0) return 0;
-    // The rounded start is right but for instants within the tolerance of a
-    // boundary; confirm it against the playback that renders the frames.
-    let frame = frameAtOrAfter(shot.startSec, fps);
-    while (frame > 0 && shotAt(frame - 1) >= index) frame -= 1;
-    while (shotAt(frame) < index) frame += 1;
-    return frame;
-  });
+  const { fps, shots, durationSec } = timeline;
+  if (!shots.length) return [];
+  // The instant timelinePlaybackAt evaluates for a frame.
+  const timeOf = (frame: number): number => Math.max(0, Math.min(frame / fps, durationSec));
+  // The shot of a frame never moves backward as frames advance, so each
+  // lookup resumes from the shot of an earlier frame: one sweep, linear in
+  // the shots and the few frames it inspects, however many shots are
+  // shorter than a frame.
+  const starts = [0];
+  // `frame` is the first frame of shot index - 1 (or frame 0) and `owner`
+  // the shot timelinePlaybackAt gives it.
+  let frame = 0,
+    owner = shotIndexAt(shots, timeOf(0));
+  for (let index = 1; index < shots.length; index += 1) {
+    if (owner < index) {
+      // Every frame up to `frame` shows an earlier shot. The rounded start is
+      // right but for instants within the tolerance of a boundary; confirm
+      // it against the playback that renders the frames.
+      let next = Math.max(frame + 1, frameAtOrAfter(shots[index].startSec, fps));
+      while (next - 1 > frame && shotIndexAt(shots, timeOf(next - 1), owner) >= index) next -= 1;
+      let at = shotIndexAt(shots, timeOf(next), owner);
+      while (at < index) {
+        next += 1;
+        at = shotIndexAt(shots, timeOf(next), at);
+      }
+      frame = next;
+      owner = at;
+    }
+    starts.push(frame);
+  }
+  return starts;
+}
+
+/**
+ * The shot timelinePlaybackAt gives an instant already clamped to the film:
+ * the first whose end it is before, within the boundary tolerance, else the
+ * last. A shot an instant is past, a later instant is past too, so `from`
+ * may be the answer for any earlier instant.
+ */
+function shotIndexAt(shots: readonly CompiledShot[], time: number, from = 0): number {
+  for (let index = from; index < shots.length - 1; index += 1) {
+    const end = shots[index].endSec;
+    if (time < end - 8 * Number.EPSILON * Math.max(1, Math.abs(time), Math.abs(end))) return index;
+  }
+  return shots.length - 1;
 }
 
 /** Match the original half-open scene boundary tolerance (including final frame). */
@@ -320,23 +354,19 @@ export function timelinePlaybackAt(
       startSec: 0,
     };
   const time = Math.max(0, Math.min(Number.isFinite(second) ? second : 0, durationSec));
-  for (const [index, shot] of shots.entries()) {
-    const tolerance = 8 * Number.EPSILON * Math.max(1, Math.abs(time), Math.abs(shot.endSec));
-    if (time < shot.endSec - tolerance || index === shots.length - 1) {
-      const elapsedSec = Math.max(0, Math.min(shot.scene.durationSec, time - shot.startSec));
-      return {
-        scene: shot.scene,
-        index,
-        elapsedSec,
-        progress: clamp(elapsedSec / shot.scene.durationSec),
-        domainAt: timeline.domainTime[index].value,
-        revealStep: timeline.revealSteps[index].value,
-        totalSec: durationSec,
-        startSec: shot.startSec,
-      };
-    }
-  }
-  throw new Error('Unable to evaluate timeline shot');
+  const index = shotIndexAt(shots, time);
+  const shot = shots[index];
+  const elapsedSec = Math.max(0, Math.min(shot.scene.durationSec, time - shot.startSec));
+  return {
+    scene: shot.scene,
+    index,
+    elapsedSec,
+    progress: clamp(elapsedSec / shot.scene.durationSec),
+    domainAt: timeline.domainTime[index].value,
+    revealStep: timeline.revealSteps[index].value,
+    totalSec: durationSec,
+    startSec: shot.startSec,
+  };
 }
 
 /**

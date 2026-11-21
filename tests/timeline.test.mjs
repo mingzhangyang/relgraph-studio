@@ -684,3 +684,91 @@ test('reveal cues start and stop exactly on the frames whose projections enter a
     }
   }
 });
+
+// The frame assignment of PR #57, one linear playback lookup per probe: the
+// reference the sweeping shotStartFrames and timelinePlaybackAt must equal.
+function referencePlaybackIndex(timeline, second) {
+  const { shots, durationSec } = timeline;
+  const time = Math.max(0, Math.min(Number.isFinite(second) ? second : 0, durationSec));
+  for (const [index, shot] of shots.entries()) {
+    const tolerance = 8 * Number.EPSILON * Math.max(1, Math.abs(time), Math.abs(shot.endSec));
+    if (time < shot.endSec - tolerance || index === shots.length - 1) return index;
+  }
+  throw new Error('unreachable');
+}
+function referenceShotStartFrames(timeline) {
+  const { fps, shots } = timeline;
+  const shotAt = (frame) => referencePlaybackIndex(timeline, frame / fps);
+  return shots.map((shot, index) => {
+    if (index === 0) return 0;
+    let frame = frameAtOrAfter(shot.startSec, fps);
+    while (frame > 0 && shotAt(frame - 1) >= index) frame -= 1;
+    while (shotAt(frame) < index) frame += 1;
+    return frame;
+  });
+}
+
+test('the frame sweep assigns exactly the frames of one playback lookup per frame', () => {
+  const next = random(0xf4a3e);
+  const pick = (items) => items[Math.floor(next() * items.length)];
+  // Shots far below, about, exactly and above a frame, decimal sums, and
+  // durations under the rounding of a late start.
+  const durations = [1e-13, 1e-9, 0.01, 1 / 48, 1 / 30, 1 / 24, 0.1, 0.3, 1.1, 599.3];
+  for (let doc = 0; doc < 300; doc += 1) {
+    const presentation = Array.from({ length: 1 + Math.floor(next() * 30) }, (_, i) => ({
+      id: `s${i}`,
+      title: `${i}`,
+      durationSec: pick(durations),
+    }));
+    const result = loadDocument({
+      format: 'relgraph.graph/1',
+      nodes: [{ id: 'n', position: { x: 0, y: 0 } }],
+      presentation,
+    });
+    assert.equal(result.valid, true, JSON.stringify(result.errors));
+    for (const fps of [24, 25, 30, 60]) {
+      const timeline = compileTimeline(result.graph, fps);
+      const where = `doc ${doc} @${fps}: ${presentation.map((s) => s.durationSec)}`;
+      assert.deepEqual(shotStartFrames(timeline), referenceShotStartFrames(timeline), where);
+      const frames = frameCount(result.graph, fps);
+      for (const frame of [0, 1, frames >> 1, frames - 2, frames - 1, frames, frames + 5])
+        assert.equal(
+          timelinePlaybackAt(timeline, frame / fps).index,
+          referencePlaybackIndex(timeline, frame / fps),
+          `${where} frame ${frame}`,
+        );
+    }
+  }
+});
+
+test('frame assignment reads each shot a bounded number of times, however short the shots', () => {
+  // 5000 shots of 0.01 s (most have no frame): compileTimeline runs this
+  // assignment for its reveal cues, so it must stay linear in the shots.
+  const shots = 5000;
+  const result = loadDocument({
+    format: 'relgraph.graph/1',
+    nodes: [{ id: 'n', position: { x: 0, y: 0 } }],
+    presentation: Array.from({ length: shots }, (_, i) => ({
+      id: `s${i}`,
+      title: `${i}`,
+      durationSec: 0.01,
+    })),
+  });
+  const timeline = compileTimeline(result.graph, 24);
+  let reads = 0;
+  const counted = {
+    ...timeline,
+    shots: timeline.shots.map((shot) => ({
+      ...shot,
+      get endSec() {
+        reads += 1;
+        return shot.endSec;
+      },
+    })),
+  };
+  const starts = shotStartFrames(counted);
+  assert.deepEqual(starts, shotStartFrames(timeline));
+  assert.equal(starts.at(-1), frameAtOrAfter(timeline.shots.at(-1).startSec, 24));
+  // A per-shot playback lookup from the first shot reads ~shots²/2 ends.
+  assert.ok(reads < 8 * shots, `${reads} end reads for ${shots} shots`);
+});
