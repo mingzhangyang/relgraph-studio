@@ -102,9 +102,9 @@ hashes and runtime rendering behavior remain unchanged.
 
 ## ADR 004 — Evidence, claims and output formats
 
-Proposed in [ADR 004](ADR-004-evidence-claims-and-output-formats.md) from the Tang poet films ([dataset](../datasets/tang-poets-met/README.md)). One PR per item, each from current `main` and targeting `main`; the 236 landscape golden hashes are the acceptance line throughout.
+Accepted in [ADR 004](ADR-004-evidence-claims-and-output-formats.md) from the Tang poet films ([dataset](../datasets/tang-poets-met/README.md)). One PR per item, each from current `main` and targeting `main`; the 236 landscape golden hashes are the acceptance line throughout.
 
-- [ ] **ADR 004 accepted** (this ADR and roadmap entry only)
+- [x] **ADR 004 accepted** (proposed in #53; accepted after P0 landed as decided)
 - [x] **P0 · D1** omitted-label diagnostics in `DisplayList`, `relgraph render` and the studio; reading-speed warning for captions
 - [x] **P0 · D2a** `relgraph check-layout`: clearance, crowding and chronology checks on drawn (bowed) relations
 - [x] **P0 · D2b** neighbour-aware `missing` placement for every engine; no existing coordinate moves
