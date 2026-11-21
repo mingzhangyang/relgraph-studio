@@ -325,6 +325,11 @@ export function validateBiologyDocument(doc: unknown): {
         'Curated claim needs sources',
         'Provide verifiable source records and identifiers.',
       );
+    records(rec, path);
+  };
+  // Source records alone: entities may cite them without an evidence status,
+  // which belongs to claims (interactions and processes).
+  const records = (rec: Record<string, unknown>, path: string) => {
     if (rec.evidence !== undefined && !Array.isArray(rec.evidence))
       fail(
         'EVIDENCE_REF',
@@ -412,6 +417,7 @@ export function validateBiologyDocument(doc: unknown): {
       );
     visual(e, path);
     interval(e.visibleFrom, e.visibleTo, path + '.visibility', e.id);
+    records(e, path);
   });
   collections.interactions.forEach((r, i) => {
     const path = 'interactions[' + i + ']';
@@ -692,6 +698,7 @@ export function adaptBiologyDocument(input: unknown) {
     color: e.color,
     position: e.position ? { ...e.position } : undefined,
     visibility: windowFor(e),
+    ...evidenceFor(e),
   }));
   const edges: VisualEdge[] = doc.interactions.map((r) => ({
     id: r.id,

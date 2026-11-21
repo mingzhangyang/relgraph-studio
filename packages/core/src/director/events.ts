@@ -2,6 +2,8 @@ import { displayNodeText } from '../project.js';
 import {
   compileTimeline,
   frameCount,
+  evidenceFrames,
+  evidenceShownSec,
   frameAtOrAfter,
   shotSettledSec,
   shotStartFrames,
@@ -118,9 +120,10 @@ export interface DomainTimeEvent extends EventBase {
 }
 
 /**
- * A shot shows an evidence card (ADR 004, D4) for its whole length. Only
- * items the shot may show are listed, so the event is as spoiler-safe as the
- * card.
+ * A shot's evidence card (ADR 004, D4) begins to fade in: once the camera has
+ * stopped and the card's object is half revealed; it lasts to the end of the
+ * shot. A card its shot ends before showing has no event. Only items the
+ * shot may show are listed, so the event is as spoiler-safe as the card.
  */
 export interface EvidenceEvent extends EventBase {
   type: 'evidence';
@@ -202,6 +205,8 @@ export function filmEvents(
   const lastFrameOf = (index: number): number =>
     index === shots.length - 1 ? total - 1 : starts[index + 1] - 1;
   const settled = shotSettledSec(timeline);
+  const cardFrames = evidenceFrames(timeline, total);
+  const shownSec = evidenceShownSec(timeline);
   // Everything a shot shows, in document order, as the projection gives it.
   // A shot shorter than a frame is never on screen: nothing it alone would
   // show (its id, title, highlight, caption, domain time) is an event.
@@ -289,10 +294,11 @@ export function filmEvents(
       fadeInSec: seconds(caption.fadeInSec),
       fadeOutSec: seconds(caption.fadeOutSec),
     });
-    if (shot.evidence)
+    const card = cardFrames[index];
+    if (shot.evidence && card?.shown)
       events.push({
-        frame,
-        sec: seconds(shot.startSec),
+        frame: card.first,
+        sec: seconds(shownSec[index] ?? shot.startSec),
         shot: index,
         type: 'evidence',
         id: shotId(index),

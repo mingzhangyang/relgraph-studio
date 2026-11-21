@@ -282,6 +282,11 @@ export const ENGLISH_DIAGNOSTICS: EnglishCatalogue = {
       'Could not convert data into a graph.',
       'Check the format, field types, and required fields.',
     ),
+    EVIDENCE_CARD_HIDDEN: wording(
+      (p) =>
+        `The evidence card waits until the camera has stopped and its object is half revealed (about ${p.shown} s into the shot), but the shot ends at ${p.end} s, so the card is never shown.`,
+      'Lengthen durationSec, or shorten transitionMs.',
+    ),
     CAPTION_READING_SPEED: wording(
       (p) =>
         `The shot's title and narration take about ${p.needed} s to read, but are fully shown for only ${p.shown} s.`,

@@ -1,7 +1,9 @@
 import { studioLanguage, uiText } from './i18n.js';
 import type { FrameText } from '@relgraph/render';
 import {
+  evidenceItems,
   evidenceLines,
+  linkableUrl,
   liveFrameDescription,
   sameTranscriptSemantics,
   snapshotTranscriptSemantics,
@@ -81,9 +83,30 @@ export function createTranscriptView(
           summary.textContent = a11y.detail.label + '：' + a11y.detail.summary;
           elements.transcript.append(heading, summary);
         }
-        const [subject, ...items] = evidenceLines(a11y.evidence, language);
-        if (subject !== undefined)
-          addList(uiText('当前证据') + (language === 'en' ? ': ' : '：') + subject, items);
+        if (a11y.evidence) {
+          // Each item as written; an http(s) source address is a link.
+          const heading = document.createElement('strong');
+          heading.textContent =
+            uiText('当前证据') + (language === 'en' ? ': ' : '：') + a11y.evidence.subject;
+          const list = document.createElement('ul');
+          for (const { text, url } of evidenceItems(a11y.evidence, language)) {
+            const item = document.createElement('li');
+            item.textContent = text;
+            if (url) {
+              const href = linkableUrl(url);
+              const address = document.createElement(href ? 'a' : 'span');
+              address.textContent = url;
+              if (href) {
+                address.setAttribute('href', href);
+                address.setAttribute('target', '_blank');
+                address.setAttribute('rel', 'noopener noreferrer');
+              }
+              item.append(' ', address);
+            }
+            list.append(item);
+          }
+          elements.transcript.append(heading, list);
+        }
         addList(uiText('当前可见节点'), a11y.nodes);
         addList(uiText('当前可见关系'), a11y.relations);
         previous = snapshotTranscriptSemantics(a11y);

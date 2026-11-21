@@ -2,7 +2,13 @@ import { compileTimeline, frameCount, layoutGraph, type Locale } from '@relgraph
 import { frameSpecFor, type FrameSpecName } from '@relgraph/render';
 import { createHeadlessRenderer } from '@relgraph/render/skia';
 import { formatDiagnostics, loadFile } from './document.js';
-import { authoredId, evidenceOverflows, type ShotEvidenceOverflow } from './evidence.js';
+import {
+  authoredId,
+  evidenceOverflows,
+  hiddenEvidenceCards,
+  type ShotEvidenceOverflow,
+  type ShotHiddenEvidence,
+} from './evidence.js';
 import {
   OmissionTally,
   sampleSettledFrames,
@@ -27,6 +33,8 @@ export interface CheckLabelsSummary {
   omittedLabels: ShotOmissions[];
   /** Evidence cards that do not fit and would make `relgraph render` fail (ADR 004, D4). */
   evidenceOverflows: ShotEvidenceOverflow[];
+  /** Evidence cards their shot ends before showing; `relgraph render` refuses these too. */
+  hiddenEvidence: ShotHiddenEvidence[];
 }
 
 /** A user-facing failure; `main` prints the message without a stack. */
@@ -64,6 +72,9 @@ export async function checkLabels(request: CheckLabelsRequest): Promise<CheckLab
     unsettled,
     omittedLabels: tally.report(),
     evidenceOverflows: evidenceOverflows(timeline, filmFrames, renderer.displayListAt, (kind, id) =>
+      authoredId(result, kind, id),
+    ),
+    hiddenEvidence: hiddenEvidenceCards(timeline, filmFrames, (kind, id) =>
       authoredId(result, kind, id),
     ),
   };

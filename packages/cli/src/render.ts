@@ -13,7 +13,13 @@ import { frameSpecFor, type FrameSpecName } from '@relgraph/render';
 import { createHeadlessRenderer, uncoveredCharacters } from '@relgraph/render/skia';
 import { documentStrings, formatDiagnostics, loadFile } from './document.js';
 import { graphEvents, writeAtomically } from './events.js';
-import { authoredId, evidenceOverflows, formatEvidenceOverflows } from './evidence.js';
+import {
+  authoredId,
+  evidenceOverflows,
+  formatEvidenceOverflows,
+  formatHiddenEvidence,
+  hiddenEvidenceCards,
+} from './evidence.js';
 import {
   audioLengthWarning,
   findFfmpeg,
@@ -223,8 +229,8 @@ export async function renderFilm(request: RenderRequest): Promise<RenderSummary>
   // the events come from the same layout and timeline the threads use.
   layoutGraph(graph);
   const events = request.events === undefined ? null : graphEvents(result, fps);
-  // An evidence card that does not fit is never cut or silently dropped:
-  // refuse before rendering anything (ADR 004, D4).
+  // An evidence card that does not fit, or that its shot ends before showing,
+  // is never cut or silently dropped: refuse before rendering (ADR 004, D4).
   const timeline = compileTimeline(graph, fps);
   if (timeline.shots.some((shot) => shot.evidence)) {
     const probe = createHeadlessRenderer(graph, layoutGraph(graph), {
@@ -236,7 +242,13 @@ export async function renderFilm(request: RenderRequest): Promise<RenderSummary>
     const overflows = evidenceOverflows(timeline, filmFrames, probe.displayListAt, (kind, id) =>
       authoredId(result, kind, id),
     );
-    if (overflows.length) throw new RenderError(`${formatEvidenceOverflows(overflows)}未渲染。`);
+    const hidden = hiddenEvidenceCards(timeline, filmFrames, (kind, id) =>
+      authoredId(result, kind, id),
+    );
+    if (overflows.length || hidden.length)
+      throw new RenderError(
+        `${formatEvidenceOverflows(overflows)}${formatHiddenEvidence(hidden)}未渲染。`,
+      );
   }
   const uncovered = uncoveredCharacters(documentStrings(JSON.parse(text)));
   if (uncovered.length)

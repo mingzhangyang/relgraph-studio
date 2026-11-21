@@ -1,5 +1,11 @@
 import { frameStateAt } from '../graph/core.js';
-import { captionOpacity, compileTimeline, revealStateAt, timelinePlaybackAt } from './timeline.js';
+import {
+  captionOpacity,
+  compileTimeline,
+  evidenceOpacity,
+  revealStateAt,
+  timelinePlaybackAt,
+} from './timeline.js';
 import type { FilmTimeline } from './timeline.js';
 // Defined beside compileTimeline, which needs it to tell which shots have frames.
 export { frameCount } from './timeline.js';
@@ -220,5 +226,6 @@ export function directorFrameAt(
     previousHighlight,
     reveal: revealStateAt(timeline, view, second),
     captionOpacity: captionOpacity(timeline, playback.index, second),
+    evidenceOpacity: state.evidence ? evidenceOpacity(timeline, playback.index, second) : 0,
   });
 }

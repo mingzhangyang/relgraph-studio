@@ -12,7 +12,7 @@ import {
   layoutIssueCount,
 } from './check-layout.js';
 import { formatOmissions } from './labels.js';
-import { formatEvidenceOverflows } from './evidence.js';
+import { formatEvidenceOverflows, formatHiddenEvidence } from './evidence.js';
 import { exportEvents, EventsError } from './events.js';
 
 export { parseCommand, USAGE, UsageError, type Command } from './args.js';
@@ -45,7 +45,10 @@ export {
 export {
   evidenceOverflows,
   formatEvidenceOverflows,
+  formatHiddenEvidence,
+  hiddenEvidenceCards,
   type ShotEvidenceOverflow,
+  type ShotHiddenEvidence,
 } from './evidence.js';
 export {
   formatOmissions,
@@ -151,7 +154,7 @@ export async function main(argv: readonly string[], io: Io = defaultIo): Promise
   if (command.command === 'check-labels') {
     try {
       const summary = await checkLabels({ ...command, log: io.stderr });
-      const { omittedLabels, unsettled, evidenceOverflows } = summary;
+      const { omittedLabels, unsettled, evidenceOverflows, hiddenEvidence } = summary;
       if (command.json) io.stdout(JSON.stringify(summary, null, 2) + '\n');
       else {
         io.stdout(
@@ -163,8 +166,9 @@ export async function main(argv: readonly string[], io: Io = defaultIo): Promise
         );
         io.stdout(formatOmissions(omittedLabels) || '没有标签被省略。\n');
         io.stdout(formatEvidenceOverflows(evidenceOverflows));
+        io.stdout(formatHiddenEvidence(hiddenEvidence));
       }
-      return omittedLabels.length || evidenceOverflows.length ? 1 : 0;
+      return omittedLabels.length || evidenceOverflows.length || hiddenEvidence.length ? 1 : 0;
     } catch (error) {
       if (!(error instanceof CheckError)) throw error;
       io.stderr('relgraph check-labels：' + error.message + '\n');

@@ -2,7 +2,7 @@ import type { EvidenceCard, VisualEvidence } from '@relgraph/core';
 import type { DisplayItem, EvidenceOverflow, FontRef, FrameText } from '../display-list.js';
 import { evidenceCardRegion } from '../frame-spec.js';
 import type { FrameContext } from './context.js';
-import { fitText, wrapAllText } from './text.js';
+import { wrapAllText } from './text.js';
 
 /** The card's lines, laid out from its top, in output pixels. */
 interface CardLine {
@@ -95,9 +95,9 @@ function layoutCard(
 /**
  * The shot's evidence card (ADR 004, D4), in the card region of the frame
  * spec, and its accessible text. The card shows each quotation exactly as
- * written followed by its citation, or a citation alone; it fades in and out
- * with the shot's caption and, like the detail card, waits for its object
- * to be half revealed. A card that does not fit is not drawn: the frame
+ * written followed by its citation, or a citation alone. It fades in once
+ * the camera has stopped and its object is half revealed, so it never
+ * covers its object, and out with the caption. A card that does not fit is not drawn: the frame
  * reports it in `evidenceOverflow` instead of cutting the text.
  */
 export function composeEvidenceCard(ctx: FrameContext): {
@@ -122,12 +122,16 @@ export function composeEvidenceCard(ctx: FrameContext): {
   };
   const textX = region.x + pad,
     textWidth = region.w - 2 * pad;
-  const contentTop = region.y + u(84);
+  // The subject wraps like the items and is never shortened: a long name
+  // takes lines from the items, and a card it leaves no room in overflows.
+  const subjectFont = serif(19, 600);
+  const subjectLines = wrapAllText(measure, subject, subjectFont, textWidth);
+  const subjectExtra = u(26) * Math.max(0, subjectLines.length - 1);
+  const contentTop = region.y + u(84) + subjectExtra;
   const laid = layoutCard(ctx, card, textWidth, region.y + region.h - u(20) - contentTop);
   if (!laid.lines) return { items: [], evidence, overflow: laid.overflow };
   // The card is as tall as its items, up to the whole region.
   const box = { ...region, h: Math.min(region.h, contentTop - region.y + laid.height + pad) };
-  const subjectFont = serif(19, 600);
   const cardItems: DisplayItem[] = [
     {
       type: 'path',
@@ -144,19 +148,19 @@ export function composeEvidenceCard(ctx: FrameContext): {
       font: sans(11, 600),
       fill: P.kicker,
     },
-    {
+    ...subjectLines.map((text, i): DisplayItem => ({
       type: 'text',
-      text: fitText(measure, subject, subjectFont, textWidth),
+      text,
       x: textX,
-      y: region.y + u(60),
+      y: region.y + u(60) + u(26) * i,
       font: subjectFont,
       fill: P.cardTitle,
-    },
+    })),
     {
       type: 'path',
       d: [
-        ['M', textX, region.y + u(72)],
-        ['L', textX + textWidth, region.y + u(72)],
+        ['M', textX, region.y + u(72) + subjectExtra],
+        ['L', textX + textWidth, region.y + u(72) + subjectExtra],
       ],
       stroke: P.cardStroke,
       width: u(1),
@@ -191,9 +195,9 @@ export function composeEvidenceCard(ctx: FrameContext): {
     });
   }
   closeRun();
-  const progress = card.object === 'node' ? ctx.nodeProgress(card.id) : ctx.edgeProgress(card.id);
-  const revealAlpha = progress >= 1 ? 1 : progress > 0.5 ? (progress - 0.5) * 2 : 0;
-  const alpha = Math.min(revealAlpha, ctx.captionAlpha);
+  // Core decides when the card may show: after the camera move that clears
+  // its object and once the object is half revealed (`evidenceShownSec`).
+  const alpha = ctx.state.evidenceOpacity ?? 1;
   if (alpha <= 0) return { items: [], evidence, overflow: null };
   return {
     items: alpha >= 1 ? cardItems : [{ type: 'group', alpha, items: cardItems }],

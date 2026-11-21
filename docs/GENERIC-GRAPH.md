@@ -122,8 +122,9 @@ citation alone or an object with the source text.
 - A string is a citation only (`"王维《送孟六归襄阳》"`); the Tang poet files
   write evidence this way and stay valid.
 - An object needs a non-empty `cite`. `quote` is verbatim source text;
-  `locator` says where in the work; `url` is kept for the accessible text and
-  the transcript but not drawn. Unknown keys are ignored. Every text is at
+  `locator` says where in the work; `url` is not drawn, but the accessible
+  text and the studio transcript give it (as a link there when it is an
+  `http` or `https` address). Unknown keys are ignored. Every text is at
   most 2,000 characters.
 - A shot shows one evidence card with `"evidence": { "edgeId": … }` or
   `{ "nodeId": … }`, using the ids you wrote. `items` lists the indices (from 0) of the items to show, in the order to show them; without it every item
@@ -133,18 +134,22 @@ citation alone or an object with the source text.
 The card shows each quotation exactly as written, marked by a rule, followed
 by its citation (`——cite · locator`), or the citation alone. Nothing else is
 written on it but `EVIDENCE` and what the card is about (the node's label, or
-the relation's two ends). There is no free-text card, and a project's display
-copy never changes card text. Lines break between words, around CJK
-characters and never before closing punctuation; nothing is shortened.
+the relation's two ends, wrapped over as many lines as it needs). There is no
+free-text card, and a project's display copy never changes card text. Lines
+break between words, around CJK characters and never before closing
+punctuation; nothing is shortened.
 
 In a landscape frame the card stands at the right of the graph area, as tall
 as its items. While it is shown, the camera frames the shot into the area to
 its left (the whole view, the shot's `fitIds` together with the card's node
 or relation ends, or the shot's `focusNodeId` while keeping those ends in
 view), so the card never covers what it is about. Its node or relation is
-highlighted for the whole shot. The card fades in and out with the caption
-and, like the detail card, appears once its node or relation is half
-revealed.
+highlighted for the whole shot. The card waits until the camera has finished
+moving to that framing and its node or relation is half revealed, then fades
+in over 0.3 seconds; it fades out with the caption. A shot that ends before
+then would never show its card: loading warns (`EVIDENCE_CARD_HIDDEN`),
+`relgraph render` refuses the film and `check-labels` reports it; lengthen the
+shot or shorten its `transitionMs`.
 
 | Relation card, dark                                             | Node card, light                                          |
 | --------------------------------------------------------------- | --------------------------------------------------------- |
@@ -153,8 +158,8 @@ revealed.
 The fictional data behind these frames is
 `tests/fixtures/evidence-cards.graph.json`.
 
-**No silent truncation.** When the items do not fit the card at the chosen
-frame spec, the card is not drawn: `relgraph render` refuses the film before
+**No silent truncation.** When the subject and items do not fit the card at
+the chosen frame spec, the card is not drawn: `relgraph render` refuses the film before
 writing anything, naming the shot, the node or relation and the first item
 that does not fit; `relgraph check-labels` reports the same and exits with
 status 1; the studio says so under the preview. Choosing fewer items or a
@@ -167,8 +172,9 @@ chapter) are left out before their time; a card that names such an item
 explicitly is withheld.
 
 Card text enters the frame's accessible text (`FrameText.evidence`), the
-studio transcript, and the film events (`evidence` events with the shot,
-`object`, `target` and the shown `items`). The literary format's relation
+studio transcript, and the film events (an `evidence` event on the frame the
+card begins to fade in, with the shot, `object`, `target` and the shown
+`items`). The literary format's relation
 quotations and the biology format's `{ source, recordId }` records map to the
 same evidence on the neutral graph; a shot `evidence` field for those two
 formats is not part of this step.

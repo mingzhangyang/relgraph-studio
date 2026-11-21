@@ -33,7 +33,7 @@ import {
 import { VIDEO_THEMES } from '../packages/render/src/theme.ts';
 import { main } from '../packages/cli/src/index.ts';
 import { renderFilm, RenderError } from '../packages/cli/src/render.ts';
-import { evidenceLines } from '../apps/studio/src/transcript-model.ts';
+import { evidenceLines, linkableUrl } from '../apps/studio/src/transcript-model.ts';
 import { evidenceOverflowText } from '../apps/studio/src/omitted-labels-view.ts';
 import { measure } from './helpers/display-list.mjs';
 import { makeStudio } from './helpers/studio-harness.mjs';
@@ -434,4 +434,177 @@ test('the studio transcript reads the card, and the notice names a card that doe
   assert.equal(evidenceOverflowText(null, 'zh-CN'), '');
   assert.match(evidenceOverflowText(overflow, 'zh-CN'), /证据卡片从证据序号 2 起放不下，未画出/);
   assert.match(evidenceOverflowText(overflow, 'en'), /does not fit from evidence index 2 on/);
+});
+
+// Review follow-ups (PR #60).
+
+/** Two pairs far apart: the first shot looks at the left pair, the second opens a card for the right one. */
+const pan = {
+  format: 'relgraph.graph/1',
+  nodes: [
+    { id: 'A', position: { x: -900, y: 0 } },
+    { id: 'B', position: { x: -800, y: 60 } },
+    { id: 'C', position: { x: 800, y: 0 } },
+    { id: 'D', position: { x: 900, y: 60 } },
+  ],
+  edges: [
+    { id: 'ab', source: 'A', target: 'B' },
+    { id: 'cd', source: 'C', target: 'D', evidence: [{ cite: '某书', quote: '二人同行。' }] },
+  ],
+  presentation: [
+    { id: 'left', title: '左', durationSec: 3, camera: { focusNodeId: 'A' } },
+    { id: 'right', title: '右', durationSec: 4, transitionMs: 1200, evidence: { edgeId: 'cd' } },
+  ],
+};
+
+test('the card waits for the camera: it never covers its relation, even mid-transition', () => {
+  for (const frameSpec of [spec, FRAME_SPECS['landscape-1080p']]) {
+    const { compose, state, starts, lastOf, positions, timeline } = film(pan, frameSpec);
+    const region = evidenceCardRegion(frameSpec);
+    const shot = timeline.shots[1];
+    const edge = shot.view.edges.find((e) => e.id === shot.evidence.id);
+    let covered = 0,
+      drawn = 0;
+    for (let frame = starts[1]; frame <= lastOf(1); frame++) {
+      const camera = state(frame).cameraResolved;
+      const xs = [edge.source, edge.target].map(
+        (id) => projectCameraPoint(positions.get(id), camera, frameSpec).x,
+      );
+      const underCard = xs.some((x) => x > region.x - EVIDENCE_CARD_GAP * frameSpec.typeScale);
+      const list = compose(frame);
+      const shown = drawnTexts(list).includes('EVIDENCE');
+      if (underCard) covered++;
+      if (shown) drawn++;
+      assert.ok(!(shown && underCard), `frame ${frame}: card drawn over its relation`);
+    }
+    // The pan does pass under the card region, and the card does appear.
+    assert.ok(covered > 0 && drawn > 0, `${covered} covered, ${drawn} drawn`);
+  }
+});
+
+test('a card waits for its relation to be half drawn and its first frame is the evidence event', () => {
+  const { graph, positions, compose, timeline, starts, lastOf, result } = film(fixture);
+  const events = filmEvents(graph, positions, 24, { authoredIds: result.authoredIds }).events;
+  for (const event of events.filter((e) => e.type === 'evidence')) {
+    const first = [...Array(lastOf(event.shot) - starts[event.shot] + 1).keys()]
+      .map((i) => starts[event.shot] + i)
+      .find((frame) => drawnTexts(compose(frame)).includes('EVIDENCE'));
+    assert.equal(event.frame, first, `shot ${event.shot}`);
+    assert.ok(event.sec > timeline.shots[event.shot].startSec);
+  }
+});
+
+test('a card its shot ends before showing is reported, never silently dropped', async () => {
+  const doc = clone(pan);
+  doc.presentation[1].durationSec = 1;
+  const result = loadDocument(doc);
+  assert.equal(result.valid, true);
+  const warning = result.warnings.find((w) => w.code === 'EVIDENCE_CARD_HIDDEN');
+  assert.ok(warning, JSON.stringify(result.warnings));
+  assert.equal(warning.path, '$.presentation[1].evidence');
+  const { graph, positions } = film(doc);
+  assert.ok(!filmEvents(graph, positions, 24).events.some((e) => e.type === 'evidence'));
+
+  const dir = mkdtempSync(join(tmpdir(), 'relgraph-hidden-card-'));
+  const file = join(dir, 'hidden.graph.json');
+  writeFileSync(file, JSON.stringify(doc));
+  await assert.rejects(
+    renderFilm({
+      file,
+      frames: join(dir, 'f', '%04d.png'),
+      frameSpec: 'landscape-720p',
+      theme: 'dark',
+      locale: 'zh-CN',
+      jobs: 1,
+    }),
+    (error) =>
+      error instanceof RenderError &&
+      /1 张证据卡片不会出现/.test(error.message) &&
+      /镜头 2\/2「右」：关系 cd 的证据卡片/.test(error.message),
+  );
+  assert.equal(existsSync(join(dir, 'f')), false);
+  const report = await run(['check-labels', file, '--json']);
+  assert.equal(report.code, 1);
+  assert.deepEqual(
+    JSON.parse(report.stdout).hiddenEvidence.map(({ shot, id, target }) => ({ shot, id, target })),
+    [{ shot: 1, id: 'right', target: 'cd' }],
+  );
+  // The pan itself, with its 4-second shot, shows its card.
+  assert.deepEqual(loadDocument(pan).warnings, []);
+});
+
+test('a long subject wraps in full and counts towards the fit', () => {
+  const name =
+    '一位名字非常非常长、需要两行以上才能写完的虚构人物，其全名在此完整列出以便区分同名者';
+  const doc = clone(fixture);
+  doc.nodes.find((node) => node.id === '戊').label = name;
+  const { compose, lastOf } = film(doc);
+  const list = compose(lastOf(3));
+  const drawn = drawnTexts(list);
+  assert.equal(list.evidenceOverflow, null);
+  const start = drawn.findIndex((text) => name.startsWith(text) && text.length > 1);
+  let joined = '';
+  for (let i = start; joined.length < name.length; i++) joined += drawn[i];
+  assert.equal(joined, name);
+  assert.ok(!drawn.some((text) => text.includes('…')));
+  assert.equal(list.a11y.evidence.subject, name);
+  // A subject that leaves no room for the items overflows instead of being cut.
+  doc.nodes.find((node) => node.id === '戊').label = '名'.repeat(400);
+  const crowded = film(doc).compose(lastOf(3));
+  assert.equal(crowded.evidenceOverflow?.item, 0);
+  assert.ok(!drawnTexts(crowded).includes('EVIDENCE'));
+});
+
+test('source addresses reach the accessible text and the transcript, as links only for http(s)', async () => {
+  const evidence = {
+    subject: '顾青 — 陆远',
+    items: [
+      { quote: '与顾子同登西岭。', cite: '陆远《山行记》', url: 'https://example.org/shanxing' },
+      { cite: '某书', url: 'javascript:alert(1)' },
+    ],
+  };
+  assert.deepEqual(evidenceLines(evidence, 'zh-CN'), [
+    '顾青 — 陆远',
+    '「与顾子同登西岭。」——陆远《山行记》 https://example.org/shanxing',
+    '某书 javascript:alert(1)',
+  ]);
+  assert.equal(linkableUrl('https://example.org/shanxing'), 'https://example.org/shanxing');
+  assert.equal(linkableUrl('javascript:alert(1)'), null);
+  assert.equal(linkableUrl('not a url'), null);
+
+  const fetcher = async () => ({ ok: true, text: async () => JSON.stringify(fixture) });
+  const app = makeStudio({ fetcher });
+  await app.ready;
+  const { lastOf } = film(fixture);
+  assert.equal(app.window.renderAt(lastOf(2)), true);
+  const transcript = app.node('transcript');
+  assert.match(transcript.textContent, /陆远《山行记》 https:\/\/example\.org\/shanxing/);
+  const links = [];
+  const walk = (node) => {
+    if (node?.tagName === 'A') links.push(node);
+    for (const child of node?.children ?? []) walk(child);
+  };
+  walk(transcript);
+  assert.deepEqual(
+    links.map((a) => [a.getAttribute('href'), a.getAttribute('rel'), a.textContent]),
+    [['https://example.org/shanxing', 'noopener noreferrer', 'https://example.org/shanxing']],
+  );
+  assert.match(app.node('sceneDescription').textContent, /https:\/\/example\.org\/shanxing/);
+});
+
+test('biology entity evidence is validated and mapped, without an evidence status', () => {
+  const doc = clone(biology);
+  const entity = doc.entities[0];
+  entity.evidence = [{ source: 'UniProt', recordId: 'P00533' }];
+  const result = loadDocument(doc);
+  assert.equal(result.valid, true, JSON.stringify(result.errors));
+  assert.deepEqual(result.graph.nodes.find((node) => node.id === entity.id).evidence, [
+    { cite: 'UniProt', locator: 'P00533' },
+  ]);
+  entity.evidence = [{ source: 'UniProt' }];
+  const invalid = loadDocument(doc);
+  assert.equal(invalid.valid, false);
+  assert.ok(
+    invalid.errors.some((e) => e.code === 'EVIDENCE_REF' && e.path === 'entities[0].evidence[0]'),
+  );
 });

@@ -1,4 +1,9 @@
-import { shotStartFrames, type AuthoredIds, type FilmTimeline } from '@relgraph/core';
+import {
+  evidenceFrames,
+  shotStartFrames,
+  type AuthoredIds,
+  type FilmTimeline,
+} from '@relgraph/core';
 import type { DisplayList, EvidenceOverflow } from '@relgraph/render';
 
 /**
@@ -63,5 +68,58 @@ export function formatEvidenceOverflows(report: readonly ShotEvidenceOverflow[])
     `错误：${report.length} 张证据卡片放不下。卡片不截断原文，放不下就不画：\n` +
     lines.join('\n') +
     '\n建议：用分镜的 evidence.items 只选部分条目，或改用较短的引文；这是数据作者的编辑决定。\n'
+  );
+}
+
+/**
+ * A shot whose evidence card is never drawn: the card waits until the camera
+ * has stopped and its object is half revealed, and the shot ends first.
+ */
+export interface ShotHiddenEvidence {
+  shot: number;
+  shots: number;
+  id?: string;
+  title: string;
+  object: 'node' | 'edge';
+  target: string;
+}
+
+/** The shots whose evidence card no frame shows (`evidenceFrames`). */
+export function hiddenEvidenceCards(
+  timeline: FilmTimeline,
+  filmFrames: number,
+  authored: (kind: 'nodes' | 'edges' | 'scenes', id: string) => string = (_, id) => id,
+): ShotHiddenEvidence[] {
+  const starts = shotStartFrames(timeline);
+  const frames = evidenceFrames(timeline, filmFrames);
+  return timeline.shots.flatMap((shot, index) => {
+    const last = index === timeline.shots.length - 1 ? filmFrames - 1 : starts[index + 1] - 1;
+    const card = frames[index];
+    // A shot no frame shows is not a hidden card: nothing of it is on screen.
+    if (!shot.evidence || !card || card.shown || last < starts[index]) return [];
+    return [
+      {
+        shot: index,
+        shots: timeline.shots.length,
+        ...(shot.scene.id === undefined ? {} : { id: authored('scenes', shot.scene.id) }),
+        title: shot.scene.title,
+        object: shot.evidence.object,
+        target: authored(shot.evidence.object === 'node' ? 'nodes' : 'edges', shot.evidence.id),
+      },
+    ];
+  });
+}
+
+/** The report as the CLI prints it; empty when every card is shown. */
+export function formatHiddenEvidence(report: readonly ShotHiddenEvidence[]): string {
+  if (!report.length) return '';
+  const lines = report.map(
+    (entry) =>
+      `  镜头 ${entry.shot + 1}/${entry.shots}「${entry.title}」：${entry.object === 'node' ? '节点' : '关系'} ${entry.target} 的证据卡片`,
+  );
+  return (
+    `错误：${report.length} 张证据卡片不会出现：卡片要等镜头移动结束、对象揭示过半才显示，而这些分镜在此之前就结束了：\n` +
+    lines.join('\n') +
+    '\n建议：延长这些分镜的 durationSec，或缩短 transitionMs。\n'
   );
 }

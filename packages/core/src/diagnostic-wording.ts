@@ -203,6 +203,11 @@ export const LOAD_WORDING = {
     (p) => `为首个分镜设置 ${p.field}，以避免提前显示未来对象。`,
   ),
   INVALID_DATA: wording('数据无法转换为图谱。', '检查文件格式、字段类型和必填字段后重试。'),
+  EVIDENCE_CARD_HIDDEN: wording(
+    (p) =>
+      `证据卡片要等镜头移动结束、对象揭示过半（约第 ${p.shown} 秒）才出现，但分镜在第 ${p.end} 秒就结束了，卡片不会显示。`,
+    '延长 durationSec，或缩短 transitionMs。',
+  ),
   CAPTION_READING_SPEED: wording(
     (p) => `分镜标题和旁白约需 ${p.needed} 秒读完，完整显示只有 ${p.shown} 秒。`,
     (p) => `把 durationSec 延长到至少 ${p.suggested} 秒，或缩短标题和旁白。`,

@@ -206,6 +206,11 @@ export interface DirectorFrameState extends FrameState {
   reveal: FrameReveal;
   /** Opacity of the current shot title and narration, 0–1. */
   captionOpacity: number;
+  /**
+   * Opacity of the shot's evidence card, 0–1: it fades in once the camera has
+   * stopped and its object is half revealed (`evidenceShownSec`).
+   */
+  evidenceOpacity: number;
 }
 
 /** Deterministic reveal progress, evaluated from a compiled timeline and frame index. */
