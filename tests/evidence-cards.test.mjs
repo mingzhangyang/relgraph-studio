@@ -848,3 +848,80 @@ test('a long timeline bar is zoomed out until it clears the card (PR #60, fourth
   assert.equal(native.evidenceCovers, null);
   assert.ok(drawnTexts(native).includes('EVIDENCE'));
 });
+
+/** The fifth review's case: eight self-loops on B, the card on the outermost (PR #60). */
+const loops = (card, camera) => ({
+  format: 'relgraph.graph/1',
+  nodes: [
+    { id: 'A', position: { x: -500, y: 0 } },
+    { id: 'B', position: { x: 500, y: 0 } },
+  ],
+  edges: Array.from({ length: 8 }, (_, i) => ({
+    id: `loop${i}`,
+    source: 'B',
+    target: 'B',
+    ...(`loop${i}` === card ? { evidence: [{ cite: 'Test', quote: '甲'.repeat(80) }] } : {}),
+  })),
+  presentation: [
+    {
+      id: 'loops',
+      title: '自环',
+      durationSec: 4,
+      ...(camera ? { camera } : {}),
+      evidence: { edgeId: card },
+    },
+  ],
+});
+
+test('a cited self-loop that reaches under the card withholds it; unobstructed loops show it', async () => {
+  const cardX = evidenceCardRegion(spec).x;
+  const loopReach = (list, id) =>
+    Math.max(
+      ...list.selection.find((e) => e.kind === 'edge' && e.id === id).points.map((p) => p.x),
+    );
+  // Focused on A, B sits at the right of the free area and loop7 reaches past it.
+  const blocked = film(loops('loop7', { focusNodeId: 'A' }));
+  const list = blocked.compose(blocked.lastOf(0));
+  assert.ok(loopReach(list, 'loop7') > cardX, `loop7 reaches ${loopReach(list, 'loop7')}`);
+  assert.deepEqual(list.evidenceCovers, { object: 'edge', id: 'loop7' });
+  assert.ok(!drawnTexts(list).includes('EVIDENCE'));
+  assert.ok(list.a11y.evidence, 'the card text stays accessible');
+  // Controls: the innermost loop with the same framing, and loop7 framed by the whole view.
+  for (const [card, camera] of [
+    ['loop0', { focusNodeId: 'A' }],
+    ['loop7', undefined],
+  ]) {
+    const clear = film(loops(card, camera));
+    const shown = clear.compose(clear.lastOf(0));
+    assert.equal(shown.evidenceCovers, null, card);
+    assert.ok(drawnTexts(shown).includes('EVIDENCE'), card);
+    assert.ok(loopReach(shown, card) < cardX, `${card} reaches ${loopReach(shown, card)}`);
+  }
+
+  // The CLI preflight reports it, and render refuses before writing anything.
+  const dir = mkdtempSync(join(tmpdir(), 'relgraph-loop-card-'));
+  const file = join(dir, 'loops.graph.json');
+  writeFileSync(file, JSON.stringify(loops('loop7', { focusNodeId: 'A' })));
+  const report = await run(['check-labels', file, '--json']);
+  assert.equal(report.code, 1);
+  assert.deepEqual(JSON.parse(report.stdout).evidenceCovering, [
+    { shot: 0, shots: 1, id: 'loops', title: '自环', object: 'edge', target: 'loop7' },
+  ]);
+  const text = await run(['check-labels', file]);
+  assert.match(text.stdout, /镜头 1\/1「自环」：关系 loop7 的证据卡片会盖住这条关系/);
+  await assert.rejects(
+    renderFilm({
+      file,
+      frames: join(dir, 'f', '%04d.png'),
+      frameSpec: 'landscape-720p',
+      theme: 'dark',
+      locale: 'zh-CN',
+      jobs: 1,
+    }),
+    (error) =>
+      error instanceof RenderError && /关系 loop7 的证据卡片会盖住这条关系/.test(error.message),
+  );
+  assert.equal(existsSync(join(dir, 'f')), false, 'nothing written');
+  assert.match(evidenceCoversText(list.evidenceCovers, 'zh-CN'), /会盖住它引证的关系/);
+  assert.match(evidenceCoversText(list.evidenceCovers, 'en'), /would cover the relation it cites/);
+});

@@ -7,7 +7,9 @@
 // The sweep varies what earlier reviews found one at a time: node shape
 // (compact, label-holding, timeline bars), geometry, the card shot's camera
 // (none, fitIds, focus, zoom), a transition from a distant node, card height,
-// label length, the card's object and the frame spec.
+// label length, the card's object and the frame spec; and cited self-loops,
+// whose route the camera does not know, so their card may be withheld - but
+// only with a report, never silently.
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { loadDocument } from '../packages/core/src/director/load.ts';
@@ -165,7 +167,7 @@ function strokeBoxes(points, width) {
 }
 
 /** Problems on one frame of a card shot; empty when the invariant holds. */
-function frameProblems(list, frameSpec, endLabels) {
+function frameProblems(list, frameSpec, endLabels, cited) {
   const region = evidenceCardRegion(frameSpec);
   const stage = list.items.find((item) => item.type === 'group' && item.clip);
   const plate = list.items
@@ -177,9 +179,9 @@ function frameProblems(list, frameSpec, endLabels) {
   const card = { x: plate.d[0][1], y: plate.d[0][2], w: plate.d[0][3], h: plate.d[0][4] };
   const problems = [];
   for (const entry of list.selection ?? []) {
-    if (entry.kind === 'node' && ['a', 'b', 'era'].includes(entry.id) && entry.box)
+    if (entry.kind === 'node' && cited.nodes.includes(entry.id) && entry.box)
       if (intersects(entry.box, card)) problems.push(`glyph ${entry.id}`);
-    if (entry.kind === 'edge' && entry.points)
+    if (entry.kind === 'edge' && entry.id === cited.edge && entry.points)
       if (strokeBoxes(entry.points, entry.width ?? 1).some((box) => intersects(box, card)))
         problems.push('relation stroke');
   }
@@ -199,7 +201,13 @@ function frameProblems(list, frameSpec, endLabels) {
   return { drawn: true, problems };
 }
 
-function checkFilm(name, doc, frameSpec) {
+/**
+ * `allowWithheld`: the camera knows nothing of a relation's route, so a
+ * self-loop that reaches under the card may make it withhold the card. That
+ * is allowed only when the frame reports it (`evidenceCovers`), never as a
+ * card that silently does not show.
+ */
+function checkFilm(name, doc, frameSpec, { allowWithheld = false } = {}) {
   const result = loadDocument(doc);
   assert.equal(result.valid, true, `${name}: ${JSON.stringify(result.errors)}`);
   const { graph } = result;
@@ -214,6 +222,12 @@ function checkFilm(name, doc, frameSpec) {
   const first = starts[index],
     last = total - 1;
   const endLabels = graph.nodes.map((node) => node.label);
+  const card = timeline.shots[index].evidence;
+  const edge = card.object === 'edge' ? graph.edges.find((e) => e.id === card.id) : null;
+  const cited = {
+    edge: edge?.id,
+    nodes: edge ? [edge.source, edge.target] : [card.id],
+  };
   const failures = new Set();
   let drawn = 0,
     lastList;
@@ -232,12 +246,12 @@ function checkFilm(name, doc, frameSpec) {
       detailAt: result.detailAt,
     });
     lastList = list;
-    const checked = frameProblems(list, frameSpec, endLabels);
+    const checked = frameProblems(list, frameSpec, endLabels, cited);
     if (checked.drawn) drawn++;
     for (const problem of checked.problems) failures.add(problem);
     if (f === last) break;
   }
-  if (!drawn)
+  if (!drawn && !(allowWithheld && lastList.evidenceCovers))
     failures.add(
       lastList.evidenceCovers
         ? `card withheld (covers ${lastList.evidenceCovers.node})`
@@ -267,9 +281,53 @@ function sweepCases() {
   return [...cases, ...timelineDocuments()];
 }
 
+/** Self-loops on the right-hand node: 1, 4 or 8 loops, the card on the last. */
+function loopCases() {
+  const cases = [];
+  for (const count of [1, 4, 8])
+    for (const [camera, settings] of Object.entries({
+      none: undefined,
+      focusLeft: { focusNodeId: 'a' },
+      focusLoop: { focusNodeId: 'b' },
+      zoom2: { zoom: 2 },
+    }))
+      for (const tall of [false, true])
+        cases.push({
+          name: `loops${count}/${camera}/${tall ? 'tall' : 'short'}-card`,
+          doc: {
+            format: 'relgraph.graph/1',
+            nodes: [
+              { id: 'a', label: '沈墨', position: { x: -500, y: 0 } },
+              { id: 'b', label: '顾青', position: { x: 500, y: 0 } },
+            ],
+            edges: Array.from({ length: count }, (_, i) => ({
+              id: `loop${i}`,
+              source: 'b',
+              target: 'b',
+              ...(i === count - 1 ? { label: TAG, evidence: tall ? TALL : ['某书'] } : {}),
+            })),
+            presentation: [
+              {
+                id: 'card',
+                title: '卡片',
+                durationSec: 4,
+                ...(settings ? { camera: settings } : {}),
+                evidence: { edgeId: `loop${count - 1}` },
+              },
+            ],
+          },
+        });
+  return cases;
+}
+
 for (const specName of ['landscape-720p', 'landscape-1080p'])
   test(`evidence card invariant over the parameter sweep (${specName})`, () => {
     const frameSpec = FRAME_SPECS[specName];
-    const failures = sweepCases().flatMap(({ name, doc }) => checkFilm(name, doc, frameSpec));
+    const failures = [
+      ...sweepCases().flatMap(({ name, doc }) => checkFilm(name, doc, frameSpec)),
+      ...loopCases().flatMap(({ name, doc }) =>
+        checkFilm(name, doc, frameSpec, { allowWithheld: true }),
+      ),
+    ];
     assert.deepEqual(failures, [], `${failures.length} failures:\n${failures.join('\n')}`);
   }, 120_000);
