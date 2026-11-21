@@ -1,5 +1,6 @@
 import { projectFrameScene } from '../graph/core.js';
 import type {
+  EvidenceCard,
   FrameScene,
   ProjectedVisualGraph,
   ResolvedHighlight,
@@ -57,6 +58,8 @@ export interface CompiledShot {
   scene: FrameScene;
   view: ProjectedVisualGraph;
   overlay: { nodeId: string } | null;
+  /** The evidence card, already projected (ADR 004, D4). */
+  evidence: EvidenceCard | null;
 }
 
 export interface FilmTimeline {
@@ -74,6 +77,11 @@ export interface FilmTimeline {
   captions: CaptionCue[];
   /** Pre-projected, safe shot payloads; no source scenes are retained. */
   shots: CompiledShot[];
+  /**
+   * When each shot's evidence card begins to fade in, or null without one
+   * (`evidenceShownSec`), computed once so frames only look it up.
+   */
+  cardShownSec: (number | null)[];
 }
 
 export const NODE_REVEAL_SEC = 0.6;
@@ -125,6 +133,7 @@ export function compileTimeline(graph: VisualGraph, fps = 24): FilmTimeline {
       scene,
       view: state.view,
       overlay: state.overlay,
+      evidence: state.evidence,
     };
     shots.push(shot);
     camera.push({
@@ -172,10 +181,12 @@ export function compileTimeline(graph: VisualGraph, fps = 24): FilmTimeline {
     reveal,
     captions,
     shots,
+    cardShownSec: [],
   };
   // Which shots have frames depends only on the shot tracks compiled above,
   // so the cues can follow the frames the film is rendered with.
   reveal.push(...revealCues(timeline, frameCount(graph, fps)));
+  timeline.cardShownSec = evidenceShownSec(timeline);
   return timeline;
 }
 
@@ -426,4 +437,75 @@ export function captionOpacity(timeline: FilmTimeline, sceneIndex: number, secon
   const fadeIn = cue.fadeInSec > 0 ? Math.max(0, second - cue.inSec) / cue.fadeInSec : 1;
   const fadeOut = cue.fadeOutSec > 0 ? (cue.outSec - second) / cue.fadeOutSec : 1;
   return clamp(Math.min(1, fadeIn, fadeOut));
+}
+
+/**
+ * When each shot's evidence card begins to fade in (ADR 004, D4), or null for
+ * a shot without one: once the camera has finished moving to the framing
+ * that leaves the card's object clear of the card (none for the first shot),
+ * and once the object is half revealed, as the detail card waits for its
+ * node. Until then the card could cover what it is about.
+ */
+export function evidenceShownSec(timeline: Omit<FilmTimeline, 'cardShownSec'>): (number | null)[] {
+  // The cues of the cards' objects only, by object: one pass over the cues.
+  const targets = new Set(
+    timeline.shots.flatMap((shot) =>
+      shot.evidence ? [`${shot.evidence.object}:${shot.evidence.id}`] : [],
+    ),
+  );
+  const cues = new Map<string, RevealCue[]>();
+  for (const cue of timeline.reveal) {
+    const key = `${cue.kind}:${cue.targetId}`;
+    if (targets.has(key)) cues.set(key, [...(cues.get(key) ?? []), cue]);
+  }
+  return timeline.shots.map((shot, index) => {
+    const card = shot.evidence;
+    if (!card) return null;
+    let shown = shot.startSec + (index > 0 ? timeline.camera[index].transitionSec : 0);
+    // The object's cue under way in this shot, if it is being revealed.
+    for (const cue of cues.get(`${card.object}:${card.id}`) ?? [])
+      if (cue.inSec < shot.endSec && (cue.outSec === undefined || cue.outSec > shot.startSec))
+        shown = Math.max(shown, cue.inSec + cue.durationSec / 2);
+    return shown;
+  });
+}
+
+/**
+ * Opacity (0–1) of shot `index`'s evidence card at `second`: it fades in over
+ * `CAPTION_FADE_SEC` from `evidenceShownSec` (as compiled into the timeline:
+ * a lookup, not a scan of the cues) and out with the caption.
+ */
+export function evidenceOpacity(
+  timeline: FilmTimeline,
+  index: number,
+  second: number,
+  shownSec: number | null = timeline.cardShownSec[index] ?? null,
+): number {
+  if (shownSec === null) return 0;
+  const fadeIn = clamp((second - shownSec) / CAPTION_FADE_SEC);
+  return Math.min(fadeIn, captionOpacity(timeline, index, second));
+}
+
+/**
+ * The frames, among those of its shot, on which each shot's evidence card is
+ * at least partly drawn; null for a shot without a card, and `shown: false`
+ * for a card the shot ends before showing (its transition or its object's
+ * reveal outlasts it).
+ */
+export function evidenceFrames(
+  timeline: FilmTimeline,
+  filmFrames: number,
+): ({ shown: true; first: number; last: number } | { shown: false } | null)[] {
+  const starts = shotStartFrames(timeline);
+  return timeline.shots.map((_, index) => {
+    const shown = timeline.cardShownSec[index] ?? null;
+    if (shown === null) return null;
+    const last = index === timeline.shots.length - 1 ? filmFrames - 1 : starts[index + 1] - 1;
+    // The first frame after the instant the fade starts, when it is past 0.
+    const first = Math.max(starts[index], Math.floor(shown * timeline.fps) + 1);
+    for (let frame = first; frame <= last; frame += 1)
+      if (evidenceOpacity(timeline, index, frame / timeline.fps, shown) > 0)
+        return { shown: true, first: frame, last };
+    return { shown: false };
+  });
 }

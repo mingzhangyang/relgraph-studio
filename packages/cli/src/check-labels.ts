@@ -3,6 +3,15 @@ import { frameSpecFor, type FrameSpecName } from '@relgraph/render';
 import { createHeadlessRenderer } from '@relgraph/render/skia';
 import { formatDiagnostics, loadFile } from './document.js';
 import {
+  authoredId,
+  evidenceOverflows,
+  evidenceCovering,
+  hiddenEvidenceCards,
+  type ShotEvidenceCovers,
+  type ShotEvidenceOverflow,
+  type ShotHiddenEvidence,
+} from './evidence.js';
+import {
   OmissionTally,
   sampleSettledFrames,
   settledFrameRanges,
@@ -24,6 +33,12 @@ export interface CheckLabelsSummary {
   /** Shots, counted from 0, that never settle: their transitions outlast them. */
   unsettled: number[];
   omittedLabels: ShotOmissions[];
+  /** Evidence cards that do not fit and would make `relgraph render` fail (ADR 004, D4). */
+  evidenceOverflows: ShotEvidenceOverflow[];
+  /** Evidence cards their shot ends before showing; `relgraph render` refuses these too. */
+  hiddenEvidence: ShotHiddenEvidence[];
+  /** Evidence cards that would cover their own node or relation end; `relgraph render` refuses these too. */
+  evidenceCovering: ShotEvidenceCovers[];
 }
 
 /** A user-facing failure; `main` prints the message without a stack. */
@@ -31,7 +46,8 @@ export class CheckError extends Error {}
 
 /**
  * Compose, without drawing, the first, middle and last settled frame of every
- * shot and report the labels they leave out (ADR 004, D1). Labels depend on
+ * shot and report the labels they leave out (ADR 004, D1), and the evidence
+ * cards that do not fit, which `relgraph render` refuses (D4). Labels depend on
  * the frame spec and, through relation captions, the locale; not on the theme.
  */
 export async function checkLabels(request: CheckLabelsRequest): Promise<CheckLabelsSummary> {
@@ -54,5 +70,19 @@ export async function checkLabels(request: CheckLabelsRequest): Promise<CheckLab
   const unsettled = settledFrameRanges(timeline, filmFrames).flatMap((range, shot) =>
     range.first > range.last ? [shot] : [],
   );
-  return { frames, shots: timeline.shots.length, unsettled, omittedLabels: tally.report() };
+  return {
+    frames,
+    shots: timeline.shots.length,
+    unsettled,
+    omittedLabels: tally.report(),
+    evidenceOverflows: evidenceOverflows(timeline, filmFrames, renderer.displayListAt, (kind, id) =>
+      authoredId(result, kind, id),
+    ),
+    hiddenEvidence: hiddenEvidenceCards(timeline, filmFrames, (kind, id) =>
+      authoredId(result, kind, id),
+    ),
+    evidenceCovering: evidenceCovering(timeline, filmFrames, renderer.displayListAt, (kind, id) =>
+      authoredId(result, kind, id),
+    ),
+  };
 }

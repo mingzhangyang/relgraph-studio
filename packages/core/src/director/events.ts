@@ -2,6 +2,7 @@ import { displayNodeText } from '../project.js';
 import {
   compileTimeline,
   frameCount,
+  evidenceFrames,
   frameAtOrAfter,
   shotSettledSec,
   shotStartFrames,
@@ -12,7 +13,7 @@ import type { AuthoredIds, ProjectedVisualGraph, VisualGraph } from '../../types
 
 /**
  * Film events, `relgraph.events/1` (ADR 004, D3): when each shot, caption,
- * reveal and domain-time step happens, on the frames the film is rendered
+ * evidence card (D4), reveal and domain-time step happens, on the frames the film is rendered
  * with, so music and other tracks can follow the picture without parsing the
  * graph. Everything is read from `compileTimeline`, which projects each shot
  * before collecting its tracks: an object, highlight or caption appears here
@@ -117,7 +118,26 @@ export interface DomainTimeEvent extends EventBase {
   unit?: string;
 }
 
-export type FilmEvent = ShotEvent | CaptionEvent | RevealEvent | DomainTimeEvent;
+/**
+ * A shot's evidence card (ADR 004, D4) begins to fade in: once the camera has
+ * stopped and the card's object is half revealed; it lasts to the end of the
+ * shot. A card its shot ends before showing has no event. Only items the
+ * shot may show are listed, so the event is as spoiler-safe as the card.
+ */
+export interface EvidenceEvent extends EventBase {
+  type: 'evidence';
+  /** The shot's id, as in its shot event. */
+  id: string | null;
+  object: 'node' | 'edge';
+  /** The node's or relation's id. */
+  target: string;
+  /** Indices of the items shown, into the object's evidence, in card order. */
+  items: number[];
+  lastFrame: number;
+  endSec: number;
+}
+
+export type FilmEvent = ShotEvent | CaptionEvent | RevealEvent | DomainTimeEvent | EvidenceEvent;
 
 export interface FilmEvents {
   format: typeof EVENTS_FORMAT;
@@ -141,7 +161,8 @@ const TYPE_ORDER: Record<FilmEvent['type'], number> = {
   shot: 0,
   'domain-time': 1,
   caption: 2,
-  reveal: 3,
+  evidence: 3,
+  reveal: 4,
 };
 
 type View = Pick<ProjectedVisualGraph, 'nodes' | 'edges'>;
@@ -183,6 +204,8 @@ export function filmEvents(
   const lastFrameOf = (index: number): number =>
     index === shots.length - 1 ? total - 1 : starts[index + 1] - 1;
   const settled = shotSettledSec(timeline);
+  const cardFrames = evidenceFrames(timeline, total);
+  const shownSec = timeline.cardShownSec;
   // Everything a shot shows, in document order, as the projection gives it.
   // A shot shorter than a frame is never on screen: nothing it alone would
   // show (its id, title, highlight, caption, domain time) is an event.
@@ -270,6 +293,21 @@ export function filmEvents(
       fadeInSec: seconds(caption.fadeInSec),
       fadeOutSec: seconds(caption.fadeOutSec),
     });
+    const card = cardFrames[index];
+    if (shot.evidence && card?.shown)
+      events.push({
+        frame: card.first,
+        sec: seconds(shownSec[index] ?? shot.startSec),
+        shot: index,
+        type: 'evidence',
+        id: shotId(index),
+        object: shot.evidence.object,
+        target:
+          shot.evidence.object === 'node' ? nodeId(shot.evidence.id) : edgeId(shot.evidence.id),
+        items: shot.evidence.items.map((item) => item.index),
+        lastFrame,
+        endSec: seconds(shot.endSec),
+      });
   }
 
   const reveal = (

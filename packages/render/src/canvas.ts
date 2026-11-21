@@ -2,10 +2,10 @@ import { materializeImages, browserImageFactory, type ImageFactory } from './ima
 import { compileTimeline, directorFrameAt, styleForGraph, localeFor } from '@relgraph/core';
 import type { DirectorFrameState, DomainStyle, VisualGraph } from '@relgraph/core';
 import { canvasTextMeasurer, drawDisplayList, type Canvas2D } from './backends/canvas2d.js';
+import { evidenceCameraFit } from './camera-fit.js';
 import { composeFrame, drawingStyle, type DetailLookup } from './compose.js';
 import type { DisplayList } from './display-list.js';
 import {
-  cameraFitFor,
   DEFAULT_FRAME_SPEC,
   frameSpecFor,
   type FrameSpec,
@@ -94,8 +94,16 @@ export function createCanvasRenderer(
   const palette = themeFor(theme);
   const spec = frameSpecFor(frameSpec);
   const rate = fps ?? spec.fps;
-  const fit = cameraFitFor(spec);
   const resolvedStyle = style ?? styleForGraph(graph);
+  // Glyph sizes let a card shot frame its node or relation clear of the card.
+  // The drawing's style follows the positions (an authoring drag moves them),
+  // so it is worked out once per composed frame, not once per glyph asked for.
+  let frameStyle: DomainStyle | undefined;
+  const fit = evidenceCameraFit(
+    spec,
+    graph,
+    () => (frameStyle ??= drawingStyle({ graph, positions, style: resolvedStyle })),
+  );
   const resolvedLocale = localeFor(locale);
   // Safe compilation depends on the input document, never on playback order.
   const timeline = compileTimeline(graph, rate);
@@ -103,6 +111,7 @@ export function createCanvasRenderer(
   canvas.width = spec.width;
   canvas.height = spec.height;
   function compose(frame: number): { state: DirectorFrameState; list: DisplayList } {
+    frameStyle = undefined;
     const evaluated = directorFrameAt(graph, positions, frame, rate, { fit, timeline });
     const state = cameraOverride
       ? { ...evaluated, cameraResolved: { ...cameraOverride } }

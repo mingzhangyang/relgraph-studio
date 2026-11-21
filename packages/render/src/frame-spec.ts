@@ -151,11 +151,41 @@ export function frameSpecFor(spec: FrameSpecName | FrameSpec | undefined): Reado
   return spec;
 }
 
+/**
+ * Where a landscape frame shows an evidence card (ADR 004, D4): the right of
+ * the graph safe area, the full height of it, reaching 10 reference pixels
+ * past its right edge like the detail card. The camera frames the graph into
+ * what is left, `EVIDENCE_CARD_GAP` short of the card, so the card never
+ * covers the nodes it is about.
+ */
+export function evidenceCardRegion(spec: FrameSpec): Rect {
+  const g = spec.safe.graph,
+    u = spec.typeScale;
+  const w = Math.min(EVIDENCE_CARD_WIDTH * u, g.w / 2);
+  return { x: g.x + g.w + 10 * u - w, y: g.y, w, h: g.h };
+}
+/** Width of the evidence card, in 720p reference pixels. */
+export const EVIDENCE_CARD_WIDTH = 370;
+/** Least space between the evidence card and the area the camera frames into. */
+export const EVIDENCE_CARD_GAP = 20;
+
 /** Camera fit extents in the 720p reference units used by core. */
-export const cameraFitFor = (spec: FrameSpec): CameraFit => ({
-  halfWidth: spec.safe.graph.w / 2 / spec.typeScale,
-  halfHeight: spec.safe.graph.h / 2 / spec.typeScale,
-});
+export const cameraFitFor = (spec: FrameSpec): CameraFit => {
+  const g = spec.safe.graph,
+    u = spec.typeScale;
+  const card = evidenceCardRegion(spec);
+  const free = { x: g.x, w: Math.max(u, card.x - EVIDENCE_CARD_GAP * u - g.x) };
+  return {
+    halfWidth: g.w / 2 / u,
+    halfHeight: g.h / 2 / u,
+    card: {
+      halfWidth: free.w / 2 / u,
+      halfHeight: g.h / 2 / u,
+      offsetX: (free.x + free.w / 2 - (g.x + g.w / 2)) / u,
+      offsetY: 0,
+    },
+  };
+};
 
 /** Screen position of the camera centre. */
 export const cameraCenterFor = (spec: FrameSpec): { x: number; y: number } => ({

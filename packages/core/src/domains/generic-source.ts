@@ -24,6 +24,7 @@ import { lanedNodes, sourceKeepsTime, timeCoordinate } from '../director/time-an
 import type {
   AuthoredIds,
   VisualEdge,
+  VisualEvidence,
   VisualGroup,
   VisualNode,
   VisualScene,
@@ -141,6 +142,7 @@ interface Reader {
   number(value: unknown, path: string, id: unknown): number | undefined;
   visibility(item: Raw, path: string, id: unknown): Visibility | undefined;
   kindName(value: unknown, fallback: string, path: string, id: unknown): string;
+  evidence(value: unknown, path: string, id: unknown): VisualEvidence[] | undefined;
 }
 
 function reader(errors: GenericDiagnostic[], warnings: GenericDiagnostic[]): Reader {
@@ -184,6 +186,48 @@ function reader(errors: GenericDiagnostic[], warnings: GenericDiagnostic[]): Rea
       return from === undefined && to === undefined
         ? undefined
         : { ...(from === undefined ? {} : { from }), ...(to === undefined ? {} : { to }) };
+    },
+    evidence(value, path, id) {
+      if (value === undefined || value === null) return undefined;
+      if (!Array.isArray(value)) {
+        fail('EVIDENCE.type', path, id);
+        return undefined;
+      }
+      // Shown verbatim on evidence cards: only surrounding space is trimmed.
+      const text = (v: unknown): string | null | undefined =>
+        v === undefined || v === null
+          ? undefined
+          : typeof v === 'string' && v.trim() && v.length <= GENERIC_LIMITS.text
+            ? v.trim()
+            : null;
+      const items: VisualEvidence[] = [];
+      value.forEach((entry: unknown, i) => {
+        const at = `${path}[${i}]`;
+        if (typeof entry === 'string') {
+          const cite = text(entry);
+          if (cite) items.push({ cite });
+          else fail('EVIDENCE.item', at, id, { limit: GENERIC_LIMITS.text });
+          return;
+        }
+        const record = object(entry) ? entry : null;
+        const cite = record && text(record.cite),
+          quote = record && text(record.quote),
+          url = record && text(record.url),
+          locator = record && text(record.locator);
+        if (!record || !cite || quote === null || url === null || locator === null) {
+          fail('EVIDENCE.item', at, id, { limit: GENERIC_LIMITS.text });
+          return;
+        }
+        items.push({
+          cite,
+          ...(quote ? { quote } : {}),
+          ...(url ? { url } : {}),
+          ...(locator ? { locator } : {}),
+        });
+      });
+      // Indices name items in shots, so an invalid item keeps the file invalid
+      // rather than shifting the ones after it.
+      return items.length ? items : undefined;
     },
     kindName(value, fallback, path, id) {
       if (value === undefined || value === null) return fallback;
@@ -383,13 +427,16 @@ interface ParsedNodes {
   sourceIds: Map<string, string>;
   /** Lane-only positions (`{ "y": … }`), resolved once the whole source is read. */
   lanes: Map<string, { y: number; index: number }>;
+  /** How many evidence items each node's source lists, valid or not; -1 for a field that is not a list. */
+  evidenceLengths: Map<string, number>;
 }
 function parseNodes(rawNodes: unknown[], ids: Ids, r: Reader): ParsedNodes {
   const nodes: ParsedGenericSource['nodes'] = [];
   const seen = new Set<string>(),
     weights = new Map<string, number>(),
     sourceIds = new Map<string, string>(),
-    lanes = new Map<string, { y: number; index: number }>();
+    lanes = new Map<string, { y: number; index: number }>(),
+    evidenceLengths = new Map<string, number>();
   rawNodes.forEach((n, i) => {
     const raw = object(n) ? rawId(n.id) : rawId(n);
     if (raw === null || seen.has(raw)) return;
@@ -407,6 +454,9 @@ function parseNodes(rawNodes: unknown[], ids: Ids, r: Reader): ParsedNodes {
       else weights.set(id, weight);
     }
     const summary = r.text(record.summary, path + '.summary', raw);
+    const evidence = r.evidence(record.evidence, path + '.evidence', raw);
+    if (record.evidence != null)
+      evidenceLengths.set(id, Array.isArray(record.evidence) ? record.evidence.length : -1);
     // A span on the time axis. It never hides the node; it also is when the
     // node first appears unless visibleFrom says otherwise.
     const start = r.number(record.start, path + '.start', raw),
@@ -448,9 +498,10 @@ function parseNodes(rawNodes: unknown[], ids: Ids, r: Reader): ParsedNodes {
         ? {}
         : { span: { from: start, ...(end === undefined ? {} : { to: end }) } }),
       ...(summary ? { summary } : {}),
+      ...(evidence ? { evidence } : {}),
     });
   });
-  return { nodes, seen, weights, sourceIds, lanes };
+  return { nodes, seen, weights, sourceIds, lanes, evidenceLengths };
 }
 
 interface ParsedEdges {
@@ -463,6 +514,8 @@ interface ParsedEdges {
   lookup: Map<string, string>;
   /** Author relation id → internal id, only for relations that have an id in the source. */
   authored: Map<string, string>;
+  /** How many evidence items each relation's source lists, valid or not; -1 for a field that is not a list. */
+  evidenceLengths: Map<string, number>;
 }
 function parseEdges(
   rawEdges: unknown[],
@@ -477,7 +530,8 @@ function parseEdges(
   const explicitEdgeIds = internalIds(edgeRaw.filter((id): id is string => id !== null));
   const usedEdgeIds = new Set(explicitEdgeIds.values());
   const edgeSeen = new Set<string>(),
-    strengths = new Map<string, number>();
+    strengths = new Map<string, number>(),
+    evidenceLengths = new Map<string, number>();
   const implicit: string[] = [];
   rawEdges.forEach((e, i) => {
     if (!object(e)) return;
@@ -516,11 +570,15 @@ function parseEdges(
       if (weight < 0) r.fail('WEIGHT', path + '.weight', raw ?? '');
       else strengths.set(id, weight);
     }
+    const evidence = r.evidence(e.evidence, path + '.evidence', raw ?? '');
+    if (e.evidence != null)
+      evidenceLengths.set(id, Array.isArray(e.evidence) ? e.evidence.length : -1);
     edges.push({
       id,
       source,
       target,
       kind,
+      ...(evidence ? { evidence } : {}),
       label: r.text(e.label, path + '.label', raw ?? ''),
       directed:
         typeof e.directed === 'boolean' ? e.directed : (kindDirected.get(kind) ?? defaultDirected),
@@ -529,7 +587,7 @@ function parseEdges(
   });
   const lookup = new Map<string, string>([...explicitEdgeIds]);
   for (const edge of edges) if (!lookup.has(edge.id)) lookup.set(edge.id, edge.id);
-  return { edges, strengths, implicit, lookup, authored: explicitEdgeIds };
+  return { edges, strengths, implicit, lookup, authored: explicitEdgeIds, evidenceLengths };
 }
 
 /** Visual hierarchy: authored weights, otherwise how connected a node is. */
@@ -598,6 +656,8 @@ function parseScenes(
   r: Reader,
   /** Filled with internal shot id → the shot's name in the source (authored or positional). */
   names: Map<string, string>,
+  /** How many evidence items each node and relation lists, by internal id. */
+  evidenceCount: { nodes: ReadonlyMap<string, number>; edges: ReadonlyMap<string, number> },
 ): VisualScene[] {
   const scenes: VisualScene[] = [];
   // A shot without an id is named after its place in the film. The name
@@ -680,6 +740,43 @@ function parseScenes(
       fit = camera ? refs(camera.fitIds, ids.nodes, 'camera.fitIds') : undefined;
     // One shot looks at one thing: a node, or the frame around several.
     if (focus !== undefined && fit?.length) r.fail('CAMERA_CONFLICT', path + '.camera', raw);
+    const detail = ref(s.openDetailNodeId, ids.nodes, 'openDetailNodeId');
+    const evidence = evidenceRef(s.evidence);
+    function evidenceRef(value: unknown): VisualScene['evidence'] {
+      if (value === undefined || value === null) return undefined;
+      const at = path + '.evidence';
+      if (!object(value) || (value.nodeId == null) === (value.edgeId == null)) {
+        r.fail('SCENE_EVIDENCE.target', at, raw);
+        return undefined;
+      }
+      const isNode = value.nodeId != null;
+      const id = isNode
+        ? ref(value.nodeId, ids.nodes, 'evidence.nodeId')
+        : ref(value.edgeId, edgeLookup, 'evidence.edgeId');
+      if (id === undefined) return undefined;
+      const count = (isNode ? evidenceCount.nodes : evidenceCount.edges).get(id) ?? 0;
+      // An evidence field that is not a list is reported where it is written.
+      if (count < 0) return undefined;
+      if (!count) {
+        r.fail('SCENE_EVIDENCE.empty', at, raw);
+        return undefined;
+      }
+      let items: number[] | undefined;
+      if (value.items !== undefined && value.items !== null) {
+        const list = value.items;
+        if (
+          !Array.isArray(list) ||
+          !list.length ||
+          list.some((n, j) => !Number.isInteger(n) || n < 0 || n >= count || list.indexOf(n) !== j)
+        ) {
+          r.fail('SCENE_EVIDENCE.items', at + '.items', raw, { last: count - 1 });
+          return undefined;
+        }
+        items = [...(list as number[])];
+      }
+      if (detail !== undefined) r.fail('SCENE_EVIDENCE.card', at, raw);
+      return { ...(isNode ? { nodeId: id } : { edgeId: id }), ...(items ? { items } : {}) };
+    }
     scenes.push({
       id: sceneIds.get(raw)!,
       title: r.text(s.title, path + '.title', raw) ?? `${i + 1}`,
@@ -697,7 +794,8 @@ function parseScenes(
             groupId: ref(highlight.groupId, ids.groups, 'highlight.groupId'),
           }
         : undefined,
-      openDetailNodeId: ref(s.openDetailNodeId, ids.nodes, 'openDetailNodeId'),
+      openDetailNodeId: detail,
+      ...(evidence ? { evidence } : {}),
     });
   });
   return scenes;
@@ -790,7 +888,7 @@ export function parseGenericSource(
   const groups = parseGroups(raw.groups, ids, r);
   const parsedNodes = parseNodes(raw.nodes, ids, r);
   const { nodes, weights, sourceIds } = parsedNodes;
-  const { edges, strengths, implicit, lookup, authored } = parseEdges(
+  const { edges, strengths, implicit, lookup, authored, evidenceLengths } = parseEdges(
     raw.edges,
     ids,
     parsedNodes.seen,
@@ -807,7 +905,10 @@ export function parseGenericSource(
   rankHierarchy(nodes, edges, weights, strengths);
   const { meta, timeline } = parseMeta(doc, r);
   const sceneNames = new Map<string, string>();
-  const scenes = parseScenes(raw.scenes, ids, lookup, r, sceneNames);
+  const scenes = parseScenes(raw.scenes, ids, lookup, r, sceneNames, {
+    nodes: parsedNodes.evidenceLengths,
+    edges: evidenceLengths,
+  });
   if (implicit.length && raw.nodes.length)
     r.warn('IMPLICIT_NODES', 'edges', '', { count: implicit.length });
   const title = r.text(meta.title, 'meta.title', '') ?? '关系图';

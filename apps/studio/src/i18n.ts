@@ -136,6 +136,7 @@ const english: Record<string, string> = {
   提示: 'Notice',
   '检查数据并重试。': 'Check the data and try again.',
   当前人物简介: 'Current character profile',
+  当前证据: 'Current evidence',
   当前可见关系: 'Currently visible relationships',
   '没有已加载的有效数据。': 'No valid data is loaded.',
   '跳转至分镜 ': 'Jump to shot ',

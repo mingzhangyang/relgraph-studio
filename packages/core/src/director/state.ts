@@ -1,10 +1,17 @@
 import { frameStateAt } from '../graph/core.js';
-import { captionOpacity, compileTimeline, revealStateAt, timelinePlaybackAt } from './timeline.js';
+import {
+  captionOpacity,
+  compileTimeline,
+  evidenceOpacity,
+  revealStateAt,
+  timelinePlaybackAt,
+} from './timeline.js';
 import type { FilmTimeline } from './timeline.js';
 // Defined beside compileTimeline, which needs it to tell which shots have frames.
 export { frameCount } from './timeline.js';
 import type {
   DirectorFrameState,
+  EvidenceCard,
   FrameState,
   ProjectedVisualGraph,
   ResolvedHighlight,
@@ -26,6 +33,22 @@ declare function structuredClone<T>(value: T): T;
 export interface CameraFit {
   halfWidth: number;
   halfHeight: number;
+  /**
+   * The part of the area left free while an evidence card holds the rest
+   * (ADR 004, D4): its half extents and its centre's offset from the whole
+   * area's centre, in the same reference pixels. Without it a card shot is
+   * framed like any other.
+   */
+  card?: { halfWidth: number; halfHeight: number; offsetX: number; offsetY: number };
+  /**
+   * Half extents, in the same reference pixels, of a node's glyph as drawn at
+   * a camera scale, stroke included; never smaller at a larger scale. The
+   * renderer supplies it (`evidenceCameraFit`) so the card's node or relation
+   * ends are framed clear of the card by their outlines, not just their
+   * centres, while core knows nothing of shapes. Without it a glyph counts as
+   * `CARD_END_MARGIN`.
+   */
+  glyphExtent?: (nodeId: string, cameraScale: number) => { halfWidth: number; halfHeight: number };
 }
 export interface DirectorFrameOptions {
   fit?: CameraFit;
@@ -35,6 +58,9 @@ export interface DirectorFrameOptions {
 export const DEFAULT_CAMERA_FIT: Readonly<CameraFit> = Object.freeze({
   halfWidth: 550,
   halfHeight: 195,
+  // The landscape card region: the right 370 of the 1100 × 390 area plus its
+  // 10-pixel overhang, with a 20-pixel gap to the graph (cameraFitFor).
+  card: Object.freeze({ halfWidth: 360, halfHeight: 195, offsetX: -190, offsetY: 0 }),
 });
 
 const clamp = (n: number, min = 0, max = 1): number => Math.max(min, Math.min(max, n));
@@ -44,16 +70,44 @@ const ease = (t: number): number => {
 };
 const mix = (a: number, b: number, t: number): number => a * (1 - t) + b * t;
 
+/**
+ * Half extents, in reference pixels, assumed for an evidence card's node or
+ * relation ends when the renderer gives no glyph sizes: a compact glyph's
+ * radius and outline, as the focus framing keeps for highlighted nodes.
+ */
+const CARD_END_MARGIN = Object.freeze({ x: 40, y: 35 });
+/** Space kept between a measured glyph outline and the edge of the free area. */
+const CARD_END_GAP = 6;
+
+/**
+ * The nodes an evidence card is about, among those in view: its node, or its
+ * relation's two ends. The camera keeps them in the area the card leaves free.
+ */
+function cardEnds(view: ProjectedVisualGraph, card: EvidenceCard | null): string[] {
+  if (!card) return [];
+  if (card.object === 'node') return [card.id];
+  const edge = view.edges.find((e) => e.id === card.id);
+  return edge ? [...new Set([edge.source, edge.target])] : [];
+}
+
 function cameraFor(
   view: ProjectedVisualGraph,
   spec: VisualCamera,
   positions: ReadonlyMap<string, Position>,
   highlight: ResolvedHighlight,
-  fit: CameraFit,
+  fullFit: CameraFit,
+  card: EvidenceCard | null = null,
 ): { x: number; y: number; scale: number } {
   const visible = new Set(view.nodes.map((node) => node.id));
+  const ends = cardEnds(view, card).filter((id) => visible.has(id));
+  // A card takes part of the area: frame into what it leaves free.
+  const area = (card && fullFit.card) || { ...fullFit, offsetX: 0, offsetY: 0 };
+  const fit = { halfWidth: area.halfWidth, halfHeight: area.halfHeight };
   const requested = spec.focusNodeId ? [spec.focusNodeId] : spec.fitIds || [];
   const selected = requested.filter((id) => visible.has(id));
+  // A framing of chosen nodes also frames the card's object.
+  if (selected.length && !spec.focusNodeId)
+    for (const id of ends) if (!selected.includes(id)) selected.push(id);
   const ids = selected.length ? selected : view.nodes.map((node) => node.id);
   const points = ids.map((id) => positions.get(id)).filter((p): p is Position => Boolean(p));
   if (!points.length) return { x: 0, y: 0, scale: 1 };
@@ -72,7 +126,7 @@ function cameraFor(
   // A focus shot should not clip other explicitly highlighted nodes. Preserve
   // its center and reduce zoom only as much as the safe area requires.
   if (spec.focusNodeId && selected.length) {
-    const focused = (highlight?.nodeIds || [])
+    const focused = [...(highlight?.nodeIds || []), ...ends]
       .filter((id) => visible.has(id))
       .map((id) => positions.get(id))
       .filter((p): p is Position => Boolean(p));
@@ -86,8 +140,58 @@ function cameraFor(
       );
     }
   }
+  // Whatever the shot's zoom, the card's node or relation ends stay inside
+  // the area the card leaves free, with room for their glyphs: an authored
+  // zoom may not push them under the card.
+  // Each end's outline must fit: |offset| × scale + its half extent ≤ the
+  // free half extent, in both directions. A glyph's extent may grow with the
+  // scale (a timeline bar is as long as its years at that scale), but never
+  // shrinks as it grows, so the ends fit at every scale up to the largest
+  // that fits: found by bisection when the shot's own scale is too large.
+  if (ends.length) {
+    const placed = ends.flatMap((id) => {
+      const p = positions.get(id);
+      return p
+        ? [{ id, halfDx: Math.abs(p.x / 2 - x / 2), halfDy: Math.abs(p.y / 2 - y / 2) }]
+        : [];
+    });
+    const fits = (s: number): boolean =>
+      placed.every(({ id, halfDx, halfDy }) => {
+        const extent = fullFit.glyphExtent?.(id, s);
+        const reach = extent
+          ? { x: extent.halfWidth + CARD_END_GAP, y: extent.halfHeight + CARD_END_GAP }
+          : CARD_END_MARGIN;
+        return (
+          2 * halfDx * s + reach.x <= fit.halfWidth && 2 * halfDy * s + reach.y <= fit.halfHeight
+        );
+      });
+    const shot = clamp(scale, Number.MIN_VALUE, 1.6);
+    if (!fits(shot)) {
+      // Search six orders of magnitude below the shot's scale. If even the
+      // smallest does not fit (a label-holding glyph wider than the free
+      // area), the scale is left alone and the renderer withholds the card.
+      let low = shot * 1e-6,
+        high = shot;
+      if (fits(low)) {
+        for (let step = 0; step < 48; step++) {
+          const mid = Math.sqrt(low * high);
+          if (fits(mid)) low = mid;
+          else high = mid;
+        }
+        scale = low;
+      }
+    }
+  }
   // Do not clamp away a necessary zoom-out for widely separated coordinates.
-  return { x, y, scale: clamp(scale, Number.MIN_VALUE, 1.6) };
+  const clamped = clamp(scale, Number.MIN_VALUE, 1.6);
+  // The camera centre is the whole area's centre: shift it so the framed
+  // nodes sit in the centre of the part the card leaves free.
+  const shifted = (centre: number, offset: number): number => {
+    if (!offset) return centre;
+    const value = centre - offset / clamped;
+    return Number.isFinite(value) ? value : centre;
+  };
+  return { x: shifted(x, area.offsetX), y: shifted(y, area.offsetY), scale: clamped };
 }
 
 /** Every value comes from the requested frame and its compiled, projected tracks. */
@@ -122,8 +226,9 @@ export function directorFrameAt(
     camera: cameraSpec,
     highlight,
     overlay: shot?.overlay ?? fallback?.overlay ?? null,
+    evidence: shot?.evidence ?? null,
   };
-  const target = cameraFor(view, cameraSpec, positions, highlight, fit);
+  const target = cameraFor(view, cameraSpec, positions, highlight, fit, state.evidence);
   let camera = target,
     transition = 1;
   let previousHighlight: ResolvedHighlight = { nodeIds: [], edgeIds: [], groupId: null };
@@ -160,6 +265,7 @@ export function directorFrameAt(
       positions,
       previousHighlight,
       fit,
+      previousShot.evidence,
     );
     const duration = timeline.camera[playback.index].transitionSec;
     transition = duration <= 0 ? 1 : ease(playback.elapsedSec / duration);
@@ -180,5 +286,6 @@ export function directorFrameAt(
     previousHighlight,
     reveal: revealStateAt(timeline, view, second),
     captionOpacity: captionOpacity(timeline, playback.index, second),
+    evidenceOpacity: state.evidence ? evidenceOpacity(timeline, playback.index, second) : 0,
   });
 }

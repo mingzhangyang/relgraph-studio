@@ -3,6 +3,7 @@ import { validateVisualGraph } from '../graph/core.js';
 import type {
   VisualCamera,
   VisualEdge,
+  VisualEvidence,
   VisualGraph,
   VisualHighlight,
   VisualNode,
@@ -21,7 +22,12 @@ const describeId = (value: unknown): string => {
   }
 };
 
-type BiologyItem = { id: string; visibleFrom?: number; visibleTo?: number };
+type BiologyItem = {
+  id: string;
+  visibleFrom?: number;
+  visibleTo?: number;
+  evidence?: { source: string; recordId: string }[];
+};
 type BioVisual = BiologyItem & {
   compartmentId?: string | null;
   importance?: number;
@@ -319,6 +325,11 @@ export function validateBiologyDocument(doc: unknown): {
         'Curated claim needs sources',
         'Provide verifiable source records and identifiers.',
       );
+    records(rec, path);
+  };
+  // Source records alone: entities may cite them without an evidence status,
+  // which belongs to claims (interactions and processes).
+  const records = (rec: Record<string, unknown>, path: string) => {
     if (rec.evidence !== undefined && !Array.isArray(rec.evidence))
       fail(
         'EVIDENCE_REF',
@@ -406,6 +417,7 @@ export function validateBiologyDocument(doc: unknown): {
       );
     visual(e, path);
     interval(e.visibleFrom, e.visibleTo, path + '.visibility', e.id);
+    records(e, path);
   });
   collections.interactions.forEach((r, i) => {
     const path = 'interactions[' + i + ']';
@@ -655,6 +667,16 @@ export function adaptBiologyDocument(input: unknown) {
   if (!isBiologyDocument(input))
     throw Object.assign(new Error('Invalid biological document'), { issues: diagnostics.errors });
   const doc = input;
+  // A source record is cited by its database or publication and located by its record id.
+  const evidenceFor = (o: BiologyItem): { evidence?: VisualEvidence[] } =>
+    o.evidence?.length
+      ? {
+          evidence: o.evidence.map((ev) => ({
+            cite: ev.source.trim(),
+            locator: ev.recordId.trim(),
+          })),
+        }
+      : {};
   const windowFor = (o: BiologyItem): Visibility | undefined =>
     o.visibleFrom !== undefined || o.visibleTo !== undefined
       ? { from: o.visibleFrom, to: o.visibleTo }
@@ -676,6 +698,7 @@ export function adaptBiologyDocument(input: unknown) {
     color: e.color,
     position: e.position ? { ...e.position } : undefined,
     visibility: windowFor(e),
+    ...evidenceFor(e),
   }));
   const edges: VisualEdge[] = doc.interactions.map((r) => ({
     id: r.id,
@@ -685,6 +708,7 @@ export function adaptBiologyDocument(input: unknown) {
     label: r.label || r.kind,
     directed: r.kind !== 'physical-association',
     visibility: windowFor(r),
+    ...evidenceFor(r),
   }));
   for (const p of doc.processes) {
     const id = 'bio:process:' + p.id;
@@ -697,6 +721,7 @@ export function adaptBiologyDocument(input: unknown) {
       color: p.color,
       position: p.position ? { ...p.position } : undefined,
       visibility: windowFor(p),
+      ...evidenceFor(p),
     });
     for (const part of p.reactants) {
       const alias = p.id + '-input-' + part.entityId;

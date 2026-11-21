@@ -10,9 +10,18 @@ import {
   type Locale,
 } from '@relgraph/core';
 import { frameSpecFor, type FrameSpecName } from '@relgraph/render';
-import { uncoveredCharacters } from '@relgraph/render/skia';
+import { createHeadlessRenderer, uncoveredCharacters } from '@relgraph/render/skia';
 import { documentStrings, formatDiagnostics, loadFile } from './document.js';
 import { graphEvents, writeAtomically } from './events.js';
+import {
+  authoredId,
+  evidenceOverflows,
+  evidenceCovering,
+  formatEvidenceCovering,
+  formatEvidenceOverflows,
+  formatHiddenEvidence,
+  hiddenEvidenceCards,
+} from './evidence.js';
 import {
   audioLengthWarning,
   findFfmpeg,
@@ -222,6 +231,31 @@ export async function renderFilm(request: RenderRequest): Promise<RenderSummary>
   // the events come from the same layout and timeline the threads use.
   layoutGraph(graph);
   const events = request.events === undefined ? null : graphEvents(result, fps);
+  // An evidence card that does not fit, that its shot ends before showing or
+  // that would cover its own node or relation end is never cut, drawn over
+  // its object or silently dropped: refuse before rendering (ADR 004, D4).
+  const timeline = compileTimeline(graph, fps);
+  if (timeline.shots.some((shot) => shot.evidence)) {
+    const probe = createHeadlessRenderer(graph, layoutGraph(graph), {
+      detailAt: result.detailAt,
+      frameSpec: request.frameSpec,
+      theme: request.theme,
+      locale: request.locale,
+    });
+    const overflows = evidenceOverflows(timeline, filmFrames, probe.displayListAt, (kind, id) =>
+      authoredId(result, kind, id),
+    );
+    const hidden = hiddenEvidenceCards(timeline, filmFrames, (kind, id) =>
+      authoredId(result, kind, id),
+    );
+    const covering = evidenceCovering(timeline, filmFrames, probe.displayListAt, (kind, id) =>
+      authoredId(result, kind, id),
+    );
+    if (overflows.length || hidden.length || covering.length)
+      throw new RenderError(
+        `${formatEvidenceOverflows(overflows)}${formatHiddenEvidence(hidden)}${formatEvidenceCovering(covering)}未渲染。`,
+      );
+  }
   const uncovered = uncoveredCharacters(documentStrings(JSON.parse(text)));
   if (uncovered.length)
     log(
@@ -258,7 +292,7 @@ export async function renderFilm(request: RenderRequest): Promise<RenderSummary>
   };
   let done = 0;
   const tick = (): void => request.progress?.(++done, frames.length);
-  const tally = new OmissionTally(compileTimeline(graph, fps), filmFrames);
+  const tally = new OmissionTally(timeline, filmFrames);
   const record = (frame: number, reply: WorkerReply): void => {
     if ('omitted' in reply) tally.add(frame, reply.omitted);
   };

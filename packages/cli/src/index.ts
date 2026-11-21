@@ -12,6 +12,11 @@ import {
   layoutIssueCount,
 } from './check-layout.js';
 import { formatOmissions } from './labels.js';
+import {
+  formatEvidenceCovering,
+  formatEvidenceOverflows,
+  formatHiddenEvidence,
+} from './evidence.js';
 import { exportEvents, EventsError } from './events.js';
 
 export { parseCommand, USAGE, UsageError, type Command } from './args.js';
@@ -41,6 +46,17 @@ export {
   type FrameIssueReport,
   type ShotLayoutIssues,
 } from './check-layout.js';
+export {
+  evidenceOverflows,
+  formatEvidenceOverflows,
+  evidenceCovering,
+  formatEvidenceCovering,
+  formatHiddenEvidence,
+  hiddenEvidenceCards,
+  type ShotEvidenceCovers,
+  type ShotEvidenceOverflow,
+  type ShotHiddenEvidence,
+} from './evidence.js';
 export {
   formatOmissions,
   OmissionTally,
@@ -145,7 +161,8 @@ export async function main(argv: readonly string[], io: Io = defaultIo): Promise
   if (command.command === 'check-labels') {
     try {
       const summary = await checkLabels({ ...command, log: io.stderr });
-      const { omittedLabels, unsettled } = summary;
+      const { omittedLabels, unsettled, evidenceOverflows, hiddenEvidence, evidenceCovering } =
+        summary;
       if (command.json) io.stdout(JSON.stringify(summary, null, 2) + '\n');
       else {
         io.stdout(
@@ -156,8 +173,16 @@ export async function main(argv: readonly string[], io: Io = defaultIo): Promise
             '\n',
         );
         io.stdout(formatOmissions(omittedLabels) || '没有标签被省略。\n');
+        io.stdout(formatEvidenceOverflows(evidenceOverflows));
+        io.stdout(formatHiddenEvidence(hiddenEvidence));
+        io.stdout(formatEvidenceCovering(evidenceCovering));
       }
-      return omittedLabels.length ? 1 : 0;
+      return omittedLabels.length ||
+        evidenceOverflows.length ||
+        hiddenEvidence.length ||
+        evidenceCovering.length
+        ? 1
+        : 0;
     } catch (error) {
       if (!(error instanceof CheckError)) throw error;
       io.stderr('relgraph check-labels：' + error.message + '\n');

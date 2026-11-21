@@ -1,4 +1,4 @@
-import type { OmittedLabel } from '@relgraph/render';
+import type { EvidenceCovers, EvidenceOverflow, OmittedLabel } from '@relgraph/render';
 import { studioLanguage } from './i18n.js';
 
 /**
@@ -8,10 +8,48 @@ import { studioLanguage } from './i18n.js';
  * announce it on each frame. Moving a node redraws the frame, so the notice
  * follows position edits. `relgraph check-labels` reports the same omissions
  * for a whole film, counting only the frames in which a shot holds.
+ *
+ * It also says when the shot's evidence card does not fit and is therefore
+ * not drawn (`DisplayList.evidenceOverflow`, ADR 004 D4); `relgraph render`
+ * refuses such a film.
  */
 export interface OmittedLabelsView {
   reset(): void;
-  render(omitted: readonly OmittedLabel[]): void;
+  render(
+    omitted: readonly OmittedLabel[],
+    overflow?: EvidenceOverflow | null,
+    covers?: EvidenceCovers | null,
+  ): void;
+}
+
+/** The notice for an evidence card that does not fit, or ''. */
+export function evidenceOverflowText(
+  overflow: EvidenceOverflow | null | undefined,
+  language: 'zh-CN' | 'en',
+): string {
+  if (!overflow) return '';
+  return language === 'en'
+    ? `The evidence card does not fit from evidence index ${overflow.item} on and is not drawn; export will refuse it. Show fewer items or a shorter quotation.`
+    : `证据卡片从证据序号 ${overflow.item} 起放不下，未画出，导出时会报错；请少选几条或改用较短的引文。`;
+}
+
+/** The notice for an evidence card withheld because it would cover its own node, or ''. */
+export function evidenceCoversText(
+  covers: EvidenceCovers | null | undefined,
+  language: 'zh-CN' | 'en',
+): string {
+  if (!covers) return '';
+  const what =
+    covers.node === undefined
+      ? language === 'en'
+        ? 'the relation it cites'
+        : '它引证的关系'
+      : language === 'en'
+        ? 'the node it cites'
+        : '它引证的节点';
+  return language === 'en'
+    ? `The evidence card would cover ${what} and is not drawn; export will refuse it. Shorten that node’s label or use a narrower shape.`
+    : `证据卡片会盖住${what}，未画出，导出时会报错；请缩短该节点的标签或改用较窄的形状。`;
 }
 
 /** The notice text, or '' when nothing was left out. */
@@ -43,6 +81,17 @@ export function createOmittedLabelsView(element: HTMLElement): OmittedLabelsView
   };
   return {
     reset: () => show(''),
-    render: (omitted) => show(omittedLabelsText(omitted, studioLanguage())),
+    render: (omitted, overflow, covers) => {
+      const language = studioLanguage();
+      show(
+        [
+          evidenceOverflowText(overflow, language),
+          evidenceCoversText(covers, language),
+          omittedLabelsText(omitted, language),
+        ]
+          .filter(Boolean)
+          .join(' '),
+      );
+    },
   };
 }
