@@ -1,7 +1,7 @@
 import { displayNodeText } from '../project.js';
-import { frameCount } from './state.js';
 import {
   compileTimeline,
+  frameCount,
   frameAtOrAfter,
   shotSettledSec,
   shotStartFrames,

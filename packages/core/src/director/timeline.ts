@@ -23,8 +23,16 @@ export interface CameraKeyframe extends Keyframe<VisualCamera> {
 export interface RevealCue {
   targetId: string;
   kind: 'node' | 'edge';
+  /**
+   * When the object enters the projection to stay until the frame that first
+   * shows it: the start of that shot, or of a shot shorter than a frame just
+   * before it.
+   */
   inSec: number;
-  /** First instant the object is no longer projected, if any. */
+  /**
+   * When a frame first no longer shows the object, if one does: the instant
+   * it left the projection to stay out until that frame.
+   */
   outSec?: number;
   durationSec: number;
   effect: 'fade' | 'draw' | 'grow';
@@ -78,8 +86,8 @@ const clamp = (x: number): number => Math.max(0, Math.min(1, x));
  * Compile the authoring presentation into safe, absolute-time tracks.
  *
  * Every shot is projected and redacted BEFORE its camera/highlight/caption
- * tracks are collected. A reveal cue is created only for an object absent
- * from the previous projection, never by observing previous rendered frames.
+ * tracks are collected. Reveal cues follow the projections of the shots the
+ * film has frames for (see `revealCues`), never previous rendered frames.
  * If domain time moves backward, disappearing objects simply leave the
  * projection; a later reappearance starts a new cue.
  */
@@ -96,8 +104,6 @@ export function compileTimeline(graph: VisualGraph, fps = 24): FilmTimeline {
   let correction = 0;
   let inheritedDomainAt: number | null = null;
   let inheritedRevealStep: number | null = null;
-  let previousNodes = new Set<string>();
-  let previousEdges = new Set<string>();
 
   for (const [index, source] of graph.scenes.entries()) {
     // The same compensated summation and boundary tolerance as sceneAtSecond.
@@ -150,46 +156,13 @@ export function compileTimeline(graph: VisualGraph, fps = 24): FilmTimeline {
       fadeOutSec: captionFadeSec,
     });
 
-    const nextNodes = new Set(state.view.nodes.map((node) => node.id));
-    const nextEdges = new Set(state.view.edges.map((edge) => edge.id));
-    // A prior cue must stop immediately when the domain projection withdraws
-    // its object; no fade-out is produced, even on backward time jumps.
-    for (const cue of reveal) {
-      if (cue.outSec !== undefined) continue;
-      const visible = cue.kind === 'node' ? nextNodes : nextEdges;
-      if (!visible.has(cue.targetId)) cue.outSec = startSec;
-    }
-    if (index > 0) {
-      for (const id of nextNodes) {
-        if (!previousNodes.has(id))
-          reveal.push({
-            targetId: id,
-            kind: 'node',
-            inSec: startSec,
-            durationSec: NODE_REVEAL_SEC,
-            effect: 'fade',
-          });
-      }
-      for (const id of nextEdges) {
-        if (!previousEdges.has(id))
-          reveal.push({
-            targetId: id,
-            kind: 'edge',
-            inSec: startSec,
-            durationSec: EDGE_REVEAL_SEC,
-            effect: 'draw',
-          });
-      }
-    }
-    previousNodes = nextNodes;
-    previousEdges = nextEdges;
     startSec = endSec;
   }
   // The film ends on its last caption at full opacity instead of fading it
   // away on the final frames.
   const last = captions.at(-1);
   if (last) last.fadeOutSec = 0;
-  return {
+  const timeline: FilmTimeline = {
     fps,
     durationSec: startSec,
     camera,
@@ -200,6 +173,84 @@ export function compileTimeline(graph: VisualGraph, fps = 24): FilmTimeline {
     captions,
     shots,
   };
+  // Which shots have frames depends only on the shot tracks compiled above,
+  // so the cues can follow the frames the film is rendered with.
+  reveal.push(...revealCues(timeline, frameCount(graph, fps)));
+  return timeline;
+}
+
+/** Frames of the film `graph` renders at `fps`: at least one. */
+export function frameCount(graph: VisualGraph, fps = 24): number {
+  return Math.max(
+    1,
+    Math.ceil(graph.scenes.reduce((sum, scene) => sum + scene.durationSec, 0) * fps - 1e-9),
+  );
+}
+
+/**
+ * Reveal cues as the frames show the projections: what the first shot
+ * projects is there outright; after that, each shot with frames is compared
+ * with the last shot that had frames. A shot shorter than a frame has none
+ * (`shotStartFrames`), so what it alone withdraws and the next shot restores
+ * never leaves the screen: no `outSec`, no second cue. An object that enters
+ * in such a shot and stays fades in from that shot's start, at most a frame
+ * before the first frame that shows it, as any cue starting between frames.
+ */
+function revealCues(timeline: FilmTimeline, frames: number): RevealCue[] {
+  const { shots } = timeline;
+  if (!shots.length) return [];
+  const starts = shotStartFrames(timeline);
+  const hasFrames = (index: number): boolean =>
+    (index === shots.length - 1 ? frames : starts[index + 1]) > starts[index];
+  const cues: RevealCue[] = [];
+  const ids = (shot: CompiledShot) => ({
+    node: new Set(shot.view.nodes.map((node) => node.id)),
+    edge: new Set(shot.view.edges.map((edge) => edge.id)),
+  });
+  // On screen: each object the last shot with frames showed, with its cue
+  // (null when the first shot shows it outright).
+  let previous = ids(shots[0]);
+  const shown = {
+    node: new Map<string, RevealCue | null>([...previous.node].map((id) => [id, null])),
+    edge: new Map<string, RevealCue | null>([...previous.edge].map((id) => [id, null])),
+  };
+  // The start of the shot from which each object has been in (or out of)
+  // the projection without a break.
+  const since = { node: new Map<string, number>(), edge: new Map<string, number>() };
+  for (let index = 1; index < shots.length; index += 1) {
+    const shot = shots[index];
+    const current = ids(shot);
+    for (const kind of ['node', 'edge'] as const) {
+      for (const id of current[kind])
+        if (!previous[kind].has(id)) since[kind].set(id, shot.startSec);
+      for (const id of previous[kind])
+        if (!current[kind].has(id)) since[kind].set(id, shot.startSec);
+    }
+    previous = current;
+    if (!hasFrames(index)) continue;
+    // A prior cue stops at once when the projection withdraws its object; no
+    // fade-out is produced, even on backward time jumps.
+    for (const kind of ['node', 'edge'] as const)
+      for (const [id, cue] of shown[kind])
+        if (!current[kind].has(id)) {
+          if (cue) cue.outSec = since[kind].get(id);
+          shown[kind].delete(id);
+        }
+    for (const kind of ['node', 'edge'] as const)
+      for (const id of current[kind]) {
+        if (shown[kind].has(id)) continue;
+        const cue: RevealCue = {
+          targetId: id,
+          kind,
+          inSec: since[kind].get(id) ?? shot.startSec,
+          durationSec: kind === 'node' ? NODE_REVEAL_SEC : EDGE_REVEAL_SEC,
+          effect: kind === 'node' ? 'fade' : 'draw',
+        };
+        cues.push(cue);
+        shown[kind].set(id, cue);
+      }
+  }
+  return cues;
 }
 
 /**
