@@ -744,6 +744,8 @@ footer span { color: var(--gold); }
  * the sidebar, so visual, reading and focus order agree.
  */
 @media (max-width: 840px) {
+  /* Room in the top bar for the frame and time-axis menus (ADR 004, D7). */
+  .top-note, .pill { display: none; }
   .layout { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; grid-template-areas: none; gap: 20px; }
   .workspace, .source-column, .rightbar { grid-area: auto; }
   .source-column { padding-right: 0; overflow: visible; }
