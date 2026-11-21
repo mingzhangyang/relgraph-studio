@@ -164,6 +164,28 @@ export const GENERIC_WORDING = {
   CAMERA_ZOOM: wording('镜头缩放无效。', '使用大于 0 的数值，或删除 zoom。'),
   TRANSITION: wording('转场时长无效。', '使用不小于 0 的毫秒数。'),
   CAMERA_CONFLICT: wording('镜头目标冲突。', 'focusNodeId 与 fitIds 只保留一个。'),
+  'EVIDENCE.type': wording('evidence 必须是数组。', '改为证据条目数组，或删除该字段。'),
+  'EVIDENCE.item': wording(
+    (p) =>
+      `证据条目无效：需要非空文本（出处），或含非空 cite 的对象；文本不超过 ${p.limit} 个字符。`,
+    '写成 "王维《送孟六归襄阳》"，或 { "cite": …, "quote": …, "url": …, "locator": … }；quote 必须是原文。',
+  ),
+  'SCENE_EVIDENCE.target': wording(
+    '证据卡片需要且只能指定 nodeId 或 edgeId 之一。',
+    '使用 { "edgeId": … } 或 { "nodeId": … }，可加 items。',
+  ),
+  'SCENE_EVIDENCE.empty': wording(
+    '证据卡片引用的对象没有证据。',
+    '为该对象添加 evidence，或删除卡片。',
+  ),
+  'SCENE_EVIDENCE.items': wording(
+    (p) => `items 需要互不重复的证据序号（0 到 ${p.last}）。`,
+    '列出要显示的证据条目序号，或删除 items 以显示全部。',
+  ),
+  'SCENE_EVIDENCE.card': wording(
+    '同一分镜不能同时打开详情卡片和证据卡片。',
+    '删除 openDetailNodeId 或 evidence 之一。',
+  ),
 } as const satisfies Record<string, DiagnosticWording>;
 
 /** The loader itself: formats, projects and playability (`studio`). */

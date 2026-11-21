@@ -1,5 +1,6 @@
 /** Renderer-neutral, deterministic graph contract. Domain facts remain in source documents. */
 import type {
+  EvidenceCard,
   FrameScene,
   FrameState,
   ProjectedVisualGraph,
@@ -7,6 +8,7 @@ import type {
   ScenePlayback,
   VisualCamera,
   VisualEdge,
+  VisualEvidence,
   VisualGraph,
   VisualNode,
   VisualScene,
@@ -122,6 +124,34 @@ export function validateVisualGraph(graph: unknown): { valid: boolean; errors: G
         'Provide finite from <= to, or omit it.',
       );
   }
+  // Evidence text is shown verbatim, so only its shape is checked here.
+  function evidence(v: unknown, path: string, id: unknown): void {
+    if (v === undefined) return;
+    if (!Array.isArray(v)) {
+      fail('EVIDENCE', path, id, 'evidence must be an array', 'Provide an array or omit it.');
+      return;
+    }
+    v.forEach((item: unknown, i) => {
+      const text = (x: unknown): boolean =>
+        x === undefined || (typeof x === 'string' && !!x.trim());
+      if (
+        !object(item) ||
+        !text(item.cite) ||
+        !text(item.quote) ||
+        !text(item.url) ||
+        !text(item.locator) ||
+        (item.cite === undefined && item.quote === undefined) ||
+        (item.from !== undefined && !finite(item.from))
+      )
+        fail(
+          'EVIDENCE',
+          path + '[' + i + ']',
+          id,
+          'Invalid evidence item',
+          'Give a non-empty cite or quote; url and locator are optional text, from a finite time.',
+        );
+    });
+  }
   function step(v: unknown, path: string, id: unknown): void {
     if (v !== undefined && !finite(v))
       fail('REVEAL_STEP', path, id, 'Invalid reveal step', 'Use a finite step, or omit it.');
@@ -163,6 +193,7 @@ export function validateVisualGraph(graph: unknown): { valid: boolean; errors: G
       );
     interval(n.visibility, 'nodes[' + i + '].visibility', n.id);
     step(n.revealStep, 'nodes[' + i + '].revealStep', n.id);
+    evidence(n.evidence, 'nodes[' + i + '].evidence', n.id);
   });
   collections.groups.forEach((g, i) => {
     if (!object(g) || !g.id) return;
@@ -203,7 +234,14 @@ export function validateVisualGraph(graph: unknown): { valid: boolean; errors: G
       );
     interval(e.visibility, 'edges[' + i + '].visibility', e.id);
     step(e.revealStep, 'edges[' + i + '].revealStep', e.id);
+    evidence(e.evidence, 'edges[' + i + '].evidence', e.id);
   });
+  const evidenceCount = (kind: 'nodes' | 'edges', id: unknown): number => {
+    const owner = (collections[kind] as unknown[]).find(
+      (item) => object(item) && item.id === id,
+    ) as { evidence?: unknown } | undefined;
+    return Array.isArray(owner?.evidence) ? owner.evidence.length : 0;
+  };
   collections.scenes.forEach((s, i) => {
     if (!object(s) || !s.id) return;
     const path = 'scenes[' + i + ']';
@@ -287,6 +325,60 @@ export function validateVisualGraph(graph: unknown): { valid: boolean; errors: G
       [highlight?.nodeIds, ids.nodes, 'highlight.nodeIds'],
       [highlight?.edgeIds, ids.edges, 'highlight.edgeIds'],
     ];
+    if (s.evidence !== undefined) {
+      const ref = s.evidence as Record<string, unknown> | null;
+      const at = path + '.evidence';
+      if (!object(ref) || (ref.nodeId === undefined) === (ref.edgeId === undefined))
+        fail(
+          'SCENE_EVIDENCE',
+          at,
+          s.id,
+          'evidence must name exactly one of nodeId and edgeId',
+          'Provide { nodeId } or { edgeId }, with optional items.',
+        );
+      else {
+        const kind = ref.nodeId !== undefined ? 'nodes' : 'edges';
+        const target = ref.nodeId ?? ref.edgeId;
+        const count = evidenceCount(kind, target);
+        if (!ids[kind].has(target))
+          fail('SCENE_REF', at, s.id, 'Unknown ' + (target as string), 'Use an existing id.');
+        else if (!count)
+          fail(
+            'SCENE_EVIDENCE',
+            at,
+            s.id,
+            'The object has no evidence',
+            'Add evidence to the object or remove the card.',
+          );
+        else if (
+          ref.items !== undefined &&
+          (!Array.isArray(ref.items) ||
+            !ref.items.length ||
+            ref.items.some(
+              (n, j, all) =>
+                !Number.isInteger(n) ||
+                (n as number) < 0 ||
+                (n as number) >= count ||
+                all.indexOf(n) !== j,
+            ))
+        )
+          fail(
+            'SCENE_EVIDENCE',
+            at + '.items',
+            s.id,
+            'Invalid evidence items',
+            'List distinct indices of existing evidence items, or omit items.',
+          );
+        if (s.openDetailNodeId)
+          fail(
+            'SCENE_EVIDENCE',
+            at,
+            s.id,
+            'A shot shows one card: a detail card or an evidence card',
+            'Remove openDetailNodeId or evidence.',
+          );
+      }
+    }
     for (const [arr, set, field] of lists) {
       if (arr === undefined) continue;
       if (!Array.isArray(arr)) {
@@ -429,6 +521,7 @@ export function projectFrameScene(
       overlay: null,
       highlight: { nodeIds: [], edgeIds: [], groupId: null },
       camera: {},
+      evidence: null,
     };
   const ns = new Set(view.nodes.map((n) => n.id)),
     es = new Set(view.edges.map((e) => e.id)),
@@ -448,7 +541,14 @@ export function projectFrameScene(
   };
   const overlay =
     s.openDetailNodeId && ns.has(s.openDetailNodeId) ? { nodeId: s.openDetailNodeId } : null;
+  const card = evidenceCard(view, s.evidence, domainAt);
+  // The card's object is emphasised for the whole shot.
+  if (card.card) {
+    const list = card.card.object === 'node' ? highlight.nodeIds : highlight.edgeIds;
+    if (!list.includes(card.card.id)) list.push(card.card.id);
+  }
   const hiddenTarget = Boolean(
+    card.hidden ||
     (s.camera?.focusNodeId && !ns.has(s.camera.focusNodeId)) ||
     (Array.isArray(s.camera?.fitIds) && s.camera.fitIds.some((id) => !ns.has(id))) ||
     (Array.isArray(s.highlight?.nodeIds) && s.highlight.nodeIds.some((id) => !ns.has(id))) ||
@@ -471,7 +571,38 @@ export function projectFrameScene(
     redacted: hiddenTarget,
     ...(overlay ? { openDetailNodeId: overlay.nodeId } : {}),
   };
-  return { scene, view, camera, highlight, overlay };
+  return { scene, view, camera, highlight, overlay, evidence: card.card };
+}
+
+/**
+ * The evidence card a shot asks for, after projection: withheld (`hidden`)
+ * when its object is not projected or an item the shot names explicitly is
+ * dated after the shot's domain time; with no explicit items, dated items
+ * the shot may not show yet are left out, and no card remains if none can be
+ * shown.
+ */
+function evidenceCard(
+  view: ProjectedVisualGraph,
+  ref: VisualScene['evidence'],
+  domainAt: number | null,
+): { card: EvidenceCard | null; hidden: boolean } {
+  if (!ref) return { card: null, hidden: false };
+  const object = ref.nodeId !== undefined ? 'node' : 'edge';
+  const id = ref.nodeId ?? ref.edgeId;
+  const owner =
+    object === 'node'
+      ? view.nodes.find((node) => node.id === id)
+      : view.edges.find((edge) => edge.id === id);
+  if (!owner || id === undefined) return { card: null, hidden: true };
+  const all = owner.evidence ?? [];
+  const allowed = (item: VisualEvidence): boolean =>
+    domainAt === null || item.from === undefined || item.from <= domainAt;
+  const indices = ref.items ?? all.map((_, index) => index);
+  const items = indices
+    .filter((index) => all[index] && allowed(all[index]))
+    .map((index) => ({ ...all[index], index }));
+  if (ref.items && items.length < ref.items.length) return { card: null, hidden: true };
+  return { card: items.length ? { object, id, items } : null, hidden: false };
 }
 
 /** Evaluate a spoiler-safe scene at any video second, including sub-frame shot boundaries. */

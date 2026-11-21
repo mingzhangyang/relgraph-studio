@@ -233,6 +233,31 @@ export const ENGLISH_DIAGNOSTICS: EnglishCatalogue = {
       'Conflicting camera targets.',
       'Keep either focusNodeId or fitIds, not both.',
     ),
+    'EVIDENCE.type': wording(
+      'evidence must be an array.',
+      'Use an array of evidence items, or remove the field.',
+    ),
+    'EVIDENCE.item': wording(
+      (p) =>
+        `Invalid evidence item: use non-empty text (a citation) or an object with a non-empty cite; text of at most ${p.limit} characters.`,
+      'Write "Wang Wei, Farewell to Meng" or { "cite": …, "quote": …, "url": …, "locator": … }; quote must be the source text verbatim.',
+    ),
+    'SCENE_EVIDENCE.target': wording(
+      'An evidence card names exactly one of nodeId and edgeId.',
+      'Use { "edgeId": … } or { "nodeId": … }, optionally with items.',
+    ),
+    'SCENE_EVIDENCE.empty': wording(
+      'The evidence card refers to an object without evidence.',
+      'Add evidence to the object, or remove the card.',
+    ),
+    'SCENE_EVIDENCE.items': wording(
+      (p) => `items must be distinct evidence indices (0 to ${p.last}).`,
+      'List the indices of the items to show, or remove items to show them all.',
+    ),
+    'SCENE_EVIDENCE.card': wording(
+      'A shot cannot open both a detail card and an evidence card.',
+      'Remove openDetailNodeId or evidence.',
+    ),
   },
   studio: {
     JSON: wording((p) => `JSON syntax error: ${p.detail}`, 'Check quotes, commas, and brackets.'),

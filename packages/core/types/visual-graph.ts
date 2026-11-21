@@ -1,5 +1,39 @@
 /** Internal presentation contract, not a replacement for domain exchange formats. */
 export type NodeId = string;
+/**
+ * One piece of source evidence for a node or relation (ADR 004, D4), mapped
+ * by each domain adapter from its own evidence shape. Text is shown exactly
+ * as written: never paraphrased, translated or overridden by display copy.
+ * At least one of `cite` and `quote` is present.
+ */
+export interface VisualEvidence {
+  /** The work or record cited, e.g. `王维《送孟六归襄阳》`. */
+  cite?: string;
+  /** Verbatim source text. */
+  quote?: string;
+  url?: string;
+  /** Where in the work: a page, chapter or record id. */
+  locator?: string;
+  /**
+   * Domain time from which the item may be shown (a literary quotation's
+   * chapter). Earlier shots withhold it, as they withhold future objects.
+   */
+  from?: number;
+}
+/** Which evidence a shot shows on a card: one node's or one relation's. */
+export interface VisualEvidenceRef {
+  nodeId?: NodeId;
+  edgeId?: string;
+  /** Indices into the object's `evidence`; all items when omitted. */
+  items?: number[];
+}
+/** A shot's evidence card after projection: only items the shot may show. */
+export interface EvidenceCard {
+  object: 'node' | 'edge';
+  id: string;
+  /** The items in the order the shot names them, each with its index in the object's evidence. */
+  items: (VisualEvidence & { index: number })[];
+}
 /** When an object exists in domain time: dates, never reveal order. */
 export interface Visibility {
   from?: number;
@@ -27,6 +61,7 @@ export interface VisualNode {
    * domain time (`visibility`). Nothing presents it as a date.
    */
   revealStep?: number;
+  evidence?: VisualEvidence[];
 }
 export interface VisualEdge {
   id: string;
@@ -40,6 +75,7 @@ export interface VisualEdge {
   visibility?: Visibility;
   /** The step of an unfolding at which the relation appears; see `VisualNode.revealStep`. */
   revealStep?: number;
+  evidence?: VisualEvidence[];
 }
 export interface VisualGroup {
   id: string;
@@ -75,6 +111,8 @@ export interface VisualScene {
   camera?: VisualCamera;
   highlight?: VisualHighlight;
   openDetailNodeId?: NodeId;
+  /** An evidence card for one node or relation (ADR 004, D4). */
+  evidence?: VisualEvidenceRef;
 }
 export interface VisualGraph {
   project?: import('../src/project.js').ProjectConfig;
@@ -157,6 +195,8 @@ export interface FrameState {
   camera: VisualCamera;
   highlight: ResolvedHighlight;
   overlay: { nodeId: NodeId } | null;
+  /** The shot's evidence card, when its object and items are projected. */
+  evidence: EvidenceCard | null;
 }
 
 export interface DirectorFrameState extends FrameState {

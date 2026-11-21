@@ -56,6 +56,17 @@ export function adaptLiteratureDocument(input: unknown) {
       strength: r.strength,
       polarity: r.polarity ?? defaults[r.type],
       visibility: r.chapters ? { ...r.chapters } : undefined,
+      // A quotation is shown from the chapter it is quoted at, never earlier.
+      ...(r.evidence?.some((q) => q.text.trim())
+        ? {
+            evidence: r.evidence
+              .filter((q) => q.text.trim())
+              .map((q) => ({
+                quote: q.text,
+                ...(q.at === undefined ? {} : { from: q.at }),
+              })),
+          }
+        : {}),
     })),
     scenes: (doc.presentation || []).map((s) => ({
       id: s.id,

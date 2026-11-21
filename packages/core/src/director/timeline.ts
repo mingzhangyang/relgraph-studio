@@ -1,5 +1,6 @@
 import { projectFrameScene } from '../graph/core.js';
 import type {
+  EvidenceCard,
   FrameScene,
   ProjectedVisualGraph,
   ResolvedHighlight,
@@ -57,6 +58,8 @@ export interface CompiledShot {
   scene: FrameScene;
   view: ProjectedVisualGraph;
   overlay: { nodeId: string } | null;
+  /** The evidence card, already projected (ADR 004, D4). */
+  evidence: EvidenceCard | null;
 }
 
 export interface FilmTimeline {
@@ -125,6 +128,7 @@ export function compileTimeline(graph: VisualGraph, fps = 24): FilmTimeline {
       scene,
       view: state.view,
       overlay: state.overlay,
+      evidence: state.evidence,
     };
     shots.push(shot);
     camera.push({
