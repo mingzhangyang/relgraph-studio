@@ -14,7 +14,7 @@ import { composeNodeLabels, composeRelationLabels } from './compose/labels.js';
 import { composeLegend } from './compose/legend.js';
 import { composeNodes, drawnNodes, nodeObstacles } from './compose/nodes.js';
 import { composeRelations, relationLayout } from './compose/relations.js';
-import { composeTimeAxis } from './compose/time-axis.js';
+import { composeTimeAxis, withoutCoveredLabels } from './compose/time-axis.js';
 
 export { drawingStyle, type ComposeOptions, type DetailLookup } from './compose/context.js';
 export { quadraticPrefix } from './compose/geometry.js';
@@ -86,7 +86,7 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
     type: 'group',
     clip: { ...stage },
     items: [
-      ...axis,
+      ...withoutCoveredLabels(ctx, axis, evidence.obstacle),
       ...hulls,
       ...relations.items,
       ...glyphs.items,

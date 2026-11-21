@@ -1,5 +1,7 @@
 import {
   DEFAULT_LOCALE,
+  drawnPositions,
+  drawsTimeVertically,
   displayEdgeText,
   displayNodeText,
   NEUTRAL_STYLE,
@@ -42,6 +44,10 @@ export interface ComposeOptions {
    * relations, to tell a tree's leaves and root before all of it is shown.
    */
   graph: Pick<VisualGraph, 'scenes' | 'project' | 'nodes' | 'edges'>;
+  /**
+   * The stored positions. The frame is drawn at `drawnPositions` of them:
+   * transposed when the project draws time vertically (ADR 004, D7 step 2).
+   */
   positions: ReadonlyMap<string, Point>;
   frame: number;
   fps: number;
@@ -127,8 +133,13 @@ export interface LabelBounds {
 export interface FrameContext {
   readonly state: DirectorFrameState;
   readonly graph: ComposeOptions['graph'];
-  /** World positions of every node of the graph, shown or not. */
+  /**
+   * Drawn positions of every node of the graph, shown or not: the stored
+   * ones, transposed when time runs vertically (`drawnPositions`).
+   */
   readonly positions: ReadonlyMap<string, Point>;
+  /** Whether the project draws time from top to bottom (ADR 004, D7 step 2). */
+  readonly vertical: boolean;
   readonly frame: number;
   readonly fps: number;
   readonly measure: TextMeasurer;
@@ -176,7 +187,6 @@ export interface FrameContext {
 export function frameContext(state: DirectorFrameState, options: ComposeOptions): FrameContext {
   const {
     graph,
-    positions,
     frame,
     fps,
     measure,
@@ -185,7 +195,11 @@ export function frameContext(state: DirectorFrameState, options: ComposeOptions)
     locale = DEFAULT_LOCALE,
     detailAt = () => undefined,
   } = options;
+  // The style reads the stored drawing (whether it keeps time); everything
+  // drawn reads the drawn one.
   const style = drawingStyle(options);
+  const positions = drawnPositions(graph, options.positions);
+  const vertical = drawsTimeVertically(graph);
   const config = graph.project;
   const { stage, typeScale: ts } = spec;
   const u = (n: number): number => n * ts;
@@ -234,6 +248,7 @@ export function frameContext(state: DirectorFrameState, options: ComposeOptions)
     state,
     graph,
     positions,
+    vertical,
     frame,
     fps,
     measure,

@@ -438,3 +438,20 @@ export function worldWithScreenOffset(
   const result = scaledTarget / scale;
   return Number.isFinite(result) ? result : null;
 }
+
+/**
+ * The width:height, in world units, that layout engines aim for when a
+ * drawing is computed for a film at `spec` (ADR 004, D7 step 2): the graph
+ * area's, or its inverse when time is drawn vertically (the drawing is then
+ * shown transposed). Undefined for a landscape spec drawn horizontally: the
+ * engines keep their landscape default, so no landscape film changes.
+ */
+export function engineAspect(
+  spec: Pick<FrameSpec, 'width' | 'height' | 'safe'>,
+  direction: 'horizontal' | 'vertical',
+): number | undefined {
+  if (spec.width > spec.height && direction === 'horizontal') return undefined;
+  const g = spec.safe.graph,
+    drawn = g.w / g.h;
+  return direction === 'vertical' ? 1 / drawn : drawn;
+}

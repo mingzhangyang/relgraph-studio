@@ -9,14 +9,17 @@
 // The sweep varies what earlier reviews found one at a time: node shape
 // (compact, label-holding, timeline bars), geometry, the card shot's camera
 // (none, fitIds, focus, zoom), a transition from a distant node, card height,
-// label length, the card's object and the frame spec (every preset, so the
+// label length, the card's object, the frame spec (every preset, so the
 // card region below the graph in portrait and 3:4 is swept like the one
-// beside it); and cited self-loops,
+// beside it) and the direction of time (ADR 004, D7 step 2: each case again
+// as a Studio project drawing time vertically, its nodes dated so that the
+// project is valid); and cited self-loops,
 // whose route the camera does not know, so their card may be withheld - but
 // only with a report, never silently.
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { loadDocument } from '../packages/core/src/director/load.ts';
+import { createProject } from '../packages/core/src/project.ts';
 import { layoutGraph } from '../packages/core/src/director/layout.ts';
 import { directorFrameAt, frameCount } from '../packages/core/src/director/state.ts';
 import { compileTimeline, shotStartFrames } from '../packages/core/src/director/timeline.ts';
@@ -279,6 +282,23 @@ function checkFilm(name, doc, frameSpec, { allowWithheld = false } = {}) {
   return [...failures].map((problem) => `${name} @${frameSpec.name}: ${problem}`);
 }
 
+/**
+ * The same film as a Studio project that draws time vertically. A plain
+ * graph is dated first (every node appears at 0, every shot at 0), since
+ * only a drawing on a time axis may turn it upright.
+ */
+function vertical({ name, doc }) {
+  const source = structuredClone(doc);
+  if (!source.diagram) {
+    for (const node of source.nodes) node.visibleFrom ??= 0;
+    for (const shot of source.presentation) shot.domainAt ??= 0;
+  }
+  return {
+    name: `${name}/vertical`,
+    doc: createProject(source, { view: { timeAxis: 'vertical' } }),
+  };
+}
+
 function sweepCases() {
   const cases = [];
   let n = 0;
@@ -295,7 +315,8 @@ function sweepCases() {
           doc: documentFor({ shape, geometry, camera: CAMERAS[camera], labels, tall, object }),
         });
       }
-  return [...cases, ...timelineDocuments()];
+  const all = [...cases, ...timelineDocuments()];
+  return [...all, ...all.map(vertical)];
 }
 
 /** Self-loops on the right-hand node: 1, 4 or 8 loops, the card on the last. */

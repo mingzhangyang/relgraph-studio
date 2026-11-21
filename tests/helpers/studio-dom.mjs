@@ -219,6 +219,7 @@ export function createSimulatedStudioDom({
     themeToggle: HTMLButtonElement,
     languageSelect: HTMLSelectElement,
     frameSpecSelect: HTMLSelectElement,
+    timeAxisSelect: HTMLSelectElement,
     layoutToggle: HTMLButtonElement,
     layoutReset: HTMLButtonElement,
     layoutExport: HTMLButtonElement,

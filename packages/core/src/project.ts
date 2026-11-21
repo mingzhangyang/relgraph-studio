@@ -9,6 +9,13 @@ import {
   type NodeShape,
 } from './style.js';
 import { LAYOUT_MODES, LAYOUT_TYPES, type LayoutMode, type LayoutType } from './project-layout.js';
+import { hasTimes } from './graph/time-axis.js';
+
+/**
+ * The directions a project may draw time in (ADR 004, D7 step 2); absent
+ * means `horizontal`. `director/time-direction.ts` reads and applies it.
+ */
+export const TIME_AXIS_DIRECTIONS = ['horizontal', 'vertical'] as const;
 
 export interface NodeAppearance {
   image?: string | null;
@@ -57,6 +64,15 @@ export interface ProjectConfig {
     iterations: number;
     locked: string[];
     positions: Record<string, { x: number; y: number }>;
+  };
+  /**
+   * How the drawing is shown, not what it says (ADR 004, D7 step 2).
+   * `timeAxis: "vertical"` draws time from top to bottom: a render-time
+   * transpose of the stored coordinates, which do not change. Absent, or
+   * `horizontal`, draws them as stored. Never inferred from the frame spec.
+   */
+  view?: {
+    timeAxis?: (typeof TIME_AXIS_DIRECTIONS)[number];
   };
 }
 export interface StudioProject {
@@ -138,8 +154,16 @@ export function validateProjectConfig(value: unknown, graph?: VisualGraph): stri
     if (Object.keys(v).some((k) => !allowed.includes(k))) fail(path + ': unknown field');
     return true;
   };
-  if (!keys(value, ['preset', 'nodes', 'edges', 'text', 'layout', 'assets'], 'config'))
+  if (!keys(value, ['preset', 'nodes', 'edges', 'text', 'layout', 'assets', 'view'], 'config'))
     return errors;
+  if (value.view !== undefined && keys(value.view, ['timeAxis'], 'config.view')) {
+    const direction = value.view.timeAxis;
+    if (direction !== undefined && !enumValue(direction, TIME_AXIS_DIRECTIONS))
+      fail('config.view.timeAxis');
+    // Only a drawing on a time axis can turn it upright: its nodes carry times.
+    else if (direction === 'vertical' && graph && !hasTimes(graph.nodes))
+      fail('config.view.timeAxis: the graph has no times');
+  }
   if (
     value.preset !== undefined &&
     !enumValue(value.preset, ['editorial', 'quiet', 'presentation'])

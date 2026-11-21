@@ -35,6 +35,11 @@ import {
 } from '../../packages/core/src/director/time-anchor.ts';
 import { placeInTime } from '../../packages/core/src/graph/time-axis.ts';
 import {
+  canDrawTimeVertically,
+  drawsTimeVertically,
+  timeDirection,
+} from '../../packages/core/src/director/time-direction.ts';
+import {
   currentStudioMode,
   planStudioModeTransition,
 } from '../../apps/studio/src/studio-mode-model.ts';
@@ -51,7 +56,7 @@ import {
 import { readFileSync } from 'node:fs';
 import { transpileModule, ModuleKind, ScriptTarget } from 'typescript';
 import { FILM_FONT_FACES, filmFontQuery } from '../../packages/render/src/fonts.ts';
-import { FRAME_SPECS } from '../../packages/render/src/frame-spec.ts';
+import { engineAspect, FRAME_SPECS } from '../../packages/render/src/frame-spec.ts';
 import {
   editableNodes,
   layoutHasChanges,
@@ -138,6 +143,10 @@ export const studioImports = {
   offTime,
   placeInTime,
   timeAnchor,
+  canDrawTimeVertically,
+  drawsTimeVertically,
+  timeDirection,
+  engineAspect,
   createLayoutStrategyView,
   layoutPanelContext,
   currentStudioMode,

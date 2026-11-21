@@ -415,14 +415,17 @@ export function composeRelations(
       // Tree, mind-map and process links leave and arrive sideways when the
       // two nodes are clearly side by side. A pair joined both ways, such as
       // a step and the retry that returns to it, opens into two arcs instead.
+      // With time running down (ADR 004, D7 step 2) the drawing is
+      // transposed, and so are its elbows: they leave and arrive upright.
+      const upright = ctx.vertical;
       const elbow =
         !back &&
         style.routing === 'elbow' &&
         siblings.length === 1 &&
-        Math.abs(dx) > Math.abs(dy) * 0.35;
+        (upright ? Math.abs(dy) > Math.abs(dx) * 0.35 : Math.abs(dx) > Math.abs(dy) * 0.35);
       // A return leaves its step upright and enters its target from the same side.
-      const ux = back ? 0 : elbow ? Math.sign(dx) : dx / len,
-        uy = back ? back.side : elbow ? 0 : dy / len;
+      const ux = back ? 0 : elbow ? (upright ? 0 : Math.sign(dx)) : dx / len,
+        uy = back ? back.side : elbow ? (upright ? Math.sign(dy) : 0) : dy / len;
       const sourceRim = nodeGlyphRayDistance(
           from.node,
           { x: ux, y: uy },
@@ -454,7 +457,7 @@ export function composeRelations(
               : width / 2 + u(2.5);
       const rb = targetRim + reach;
       // Glyphs that touch or overlap leave no room for a readable stroke.
-      if (!back && (elbow ? Math.abs(dx) : len) <= ra + rb + u(1)) continue;
+      if (!back && (elbow ? Math.abs(upright ? dy : dx) : len) <= ra + rb + u(1)) continue;
       const start = { x: a.x + ux * ra, y: a.y + uy * ra },
         end = back ? { x: b.x, y: b.y + back.side * rb } : { x: b.x - ux * rb, y: b.y - uy * rb };
       let segments: Segment[];
@@ -470,6 +473,14 @@ export function composeRelations(
           [start, { x: start.x, y: peak }, leave],
           [leave, { x: (leave.x + arrive.x) / 2, y: peak }, arrive],
           [arrive, { x: end.x, y: peak }, end],
+        ];
+      } else if (elbow && upright) {
+        // Out upright, across, in upright: the level elbow, transposed.
+        const turn = (start.y + end.y) / 2 + u(custom.curve ?? 0),
+          middle = { x: (start.x + end.x) / 2, y: turn };
+        segments = [
+          [start, { x: start.x, y: turn }, middle],
+          [middle, { x: end.x, y: turn }, end],
         ];
       } else if (elbow) {
         // Out level, across, in level: two quadratic arcs that meet upright.
