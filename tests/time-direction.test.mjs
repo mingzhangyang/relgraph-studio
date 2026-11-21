@@ -272,6 +272,20 @@ test('engines read a target aspect, and keep the landscape one without it', () =
   assert.equal(engineAspect(FRAME_SPECS['landscape-1080p'], 'horizontal'), undefined);
 });
 
+test('filling missing positions without anchors ignores the preview aspect', () => {
+  const { graph } = loaded(bookshop);
+  for (const node of graph.nodes) delete node.position;
+  const aspect = engineAspect(FRAME_SPECS['portrait-1080x1920'], 'horizontal');
+  for (const type of ['grid', 'force']) {
+    const settings = { ...DEFAULT_LAYOUT_SETTINGS, type, mode: 'missing' };
+    assert.deepEqual(
+      planLayout(graph, settings, undefined, { aspect }).positions,
+      planLayout(graph, settings).positions,
+      type,
+    );
+  }
+});
+
 test('a timeline computed for a vertical portrait film spreads its lanes', () => {
   const { graph } = loaded(project(dynasties, 'vertical'));
   const settings = { ...DEFAULT_LAYOUT_SETTINGS, type: 'timeline', mode: 'rearrange' };

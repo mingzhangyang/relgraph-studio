@@ -284,7 +284,10 @@ function applyProjectHistory({
   // an in-flight pointer transaction before they replace its underlying layout.
   // Otherwise the late pointerup could commit stale coordinates over undo/redo.
   cancelActiveLayoutDrag();
-  graph.project = projectHistory.value;
+  const next = projectHistory.value;
+  if (timeDirection(graph) !== timeDirection({ project: next }))
+    transitionStudio('exitPositionEdit');
+  graph.project = next;
   restoreLayoutPositions(currentLayout, originalLayout);
   for (const [id, p] of Object.entries(graph.project.layout?.positions ?? {}))
     currentLayout.set(id, { ...p });
@@ -837,6 +840,7 @@ function beginLoad(): number {
   projectEditor.imageBusy(false);
   const serial = ++requestSerial;
   loading = true;
+  renderTimeAxisControl();
   renderDocumentToolbar();
   refreshUnsavedState();
   strategyView.render(currentFrameState, projectHistory.value.layout, false, true);

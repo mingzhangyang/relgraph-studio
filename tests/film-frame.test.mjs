@@ -504,6 +504,38 @@ test('#47 review · a reciprocal retry and a full cycle still route their return
   assert.ok(Math.min(...back.map((q) => q.y)) < middle.y, 'over the row');
 });
 
+test('a vertical dated flowchart routes its retry outside the intervening step', () => {
+  const result = load({
+    format: 'relgraph.studio/1',
+    config: { view: { timeAxis: 'vertical' } },
+    source: {
+      format: 'relgraph.graph/1',
+      diagram: 'flowchart',
+      directed: true,
+      nodes: ['A', 'B', 'C'].map((id, i) => ({
+        id,
+        visibleFrom: i,
+        position: { x: i * 240, y: 0 },
+      })),
+      edges: [
+        { source: 'A', target: 'B' },
+        { source: 'B', target: 'C' },
+        { source: 'C', target: 'A', label: 'retry' },
+      ],
+      presentation: [{ title: 'all', durationSec: 2, domainAt: 2 }],
+    },
+  });
+  const { list } = compose(result, frameCount(result.graph) - 1);
+  const nodes = outlines(result, list).nodes;
+  const retry = returnPath(result, list, 'retry');
+  assert.ok(retry[0].x < nodes.get('C').x, 'leaves the left side');
+  assert.ok(retry.at(-1).x < nodes.get('A').x, 'arrives at the left side');
+  assert.ok(
+    retry.every((point) => point.x < nodes.get('B').x),
+    'clears the middle step',
+  );
+});
+
 test('#47 review · an authored curve cannot bring a return inside its clearance or onto another lane', () => {
   const steps = { 甲: [0, 0], 乙: [220, 0], 丙: [440, 0], 丁: [660, 0] };
   const edges = [

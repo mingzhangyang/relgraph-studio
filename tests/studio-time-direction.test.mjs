@@ -7,7 +7,7 @@ import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { loadDocument } from '../packages/core/src/director/load.ts';
 import { VIDEO_THEMES } from '../packages/render/src/theme.ts';
-import { flush, makeStudio } from './helpers/studio-harness.mjs';
+import { deferred, flush, makeStudio } from './helpers/studio-harness.mjs';
 import { measure } from './helpers/display-list.mjs';
 import { timeDirectionProblems } from './helpers/time-direction.mjs';
 
@@ -80,6 +80,40 @@ test('the control is offered only for a graph whose nodes carry times', async ()
   assert.equal(select.disabled, true);
   assert.equal(select.value, 'horizontal');
   await app.node('exampleTimeline').click();
+  await flush();
+  assert.equal(select.disabled, false);
+});
+
+test('changing direction exits position editing on commit, undo and redo', async () => {
+  const { app, last } = await timelineStudio();
+  const toggle = app.node('layoutToggle');
+  const select = app.node('timeAxisSelect');
+  const horizontal = last().state.cameraResolved;
+  for (const action of ['change', 'visualUndo', 'visualRedo']) {
+    await toggle.click();
+    assert.equal(toggle.attributes['aria-pressed'], 'true');
+    if (action === 'change') {
+      select.value = 'vertical';
+      await select.dispatch('change');
+    } else await app.node(action).click();
+    assert.equal(toggle.attributes['aria-pressed'], 'false', action);
+    const camera = last().state.cameraResolved;
+    if (action === 'visualUndo') assert.deepEqual(camera, horizontal);
+    else assert.deepEqual([camera.x, camera.y], [horizontal.y, horizontal.x]);
+  }
+});
+
+test('a pending replacement immediately disables the time-axis menu', async () => {
+  const { app } = await timelineStudio();
+  const input = app.node('fileInput');
+  const select = app.node('timeAxisSelect');
+  const pending = deferred();
+  input.files = [{ name: 'replacement.json', text: () => pending.promise }];
+  await input.dispatch('change');
+  assert.equal(select.disabled, true);
+  pending.resolve(
+    JSON.stringify({ format: 'relgraph.graph/1', nodes: [{ id: 'a', visibleFrom: 1 }] }),
+  );
   await flush();
   assert.equal(select.disabled, false);
 });

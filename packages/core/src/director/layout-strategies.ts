@@ -249,7 +249,7 @@ export function planLayout(
   graph: VisualGraph,
   settings: LayoutSettings,
   current: ReadonlyMap<string, LayoutPoint> = layoutGraph(graph),
-  { aspect }: PlanOptions = {},
+  options: PlanOptions = {},
 ): LayoutPlan {
   const now = Boolean(timeAnchor(graph));
   const plan = (
@@ -318,6 +318,7 @@ export function planLayout(
     );
   const nodes = graph.nodes.map((n) => ({ ...n, position: anchors.get(n.id) }));
   let result: Map<string, LayoutPoint>;
+  const aspect = mode === 'missing' ? undefined : options.aspect;
   if (engine === 'force') {
     // Anchors beyond any drawable range keep the overflow-safe incremental
     // solver; everything else gets the full structural relaxation.
