@@ -1,8 +1,12 @@
 import { displayNodeText, edgeStyleFor, localize } from '@relgraph/core';
 import type { DisplayItem, FontRef, FrameText, Paint } from '../display-list.js';
 import type { FrameContext } from './context.js';
+import { furnitureOf, minBandHeight } from '../frame-spec.js';
 import { clamp } from './geometry.js';
 import { captionWithLabel, fitText, wrapText } from './text.js';
+
+/** Space between narration baselines, in 720p reference pixels. */
+export const NARRATION_LEADING = 21;
 
 /** The domain time shown in the title band, or '' for a frame without one. */
 export function domainTimeText(ctx: FrameContext): string {
@@ -121,19 +125,39 @@ export function composeFurniture(ctx: FrameContext): DisplayItem[] {
         ...(alpha === undefined || alpha === 1 ? {} : { alpha }),
       });
   };
+  const furniture = furnitureOf(spec);
   const titleX = titleBand.x + u(2),
     titleRight = titleBand.x + titleBand.w;
   const titleFont = serif(27, 600),
     metaFont = mono(13);
   const domainTime = domainTimeText(ctx);
-  // The film title shares its row with the right-aligned domain time and
-  // never exceeds the title safe area; u(850) is the design's maximum length.
-  const titleRoom = titleRight - titleX - (domainTime ? measure(domainTime, metaFont) + u(24) : 0);
-  const filmTitle = fitText(measure, view.meta.title, titleFont, Math.min(u(850), titleRoom));
-  text(messages.kicker, titleX, titleBand.y + u(39), sans(13, 600), P.kicker);
-  text(filmTitle, titleX, titleBand.y + u(78), titleFont, P.title);
-  text(messages.frameMeta(frame, fps), titleRight, titleBand.y + u(40), metaFont, P.meta, 'right');
-  text(domainTime, titleRight, titleBand.y + u(73), metaFont, P.meta, 'right');
+  if (furniture.title === 'stacked') {
+    // Kicker and frame number, film title, domain time: one row each, at the
+    // bottom of the band so the space above it stays clear.
+    const top = titleBand.y + titleBand.h - u(minBandHeight(spec).title);
+    const filmTitle = fitText(measure, view.meta.title, titleFont, titleRight - titleX);
+    text(messages.kicker, titleX, top + u(39), sans(13, 600), P.kicker);
+    text(messages.frameMeta(frame, fps), titleRight, top + u(40), metaFont, P.meta, 'right');
+    text(filmTitle, titleX, top + u(78), titleFont, P.title);
+    text(domainTime, titleX, top + u(106), metaFont, P.meta);
+  } else {
+    // The film title shares its row with the right-aligned domain time and
+    // never exceeds the title safe area; u(850) is the design's maximum length.
+    const titleRoom =
+      titleRight - titleX - (domainTime ? measure(domainTime, metaFont) + u(24) : 0);
+    const filmTitle = fitText(measure, view.meta.title, titleFont, Math.min(u(850), titleRoom));
+    text(messages.kicker, titleX, titleBand.y + u(39), sans(13, 600), P.kicker);
+    text(filmTitle, titleX, titleBand.y + u(78), titleFont, P.title);
+    text(
+      messages.frameMeta(frame, fps),
+      titleRight,
+      titleBand.y + u(40),
+      metaFont,
+      P.meta,
+      'right',
+    );
+    text(domainTime, titleRight, titleBand.y + u(73), metaFont, P.meta, 'right');
+  }
 
   const captionX = captionBand.x + u(2),
     captionWidth = captionBand.w - u(36),
@@ -157,18 +181,20 @@ export function composeFurniture(ctx: FrameContext): DisplayItem[] {
     captionAlpha,
   );
   const narrationFont = sans(16);
-  wrapText(measure, narration, narrationFont, captionWidth, 2).forEach((line, i) =>
-    text(
-      line,
-      captionX,
-      captionBand.y + u(109) + i * u(21),
-      narrationFont,
-      P.narration,
-      undefined,
-      captionAlpha,
-    ),
+  wrapText(measure, narration, narrationFont, captionWidth, furniture.narrationLines).forEach(
+    (line, i) =>
+      text(
+        line,
+        captionX,
+        captionBand.y + u(109) + i * u(NARRATION_LEADING),
+        narrationFont,
+        P.narration,
+        undefined,
+        captionAlpha,
+      ),
   );
-  const trackY = captionBand.y + u(156);
+  // The track follows the last narration line the band holds.
+  const trackY = captionBand.y + u(156 + (furniture.narrationLines - 2) * NARRATION_LEADING);
   items.push({ type: 'path', d: [['R', captionX, trackY, trackWidth, u(2)]], fill: P.track });
   const progress = trackWidth * clamp(frame / fps / (playback.totalSec || 1), 0, 1);
   if (progress > 0)

@@ -2,12 +2,16 @@
 // sweep rather than single examples: on every frame that draws a card, the
 // card covers nothing drawn for its object - neither end's glyph, the
 // relation's stroke, either end's name label nor the relation's own label -
-// and a card shot that can show its card does show it.
+// the object's glyphs are drawn wholly on the stage (D7 step 1: framing
+// into the free area must not push them off it), and a card shot that can
+// show its card does show it.
 //
 // The sweep varies what earlier reviews found one at a time: node shape
 // (compact, label-holding, timeline bars), geometry, the card shot's camera
 // (none, fitIds, focus, zoom), a transition from a distant node, card height,
-// label length, the card's object and the frame spec; and cited self-loops,
+// label length, the card's object and the frame spec (every preset, so the
+// card region below the graph in portrait and 3:4 is swept like the one
+// beside it); and cited self-loops,
 // whose route the camera does not know, so their card may be withheld - but
 // only with a report, never silently.
 import { test } from 'vitest';
@@ -178,13 +182,26 @@ function frameProblems(list, frameSpec, endLabels, cited) {
   if (!plate) return { drawn: false, problems: [] };
   const card = { x: plate.d[0][1], y: plate.d[0][2], w: plate.d[0][3], h: plate.d[0][4] };
   const problems = [];
+  const inStage = (box) =>
+    stage?.clip &&
+    box.x >= stage.clip.x - 0.5 &&
+    box.y >= stage.clip.y - 0.5 &&
+    box.x + box.w <= stage.clip.x + stage.clip.w + 0.5 &&
+    box.y + box.h <= stage.clip.y + stage.clip.h + 0.5;
+  const shown = new Set();
   for (const entry of list.selection ?? []) {
-    if (entry.kind === 'node' && cited.nodes.includes(entry.id) && entry.box)
+    if (entry.kind === 'node' && cited.nodes.includes(entry.id) && entry.box) {
+      shown.add(entry.id);
       if (intersects(entry.box, card)) problems.push(`glyph ${entry.id}`);
+      // What the card is about is shown in full while the card is.
+      if (!inStage(entry.box)) problems.push(`glyph ${entry.id} not wholly on stage`);
+    }
     if (entry.kind === 'edge' && entry.id === cited.edge && entry.points)
       if (strokeBoxes(entry.points, entry.width ?? 1).some((box) => intersects(box, card)))
         problems.push('relation stroke');
   }
+  for (const id of cited.nodes)
+    if (!shown.has(id)) problems.push(`glyph ${id} not drawn with the card`);
   const texts = [];
   (function walk(items) {
     for (const item of items) {
@@ -320,7 +337,9 @@ function loopCases() {
   return cases;
 }
 
-for (const specName of ['landscape-720p', 'landscape-1080p'])
+// Every preset: landscape beside the graph, portrait and 3:4 below it, square
+// beside it in a narrower region (ADR 004, D7 step 1).
+for (const specName of Object.keys(FRAME_SPECS))
   test(`evidence card invariant over the parameter sweep (${specName})`, () => {
     const frameSpec = FRAME_SPECS[specName];
     const failures = [

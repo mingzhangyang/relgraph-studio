@@ -12,7 +12,15 @@ import { fitText } from './text.js';
  * they are no smaller than the frame's other secondary text (scene label and
  * group names, 13). Marks and plate grow with them.
  */
-export const LEGEND = Object.freeze({ size: 14, mark: 14, swatch: 22, gap: 7, plate: 28 });
+export const LEGEND = Object.freeze({
+  size: 14,
+  mark: 14,
+  swatch: 22,
+  gap: 7,
+  plate: 28,
+  /** Space between the rows of a legend strip. */
+  rowGap: 6,
+});
 
 /** How far the most advanced item of each kind has come. */
 const kindProgress = (
@@ -27,8 +35,9 @@ const kindProgress = (
 
 /**
  * The legend names what colour, rhythm and shape mean, for the kinds that are
- * on screen now. Kinds captioned on their own edges need no entry. Its plate
- * takes its place in `occupied`.
+ * on screen now. Kinds captioned on their own edges need no entry. Each row's
+ * plate takes its place in `occupied`. Entries that find no room are left
+ * out, as before; a legend strip with two rows holds more of them.
  */
 export function composeLegend(ctx: FrameContext, occupied: RectIndex): DisplayItem[] {
   const { view, style, theme: P, u, sans, measure, locale, spec } = ctx;
@@ -51,15 +60,44 @@ export function composeLegend(ctx: FrameContext, occupied: RectIndex): DisplayIt
     padX = u(12),
     h = u(LEGEND.plate),
     mark = u(LEGEND.mark);
-  const x0 = titleBand.x + u(2),
-    y0 = stage.y + stage.h - h - u(8),
-    limit = stage.x + stage.w - u(12);
-  const row: DisplayItem[] = [];
-  let x = x0 + padX;
+  // Landscape: one row at the bottom left of the stage. A spec with a
+  // legend strip (portrait, 3:4, square) fills its rows from the top left.
+  const strip = spec.safe.legend;
+  const x0 = strip ? strip.x : titleBand.x + u(2),
+    limit = strip ? strip.x + strip.w : stage.x + stage.w - u(12),
+    rowGap = u(LEGEND.rowGap),
+    rows = strip ? Math.max(1, Math.floor((strip.h + rowGap) / (h + rowGap))) : 1;
+  const rowY = (row: number): number =>
+    strip ? strip.y + row * (h + rowGap) : stage.y + stage.h - h - u(8);
+  let row: DisplayItem[] = [];
+  let line = 0,
+    y0 = rowY(0),
+    x = x0 + padX;
+  const closeRow = (): void => {
+    if (!row.length) return;
+    const plate = { x: x0, y: y0, w: x - between + padX - x0, h };
+    occupied.add(plate);
+    items.push(
+      {
+        type: 'path',
+        d: [['RR', plate.x, plate.y, plate.w, plate.h, h / 2]],
+        fill: P.legendPlate,
+      },
+      ...row,
+    );
+    row = [];
+  };
   for (const entry of legendEntries) {
     const text = fitText(measure, localize(entry.label, locale), font, u(140)),
       w = (entry.isNode ? mark : swatch) + gap + measure(text, font);
-    if (x + w + padX > limit) break;
+    if (x + w + padX > limit) {
+      // The next row, if the strip has one and this entry fits a row at all.
+      if (line + 1 >= rows || x0 + padX + w + padX > limit) break;
+      closeRow();
+      line += 1;
+      y0 = rowY(line);
+      x = x0 + padX;
+    }
     const cy = y0 + h / 2;
     if (entry.isNode) {
       const kindStyle = nodeStyleFor(style, entry.kind),
@@ -105,17 +143,6 @@ export function composeLegend(ctx: FrameContext, occupied: RectIndex): DisplayIt
     });
     x += w + between;
   }
-  if (row.length) {
-    const plate = { x: x0, y: y0, w: x - between + padX - x0, h };
-    occupied.add(plate);
-    items.push(
-      {
-        type: 'path',
-        d: [['RR', plate.x, plate.y, plate.w, plate.h, h / 2]],
-        fill: P.legendPlate,
-      },
-      ...row,
-    );
-  }
+  closeRow();
   return items;
 }

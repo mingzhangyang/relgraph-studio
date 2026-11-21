@@ -49,6 +49,10 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
   const occupied = ctx.rectIndex();
   const obstacles = nodeObstacles(ctx, drawn, occupied);
   const axis = composeTimeAxis(ctx, occupied);
+  // A legend strip (portrait, 3:4, square) is laid out before group names
+  // and labels, which are placed at the top of what they name and would
+  // otherwise land under it; the landscape legend keeps its place in the order.
+  const stripLegend = ctx.spec.safe.legend ? composeLegend(ctx, occupied) : null;
   const hulls = composeGroups(ctx, drawn, occupied);
   const layout = relationLayout(ctx.view, ctx.points, ctx.style, ctx.graph);
   const relations = composeRelations(
@@ -57,7 +61,7 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
     layout,
   );
   const glyphs = composeNodes(ctx, drawn);
-  const legend = composeLegend(ctx, occupied);
+  const legend = stripLegend ?? composeLegend(ctx, occupied);
   // The evidence card is laid out before any name or relation label: its box
   // is taken for the whole shot, so no label of its object (or any other)
   // is placed under it, and it is verified against the drawn glyphs and
