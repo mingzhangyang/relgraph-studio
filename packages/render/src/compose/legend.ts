@@ -1,5 +1,6 @@
 import { edgeStyleFor, localize, nodeStyleFor } from '@relgraph/core';
 import type { DisplayItem } from '../display-list.js';
+import { LEGEND_ROW_HEIGHT } from '../frame-spec.js';
 import { miniatureGeometry, nodeOutline } from '../node-geometry.js';
 import type { RectIndex } from '../spatial.js';
 import { edgePaint, mixHex, toneOf } from '../theme.js';
@@ -17,7 +18,7 @@ export const LEGEND = Object.freeze({
   mark: 14,
   swatch: 22,
   gap: 7,
-  plate: 28,
+  plate: LEGEND_ROW_HEIGHT,
   /** Space between the rows of a legend strip. */
   rowGap: 6,
 });
@@ -66,7 +67,10 @@ export function composeLegend(ctx: FrameContext, occupied: RectIndex): DisplayIt
   const x0 = strip ? strip.x : titleBand.x + u(2),
     limit = strip ? strip.x + strip.w : stage.x + stage.w - u(12),
     rowGap = u(LEGEND.rowGap),
-    rows = strip ? Math.max(1, Math.floor((strip.h + rowGap) / (h + rowGap))) : 1;
+    rows = strip ? Math.floor((strip.h + rowGap) / (h + rowGap)) : 1;
+  // A strip too short for one row (frameSpecFor refuses such a spec) shows
+  // no legend rather than a plate reaching past it.
+  if (rows < 1) return items;
   const rowY = (row: number): number =>
     strip ? strip.y + row * (h + rowGap) : stage.y + stage.h - h - u(8);
   let row: DisplayItem[] = [];

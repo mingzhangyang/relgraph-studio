@@ -307,6 +307,12 @@ export function frameSpecFor(spec: FrameSpecName | FrameSpec | undefined): Reado
   const { legend, card } = spec.safe;
   if (legend && !contains(spec.stage, legend)) throw invalid('safe.legend must lie on the stage');
   if (legend && overlaps(legend, spec.safe.graph)) throw invalid('safe.legend overlaps safe.graph');
+  // The legend is drawn in whole rows; a strip that holds none would let a
+  // row's plate reach past it, over the graph.
+  if (legend && legend.h < LEGEND_ROW_HEIGHT * spec.typeScale - EPSILON)
+    throw invalid(
+      `safe.legend is shorter than one legend row (${LEGEND_ROW_HEIGHT * spec.typeScale}px)`,
+    );
   if (card) {
     if (!contains(spec.stage, card)) throw invalid('safe.card must lie on the stage');
     if (legend && overlaps(legend, card)) throw invalid('safe.legend overlaps safe.card');
@@ -338,6 +344,8 @@ export function evidenceCardRegion(spec: FrameSpec): Rect {
   const w = Math.min(EVIDENCE_CARD_WIDTH * u, g.w / 2);
   return { x: g.x + g.w + 10 * u - w, y: g.y, w, h: g.h };
 }
+/** Height of one legend row (its plate), in 720p reference pixels. */
+export const LEGEND_ROW_HEIGHT = 28;
 /** Width of the evidence card, in 720p reference pixels. */
 export const EVIDENCE_CARD_WIDTH = 370;
 /** Least space between the evidence card and the area the camera frames into. */

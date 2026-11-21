@@ -1968,45 +1968,96 @@ for (const theme of ['dark', 'light']) {
 // the selection overlay follows it; landscape returns to 1280 × 720.
 {
   const { context, page, problems } = await openStudio();
-  await check('frame-spec menu sizes the preview from the spec at 1440px and 390px', async () => {
-    assert.equal(await page.inputValue('#frameSpecSelect'), 'landscape-720p');
-    const shape = () =>
-      page.evaluate(() => {
-        const canvas = document.getElementById('stage');
-        const box = canvas.getBoundingClientRect();
-        return {
-          bitmap: [canvas.width, canvas.height],
-          shown: box.width / box.height,
-          height: box.height,
-          viewBox: document.getElementById('stageSelection').getAttribute('viewBox'),
-          overflow: document.documentElement.scrollWidth - window.innerWidth,
-        };
-      });
-    for (const width of [1440, 390]) {
-      await page.setViewportSize({ width, height: 1000 });
+  await check(
+    'frame-spec menu sizes the preview from the spec at 1440px and 390px; empty stage centred',
+    async () => {
+      assert.equal(await page.inputValue('#frameSpecSelect'), 'landscape-720p');
+      const shape = () =>
+        page.evaluate(() => {
+          const canvas = document.getElementById('stage');
+          const box = canvas.getBoundingClientRect();
+          return {
+            bitmap: [canvas.width, canvas.height],
+            shown: box.width / box.height,
+            height: box.height,
+            viewBox: document.getElementById('stageSelection').getAttribute('viewBox'),
+            overflow: document.documentElement.scrollWidth - window.innerWidth,
+          };
+        });
+      for (const width of [1440, 390]) {
+        await page.setViewportSize({ width, height: 1000 });
+        for (const [name, w, h] of [
+          ['portrait-1080x1920', 1080, 1920],
+          ['portrait-1080x1440', 1080, 1440],
+          ['square-1080', 1080, 1080],
+          ['landscape-720p', 1280, 720],
+        ]) {
+          await page.selectOption('#frameSpecSelect', name);
+          assert.equal(await page.evaluate(() => window.renderAt(30)), true);
+          const got = await shape();
+          assert.deepEqual(got.bitmap, [w, h], `${name} bitmap at ${width}px`);
+          assert.ok(Math.abs(got.shown - w / h) < 0.02, `${name} shown ${got.shown} at ${width}px`);
+          assert.equal(got.viewBox, `0 0 ${w} ${h}`, `${name} overlay at ${width}px`);
+          assert.ok(got.overflow <= 2, `${name}: no horizontal overflow at ${width}px`);
+          if (w <= h) assert.ok(got.height <= 1000 * 0.78 + 2, `${name} height ${got.height}`);
+        }
+      }
+      await page.setViewportSize({ width: 1440, height: 1000 });
+      await page.selectOption('#frameSpecSelect', 'portrait-1080x1920');
+      assert.equal(await page.evaluate(() => window.renderAt(30)), true);
+      await page.screenshot({ path: join(outputDir, 'frame-spec-portrait.png'), fullPage: true });
+      // The empty/error stage is painted centred on the spec's canvas (review
+      // of #61): its drawn text, found from the pixels, sits around the centre.
+      const broken = join(fixtures, 'frame-spec-broken.json');
+      await writeFile(broken, '{"schemaVersion": ');
+      await page.locator('#fileInput').setInputFiles(broken);
+      await page.waitForFunction(
+        () => document.getElementById('status').getAttribute('data-state') === 'error',
+      );
       for (const [name, w, h] of [
         ['portrait-1080x1920', 1080, 1920],
         ['portrait-1080x1440', 1080, 1440],
         ['square-1080', 1080, 1080],
-        ['landscape-720p', 1280, 720],
       ]) {
         await page.selectOption('#frameSpecSelect', name);
-        assert.equal(await page.evaluate(() => window.renderAt(30)), true);
-        const got = await shape();
-        assert.deepEqual(got.bitmap, [w, h], `${name} bitmap at ${width}px`);
-        assert.ok(Math.abs(got.shown - w / h) < 0.02, `${name} shown ${got.shown} at ${width}px`);
-        assert.equal(got.viewBox, `0 0 ${w} ${h}`, `${name} overlay at ${width}px`);
-        assert.ok(got.overflow <= 2, `${name}: no horizontal overflow at ${width}px`);
-        if (w <= h) assert.ok(got.height <= 1000 * 0.78 + 2, `${name} height ${got.height}`);
+        const ink = await page.evaluate(() => {
+          const canvas = document.getElementById('stage');
+          const { data, width, height } = canvas
+            .getContext('2d')
+            .getImageData(0, 0, canvas.width, canvas.height);
+          const bg = data.slice(0, 3);
+          let top = height,
+            bottom = -1,
+            left = width,
+            right = -1;
+          for (let y = 0; y < height; y++)
+            for (let x = 0; x < width; x++) {
+              const i = (y * width + x) * 4;
+              if (Math.abs(data[i] - bg[0]) + Math.abs(data[i + 1] - bg[1]) > 60) {
+                top = Math.min(top, y);
+                bottom = Math.max(bottom, y);
+                left = Math.min(left, x);
+                right = Math.max(right, x);
+              }
+            }
+          return { top, bottom, left, right, width, height };
+        });
+        assert.deepEqual([ink.width, ink.height], [w, h], `${name} empty canvas size`);
+        assert.ok(ink.bottom > ink.top, `${name}: error message drawn`);
+        const cx = (ink.left + ink.right) / 2,
+          cy = (ink.top + ink.bottom) / 2;
+        assert.ok(Math.abs(cx - w / 2) < w * 0.05, `${name}: message centre x ${cx}`);
+        assert.ok(Math.abs(cy - h / 2) < h * 0.05, `${name}: message centre y ${cy}`);
       }
-    }
-    await page.setViewportSize({ width: 1440, height: 1000 });
-    await page.selectOption('#frameSpecSelect', 'portrait-1080x1920');
-    assert.equal(await page.evaluate(() => window.renderAt(30)), true);
-    await page.screenshot({ path: join(outputDir, 'frame-spec-portrait.png'), fullPage: true });
-    await page.selectOption('#frameSpecSelect', 'landscape-720p');
-    assert.deepEqual(problems, []);
-  });
+      await page.selectOption('#frameSpecSelect', 'portrait-1080x1920');
+      await page.screenshot({
+        path: join(outputDir, 'frame-spec-portrait-error.png'),
+        fullPage: true,
+      });
+      await page.selectOption('#frameSpecSelect', 'landscape-720p');
+      assert.deepEqual(problems, []);
+    },
+  );
   await context.close();
 }
 

@@ -6,6 +6,7 @@
 // invariant over all examples is tests/frame-furniture-invariant.test.mjs.
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import fixture from './fixtures/evidence-cards.graph.json' with { type: 'json' };
 import { loadDocument } from '../packages/core/src/director/load.ts';
 import { layoutGraph } from '../packages/core/src/director/layout.ts';
@@ -117,6 +118,15 @@ test('custom specs are validated: bands clear of the stage, strip and card on it
     change(spec);
     assert.throws(() => frameSpecFor(spec), error);
   }
+  // The review's case (#61): a 1.5px strip just above the graph passed, yet
+  // its 42px legend row reached ~40px into the graph. A strip must hold a row.
+  const thin = clone(FRAME_SPECS['square-1080']);
+  thin.safe.legend.y = thin.safe.graph.y - 1.5;
+  thin.safe.legend.h = 1.5;
+  assert.throws(() => frameSpecFor(thin), /safe\.legend is shorter than one legend row \(42px\)/);
+  thin.safe.legend.y = thin.safe.graph.y - 42;
+  thin.safe.legend.h = 42;
+  assert.equal(frameSpecFor(thin), thin, 'exactly one row fits');
   // A custom landscape spec without the new fields behaves as before.
   const custom = clone(FRAME_SPECS['landscape-720p']);
   custom.name = 'custom';
@@ -330,4 +340,26 @@ test('the studio preview takes its canvas size from the chosen frame spec (simul
   await select.dispatch('change');
   assert.equal(select.value, 'landscape-720p');
   assert.deepEqual([canvas.width, canvas.height], [1280, 720]);
+});
+
+test('a legend strip too short for a row draws no legend, even in an unvalidated spec', () => {
+  const bookshop = JSON.parse(
+    readFileSync(new URL('../examples/bookshop-systems-synthetic.graph.json', import.meta.url)),
+  );
+  const plates = (frameSpec) => {
+    const { compose, lastOf } = film(bookshop, frameSpec);
+    const list = compose(lastOf(4));
+    const legend = readFrame(list, VIDEO_THEMES.dark, measure).legendPlates;
+    return { legend, graph: frameSpec.safe.graph };
+  };
+  // The preset draws its legend inside the strip, clear of the graph.
+  const preset = plates(FRAME_SPECS['square-1080']);
+  assert.ok(preset.legend.length > 0);
+  for (const plate of preset.legend)
+    assert.ok(plate.y + plate.h <= preset.graph.y, 'preset legend above the graph');
+  // composeFrame takes a spec as given; a strip shorter than a row is left empty.
+  const thin = clone(FRAME_SPECS['square-1080']);
+  thin.safe.legend.y = thin.safe.graph.y - 1.5;
+  thin.safe.legend.h = 1.5;
+  assert.deepEqual(plates(thin).legend, []);
 });
