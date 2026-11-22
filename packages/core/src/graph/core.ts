@@ -648,8 +648,13 @@ export function projectBeatStages(
     const beat = changes[i];
     for (const id of beat?.reveal?.nodeIds ?? []) waitingNodes.delete(id);
     for (const id of beat?.reveal?.edgeIds ?? []) waitingEdges.delete(id);
-    camera = beat?.camera ?? camera;
-    highlight = beat?.highlight ?? highlight;
+    if (beat?.camera) {
+      camera = { ...camera, ...beat.camera };
+      // A target switch changes modes; other fields such as zoom remain inherited.
+      if (beat.camera.focusNodeId !== undefined) delete camera.fitIds;
+      else if (beat.camera.fitIds !== undefined) delete camera.focusNodeId;
+    }
+    if (beat?.highlight) highlight = { ...highlight, ...beat.highlight };
     evidence = beat?.evidence ?? evidence;
     const nodes = view.nodes.filter((n) => !waitingNodes.has(n.id));
     const edges = view.edges.filter(

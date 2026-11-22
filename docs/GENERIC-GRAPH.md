@@ -104,14 +104,22 @@ must be strictly later than the preceding beat, from zero up to (excluding)
 `durationSec`. A time alone marks a sync point. A beat can also supply:
 
 - `camera` and `highlight`, with the same fields as on the shot. Each supplied
-  value replaces its previous value for the rest of the shot or until changed
-  again. The camera starts moving at the beat and eases over `transitionMs`,
-  capped at the next presentation change or shot end.
+  field replaces its previous value for the rest of the shot or until changed
+  again; omitted fields are inherited. For example, `camera: { zoom: 1.5 }`
+  keeps the current focus or fit target, and `highlight: { edgeIds: [] }`
+  clears only the highlighted relations. Supplying `focusNodeId` clears the
+  previous `fitIds`; supplying `fitIds` clears the previous focus (`fitIds: []`
+  returns to framing the whole visible graph). Empty objects preserve all fields.
+  The camera starts moving at the beat and eases over `transitionMs`, capped
+  at the next presentation change or shot end.
 - `reveal: { nodeIds?, edgeIds? }` holds those objects until their first reveal
   in this shot. A relation also waits for both ends. Domain-time visibility
   still applies to every reference.
 - `evidence` selects a card using the same target and item indices as on a shot.
   The card waits for camera motion and its object's reveal before appearing.
+  When the selected items and camera framing stay unchanged across beats,
+  the card continues without restarting its fade or emitting another evidence
+  event. A new card or framing change starts a new presentation.
 
 The caption and the playback clock span the entire shot. Each beat on the film's
 frame grid produces a `beat` event with its zero-based shot and beat indices,

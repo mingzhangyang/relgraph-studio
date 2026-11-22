@@ -241,6 +241,7 @@ export function filmEvents(
   const groupOf = new Map([...shown.values()].map((node) => [node.id, node.groupId ?? null]));
 
   const events: FilmEvent[] = [];
+  const cardEvents = new Map<number, EvidenceEvent>();
   const shotId = (index: number): string | null => {
     const id = shots[index].scene.id;
     return id === undefined ? null : sceneId(id);
@@ -251,7 +252,13 @@ export function filmEvents(
       lastFrame = lastFrameOf(index);
     // A shot no frame shows has no events at all, not even a shot event: its
     // id, title and highlight come from a projection the film never shows.
-    if (!onScreen[index]) continue;
+    if (!onScreen[index]) {
+      // An unchanged trailing beat can extend the authored card lifetime
+      // without owning another frame. It never creates a new appearance.
+      const previous = cardEvents.get(timeline.cardStartIndices?.[index] ?? index);
+      if (previous) previous.endSec = seconds(shot.endSec);
+      continue;
+    }
     const settledFrame = Math.max(frame, frameAtOrAfter(settled[index], fps));
     const highlight = timeline.highlight[index].value;
     events.push({
@@ -303,20 +310,30 @@ export function filmEvents(
       fadeOutSec: seconds(caption.fadeOutSec),
     });
     const card = cardFrames[index];
-    if (shot.evidence && card?.shown)
-      events.push({
-        frame: card.first,
-        sec: seconds(shownSec[index] ?? shot.startSec),
-        shot: index,
-        type: 'evidence',
-        id: shotId(index),
-        object: shot.evidence.object,
-        target:
-          shot.evidence.object === 'node' ? nodeId(shot.evidence.id) : edgeId(shot.evidence.id),
-        items: shot.evidence.items.map((item) => item.index),
-        lastFrame,
-        endSec: seconds(shot.endSec),
-      });
+    if (shot.evidence && card?.shown) {
+      const startIndex = timeline.cardStartIndices?.[index] ?? index;
+      const previous = cardEvents.get(startIndex);
+      if (previous) {
+        previous.lastFrame = lastFrame;
+        previous.endSec = seconds(shot.endSec);
+      } else {
+        const event: EvidenceEvent = {
+          frame: card.first,
+          sec: seconds(shownSec[index] ?? shot.startSec),
+          shot: index,
+          type: 'evidence',
+          id: shotId(index),
+          object: shot.evidence.object,
+          target:
+            shot.evidence.object === 'node' ? nodeId(shot.evidence.id) : edgeId(shot.evidence.id),
+          items: shot.evidence.items.map((item) => item.index),
+          lastFrame,
+          endSec: seconds(shot.endSec),
+        };
+        events.push(event);
+        cardEvents.set(startIndex, event);
+      }
+    }
   }
 
   const reveal = (

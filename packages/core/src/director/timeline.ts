@@ -85,6 +85,12 @@ export interface FilmTimeline {
    * (`evidenceShownSec`), computed once so frames only look it up.
    */
   cardShownSec: (number | null)[];
+  /**
+   * Stage index that starts each continuous card presentation within an
+   * authored shot. Absent on timelines without beat stages. This is a run
+   * identity, not the first frame with positive card opacity.
+   */
+  cardStartIndices?: number[];
 }
 
 export const NODE_REVEAL_SEC = 0.6;
@@ -257,8 +263,53 @@ function compileBeatStages(graph: VisualGraph, film: FilmTimeline): void {
     opening?.atSec === 0 ? opening.reveal : undefined,
   );
   stage.cardShownSec = evidenceShownSec(stage);
+  const starts = shotStartFrames(stage);
+  const frames = frameCount(graph, film.fps);
+  const cardStartIndices: number[] = [];
+  let previous = -1;
+  let previousCard: string | null = null;
+  for (const [index] of stage.shots.entries()) {
+    cardStartIndices.push(index);
+    const last = index === stage.shots.length - 1 ? frames - 1 : starts[index + 1] - 1;
+    const card = cardPresentationKey(stage, index);
+    if (card !== null && owners[index] === owners[previous] && card === previousCard) {
+      cardStartIndices[index] = cardStartIndices[previous];
+      stage.cardShownSec[index] = stage.cardShownSec[previous];
+    }
+    // Match the previous camera target used by directorFrameAt: an unseen
+    // intervening stage cannot interrupt a presentation on the frame grid.
+    if (last < starts[index]) continue;
+    previous = index;
+    previousCard = card;
+  }
+  stage.cardStartIndices = cardStartIndices;
   film.reveal = stage.reveal;
   film.stages = { timeline: stage, owners };
+}
+
+/**
+ * Card identity plus the inputs that can change cameraFor's framing. Graph
+ * geometry, card contents and domain time are fixed inside an authored shot.
+ * Edge/group highlights never move the camera; node highlights can constrain
+ * a focus shot, and a reveal changes framing only when those nodes are used.
+ */
+function cardPresentationKey(timeline: FilmTimeline, index: number): string | null {
+  const shot = timeline.shots[index];
+  const card = shot.evidence;
+  if (!card) return null;
+  const camera = timeline.camera[index].value;
+  const focus = camera.focusNodeId;
+  const selected = focus ? [focus] : (camera.fitIds ?? []);
+  return JSON.stringify([
+    card.object,
+    card.id,
+    card.items.map((item) => item.index),
+    camera.zoom ?? 1,
+    focus ?? null,
+    selected.length > 0,
+    [...(selected.length ? selected : shot.view.nodes.map((node) => node.id))].sort(),
+    focus ? [...new Set(timeline.highlight[index].value.nodeIds)].sort() : [],
+  ]);
 }
 
 /** Frames of the film `graph` renders at `fps`: at least one. */
