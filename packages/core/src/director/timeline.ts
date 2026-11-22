@@ -587,28 +587,34 @@ export function captionOpacity(timeline: FilmTimeline, sceneIndex: number, secon
  * a shot without one: once the camera has finished moving to the framing
  * that leaves the card's object clear of the card (none for the first shot),
  * and once the object is half revealed, as the detail card waits for its
- * node. Until then the card could cover what it is about.
+ * node. A pair note waits for both endpoint nodes. Until then the card could
+ * cover what it is about.
  */
 export function evidenceShownSec(timeline: Omit<FilmTimeline, 'cardShownSec'>): (number | null)[] {
-  // The cues of the cards' objects only, by object: one pass over the cues.
-  const targets = new Set(
-    timeline.shots.flatMap((shot) =>
-      shot.evidence ? [`${shot.evidence.object}:${shot.evidence.id}`] : [],
-    ),
-  );
+  // Pair notes have no reveal cue of their own: their subjects are two nodes.
+  const shotTargets = timeline.shots.map(({ evidence: card, view }) => {
+    if (!card) return [];
+    if (card.object === 'pairNote')
+      return (view.pairNotes?.find((note) => note.id === card.id)?.nodes ?? []).map(
+        (id) => `node:${id}`,
+      );
+    return [`${card.object}:${card.id}`];
+  });
+  // The cues of the cards' subjects only, by object: one pass over the cues.
+  const targets = new Set(shotTargets.flat());
   const cues = new Map<string, RevealCue[]>();
   for (const cue of timeline.reveal) {
     const key = `${cue.kind}:${cue.targetId}`;
     if (targets.has(key)) cues.set(key, [...(cues.get(key) ?? []), cue]);
   }
   return timeline.shots.map((shot, index) => {
-    const card = shot.evidence;
-    if (!card) return null;
+    if (!shot.evidence) return null;
     let shown = shot.startSec + (index > 0 ? timeline.camera[index].transitionSec : 0);
-    // The object's cue under way in this shot, if it is being revealed.
-    for (const cue of cues.get(`${card.object}:${card.id}`) ?? [])
-      if (cue.inSec < shot.endSec && (cue.outSec === undefined || cue.outSec > shot.startSec))
-        shown = Math.max(shown, cue.inSec + cue.durationSec / 2);
+    // Every subject's cue under way in this shot, if it is being revealed.
+    for (const target of shotTargets[index])
+      for (const cue of cues.get(target) ?? [])
+        if (cue.inSec < shot.endSec && (cue.outSec === undefined || cue.outSec > shot.startSec))
+          shown = Math.max(shown, cue.inSec + cue.durationSec / 2);
     return shown;
   });
 }

@@ -800,8 +800,12 @@ function parseScenes(
     const beats = readBeats(
       s.beats,
       finite(duration) ? duration : 4,
-      (kind, id) => (kind === 'edges' ? edgeLookup : ids[kind]).get(id),
-      (kind, id) => evidenceCount[kind].get(id) ?? 0,
+      (kind, id) =>
+        kind === 'pairNotes'
+          ? notes.get(id)?.id
+          : (kind === 'edges' ? edgeLookup : ids[kind]).get(id),
+      (kind, id) =>
+        (kind === 'pairNotes' ? notes.get(id)?.evidence.length : evidenceCount[kind].get(id)) ?? 0,
       (field) => r.fail('BEAT', path + '.' + field, raw),
       rawId,
     );

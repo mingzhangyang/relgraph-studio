@@ -309,7 +309,7 @@ export function validateVisualGraph(graph: unknown): { valid: boolean; errors: G
     const beats = readBeats(
       s.beats,
       Number(s.durationSec),
-      (kind, id) => (ids[kind].has(id) ? id : undefined),
+      (kind, id) => ((kind === 'pairNotes' ? notes : ids[kind]).has(id) ? id : undefined),
       evidenceCount,
       (field) =>
         fail(

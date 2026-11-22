@@ -802,9 +802,19 @@ export function adaptBiologyDocument(input: unknown) {
       const beats = readBeats(
         s.beats,
         s.durationSec,
-        (kind, id) => (kind === 'nodes' ? nodeRef(id) : kind === 'edges' ? edgeRef(id) : id),
         (kind, id) =>
-          (kind === 'nodes' ? nodes : edges).find((item) => item.id === id)?.evidence?.length ?? 0,
+          kind === 'pairNotes'
+            ? undefined
+            : kind === 'nodes'
+              ? nodeRef(id)
+              : kind === 'edges'
+                ? edgeRef(id)
+                : id,
+        (kind, id) =>
+          kind === 'pairNotes'
+            ? 0
+            : ((kind === 'nodes' ? nodes : edges).find((item) => item.id === id)?.evidence
+                ?.length ?? 0),
         (field) => {
           throw Object.assign(new Error('Invalid biological beat'), {
             issues: [
