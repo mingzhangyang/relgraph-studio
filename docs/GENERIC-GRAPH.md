@@ -97,6 +97,33 @@ Rules worth knowing:
 Coordinate export (`仅导出坐标 JSON`) and `relgraph layout` write back to the
 ids you authored and declare nodes that previously existed only as endpoints.
 
+### In-shot beats
+
+A shot can include a `beats` array. Each `atSec` is relative to its shot and
+must be strictly later than the preceding beat, from zero up to (excluding)
+`durationSec`. A time alone marks a sync point. A beat can also supply:
+
+- `camera` and `highlight`, with the same fields as on the shot. Each supplied
+  value replaces its previous value for the rest of the shot or until changed
+  again. The camera starts moving at the beat and eases over `transitionMs`,
+  capped at the next presentation change or shot end.
+- `reveal: { nodeIds?, edgeIds? }` holds those objects until their first reveal
+  in this shot. A relation also waits for both ends. Domain-time visibility
+  still applies to every reference.
+- `evidence` selects a card using the same target and item indices as on a shot.
+  The card waits for camera motion and its object's reveal before appearing.
+
+The caption and the playback clock span the entire shot. Each beat on the film's
+frame grid produces a `beat` event with its zero-based shot and beat indices,
+the absolute time in seconds and the first frame at or after that time.
+
+Render the [one-shot scrolling example](../examples/scrolling-timeline.studio.json)
+with the built CLI:
+
+```sh
+npm run relgraph -- render examples/scrolling-timeline.studio.json --frame-spec portrait-1080x1920 --out scrolling.mp4 --events scrolling.events.json
+```
+
 ## Evidence cards
 
 A node or relation may carry `evidence`: a list whose items are either a

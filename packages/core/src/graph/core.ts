@@ -1,3 +1,4 @@
+import { readBeats } from './beats.js';
 /** Renderer-neutral, deterministic graph contract. Domain facts remain in source documents. */
 import type {
   EvidenceCard,
@@ -271,6 +272,22 @@ export function validateVisualGraph(graph: unknown): { valid: boolean; errors: G
         'Invalid domain time',
         'Use finite domain time, separate from playback seconds.',
       );
+    const beats = readBeats(
+      s.beats,
+      Number(s.durationSec),
+      (kind, id) => (ids[kind].has(id) ? id : undefined),
+      evidenceCount,
+      (field) =>
+        fail(
+          'BEAT',
+          path + '.' + field,
+          s.id,
+          'Invalid shot beat',
+          'Check beat timing and targets.',
+        ),
+    );
+    if (s.openDetailNodeId && beats?.some((beat) => beat.evidence))
+      fail('SCENE_EVIDENCE', path + '.beats', s.id, 'Conflicting cards', 'Choose one card.');
     step(s.revealStep, path + '.revealStep', s.id);
     if (s.camera !== undefined && !object(s.camera))
       fail(
@@ -511,8 +528,8 @@ export function projectFrameScene(
   index: number,
   domainAt: number | null,
   revealStep: number | null = null,
+  view = projectVisualGraph(graph, domainAt, revealStep),
 ): Omit<FrameState, 'playback'> & { scene: FrameScene | null } {
-  const view = projectVisualGraph(graph, domainAt, revealStep);
   const s = source;
   if (!s)
     return {
@@ -605,9 +622,81 @@ function evidenceCard(
   return { card: items.length ? { object, id, items } : null, hidden: false };
 }
 
+/** Each beat changes only presentation inside the already projected domain view. */
+export function projectBeatStages(
+  graph: VisualGraph,
+  source: VisualScene,
+  index: number,
+  domainAt: number | null,
+  revealStep: number | null,
+  view = projectVisualGraph(graph, domainAt, revealStep),
+) {
+  const beats = source.beats ?? [];
+  const waitingNodes = new Set(beats.flatMap((beat) => beat.reveal?.nodeIds ?? []));
+  const waitingEdges = new Set(beats.flatMap((beat) => beat.reveal?.edgeIds ?? []));
+  const visibleNodes = new Set(view.nodes.map((n) => n.id)),
+    visibleEdges = new Set(view.edges.map((e) => e.id));
+  let redacted =
+    [...waitingNodes].some((id) => !visibleNodes.has(id)) ||
+    [...waitingEdges].some((id) => !visibleEdges.has(id));
+  let camera = source.camera,
+    highlight = source.highlight,
+    evidence = source.evidence;
+  const changes = beats.filter((b) => b.reveal || b.camera || b.highlight || b.evidence);
+  const stages = [];
+  for (let i = changes[0]?.atSec === 0 ? 0 : -1; i < changes.length; i++) {
+    const beat = changes[i];
+    for (const id of beat?.reveal?.nodeIds ?? []) waitingNodes.delete(id);
+    for (const id of beat?.reveal?.edgeIds ?? []) waitingEdges.delete(id);
+    camera = beat?.camera ?? camera;
+    highlight = beat?.highlight ?? highlight;
+    evidence = beat?.evidence ?? evidence;
+    const nodes = view.nodes.filter((n) => !waitingNodes.has(n.id));
+    const edges = view.edges.filter(
+      (e) => !waitingEdges.has(e.id) && !waitingNodes.has(e.source) && !waitingNodes.has(e.target),
+    );
+    const groups = new Set(nodes.map((n) => n.groupId));
+    const state = projectFrameScene(
+      graph,
+      { ...source, camera, highlight, evidence },
+      index,
+      domainAt,
+      revealStep,
+      { ...view, nodes, edges, groups: view.groups.filter((g) => groups.has(g.id)) },
+    );
+    if (!state.scene) throw new Error('Missing projected shot');
+    redacted ||= state.scene.redacted;
+    stages.push({ atSec: beat?.atSec ?? 0, state: { ...state, scene: state.scene } });
+  }
+  if (redacted)
+    for (const { state } of stages)
+      state.scene = {
+        ...state.scene,
+        id: undefined,
+        title: `分镜 ${index + 1}（目标尚不可见）`,
+        narration: undefined,
+        redacted: true,
+      };
+  return stages;
+}
+
 /** Evaluate a spoiler-safe scene at any video second, including sub-frame shot boundaries. */
 export function frameStateAtSecond(graph: VisualGraph, second: number): FrameState {
   const playback = sceneAtSecond(graph, second);
+  if (playback.scene?.beats?.length) {
+    const stages = projectBeatStages(
+      graph,
+      playback.scene,
+      playback.index,
+      playback.domainAt,
+      playback.revealStep,
+    );
+    const tolerance = 8 * Number.EPSILON * Math.max(1, Math.abs(second));
+    const { scene, ...state } = (
+      stages.reverse().find((s) => s.atSec <= playback.elapsedSec + tolerance) ?? stages[0]
+    ).state;
+    return { ...state, playback: { ...playback, scene } };
+  }
   const { scene, ...projected } = projectFrameScene(
     graph,
     playback.scene,

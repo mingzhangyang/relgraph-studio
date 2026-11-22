@@ -146,6 +146,7 @@ export const ENGLISH_DIAGNOSTICS: EnglishCatalogue = {
       (p) => `${p.field} must be an array.`,
       'Change it to an array, or remove the field.',
     ),
+    BEAT: wording('Invalid shot beat.', 'Check beat timing, field values and object references.'),
     'TYPE.ids': wording((p) => `${p.field} must be an array.`, 'Change it to an array of ids.'),
     'TYPE.object': wording(
       (p) => `${p.field} must be an object.`,

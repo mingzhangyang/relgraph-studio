@@ -1,0 +1,67 @@
+{
+  "format": "relgraph.studio/1",
+  "config": {
+    "view": {
+      "timeAxis": "vertical"
+    }
+  },
+  "source": {
+    "format": "relgraph.graph/1",
+    "diagram": "timeline",
+    "meta": {
+      "title": "一天的观测"
+    },
+    "timeline": {
+      "unit": "时"
+    },
+    "nodes": [
+      {
+        "id": "清晨",
+        "start": 6,
+        "end": 9
+      },
+      {
+        "id": "正午",
+        "start": 12,
+        "end": 15
+      },
+      {
+        "id": "黄昏",
+        "start": 18,
+        "end": 21
+      }
+    ],
+    "presentation": [
+      {
+        "id": "observation",
+        "title": "从清晨到黄昏",
+        "durationSec": 4,
+        "transitionMs": 800,
+        "camera": {
+          "focusNodeId": "清晨"
+        },
+        "beats": [
+          {
+            "atSec": 1,
+            "camera": {
+              "focusNodeId": "正午"
+            },
+            "highlight": {
+              "nodeIds": ["正午"]
+            }
+          },
+          {
+            "atSec": 2.5,
+            "reveal": {
+              "nodeIds": ["黄昏"]
+            },
+            "camera": {
+              "focusNodeId": "黄昏"
+            }
+          }
+        ],
+        "domainAt": 21
+      }
+    ]
+  }
+}

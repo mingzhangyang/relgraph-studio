@@ -111,6 +111,7 @@ export const GENERIC_WORDING = {
     '预览可能卡顿，导出的影片不受影响；如需流畅预览，请先筛选或聚合数据。',
   ),
   'TYPE.array': wording((p) => `${p.field} 必须是数组。`, '改为数组，或删除该字段。'),
+  BEAT: wording('镜头节拍无效。', '按时间递增排列镜头内的节拍，并检查对象引用和字段值。'),
   'TYPE.ids': wording((p) => `${p.field} 必须是数组。`, '改为 id 数组。'),
   'TYPE.object': wording(
     (p) => `${p.field} 必须是对象。`,

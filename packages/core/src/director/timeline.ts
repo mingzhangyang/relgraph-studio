@@ -1,4 +1,4 @@
-import { projectFrameScene } from '../graph/core.js';
+import { projectFrameScene, projectBeatStages } from '../graph/core.js';
 import type {
   EvidenceCard,
   FrameScene,
@@ -49,6 +49,7 @@ export interface CaptionCue {
 }
 
 export interface CompiledShot {
+  beatTimes?: number[];
   startSec: number;
   endSec: number;
   domainAt: number | null;
@@ -63,6 +64,8 @@ export interface CompiledShot {
 }
 
 export interface FilmTimeline {
+  /** Sub-shot stage states, when beats are authored. Captions and playback keep authored shots. */
+  stages?: { timeline: FilmTimeline; owners: number[] };
   fps: number;
   durationSec: number;
   camera: CameraKeyframe[];
@@ -187,7 +190,75 @@ export function compileTimeline(graph: VisualGraph, fps = 24): FilmTimeline {
   // so the cues can follow the frames the film is rendered with.
   reveal.push(...revealCues(timeline, frameCount(graph, fps)));
   timeline.cardShownSec = evidenceShownSec(timeline);
+  if (graph.scenes.some((scene) => scene.beats?.length)) compileBeatStages(graph, timeline);
   return timeline;
+}
+
+/** Segment the stage at beat boundaries, reusing the same safe camera, reveal and
+ * evidence tracks as shot changes. Captions remain on the authored timeline. */
+function compileBeatStages(graph: VisualGraph, film: FilmTimeline): void {
+  const stage: FilmTimeline = {
+    ...film,
+    shots: [],
+    camera: [],
+    highlight: [],
+    domainTime: [],
+    revealSteps: [],
+    reveal: [],
+    captions: [],
+    cardShownSec: [],
+  };
+  const owners: number[] = [];
+  for (const [index, shot] of film.shots.entries()) {
+    const source = graph.scenes[index];
+    const stages = projectBeatStages(
+      graph,
+      source,
+      index,
+      shot.domainAt,
+      shot.revealStep,
+      shot.view,
+    );
+    shot.beatTimes = source.beats?.map((beat) => shot.startSec + beat.atSec);
+    const opening = stages[0].state;
+    shot.scene = opening.scene;
+    film.captions[index] = {
+      ...film.captions[index],
+      title: opening.scene.title,
+      text: opening.scene.narration,
+    };
+    for (const [i, { atSec, state }] of stages.entries()) {
+      const startSec = shot.startSec + atSec;
+      const endSec = stages[i + 1] ? shot.startSec + stages[i + 1].atSec : shot.endSec;
+      stage.shots.push({
+        ...shot,
+        ...state,
+        scene: { ...state.scene, durationSec: endSec - startSec },
+        startSec,
+        endSec,
+      });
+      stage.camera.push({
+        ...film.camera[index],
+        atSec: startSec,
+        value: state.camera,
+        transitionSec: Math.min((source.transitionMs ?? 1200) / 1000, endSec - startSec),
+      });
+      stage.highlight.push({ atSec: startSec, value: state.highlight, ease: 'smooth' });
+      stage.domainTime.push(film.domainTime[index]);
+      stage.revealSteps.push(film.revealSteps[index]);
+      stage.captions.push(film.captions[index]);
+      owners.push(index);
+    }
+  }
+  const opening = graph.scenes[0]?.beats?.[0];
+  stage.reveal = revealCues(
+    stage,
+    frameCount(graph, film.fps),
+    opening?.atSec === 0 ? opening.reveal : undefined,
+  );
+  stage.cardShownSec = evidenceShownSec(stage);
+  film.reveal = stage.reveal;
+  film.stages = { timeline: stage, owners };
 }
 
 /** Frames of the film `graph` renders at `fps`: at least one. */
@@ -207,7 +278,11 @@ export function frameCount(graph: VisualGraph, fps = 24): number {
  * in such a shot and stays fades in from that shot's start, at most a frame
  * before the first frame that shows it, as any cue starting between frames.
  */
-function revealCues(timeline: FilmTimeline, frames: number): RevealCue[] {
+function revealCues(
+  timeline: FilmTimeline,
+  frames: number,
+  opening?: { nodeIds?: string[]; edgeIds?: string[] },
+): RevealCue[] {
   const { shots } = timeline;
   if (!shots.length) return [];
   const starts = shotStartFrames(timeline);
@@ -228,7 +303,10 @@ function revealCues(timeline: FilmTimeline, frames: number): RevealCue[] {
   // The start of the shot from which each object has been in (or out of)
   // the projection without a break.
   const since = { node: new Map<string, number>(), edge: new Map<string, number>() };
-  for (let index = 1; index < shots.length; index += 1) {
+  // Explicit frame-zero reveals use the ordinary entrance/withdrawal lifecycle.
+  for (const id of opening?.nodeIds ?? []) shown.node.delete(id);
+  for (const id of opening?.edgeIds ?? []) shown.edge.delete(id);
+  for (let index = opening ? 0 : 1; index < shots.length; index += 1) {
     const shot = shots[index];
     const current = ids(shot);
     for (const kind of ['node', 'edge'] as const) {
@@ -272,6 +350,14 @@ function revealCues(timeline: FilmTimeline, frames: number): RevealCue[] {
  * viewer has time to read (ADR 004, D1).
  */
 export function shotSettledSec(timeline: FilmTimeline): number[] {
+  if (timeline.stages) {
+    const { timeline: stage, owners } = timeline.stages;
+    const settled = timeline.shots.map((s) => s.startSec);
+    shotSettledSec(stage).forEach((sec, i) => {
+      settled[owners[i]] = sec;
+    });
+    return settled;
+  }
   return timeline.shots.map((shot, index) => {
     let settled = shot.startSec + (index > 0 ? timeline.camera[index].transitionSec : 0);
     for (const cue of timeline.reveal)
@@ -392,6 +478,11 @@ export function revealStateAt(
   view: Pick<ProjectedVisualGraph, 'nodes' | 'edges'>,
   second: number,
 ): { nodes: Record<string, number>; edges: Record<string, number> } {
+  if (timeline.stages) {
+    const stage = timeline.stages.timeline;
+    const current = stage.shots[timelinePlaybackAt(stage, second).index];
+    return revealStateAt(stage, current.view, second);
+  }
   const tolerance = 8 * Number.EPSILON * Math.max(1, Math.abs(second));
   const active = { node: new Map<string, number>(), edge: new Map<string, number>() };
   // Later cues overwrite earlier ones for the same object.
@@ -418,6 +509,7 @@ export function revealProgress(
   targetId: string,
   second: number,
 ): number {
+  timeline = timeline.stages?.timeline ?? timeline;
   const view = timeline.shots[timelinePlaybackAt(timeline, second).index]?.view;
   if (!view) return 0;
   const state = revealStateAt(timeline, view, second);

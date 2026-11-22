@@ -95,7 +95,15 @@ export interface VisualHighlight {
   edgeIds?: string[];
   groupId?: string;
 }
+export interface VisualBeat {
+  atSec: number;
+  camera?: VisualCamera;
+  highlight?: VisualHighlight;
+  reveal?: Pick<VisualHighlight, 'nodeIds' | 'edgeIds'>;
+  evidence?: VisualEvidenceRef;
+}
 export interface VisualScene {
+  beats?: VisualBeat[];
   id: string;
   title: string;
   narration?: string;
