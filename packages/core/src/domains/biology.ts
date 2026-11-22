@@ -1,3 +1,4 @@
+import { readBeats } from '../graph/beats.js';
 /** Experimental biological domain adapter, NOT PSI-MI / SBML / SBGN-ML compliant. */
 import { validateVisualGraph } from '../graph/core.js';
 import type {
@@ -51,6 +52,7 @@ type BioProcess = BioVisual & {
   modifiers?: Modifier[];
 };
 type BioScene = {
+  beats?: unknown;
   id: string;
   title: string;
   durationSec: number;
@@ -202,7 +204,7 @@ const processKinds = new Set<unknown>([
 ]);
 const evidenceStatuses = new Set<unknown>(['curated', 'hypothesis', 'illustrative']);
 const modifierKinds = new Set<unknown>(['catalyst', 'activator', 'inhibitor']);
-export function validateBiologyDocument(doc: unknown): {
+function validateBiologySource(doc: unknown): {
   valid: boolean;
   errors: BiologyDiagnostic[];
   warnings: [];
@@ -659,9 +661,27 @@ export function validateBiologyDocument(doc: unknown): {
   }
   return { valid: errors.length === 0, errors, warnings: [] };
 }
+/** Beat targets may use generated process and participant aliases. Validate
+ * them after adaptation, when the final node and relation tables exist. */
+export function validateBiologyDocument(doc: unknown): ReturnType<typeof validateBiologySource> {
+  if (
+    object(doc) &&
+    Array.isArray(doc.presentation) &&
+    doc.presentation.some((s) => object(s) && s.beats !== undefined)
+  ) {
+    try {
+      return adaptBiologyDocument(doc).diagnostics;
+    } catch (error) {
+      if (object(error) && Array.isArray(error.issues))
+        return { valid: false, errors: error.issues, warnings: [] };
+      throw error;
+    }
+  }
+  return validateBiologySource(doc);
+}
 /** Reactions are explicit nodes with participant arcs, not invented binary PPIs. */
 export function adaptBiologyDocument(input: unknown) {
-  const diagnostics = validateBiologyDocument(input);
+  const diagnostics = validateBiologySource(input);
   if (!diagnostics.valid)
     throw Object.assign(new Error('Invalid biological document'), { issues: diagnostics.errors });
   if (!isBiologyDocument(input))
@@ -778,30 +798,56 @@ export function adaptBiologyDocument(input: unknown) {
     })),
     nodes,
     edges,
-    scenes: (doc.presentation || []).map((s) => ({
-      id: s.id,
-      title: s.title,
-      narration: s.narration,
-      durationSec: s.durationSec,
-      transitionMs: s.transitionMs,
-      domainAt: s.domainAt,
-      camera: s.camera
-        ? {
-            zoom: s.camera.zoom,
-            focusNodeId:
-              s.camera.focusNodeId === undefined ? undefined : nodeRef(s.camera.focusNodeId),
-            fitIds: s.camera.fitIds?.map(nodeRef),
-          }
-        : undefined,
-      highlight: s.highlight
-        ? {
-            groupId: s.highlight.groupId,
-            nodeIds: s.highlight.nodeIds?.map(nodeRef),
-            edgeIds: s.highlight.edgeIds?.map(edgeRef),
-          }
-        : undefined,
-      openDetailNodeId: s.openDetailNodeId === undefined ? undefined : nodeRef(s.openDetailNodeId),
-    })),
+    scenes: (doc.presentation || []).map((s, i) => {
+      const beats = readBeats(
+        s.beats,
+        s.durationSec,
+        (kind, id) => (kind === 'nodes' ? nodeRef(id) : kind === 'edges' ? edgeRef(id) : id),
+        (kind, id) =>
+          (kind === 'nodes' ? nodes : edges).find((item) => item.id === id)?.evidence?.length ?? 0,
+        (field) => {
+          throw Object.assign(new Error('Invalid biological beat'), {
+            issues: [
+              {
+                level: 'error',
+                layer: 'biology',
+                code: 'BEAT',
+                path: 'presentation[' + i + '].' + field,
+                id: s.id,
+                message: 'Invalid shot beat',
+                fix: 'Check beat timing and targets.',
+              },
+            ],
+          });
+        },
+      );
+      return {
+        ...(beats ? { beats } : {}),
+        id: s.id,
+        title: s.title,
+        narration: s.narration,
+        durationSec: s.durationSec,
+        transitionMs: s.transitionMs,
+        domainAt: s.domainAt,
+        camera: s.camera
+          ? {
+              zoom: s.camera.zoom,
+              focusNodeId:
+                s.camera.focusNodeId === undefined ? undefined : nodeRef(s.camera.focusNodeId),
+              fitIds: s.camera.fitIds?.map(nodeRef),
+            }
+          : undefined,
+        highlight: s.highlight
+          ? {
+              groupId: s.highlight.groupId,
+              nodeIds: s.highlight.nodeIds?.map(nodeRef),
+              edgeIds: s.highlight.edgeIds?.map(edgeRef),
+            }
+          : undefined,
+        openDetailNodeId:
+          s.openDetailNodeId === undefined ? undefined : nodeRef(s.openDetailNodeId),
+      };
+    }),
   };
   const check = validateVisualGraph(graph);
   if (!check.valid)

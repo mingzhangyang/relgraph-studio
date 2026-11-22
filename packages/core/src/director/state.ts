@@ -209,7 +209,8 @@ export function directorFrameAt(
 ): DirectorFrameState {
   if (!Number.isInteger(frame) || frame < 0 || !Number.isFinite(fps) || fps <= 0)
     throw new RangeError('Invalid frame or fps');
-  const timeline = suppliedTimeline ?? compileTimeline(graph, fps);
+  const film = suppliedTimeline ?? compileTimeline(graph, fps);
+  const timeline = film.stages?.timeline ?? film;
   if (timeline.fps !== fps) throw new RangeError('Timeline FPS mismatch');
   const playback = timelinePlaybackAt(timeline, frame / fps);
   const shot = timeline.shots[playback.index];
@@ -287,8 +288,12 @@ export function directorFrameAt(
   // The scene, projection, camera and highlight come from the (possibly
   // caller-supplied, reused) timeline. Return a copy so editing a returned
   // state can never change a later frame.
+  const authoredPlayback = timeline === film ? playback : timelinePlaybackAt(film, second);
+  if (timeline !== film && authoredPlayback.scene && playback.scene)
+    authoredPlayback.scene = { ...playback.scene, durationSec: authoredPlayback.scene.durationSec };
   return structuredClone({
     ...state,
+    playback: authoredPlayback,
     cameraResolved: camera,
     transition,
     previousHighlight,

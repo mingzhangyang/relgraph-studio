@@ -137,7 +137,15 @@ export interface EvidenceEvent extends EventBase {
   endSec: number;
 }
 
-export type FilmEvent = ShotEvent | CaptionEvent | RevealEvent | DomainTimeEvent | EvidenceEvent;
+export interface BeatEvent extends EventBase {
+  type: 'beat';
+  id: string | null;
+  /** Index within the authored shot. */
+  beat: number;
+}
+
+export type FilmEvent =
+  BeatEvent | ShotEvent | CaptionEvent | RevealEvent | DomainTimeEvent | EvidenceEvent;
 
 export interface FilmEvents {
   format: typeof EVENTS_FORMAT;
@@ -161,8 +169,9 @@ const TYPE_ORDER: Record<FilmEvent['type'], number> = {
   shot: 0,
   'domain-time': 1,
   caption: 2,
-  evidence: 3,
-  reveal: 4,
+  beat: 3,
+  evidence: 4,
+  reveal: 5,
 };
 
 type View = Pick<ProjectedVisualGraph, 'nodes' | 'edges'>;
@@ -232,6 +241,7 @@ export function filmEvents(
   const groupOf = new Map([...shown.values()].map((node) => [node.id, node.groupId ?? null]));
 
   const events: FilmEvent[] = [];
+  const cardEvents = new Map<number, EvidenceEvent>();
   const shotId = (index: number): string | null => {
     const id = shots[index].scene.id;
     return id === undefined ? null : sceneId(id);
@@ -242,7 +252,13 @@ export function filmEvents(
       lastFrame = lastFrameOf(index);
     // A shot no frame shows has no events at all, not even a shot event: its
     // id, title and highlight come from a projection the film never shows.
-    if (!onScreen[index]) continue;
+    if (!onScreen[index]) {
+      // An unchanged trailing beat can extend the authored card lifetime
+      // without owning another frame. It never creates a new appearance.
+      const previous = cardEvents.get(timeline.cardStartIndices?.[index] ?? index);
+      if (previous) previous.endSec = seconds(shot.endSec);
+      continue;
+    }
     const settledFrame = Math.max(frame, frameAtOrAfter(settled[index], fps));
     const highlight = timeline.highlight[index].value;
     events.push({
@@ -294,20 +310,30 @@ export function filmEvents(
       fadeOutSec: seconds(caption.fadeOutSec),
     });
     const card = cardFrames[index];
-    if (shot.evidence && card?.shown)
-      events.push({
-        frame: card.first,
-        sec: seconds(shownSec[index] ?? shot.startSec),
-        shot: index,
-        type: 'evidence',
-        id: shotId(index),
-        object: shot.evidence.object,
-        target:
-          shot.evidence.object === 'node' ? nodeId(shot.evidence.id) : edgeId(shot.evidence.id),
-        items: shot.evidence.items.map((item) => item.index),
-        lastFrame,
-        endSec: seconds(shot.endSec),
-      });
+    if (shot.evidence && card?.shown) {
+      const startIndex = timeline.cardStartIndices?.[index] ?? index;
+      const previous = cardEvents.get(startIndex);
+      if (previous) {
+        previous.lastFrame = lastFrame;
+        previous.endSec = seconds(shot.endSec);
+      } else {
+        const event: EvidenceEvent = {
+          frame: card.first,
+          sec: seconds(shownSec[index] ?? shot.startSec),
+          shot: index,
+          type: 'evidence',
+          id: shotId(index),
+          object: shot.evidence.object,
+          target:
+            shot.evidence.object === 'node' ? nodeId(shot.evidence.id) : edgeId(shot.evidence.id),
+          items: shot.evidence.items.map((item) => item.index),
+          lastFrame,
+          endSec: seconds(shot.endSec),
+        };
+        events.push(event);
+        cardEvents.set(startIndex, event);
+      }
+    }
   }
 
   const reveal = (
@@ -374,10 +400,42 @@ export function filmEvents(
     }
   }
 
+  if (timeline.stages) {
+    const { timeline: stage, owners } = timeline.stages;
+    const staged = filmEvents(graph, positions, fps, { timeline: stage, authoredIds });
+    const authoredEvents: FilmEvent[] = events.filter(
+      (event) => event.type !== 'reveal' && event.type !== 'evidence',
+    );
+    const openings = new Map(
+      authoredEvents.flatMap((e) => (e.type === 'shot' ? [[e.shot, e] as const] : [])),
+    );
+    for (const [shot, opening] of openings) {
+      for (const [beat, atSec] of (shots[shot].beatTimes ?? []).entries()) {
+        const frame = Math.max(opening.frame, frameAtOrAfter(atSec, fps));
+        if (frame <= opening.lastFrame)
+          authoredEvents.push({
+            type: 'beat',
+            id: opening.id,
+            shot,
+            beat,
+            frame,
+            sec: seconds(atSec),
+          });
+      }
+    }
+    for (const event of staged.events) {
+      const shot = owners[event.shot];
+      if (event.type === 'reveal') authoredEvents.push({ ...event, shot });
+      if (event.type === 'evidence') authoredEvents.push({ ...event, shot, id: shotId(shot) });
+      if (event.type === 'shot' && event.frame === starts[shot]) {
+        const opening = openings.get(shot);
+        if (opening?.type === 'shot') opening.highlight = event.highlight;
+      }
+    }
+    return { ...staged, events: authoredEvents.sort(eventOrder) };
+  }
   // A stable sort keeps document and cue order within one frame and type.
-  events.sort(
-    (a, b) => a.frame - b.frame || a.shot - b.shot || TYPE_ORDER[a.type] - TYPE_ORDER[b.type],
-  );
+  events.sort(eventOrder);
   return {
     format: EVENTS_FORMAT,
     fps,
@@ -391,3 +449,7 @@ export function filmEvents(
 /** The file text: two-space JSON with a final newline, identical for identical inputs. */
 export const formatFilmEvents = (events: FilmEvents): string =>
   JSON.stringify(events, null, 2) + '\n';
+
+function eventOrder(a: FilmEvent, b: FilmEvent): number {
+  return a.frame - b.frame || a.shot - b.shot || TYPE_ORDER[a.type] - TYPE_ORDER[b.type];
+}

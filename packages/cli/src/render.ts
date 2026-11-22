@@ -241,7 +241,7 @@ export async function renderFilm(request: RenderRequest): Promise<RenderSummary>
   // that would cover its own node or relation end is never cut, drawn over
   // its object or silently dropped: refuse before rendering (ADR 004, D4).
   const timeline = compileTimeline(graph, fps);
-  if (timeline.shots.some((shot) => shot.evidence)) {
+  if ((timeline.stages?.timeline ?? timeline).shots.some((shot) => shot.evidence)) {
     const probe = createHeadlessRenderer(graph, layoutGraph(graph), {
       detailAt: result.detailAt,
       frameSpec: request.frameSpec,

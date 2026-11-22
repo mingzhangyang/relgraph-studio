@@ -1,3 +1,4 @@
+import { readBeats } from '../graph/beats.js';
 /**
  * The parser and validator of `relgraph.graph/1`. One pass per section of the
  * source, in a fixed order so the diagnostics come out in the order the file
@@ -777,7 +778,18 @@ function parseScenes(
       if (detail !== undefined) r.fail('SCENE_EVIDENCE.card', at, raw);
       return { ...(isNode ? { nodeId: id } : { edgeId: id }), ...(items ? { items } : {}) };
     }
+    const beats = readBeats(
+      s.beats,
+      finite(duration) ? duration : 4,
+      (kind, id) => (kind === 'edges' ? edgeLookup : ids[kind]).get(id),
+      (kind, id) => evidenceCount[kind].get(id) ?? 0,
+      (field) => r.fail('BEAT', path + '.' + field, raw),
+      rawId,
+    );
+    if (detail && beats?.some((beat) => beat.evidence))
+      r.fail('SCENE_EVIDENCE.card', path + '.beats', raw);
     scenes.push({
+      ...(beats ? { beats } : {}),
       id: sceneIds.get(raw)!,
       title: r.text(s.title, path + '.title', raw) ?? `${i + 1}`,
       narration: r.text(s.narration, path + '.narration', raw),

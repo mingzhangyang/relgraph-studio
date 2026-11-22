@@ -37,6 +37,8 @@ export function evidenceOverflows(
   /** The source's own id of an object (`LoadResult.authoredIds`). */
   authored: (kind: 'nodes' | 'edges' | 'scenes', id: string) => string = (_, id) => id,
 ): ShotEvidenceOverflow[] {
+  const film = timeline;
+  timeline = film.stages?.timeline ?? film;
   const starts = shotStartFrames(timeline);
   return timeline.shots.flatMap((shot, index) => {
     const last = index === timeline.shots.length - 1 ? filmFrames - 1 : starts[index + 1] - 1;
@@ -47,8 +49,8 @@ export function evidenceOverflows(
     return [
       {
         ...rest,
-        shot: index,
-        shots: timeline.shots.length,
+        shot: film.stages?.owners[index] ?? index,
+        shots: film.shots.length,
         ...(shot.scene.id === undefined ? {} : { id: authored('scenes', shot.scene.id) }),
         title: shot.scene.title,
         target: authored(overflow.object === 'node' ? 'nodes' : 'edges', id),
@@ -90,17 +92,25 @@ export function hiddenEvidenceCards(
   filmFrames: number,
   authored: (kind: 'nodes' | 'edges' | 'scenes', id: string) => string = (_, id) => id,
 ): ShotHiddenEvidence[] {
+  const film = timeline;
+  timeline = film.stages?.timeline ?? film;
   const starts = shotStartFrames(timeline);
   const frames = evidenceFrames(timeline, filmFrames);
+  const startOf = (index: number): number => timeline.cardStartIndices?.[index] ?? index;
+  const shown = new Set(frames.flatMap((card, index) => (card?.shown ? [startOf(index)] : [])));
+  const reported = new Set<number>();
   return timeline.shots.flatMap((shot, index) => {
     const last = index === timeline.shots.length - 1 ? filmFrames - 1 : starts[index + 1] - 1;
     const card = frames[index];
     // A shot no frame shows is not a hidden card: nothing of it is on screen.
-    if (!shot.evidence || !card || card.shown || last < starts[index]) return [];
+    const start = startOf(index);
+    if (!shot.evidence || !card || shown.has(start) || reported.has(start) || last < starts[index])
+      return [];
+    reported.add(start);
     return [
       {
-        shot: index,
-        shots: timeline.shots.length,
+        shot: film.stages?.owners[index] ?? index,
+        shots: film.shots.length,
         ...(shot.scene.id === undefined ? {} : { id: authored('scenes', shot.scene.id) }),
         title: shot.scene.title,
         object: shot.evidence.object,
@@ -148,6 +158,8 @@ export function evidenceCovering(
   displayListAt: (frame: number) => Pick<DisplayList, 'evidenceCovers'>,
   authored: (kind: 'nodes' | 'edges' | 'scenes', id: string) => string = (_, id) => id,
 ): ShotEvidenceCovers[] {
+  const film = timeline;
+  timeline = film.stages?.timeline ?? film;
   const frames = evidenceFrames(timeline, filmFrames);
   return timeline.shots.flatMap((shot, index) => {
     const card = frames[index];
@@ -156,8 +168,8 @@ export function evidenceCovering(
     if (!covers) return [];
     return [
       {
-        shot: index,
-        shots: timeline.shots.length,
+        shot: film.stages?.owners[index] ?? index,
+        shots: film.shots.length,
         ...(shot.scene.id === undefined ? {} : { id: authored('scenes', shot.scene.id) }),
         title: shot.scene.title,
         object: covers.object,
