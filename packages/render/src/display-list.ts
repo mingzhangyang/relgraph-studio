@@ -165,6 +165,7 @@ export interface DisplayList {
   a11y: FrameText;
   /** Labels this frame had to leave out, in placement order (ADR 004, D1). */
   omitted: OmittedLabel[];
+  formDiagnostics: import('./forms.js').FormDiagnostic[];
   /** The shot's evidence card, when it does not fit and is therefore not drawn. */
   evidenceOverflow: EvidenceOverflow | null;
   /** The shot's evidence card, when it would cover its own node or relation end and is not drawn. */

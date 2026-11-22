@@ -36,6 +36,7 @@ import {
 import {
   createProject,
   projectSource,
+  socialAppearanceWarnings,
   validateProjectConfig,
   type ProjectConfig,
 } from '@relgraph/core';
@@ -288,6 +289,13 @@ function applyProjectHistory({
   if (timeDirection(graph) !== timeDirection({ project: next }))
     transitionStudio('exitPositionEdit');
   graph.project = next;
+  if (currentDiagnostics) {
+    currentDiagnostics = {
+      ...currentDiagnostics,
+      warnings: socialAppearanceWarnings(sourceDocument, graph, currentDiagnostics.warnings),
+    };
+    diagnosticsView.render(currentDiagnostics);
+  }
   restoreLayoutPositions(currentLayout, originalLayout);
   for (const [id, p] of Object.entries(graph.project.layout?.positions ?? {}))
     currentLayout.set(id, { ...p });

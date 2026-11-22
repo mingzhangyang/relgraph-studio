@@ -128,6 +128,7 @@ test('composeFrame is its passes, run in order over one context', () => {
       selection: [...relations.selection, ...glyphs.selection],
       selectionClip: { ...spec.stage },
       omitted,
+      formDiagnostics: relations.formDiagnostics,
       evidenceOverflow: evidence.overflow,
       evidenceCovers: evidence.covers,
     };

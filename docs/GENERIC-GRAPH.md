@@ -1,5 +1,7 @@
 # 一切关系皆可图 · Generic graphs, derived encoding and layouts
 
+For relations whose evidence and co-presence claims determine permitted visual forms, see the [social network format](SOCIAL-GRAPH.md).
+
 Status: implemented on top of `main` (started at `663d5ec`, reconciled with `0f995b7`). This document describes the
 `relgraph.graph/1` source format, how arbitrary kinds are turned into a visual
 encoding, the layout strategies, and what changed in how the network is drawn.

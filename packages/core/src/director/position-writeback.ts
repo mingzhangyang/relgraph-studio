@@ -1,4 +1,5 @@
 import type { VisualGraph } from '../../types/visual-graph.js';
+import { SOCIAL_FORMAT } from '../domains/social.js';
 import { GENERIC_FORMAT, internalIds } from '../domains/generic.js';
 import { lanedNodes, sourceKeepsTime } from './time-anchor.js';
 
@@ -69,7 +70,7 @@ export function applyGraphPositions(
   else if (document.format === 'relgraph.bio/0.1-draft') {
     fill(document.entities, (id) => id);
     fill(document.processes, (id) => 'bio:process:' + id);
-  } else if (document.format === GENERIC_FORMAT) {
+  } else if (document.format === GENERIC_FORMAT || document.format === SOCIAL_FORMAT) {
     // Author ids may be free text or numbers; nodes may exist only as edge
     // endpoints. Declare such a node so its coordinate has somewhere to live.
     const author = (value: unknown): string | null =>

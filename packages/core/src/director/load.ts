@@ -5,6 +5,11 @@ import { adaptBiologyDocument, validateBiologyDocument } from '../domains/biolog
 import { timeAnchor } from './time-anchor.js';
 import { slowCaptions } from './reading-speed.js';
 import { compileTimeline, evidenceFrames, frameCount } from './timeline.js';
+import {
+  SOCIAL_FORMAT,
+  inspectSocialDocument,
+  socialAppearanceWarnings,
+} from '../domains/social.js';
 import { GENERIC_FORMAT, inspectGenericDocument } from '../domains/generic.js';
 import { LOAD_WORDING, worded, type DiagnosticParams } from '../diagnostic-wording.js';
 import type { Bio } from '../../types/relationship-graph.js';
@@ -135,7 +140,7 @@ export function loadDocument(doc: unknown): LoadResult {
       const warnings = timeAnchor(graph)
         ? result.warnings
         : result.warnings.filter((entry) => entry.code !== 'OFF_TIME_AXIS');
-      return { ...result, graph, warnings };
+      return { ...result, graph, warnings: socialAppearanceWarnings(doc.source, graph, warnings) };
     }
     let adapted;
     let detailAt: DetailAt = () => undefined;
@@ -153,9 +158,10 @@ export function loadDocument(doc: unknown): LoadResult {
       adapted = adaptLiteratureDocument(doc);
       const source = inspected.document;
       detailAt = (id, at) => literaryDetailsAt(source, at, { spoilerSafe: true })[id];
-    } else if (object(doc) && doc.format === GENERIC_FORMAT) {
+    } else if (object(doc) && (doc.format === GENERIC_FORMAT || doc.format === SOCIAL_FORMAT)) {
       // One parse validates and adapts the source.
-      const inspected = inspectGenericDocument(doc);
+      const inspected =
+        doc.format === SOCIAL_FORMAT ? inspectSocialDocument(doc) : inspectGenericDocument(doc);
       if (!inspected.valid)
         return {
           valid: false,

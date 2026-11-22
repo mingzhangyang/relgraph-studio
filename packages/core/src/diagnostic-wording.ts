@@ -194,7 +194,7 @@ export const LOAD_WORDING = {
   JSON: wording((p) => `JSON 语法错误：${p.detail}`, '检查引号、逗号和括号后重试。'),
   FORMAT: wording(
     '无法识别数据格式。',
-    '通用关系图使用 format: "relgraph.graph/1"；文学数据需要 schemaVersion: "0.1"；生物学数据需要 format: "relgraph.bio/0.1-draft"。',
+    '通用关系图使用 format: "relgraph.graph/1"；文学数据需要 schemaVersion: "0.1"；社会网络使用 format: "relgraph.social/0.1-draft"；生物学数据需要 format: "relgraph.bio/0.1-draft"。',
   ),
   'PROJECT_CONFIG.field': wording('项目配置无效。', '修正该配置字段或移除覆盖。'),
   'PROJECT_CONFIG.reference': wording('项目配置无效。', '检查对象引用与样式范围。'),
@@ -215,11 +215,19 @@ export const LOAD_WORDING = {
   ),
 } as const satisfies Record<string, DiagnosticWording>;
 
+export const SOCIAL_WORDING = {
+  SOCIAL_FORMAT: wording('无法识别社会网络格式。', '使用 relgraph.social/0.1-draft。'),
+  SOCIAL_CO_PRESENCE: wording('assertsCoPresence 需要布尔值。', '使用 true 或 false。'),
+  SOCIAL_BASIS: wording('无法识别关系依据。', '使用 attested 或 inferred。'),
+  INFERRED_SOLID: wording('实线会让推定关系看起来像有据关系。', '将线型设为 dashed 或 dotted。'),
+} as const satisfies Record<string, DiagnosticWording>;
+
 /** Every worded layer and its table. */
 export const DIAGNOSTIC_WORDING = {
   structure: STRUCTURE_WORDING,
   semantic: SEMANTIC_WORDING,
   'graph-source': GENERIC_WORDING,
+  'social-source': SOCIAL_WORDING,
   studio: LOAD_WORDING,
 } as const;
 export type WordedLayer = keyof typeof DIAGNOSTIC_WORDING;

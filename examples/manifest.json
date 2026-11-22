@@ -48,5 +48,12 @@
     "name": "订单流程 · 流程图合成示例",
     "title": "订单流程",
     "subtitle": "流程图"
+  },
+  {
+    "id": "exampleSocial",
+    "file": "tang-correspondence.social.json",
+    "name": "唐代诗人 · 诗文与证据",
+    "title": "唐代诗人",
+    "subtitle": "社会网络 · 诗文证据"
   }
 ]

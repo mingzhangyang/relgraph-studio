@@ -12,6 +12,7 @@ export * from './director/chronology.js';
 export * from './domains/biology.js';
 export * from './domains/biology.style.js';
 export * from './domains/generic.js';
+export * from './domains/social.js';
 export { autoStoryboard } from './director/storyboard.js';
 export * from './domains/literature.js';
 export * from './domains/literature.style.js';
