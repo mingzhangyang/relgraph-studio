@@ -24,12 +24,13 @@ export interface VisualEvidence {
 export interface VisualEvidenceRef {
   nodeId?: NodeId;
   edgeId?: string;
+  pairNoteId?: string;
   /** Indices into the object's `evidence`; all items when omitted. */
   items?: number[];
 }
 /** A shot's evidence card after projection: only items the shot may show. */
 export interface EvidenceCard {
-  object: 'node' | 'edge';
+  object: 'node' | 'edge' | 'pairNote';
   id: string;
   /** The items in the order the shot names them, each with its index in the object's evidence. */
   items: (VisualEvidence & { index: number })[];
@@ -39,7 +40,14 @@ export interface Visibility {
   from?: number;
   to?: number;
 }
+export interface PairNote {
+  id: string;
+  nodes: [string, string];
+  label: string;
+  evidence: VisualEvidence[];
+}
 export interface VisualNode {
+  hollowOutline?: import('../src/style.js').LocalizedText;
   id: NodeId;
   label: string;
   kind: string;
@@ -140,6 +148,7 @@ export interface VisualGraph {
   diagram?: import('../src/style.js').DiagramKind;
   /** Presentation declared per kind by a generic graph document. */
   kinds?: import('../src/style.js').GraphKinds;
+  pairNotes?: PairNote[];
   nodes: VisualNode[];
   edges: VisualEdge[];
   groups: VisualGroup[];

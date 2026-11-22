@@ -29,13 +29,24 @@ export const authoredId = (
   id: string,
 ): string => result.authoredIds?.[kind].get(id) ?? id;
 
+const objectName = { node: '节点', edge: '关系', pairNote: '人物对注记' } as const;
+type AuthoredIdLookup = (kind: 'nodes' | 'edges' | 'scenes', id: string) => string;
+
+function evidenceTarget(
+  object: EvidenceOverflow['object'],
+  id: string,
+  authored: AuthoredIdLookup,
+): string {
+  return object === 'pairNote' ? id : authored(object === 'node' ? 'nodes' : 'edges', id);
+}
+
 /** Compose the first frame of every shot with a card and collect the cards that do not fit. */
 export function evidenceOverflows(
   timeline: FilmTimeline,
   filmFrames: number,
   displayListAt: (frame: number) => Pick<DisplayList, 'evidenceOverflow'>,
   /** The source's own id of an object (`LoadResult.authoredIds`). */
-  authored: (kind: 'nodes' | 'edges' | 'scenes', id: string) => string = (_, id) => id,
+  authored: AuthoredIdLookup = (_, id) => id,
 ): ShotEvidenceOverflow[] {
   const film = timeline;
   timeline = film.stages?.timeline ?? film;
@@ -53,7 +64,7 @@ export function evidenceOverflows(
         shots: film.shots.length,
         ...(shot.scene.id === undefined ? {} : { id: authored('scenes', shot.scene.id) }),
         title: shot.scene.title,
-        target: authored(overflow.object === 'node' ? 'nodes' : 'edges', id),
+        target: evidenceTarget(overflow.object, id, authored),
       },
     ];
   });
@@ -64,7 +75,7 @@ export function formatEvidenceOverflows(report: readonly ShotEvidenceOverflow[])
   if (!report.length) return '';
   const lines = report.map(
     (entry) =>
-      `  镜头 ${entry.shot + 1}/${entry.shots}「${entry.title}」：${entry.object === 'node' ? '节点' : '关系'} ${entry.target} 的证据从序号 ${entry.item} 起放不下（需要约 ${Math.ceil(entry.needed)} 像素高，卡片只有 ${Math.floor(entry.available)} 像素，按 720p 计）`,
+      `  镜头 ${entry.shot + 1}/${entry.shots}「${entry.title}」：${objectName[entry.object]} ${entry.target} 的证据从序号 ${entry.item} 起放不下（需要约 ${Math.ceil(entry.needed)} 像素高，卡片只有 ${Math.floor(entry.available)} 像素，按 720p 计）`,
   );
   return (
     `错误：${report.length} 张证据卡片放不下。卡片不截断原文，放不下就不画：\n` +
@@ -82,7 +93,7 @@ export interface ShotHiddenEvidence {
   shots: number;
   id?: string;
   title: string;
-  object: 'node' | 'edge';
+  object: 'node' | 'edge' | 'pairNote';
   target: string;
 }
 
@@ -90,7 +101,7 @@ export interface ShotHiddenEvidence {
 export function hiddenEvidenceCards(
   timeline: FilmTimeline,
   filmFrames: number,
-  authored: (kind: 'nodes' | 'edges' | 'scenes', id: string) => string = (_, id) => id,
+  authored: AuthoredIdLookup = (_, id) => id,
 ): ShotHiddenEvidence[] {
   const film = timeline;
   timeline = film.stages?.timeline ?? film;
@@ -114,7 +125,7 @@ export function hiddenEvidenceCards(
         ...(shot.scene.id === undefined ? {} : { id: authored('scenes', shot.scene.id) }),
         title: shot.scene.title,
         object: shot.evidence.object,
-        target: authored(shot.evidence.object === 'node' ? 'nodes' : 'edges', shot.evidence.id),
+        target: evidenceTarget(shot.evidence.object, shot.evidence.id, authored),
       },
     ];
   });
@@ -125,7 +136,7 @@ export function formatHiddenEvidence(report: readonly ShotHiddenEvidence[]): str
   if (!report.length) return '';
   const lines = report.map(
     (entry) =>
-      `  镜头 ${entry.shot + 1}/${entry.shots}「${entry.title}」：${entry.object === 'node' ? '节点' : '关系'} ${entry.target} 的证据卡片`,
+      `  镜头 ${entry.shot + 1}/${entry.shots}「${entry.title}」：${objectName[entry.object]} ${entry.target} 的证据卡片`,
   );
   return (
     `错误：${report.length} 张证据卡片不会出现：卡片要等镜头移动结束、对象揭示过半才显示，而这些分镜在此之前就结束了：\n` +
@@ -140,7 +151,7 @@ export interface ShotEvidenceCovers {
   shots: number;
   id?: string;
   title: string;
-  object: 'node' | 'edge';
+  object: 'node' | 'edge' | 'pairNote';
   target: string;
   /** The node, as the source writes it, whose glyph the card would cover; absent for the relation's stroke. */
   node?: string;
@@ -156,7 +167,7 @@ export function evidenceCovering(
   timeline: FilmTimeline,
   filmFrames: number,
   displayListAt: (frame: number) => Pick<DisplayList, 'evidenceCovers'>,
-  authored: (kind: 'nodes' | 'edges' | 'scenes', id: string) => string = (_, id) => id,
+  authored: AuthoredIdLookup = (_, id) => id,
 ): ShotEvidenceCovers[] {
   const film = timeline;
   timeline = film.stages?.timeline ?? film;
@@ -173,7 +184,7 @@ export function evidenceCovering(
         ...(shot.scene.id === undefined ? {} : { id: authored('scenes', shot.scene.id) }),
         title: shot.scene.title,
         object: covers.object,
-        target: authored(covers.object === 'node' ? 'nodes' : 'edges', covers.id),
+        target: evidenceTarget(covers.object, covers.id, authored),
         ...(covers.node === undefined ? {} : { node: authored('nodes', covers.node) }),
       },
     ];
@@ -185,7 +196,7 @@ export function formatEvidenceCovering(report: readonly ShotEvidenceCovers[]): s
   if (!report.length) return '';
   const lines = report.map(
     (entry) =>
-      `  镜头 ${entry.shot + 1}/${entry.shots}「${entry.title}」：${entry.object === 'node' ? '节点' : '关系'} ${entry.target} 的证据卡片会盖住${entry.node === undefined ? '这条关系' : `节点 ${entry.node}`}`,
+      `  镜头 ${entry.shot + 1}/${entry.shots}「${entry.title}」：${objectName[entry.object]} ${entry.target} 的证据卡片会盖住${entry.node === undefined ? '这条关系' : `节点 ${entry.node}`}`,
   );
   return (
     `错误：${report.length} 张证据卡片即使在镜头取景后也会盖住自己引证的对象，未画出：\n` +

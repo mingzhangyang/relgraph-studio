@@ -216,6 +216,9 @@ export const LOAD_WORDING = {
 } as const satisfies Record<string, DiagnosticWording>;
 
 export const SOCIAL_WORDING = {
+  SOCIAL_MARK: wording('人物标注需要布尔值。', '使用 true 或 false。'),
+  SOCIAL_INCIDENT: wording('此人物标注与关系端点冲突。', '核对关系或人物标注。'),
+  SOCIAL_PAIR: wording('排除组合无效。', '提供唯一标识、两个不同人物、理由和证据。'),
   SOCIAL_FORMAT: wording('无法识别社会网络格式。', '使用 relgraph.social/0.1-draft。'),
   SOCIAL_CO_PRESENCE: wording('assertsCoPresence 需要布尔值。', '使用 true 或 false。'),
   SOCIAL_BASIS: wording('无法识别关系依据。', '使用 attested 或 inferred。'),

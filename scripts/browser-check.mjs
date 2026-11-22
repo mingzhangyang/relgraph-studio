@@ -488,6 +488,17 @@ const literatureFrames = Math.ceil(
     assert.match(await page.locator('#transcript').textContent(), /何时一樽酒/);
   });
 
+  await check('a social pair note opens in Studio with its reason and source', async () => {
+    const file = 'tang-absence.social.json';
+    await page.locator('#fileInput').setInputFiles(join(root, 'examples', file));
+    await page.waitForFunction(() =>
+      document.querySelector('#transcript')?.textContent.includes('卢照邻条'),
+    );
+    assert.equal(await status(page), 'ready');
+    assert.equal(await page.evaluate(() => window.renderAt(36)), true);
+    assert.match(await page.locator('#transcript').textContent(), /齐名不等于相识/);
+  });
+
   await check('the biology example plays through domain-time stages', async () => {
     await loadExample(page, EXAMPLES[1]);
     assert.equal(await status(page), 'ready');

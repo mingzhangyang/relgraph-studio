@@ -123,7 +123,7 @@ export interface OmittedLabel {
  * or a shorter quotation (ADR 004, D4).
  */
 export interface EvidenceOverflow {
-  object: 'node' | 'edge';
+  object: 'node' | 'edge' | 'pairNote';
   id: string;
   /** Index, in the object's evidence, of the first item that does not fit. */
   item: number;
@@ -139,7 +139,7 @@ export interface EvidenceOverflow {
  * than that area.
  */
 export interface EvidenceCovers {
-  object: 'node' | 'edge';
+  object: 'node' | 'edge' | 'pairNote';
   id: string;
   /** The node whose glyph the card would cover; absent when it is the relation's stroke. */
   node?: string;

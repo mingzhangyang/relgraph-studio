@@ -151,7 +151,10 @@ export function composeNodes(
       });
     if (visibility <= 0) continue;
     const asset =
-      custom.image && config?.assets && Object.hasOwn(config.assets, custom.image)
+      !node.hollowOutline &&
+      custom.image &&
+      config?.assets &&
+      Object.hasOwn(config.assets, custom.image)
         ? config.assets[custom.image]
         : undefined;
     const imageBox = {
@@ -203,7 +206,7 @@ export function composeNodes(
       });
     }
     // The topic of a mind map, or the first step, is set in solid colour.
-    const solid = geometry.inside !== undefined && principal && !custom.fill;
+    const solid = !node.hollowOutline && geometry.inside !== undefined && principal && !custom.fill;
     if (asset && custom.image)
       glyph.push(
         { type: 'path', d: outline, fill: custom.fill ?? P.nodeFill },
@@ -214,11 +217,11 @@ export function composeNodes(
       glyph.push({
         type: 'path',
         d: outline,
-        fill: solid ? c : body,
+        ...(node.hollowOutline ? { dash: [u(4), u(3)] } : { fill: solid ? c : body }),
         stroke: c,
         width: borderWidth,
       });
-      if (!wide)
+      if (!wide && !node.hollowOutline)
         glyph.push({
           type: 'path',
           d: [

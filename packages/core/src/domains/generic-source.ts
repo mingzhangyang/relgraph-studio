@@ -24,6 +24,7 @@ import { GENERIC_WORDING, worded, type DiagnosticParams } from '../diagnostic-wo
 import { lanedNodes, sourceKeepsTime, timeCoordinate } from '../director/time-anchor.js';
 import type {
   AuthoredIds,
+  PairNote,
   VisualEdge,
   VisualEvidence,
   VisualGroup,
@@ -69,7 +70,7 @@ const hex = /^#[0-9a-f]{6}$/i;
 const compareText = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
 
 /** An author id: a non-empty string, or a number as exported by spreadsheets. */
-const rawId = (v: unknown): string | null => {
+export const rawId = (v: unknown): string | null => {
   if (finite(v)) return String(v);
   if (typeof v !== 'string') return null;
   const id = v.trim();
@@ -110,6 +111,7 @@ export function internalIds(ids: Iterable<string>): Map<string, string> {
 
 /** A parsed source, before the adapter shapes it into a `VisualGraph`. */
 export interface ParsedGenericSource {
+  pairNotes?: PairNote[];
   title: string;
   description?: string;
   sourceNote?: string;
@@ -659,7 +661,9 @@ function parseScenes(
   names: Map<string, string>,
   /** How many evidence items each node and relation lists, by internal id. */
   evidenceCount: { nodes: ReadonlyMap<string, number>; edges: ReadonlyMap<string, number> },
+  pairNotes?: PairNote[],
 ): VisualScene[] {
+  const notes = new Map(pairNotes?.map((note) => [note.id, note]));
   const scenes: VisualScene[] = [];
   // A shot without an id is named after its place in the film. The name
   // steps aside when the author already used it for another shot.
@@ -746,16 +750,28 @@ function parseScenes(
     function evidenceRef(value: unknown): VisualScene['evidence'] {
       if (value === undefined || value === null) return undefined;
       const at = path + '.evidence';
-      if (!object(value) || (value.nodeId == null) === (value.edgeId == null)) {
+      if (
+        !object(value) ||
+        [value.nodeId, value.edgeId, value.pairNoteId].filter((v) => v != null).length !== 1
+      ) {
         r.fail('SCENE_EVIDENCE.target', at, raw);
         return undefined;
       }
       const isNode = value.nodeId != null;
-      const id = isNode
-        ? ref(value.nodeId, ids.nodes, 'evidence.nodeId')
-        : ref(value.edgeId, edgeLookup, 'evidence.edgeId');
+      const isNote = value.pairNoteId != null;
+      const id = isNote
+        ? (rawId(value.pairNoteId) ?? undefined)
+        : isNode
+          ? ref(value.nodeId, ids.nodes, 'evidence.nodeId')
+          : ref(value.edgeId, edgeLookup, 'evidence.edgeId');
+      if (isNote && (!id || !notes.has(id))) {
+        r.fail('SCENE_REF', at + '.pairNoteId', raw);
+        return undefined;
+      }
       if (id === undefined) return undefined;
-      const count = (isNode ? evidenceCount.nodes : evidenceCount.edges).get(id) ?? 0;
+      const count = isNote
+        ? notes.get(id)!.evidence.length
+        : ((isNode ? evidenceCount.nodes : evidenceCount.edges).get(id) ?? 0);
       // An evidence field that is not a list is reported where it is written.
       if (count < 0) return undefined;
       if (!count) {
@@ -776,13 +792,20 @@ function parseScenes(
         items = [...(list as number[])];
       }
       if (detail !== undefined) r.fail('SCENE_EVIDENCE.card', at, raw);
-      return { ...(isNode ? { nodeId: id } : { edgeId: id }), ...(items ? { items } : {}) };
+      return {
+        ...(isNote ? { pairNoteId: id } : isNode ? { nodeId: id } : { edgeId: id }),
+        ...(items ? { items } : {}),
+      };
     }
     const beats = readBeats(
       s.beats,
       finite(duration) ? duration : 4,
-      (kind, id) => (kind === 'edges' ? edgeLookup : ids[kind]).get(id),
-      (kind, id) => evidenceCount[kind].get(id) ?? 0,
+      (kind, id) =>
+        kind === 'pairNotes'
+          ? notes.get(id)?.id
+          : (kind === 'edges' ? edgeLookup : ids[kind]).get(id),
+      (kind, id) =>
+        (kind === 'pairNotes' ? notes.get(id)?.evidence.length : evidenceCount[kind].get(id)) ?? 0,
       (field) => r.fail('BEAT', path + '.' + field, raw),
       rawId,
     );
@@ -861,6 +884,7 @@ export function parseGenericSource(
   doc: unknown,
   errors: GenericDiagnostic[],
   warnings: GenericDiagnostic[],
+  notesFor?: (ids: ReadonlyMap<string, string>, reader: Reader) => PairNote[],
 ): ParsedGenericSource | null {
   const r = reader(errors, warnings);
   if (!object(doc) || doc.format !== GENERIC_FORMAT) {
@@ -917,16 +941,26 @@ export function parseGenericSource(
   rankHierarchy(nodes, edges, weights, strengths);
   const { meta, timeline } = parseMeta(doc, r);
   const sceneNames = new Map<string, string>();
-  const scenes = parseScenes(raw.scenes, ids, lookup, r, sceneNames, {
-    nodes: parsedNodes.evidenceLengths,
-    edges: evidenceLengths,
-  });
+  const pairNotes = notesFor?.(ids.nodes, r);
+  const scenes = parseScenes(
+    raw.scenes,
+    ids,
+    lookup,
+    r,
+    sceneNames,
+    {
+      nodes: parsedNodes.evidenceLengths,
+      edges: evidenceLengths,
+    },
+    pairNotes,
+  );
   if (implicit.length && raw.nodes.length)
     r.warn('IMPLICIT_NODES', 'edges', '', { count: implicit.length });
   const title = r.text(meta.title, 'meta.title', '') ?? '关系图';
   const diagram = parseDiagram(doc, r);
   resolveLanes(doc, diagram, parsedNodes, r);
   return {
+    ...(pairNotes?.length ? { pairNotes } : {}),
     title,
     description: r.text(meta.description, 'meta.description', ''),
     sourceNote: r.text(meta.sourceNote, 'meta.sourceNote', ''),

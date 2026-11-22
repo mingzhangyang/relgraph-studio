@@ -1,6 +1,7 @@
 import type { VisualBeat } from '../../types/visual-graph.js';
 
-type Kind = 'nodes' | 'edges' | 'groups';
+type EvidenceKind = 'nodes' | 'edges' | 'pairNotes';
+type Kind = EvidenceKind | 'groups';
 const record = (v: unknown): v is Record<string, unknown> =>
   v !== null && typeof v === 'object' && !Array.isArray(v);
 
@@ -9,7 +10,7 @@ export function readBeats(
   input: unknown,
   duration: number,
   resolve: (kind: Kind, id: string) => string | undefined,
-  count: (kind: 'nodes' | 'edges', id: string) => number,
+  count: (kind: EvidenceKind, id: string) => number,
   report: (path: string) => void,
   sourceId: (value: unknown) => string | null = (value) =>
     typeof value === 'string' ? value : null,
@@ -73,12 +74,19 @@ export function readBeats(
         }
       } else if (key === 'evidence') {
         const node = part.nodeId !== undefined;
-        if (node === (part.edgeId !== undefined)) {
+        const pairNote = part.pairNoteId !== undefined;
+        if (
+          [part.nodeId, part.edgeId, part.pairNoteId].filter((id) => id !== undefined).length !== 1
+        ) {
           report(path + '.evidence');
           continue;
         }
-        const kind = node ? 'nodes' : 'edges';
-        const id = ref(node ? part.nodeId : part.edgeId, kind, 'evidence');
+        const kind = pairNote ? 'pairNotes' : node ? 'nodes' : 'edges';
+        const id = ref(
+          pairNote ? part.pairNoteId : node ? part.nodeId : part.edgeId,
+          kind,
+          'evidence',
+        );
         if (id === undefined) continue;
         const n = count(kind, id);
         const items = part.items;
@@ -95,7 +103,7 @@ export function readBeats(
           continue;
         }
         beat.evidence = {
-          ...(node ? { nodeId: id } : { edgeId: id }),
+          ...(pairNote ? { pairNoteId: id } : node ? { nodeId: id } : { edgeId: id }),
           ...(Array.isArray(items) ? { items: [...items] } : {}),
         };
       } else {

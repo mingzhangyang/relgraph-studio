@@ -117,7 +117,7 @@ Accepted in [ADR 004](ADR-004-evidence-claims-and-output-formats.md) from the Ta
   - `config.view.timeAxis: "horizontal" | "vertical"` in `relgraph.studio/1`, validated with `config` (vertical needs nodes with times), kept by undo/redo and project export, set from the studio's 时间轴 menu; never inferred from the frame spec, no CLI switch; `relgraph render` warns when a portrait spec draws a horizontal time axis. Stored coordinates unchanged; camera, composer, hit tests and drags read them transposed; bars, axis rules and labels, elbows and the legend bar follow; `check-layout` runs on the transposed frames. Engines take a target aspect (`engineAspect(spec, direction)`) when the studio computes a strategy for a portrait, 3:4 or square preview; the timeline engine spreads its lanes towards it. Existing golden manifests unchanged; `examples/golden-frames.vertical.json` for the vertical case. Tang 64 overview in 9:16: 20 names left out upright against 31 across
 - [x] **P2 · D7.3 + D8** in-shot camera keyframes and `beats`
 - [x] **P3 · D5** [`relgraph.social/0.1-draft`](SOCIAL-GRAPH.md) for evidence-based social networks; form registry and per-kind allowlists
-- [ ] **P3 · D6** absence in the social format: people without attested relations, rejected pairs never drawn as lines
+- [x] **P3 · D6** absence in the social format: people without attested relations, rejected pairs never drawn as lines
 
 ## B3 — Templates and output
 

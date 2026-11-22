@@ -65,9 +65,21 @@ export function composeLegend(ctx: FrameContext, occupied: RectIndex): DisplayIt
     const isNode = entry.of === 'node';
     if (!isNode && edgeStyleFor(style, entry.kind).caption) return [];
     const progress = (isNode ? nodeKindProgress : edgeKindProgress).get(entry.kind) ?? 0;
-    return progress > 0.5 ? [{ ...entry, isNode, alpha: Math.min(1, (progress - 0.5) * 2) }] : [];
+    return progress > 0.5
+      ? [{ ...entry, hollow: false, isNode, alpha: Math.min(1, (progress - 0.5) * 2) }]
+      : [];
   });
-  if (legendEntries.length <= 1) return items;
+  const marked = view.nodes.find((node) => node.hollowOutline && ctx.nodeProgress(node.id) > 0.5);
+  if (marked?.hollowOutline)
+    legendEntries.unshift({
+      of: 'node',
+      isNode: true,
+      kind: marked.kind,
+      label: marked.hollowOutline,
+      alpha: 1,
+      hollow: true,
+    });
+  if (!marked && legendEntries.length <= 1) return items;
   const font = sans(LEGEND.size, 400),
     swatch = u(LEGEND.swatch),
     gap = u(LEGEND.gap),
@@ -106,7 +118,9 @@ export function composeLegend(ctx: FrameContext, occupied: RectIndex): DisplayIt
     row = [];
   };
   for (const entry of legendEntries) {
-    const text = fitText(measure, localize(entry.label, locale), font, u(140)),
+    const text = entry.hollow
+        ? localize(entry.label, locale)
+        : fitText(measure, localize(entry.label, locale), font, u(140)),
       w = (entry.isNode ? mark : swatch) + gap + measure(text, font);
     if (x + w + padX > limit) {
       // The next row, if the strip has one and this entry fits a row at all.
@@ -132,7 +146,9 @@ export function composeLegend(ctx: FrameContext, occupied: RectIndex): DisplayIt
       row.push({
         type: 'path',
         d: nodeOutline({ x: x + mark / 2, y: cy }, drawn),
-        fill: mixHex(color(c, P.fallbackNode), P.nodeFill, P.nodeTint),
+        ...(entry.hollow
+          ? { dash: [u(3), u(2)] }
+          : { fill: mixHex(color(c, P.fallbackNode), P.nodeFill, P.nodeTint) }),
         stroke: c,
         width: u(1.5),
         alpha: entry.alpha,

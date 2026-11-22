@@ -86,6 +86,8 @@ const CARD_END_GAP = 6;
  */
 function cardEnds(view: ProjectedVisualGraph, card: EvidenceCard | null): string[] {
   if (!card) return [];
+  if (card.object === 'pairNote')
+    return view.pairNotes?.find((note) => note.id === card.id)?.nodes ?? [];
   if (card.object === 'node') return [card.id];
   const edge = view.edges.find((e) => e.id === card.id);
   return edge ? [...new Set([edge.source, edge.target])] : [];

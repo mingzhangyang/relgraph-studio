@@ -1,3 +1,5 @@
+import { rawId } from './generic-source.js';
+import type { PairNote } from '../../types/visual-graph.js';
 import { SOCIAL_WORDING, worded } from '../diagnostic-wording.js';
 import type { Diagnostic } from '../director/load.js';
 import { edgeAppearance, type EdgeAppearance } from '../project.js';
@@ -102,7 +104,66 @@ export function inspectSocialDocument(doc: unknown) {
     if (basis === 'inferred' && value.line === 'solid')
       issue('warning', 'INFERRED_SOLID', path + '.line', name);
   }
-  const result = inspectGenericDocument({ ...doc, format: GENERIC_FORMAT });
+  const marked = new Set<string>();
+  if (Array.isArray(doc.nodes))
+    doc.nodes.forEach((node, i) => {
+      if (!record(node) || node.noAttestedRelation === undefined) return;
+      const id = rawId(node.id);
+      if (typeof node.noAttestedRelation !== 'boolean')
+        issue('error', 'SOCIAL_MARK', `nodes[${i}].noAttestedRelation`, id ?? '');
+      else if (id && node.noAttestedRelation) marked.add(id);
+    });
+  if (Array.isArray(doc.edges))
+    doc.edges.forEach((edge, i) => {
+      if (!record(edge)) return;
+      for (const end of ['source', 'target']) {
+        const id = rawId(edge[end]);
+        if (id && marked.has(id)) issue('error', 'SOCIAL_INCIDENT', `edges[${i}].${end}`, id);
+      }
+    });
+  const result = inspectGenericDocument({ ...doc, format: GENERIC_FORMAT }, (ids, reader) => {
+    const notes: PairNote[] = [];
+    if (doc.rejectedPairs === undefined) return notes;
+    if (!Array.isArray(doc.rejectedPairs)) {
+      issue('error', 'SOCIAL_PAIR', 'rejectedPairs', '');
+      return notes;
+    }
+    const seen = new Set<string>();
+    doc.rejectedPairs.forEach((pair, i) => {
+      const path = `rejectedPairs[${i}]`;
+      if (!record(pair)) {
+        issue('error', 'SOCIAL_PAIR', path, '');
+        return;
+      }
+      const id = rawId(pair.id);
+      if (!id || seen.has(id)) {
+        issue('error', 'SOCIAL_PAIR', path + '.id', id ?? '');
+        return;
+      }
+      seen.add(id);
+      if (!Array.isArray(pair.nodes) || pair.nodes.length !== 2) {
+        issue('error', 'SOCIAL_PAIR', path + '.nodes', id);
+        return;
+      }
+      const ends = pair.nodes.map((n, j) => {
+        const end = ids.get(rawId(n) ?? '');
+        if (!end) issue('error', 'SOCIAL_PAIR', path + '.nodes[' + j + ']', id);
+        return end;
+      });
+      if (ends[0] && ends[0] === ends[1]) {
+        issue('error', 'SOCIAL_PAIR', path + '.nodes', id);
+        return;
+      }
+      const label =
+        typeof pair.reason === 'string' && pair.reason.length <= 2000 ? pair.reason.trim() : '';
+      if (!label) issue('error', 'SOCIAL_PAIR', path + '.reason', id);
+      const evidence = reader.evidence(pair.evidence, path + '.evidence', id);
+      if (!evidence) issue('error', 'SOCIAL_PAIR', path + '.evidence', id);
+      if (ends[0] && ends[1] && label && evidence)
+        notes.push({ id, nodes: [ends[0], ends[1]], label, evidence });
+    });
+    return notes;
+  });
   if (!result.valid)
     return {
       valid: false as const,
@@ -114,6 +175,12 @@ export function inspectSocialDocument(doc: unknown) {
   if (errors.length) return { valid: false as const, errors, warnings };
   const declared = graph.kinds?.edges ?? {};
   const kinds = new Set([...Object.keys(declared), ...graph.edges.map((edge) => edge.kind)]);
+  for (const node of graph.nodes)
+    if (marked.has(result.adapted.sourceIds.get(node.id) ?? ''))
+      node.hollowOutline = {
+        'zh-CN': '本图未找到有据关系',
+        en: 'No attested relation found in this graph',
+      };
   graph.domain = 'social';
   graph.kinds = {
     ...graph.kinds,

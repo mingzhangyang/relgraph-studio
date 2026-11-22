@@ -26,6 +26,14 @@ interface CardLine {
  */
 function cardSubject(ctx: FrameContext, card: EvidenceCard): string {
   const { view } = ctx;
+  if (card.object === 'pairNote') {
+    const note = view.pairNotes!.find((n) => n.id === card.id)!;
+    return (
+      note.nodes.map((id) => ctx.nodeLabel(view.nodes.find((n) => n.id === id)!)).join('、') +
+      ' · ' +
+      note.label
+    );
+  }
   if (card.object === 'node') {
     const node = view.nodes.find((n) => n.id === card.id);
     return node ? ctx.nodeLabel(node) : '';
@@ -304,11 +312,13 @@ function pathMeetsRect(
 /** The nodes in view an evidence card is about: its node, or its relation's ends. */
 function cardEnds(ctx: FrameContext, card: EvidenceCard): FrameContext['view']['nodes'] {
   const ids =
-    card.object === 'node'
-      ? [card.id]
-      : (() => {
-          const edge = ctx.view.edges.find((e) => e.id === card.id);
-          return edge ? [edge.source, edge.target] : [];
-        })();
+    card.object === 'pairNote'
+      ? ctx.view.pairNotes!.find((note) => note.id === card.id)!.nodes
+      : card.object === 'node'
+        ? [card.id]
+        : (() => {
+            const edge = ctx.view.edges.find((e) => e.id === card.id);
+            return edge ? [edge.source, edge.target] : [];
+          })();
   return ctx.view.nodes.filter((node) => ids.includes(node.id));
 }
