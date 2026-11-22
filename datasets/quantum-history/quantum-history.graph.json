@@ -1,20 +1,47 @@
 {
   "format": "relgraph.graph/1",
   "meta": {
-    "title": "量子力学 · 思想关系图",
-    "description": "1900—1982，六幕追踪物理学家与成果的联系。",
-    "sourceNote": "主要文献：Planck (1900), Einstein (1905), Bohr (1913), de Broglie (1924), Heisenberg (1925, 1927), Schrödinger (1926), Born (1926), Einstein–Podolsky–Rosen (1935), Bell (1964), Freedman–Clauser (1972), Aspect–Dalibard–Roger (1982)。连线表示理论或实验联系。"
+    "title": "量子力学：从哥本哈根到标准模型",
+    "description": "以玻尔研究所为交点，追踪量子测量与量子场论两条发展线。",
+    "sourceNote": "Planck 1900  ·  Einstein 1905  ·  Bohr 1913；Niels Bohr Archive  ·  Institute history；Heisenberg 1925  ·  Born & Jordan 1925  ·  Schrödinger 1926；Pauli 1925  ·  Uhlenbeck & Goudsmit 1925；Bose 1924  ·  Einstein 1924–25  ·  Fermi & Dirac 1926；Born 1926  ·  Heisenberg 1927  ·  Bohr, Como lecture 1927；Dirac 1928, 1931  ·  Anderson 1932；Einstein, Podolsky & Rosen 1935  ·  Bohr 1935；Bell 1964  ·  Freedman & Clauser 1972  ·  Aspect et al. 1982；Dirac 1927  ·  Nobel Prize in Physics 1965；Pauli 1930  ·  Fermi 1934  ·  Cowan et al. 1956；Yang & Mills 1954  ·  Nobel Prize in Physics 1969, 2004；Nobel Prize in Physics 1979, 1984, 2013；CERN  ·  ATLAS & CMS, Physics Letters B 716 (2012)。研究资料：https://nbarchive.ku.dk/ ；https://doi.org/10.1103/PhysRev.48.696 ；https://www.nobelprize.org/prizes/physics/1945/summary/ ；https://www.nobelprize.org/prizes/physics/1933/summary/ ；https://home.cern/science/physics/standard-model 。"
   },
   "directed": true,
+  "timeline": {
+    "unit": "年"
+  },
+  "kinds": {
+    "nodes": {
+      "人物": {
+        "label": "人物",
+        "color": "#377b77",
+        "shape": "capsule"
+      },
+      "理论与成果": {
+        "label": "理论与成果",
+        "color": "#b77830",
+        "shape": "box"
+      },
+      "研究机构": {
+        "label": "研究机构",
+        "color": "#a7574b",
+        "shape": "hexagon"
+      },
+      "科学问题": {
+        "label": "科学问题",
+        "color": "#785e91",
+        "shape": "diamond"
+      },
+      "合作组": {
+        "label": "合作组",
+        "color": "#34748c",
+        "shape": "pill"
+      }
+    }
+  },
   "nodes": [
     {
       "id": "普朗克",
       "kind": "人物",
-      "visibleFrom": 1900
-    },
-    {
-      "id": "能量元",
-      "kind": "成果",
       "visibleFrom": 1900
     },
     {
@@ -23,9 +50,19 @@
       "visibleFrom": 1905
     },
     {
+      "id": "能量元",
+      "kind": "理论与成果",
+      "visibleFrom": 1900
+    },
+    {
       "id": "光量子",
-      "kind": "成果",
+      "kind": "理论与成果",
       "visibleFrom": 1905
+    },
+    {
+      "id": "玻尔的原子模型",
+      "kind": "理论与成果",
+      "visibleFrom": 1913
     },
     {
       "id": "玻尔",
@@ -33,19 +70,9 @@
       "visibleFrom": 1913
     },
     {
-      "id": "量子化能级",
-      "kind": "成果",
-      "visibleFrom": 1913
-    },
-    {
-      "id": "德布罗意",
-      "kind": "人物",
-      "visibleFrom": 1924
-    },
-    {
-      "id": "物质波",
-      "kind": "成果",
-      "visibleFrom": 1924
+      "id": "哥本哈根研究所",
+      "kind": "研究机构",
+      "visibleFrom": 1921
     },
     {
       "id": "海森堡",
@@ -53,53 +80,162 @@
       "visibleFrom": 1925
     },
     {
-      "id": "矩阵力学",
-      "kind": "成果",
+      "id": "泡利",
+      "kind": "人物",
       "visibleFrom": 1925
     },
     {
-      "id": "薛定谔",
+      "id": "狄拉克",
       "kind": "人物",
       "visibleFrom": 1926
     },
     {
+      "id": "德布罗意",
+      "kind": "人物",
+      "visibleFrom": 1924
+    },
+    {
+      "id": "矩阵力学",
+      "kind": "理论与成果",
+      "visibleFrom": 1925
+    },
+    {
+      "id": "物质波",
+      "kind": "理论与成果",
+      "visibleFrom": 1924
+    },
+    {
+      "id": "能级预测",
+      "kind": "理论与成果",
+      "visibleFrom": 1926
+    },
+    {
       "id": "波动力学",
-      "kind": "成果",
+      "kind": "理论与成果",
+      "visibleFrom": 1926
+    },
+    {
+      "id": "乌伦贝克与古兹密特",
+      "kind": "合作组",
+      "visibleFrom": 1925
+    },
+    {
+      "id": "不相容原理",
+      "kind": "理论与成果",
+      "visibleFrom": 1925,
+      "summary": "1925 年，泡利提出电子不能占据完全相同的量子态。这一限制帮助解释原子壳层及元素周期律。"
+    },
+    {
+      "id": "电子自旋",
+      "kind": "理论与成果",
+      "visibleFrom": 1925
+    },
+    {
+      "id": "原子壳层",
+      "kind": "理论与成果",
+      "visibleFrom": 1927
+    },
+    {
+      "id": "玻色与爱因斯坦",
+      "kind": "合作组",
+      "visibleFrom": 1924
+    },
+    {
+      "id": "费米与狄拉克",
+      "kind": "合作组",
+      "visibleFrom": 1926
+    },
+    {
+      "id": "玻色–爱因斯坦统计",
+      "kind": "理论与成果",
+      "visibleFrom": 1926
+    },
+    {
+      "id": "费米–狄拉克统计",
+      "kind": "理论与成果",
+      "visibleFrom": 1926
+    },
+    {
+      "id": "玻色子",
+      "kind": "理论与成果",
+      "visibleFrom": 1926
+    },
+    {
+      "id": "费米子",
+      "kind": "理论与成果",
       "visibleFrom": 1926
     },
     {
       "id": "玻恩",
       "kind": "人物",
-      "visibleFrom": 1926
+      "visibleFrom": 1925
     },
     {
       "id": "概率诠释",
-      "kind": "成果",
+      "kind": "理论与成果",
       "visibleFrom": 1926
     },
     {
       "id": "测不准关系",
-      "kind": "成果",
+      "kind": "理论与成果",
       "visibleFrom": 1927
     },
     {
-      "id": "EPR 三人",
+      "id": "互补原理",
+      "kind": "理论与成果",
+      "visibleFrom": 1927,
+      "summary": "玻尔在 1927 年科莫会议上阐述互补性。不同实验安排可以提供理解同一量子系统所需的互补信息。"
+    },
+    {
+      "id": "哥本哈根诠释",
+      "kind": "理论与成果",
+      "visibleFrom": 1927,
+      "summary": "这是后来用于一组相关测量思想的历史称谓，包括玻尔的互补性、海森堡的测不准关系和玻恩的概率解释。"
+    },
+    {
+      "id": "狭义相对论",
+      "kind": "理论与成果",
+      "visibleFrom": 1905
+    },
+    {
+      "id": "狄拉克方程",
+      "kind": "理论与成果",
+      "visibleFrom": 1928,
+      "summary": "1928 年建立的相对论性电子方程，自然容纳电子自旋。狄拉克于 1931 年明确提出反电子。"
+    },
+    {
+      "id": "正电子",
+      "kind": "理论与成果",
+      "visibleFrom": 1931
+    },
+    {
+      "id": "安德森",
+      "kind": "人物",
+      "visibleFrom": 1932
+    },
+    {
+      "id": "爱因斯坦等三人",
       "kind": "合作组",
       "visibleFrom": 1935
     },
     {
-      "id": "EPR 论证",
-      "kind": "成果",
+      "id": "完备性质疑",
+      "kind": "理论与成果",
       "visibleFrom": 1935
     },
     {
-      "id": "贝尔",
-      "kind": "人物",
-      "visibleFrom": 1964
+      "id": "对 EPR 的回应",
+      "kind": "理论与成果",
+      "visibleFrom": 1935
+    },
+    {
+      "id": "纠缠与测量",
+      "kind": "科学问题",
+      "visibleFrom": 1935
     },
     {
       "id": "贝尔不等式",
-      "kind": "成果",
+      "kind": "理论与成果",
       "visibleFrom": 1964
     },
     {
@@ -108,19 +244,153 @@
       "visibleFrom": 1972
     },
     {
-      "id": "光子关联实验",
-      "kind": "成果",
-      "visibleFrom": 1972
-    },
-    {
       "id": "阿斯佩团队",
       "kind": "合作组",
       "visibleFrom": 1982
     },
     {
-      "id": "快速切换实验",
-      "kind": "成果",
-      "visibleFrom": 1982
+      "id": "辐射场量子化",
+      "kind": "理论与成果",
+      "visibleFrom": 1927
+    },
+    {
+      "id": "重整化 QED",
+      "kind": "理论与成果",
+      "visibleFrom": 1949,
+      "summary": "朝永振一郎、施温格和费曼以不同方法建立重整化量子电动力学，能计算电子反常磁矩等可观测量。"
+    },
+    {
+      "id": "电子磁矩",
+      "kind": "理论与成果",
+      "visibleFrom": 1949
+    },
+    {
+      "id": "费米",
+      "kind": "人物",
+      "visibleFrom": 1926
+    },
+    {
+      "id": "中微子假说",
+      "kind": "理论与成果",
+      "visibleFrom": 1930
+    },
+    {
+      "id": "β 衰变理论",
+      "kind": "理论与成果",
+      "visibleFrom": 1934
+    },
+    {
+      "id": "反应堆反中微子",
+      "kind": "理论与成果",
+      "visibleFrom": 1956,
+      "summary": "科万、莱因斯等人借助逆 β 衰变产生的正电子与中子信号探测反应堆反中微子。"
+    },
+    {
+      "id": "杨振宁与米尔斯",
+      "kind": "合作组",
+      "visibleFrom": 1954
+    },
+    {
+      "id": "盖尔曼与茨威格",
+      "kind": "合作组",
+      "visibleFrom": 1964
+    },
+    {
+      "id": "非阿贝尔规范场",
+      "kind": "理论与成果",
+      "visibleFrom": 1954
+    },
+    {
+      "id": "夸克模型",
+      "kind": "理论与成果",
+      "visibleFrom": 1964
+    },
+    {
+      "id": "量子色动力学",
+      "kind": "理论与成果",
+      "visibleFrom": 1973
+    },
+    {
+      "id": "格拉肖",
+      "kind": "人物",
+      "visibleFrom": 1961
+    },
+    {
+      "id": "布劳特等人",
+      "kind": "合作组",
+      "visibleFrom": 1964,
+      "summary": "1964 年，恩格勒和布劳特、希格斯，以及古拉尼、哈根和基布尔三个研究组分别研究了对称性破缺与规范粒子的质量。"
+    },
+    {
+      "id": "电弱规范结构",
+      "kind": "理论与成果",
+      "visibleFrom": 1961
+    },
+    {
+      "id": "希格斯机制",
+      "kind": "理论与成果",
+      "visibleFrom": 1964
+    },
+    {
+      "id": "电弱理论",
+      "kind": "理论与成果",
+      "visibleFrom": 1967
+    },
+    {
+      "id": "粒子物理标准模型",
+      "kind": "理论与成果",
+      "visibleFrom": 1974,
+      "summary": "以 SU(3) × SU(2) × U(1) 规范对称性描述强、电磁与弱相互作用。物质粒子构成三代夸克与轻子，玻色子部门包括规范场与希格斯场。"
+    },
+    {
+      "id": "夸克与轻子",
+      "kind": "理论与成果",
+      "visibleFrom": 1974
+    },
+    {
+      "id": "规范玻色子",
+      "kind": "理论与成果",
+      "visibleFrom": 1974
+    },
+    {
+      "id": "希格斯玻色子",
+      "kind": "理论与成果",
+      "visibleFrom": 1964
+    },
+    {
+      "id": "玻色",
+      "kind": "人物",
+      "visibleFrom": 1924
+    },
+    {
+      "id": "科万",
+      "kind": "人物",
+      "visibleFrom": 1956
+    },
+    {
+      "id": "莱因斯",
+      "kind": "人物",
+      "visibleFrom": 1956
+    },
+    {
+      "id": "约尔丹",
+      "kind": "人物",
+      "visibleFrom": 1925
+    },
+    {
+      "id": "薛定谔",
+      "kind": "人物",
+      "visibleFrom": 1926
+    },
+    {
+      "id": "乌伦贝克",
+      "kind": "人物",
+      "visibleFrom": 1925
+    },
+    {
+      "id": "古兹密特",
+      "kind": "人物",
+      "visibleFrom": 1925
     },
     {
       "id": "波多尔斯基",
@@ -131,6 +401,11 @@
       "id": "罗森",
       "kind": "人物",
       "visibleFrom": 1935
+    },
+    {
+      "id": "贝尔",
+      "kind": "人物",
+      "visibleFrom": 1964
     },
     {
       "id": "弗里德曼",
@@ -146,357 +421,1319 @@
       "id": "阿斯佩",
       "kind": "人物",
       "visibleFrom": 1982
+    },
+    {
+      "id": "朝永振一郎",
+      "kind": "人物",
+      "visibleFrom": 1949
+    },
+    {
+      "id": "施温格",
+      "kind": "人物",
+      "visibleFrom": 1949
+    },
+    {
+      "id": "费曼",
+      "kind": "人物",
+      "visibleFrom": 1949
+    },
+    {
+      "id": "杨振宁",
+      "kind": "人物",
+      "visibleFrom": 1954
+    },
+    {
+      "id": "米尔斯",
+      "kind": "人物",
+      "visibleFrom": 1954
+    },
+    {
+      "id": "盖尔曼",
+      "kind": "人物",
+      "visibleFrom": 1964
+    },
+    {
+      "id": "茨威格",
+      "kind": "人物",
+      "visibleFrom": 1964
+    },
+    {
+      "id": "格罗斯",
+      "kind": "人物",
+      "visibleFrom": 1973
+    },
+    {
+      "id": "渐近自由",
+      "kind": "理论与成果",
+      "visibleFrom": 1973
+    },
+    {
+      "id": "维尔切克",
+      "kind": "人物",
+      "visibleFrom": 1973
+    },
+    {
+      "id": "波利策",
+      "kind": "人物",
+      "visibleFrom": 1973
+    },
+    {
+      "id": "温伯格",
+      "kind": "人物",
+      "visibleFrom": 1967
+    },
+    {
+      "id": "萨拉姆",
+      "kind": "人物",
+      "visibleFrom": 1968
+    },
+    {
+      "id": "W 与 Z 玻色子",
+      "kind": "理论与成果",
+      "visibleFrom": 1968
+    },
+    {
+      "id": "ATLAS",
+      "kind": "合作组",
+      "visibleFrom": 2012
+    },
+    {
+      "id": "CMS",
+      "kind": "合作组",
+      "visibleFrom": 2012
+    },
+    {
+      "id": "布劳特",
+      "kind": "人物",
+      "visibleFrom": 1964
+    },
+    {
+      "id": "恩格勒",
+      "kind": "人物",
+      "visibleFrom": 1964
+    },
+    {
+      "id": "希格斯",
+      "kind": "人物",
+      "visibleFrom": 1964
+    },
+    {
+      "id": "古拉尼",
+      "kind": "人物",
+      "visibleFrom": 1964
+    },
+    {
+      "id": "哈根",
+      "kind": "人物",
+      "visibleFrom": 1964
+    },
+    {
+      "id": "基布尔",
+      "kind": "人物",
+      "visibleFrom": 1964
+    },
+    {
+      "id": "哥本哈根学派",
+      "kind": "合作组",
+      "visibleFrom": 1927,
+      "summary": "以玻尔及其研究所的讨论圈为中心。来访与合作构成了学术网络，圈内物理学家对测量与理论的看法也有分歧。"
     }
   ],
   "edges": [
     {
       "source": "普朗克",
       "target": "能量元",
-      "kind": "贡献",
+      "kind": "关系",
+      "label": "1900",
       "visibleFrom": 1900
     },
     {
       "source": "爱因斯坦",
       "target": "光量子",
-      "kind": "贡献",
+      "kind": "关系",
+      "label": "1905",
       "visibleFrom": 1905
     },
     {
       "source": "能量元",
-      "target": "光量子",
-      "label": "推广",
-      "kind": "联系",
-      "visibleFrom": 1905
+      "target": "玻尔的原子模型",
+      "kind": "关系",
+      "label": "量子条件",
+      "visibleFrom": 1913
     },
     {
       "source": "玻尔",
-      "target": "量子化能级",
-      "kind": "贡献",
-      "visibleFrom": 1913
+      "target": "哥本哈根研究所",
+      "kind": "关系",
+      "label": "主持",
+      "visibleFrom": 1921
     },
     {
-      "source": "德布罗意",
-      "target": "物质波",
-      "kind": "贡献",
-      "visibleFrom": 1924
+      "source": "哥本哈根研究所",
+      "target": "海森堡",
+      "kind": "合作",
+      "label": "共事",
+      "visibleFrom": 1927
     },
     {
-      "source": "能量元",
-      "target": "量子化能级",
-      "label": "引入量子条件",
-      "kind": "联系",
-      "visibleFrom": 1913
+      "source": "哥本哈根研究所",
+      "target": "泡利",
+      "kind": "合作",
+      "label": "来访",
+      "visibleFrom": 1927
     },
     {
-      "source": "光量子",
-      "target": "物质波",
-      "label": "推广波粒二象性",
-      "kind": "联系",
-      "visibleFrom": 1924
-    },
-    {
-      "source": "量子化能级",
-      "target": "物质波",
-      "label": "寻求波动解释",
-      "kind": "联系",
-      "visibleFrom": 1924
+      "source": "哥本哈根研究所",
+      "target": "狄拉克",
+      "kind": "合作",
+      "label": "交流",
+      "visibleFrom": 1927
     },
     {
       "source": "海森堡",
       "target": "矩阵力学",
-      "kind": "贡献",
+      "kind": "关系",
+      "label": "1925",
       "visibleFrom": 1925
     },
     {
-      "source": "薛定谔",
-      "target": "波动力学",
-      "kind": "贡献",
+      "source": "德布罗意",
+      "target": "物质波",
+      "kind": "关系",
+      "label": "1924",
+      "visibleFrom": 1924
+    },
+    {
+      "source": "矩阵力学",
+      "target": "能级预测",
+      "kind": "关系",
+      "label": "求解",
       "visibleFrom": 1926
-    },
-    {
-      "source": "量子化能级",
-      "target": "矩阵力学",
-      "label": "解释跃迁",
-      "kind": "联系",
-      "visibleFrom": 1925
     },
     {
       "source": "物质波",
       "target": "波动力学",
-      "label": "发展为波方程",
-      "kind": "联系",
+      "kind": "关系",
+      "label": "薛定谔发展",
       "visibleFrom": 1926
     },
     {
-      "source": "矩阵力学",
-      "target": "波动力学",
-      "label": "形式等价",
-      "kind": "联系",
+      "source": "波动力学",
+      "target": "能级预测",
+      "kind": "关系",
+      "label": "求解",
+      "visibleFrom": 1926
+    },
+    {
+      "source": "泡利",
+      "target": "不相容原理",
+      "kind": "关系",
+      "label": "提出",
+      "visibleFrom": 1925
+    },
+    {
+      "source": "乌伦贝克与古兹密特",
+      "target": "电子自旋",
+      "kind": "关系",
+      "label": "提出",
+      "visibleFrom": 1925
+    },
+    {
+      "source": "不相容原理",
+      "target": "原子壳层",
+      "kind": "关系",
+      "label": "限制占据",
+      "visibleFrom": 1927
+    },
+    {
+      "source": "电子自旋",
+      "target": "原子壳层",
+      "kind": "关系",
+      "label": "区分状态",
+      "visibleFrom": 1927
+    },
+    {
+      "source": "玻色与爱因斯坦",
+      "target": "玻色–爱因斯坦统计",
+      "kind": "关系",
+      "label": "1924—25",
+      "visibleFrom": 1926
+    },
+    {
+      "source": "费米与狄拉克",
+      "target": "费米–狄拉克统计",
+      "kind": "关系",
+      "label": "1926",
+      "visibleFrom": 1926
+    },
+    {
+      "source": "玻色–爱因斯坦统计",
+      "target": "玻色子",
+      "kind": "关系",
+      "label": "可共享状态",
+      "visibleFrom": 1926
+    },
+    {
+      "source": "费米–狄拉克统计",
+      "target": "费米子",
+      "kind": "关系",
+      "label": "遵守泡利原理",
       "visibleFrom": 1926
     },
     {
       "source": "玻恩",
       "target": "概率诠释",
-      "kind": "贡献",
+      "kind": "关系",
+      "label": "1926",
       "visibleFrom": 1926
     },
     {
       "source": "海森堡",
       "target": "测不准关系",
-      "kind": "贡献",
+      "kind": "关系",
+      "label": "1927",
       "visibleFrom": 1927
+    },
+    {
+      "source": "玻尔",
+      "target": "互补原理",
+      "kind": "关系",
+      "label": "1927",
+      "visibleFrom": 1927
+    },
+    {
+      "source": "概率诠释",
+      "target": "哥本哈根诠释",
+      "kind": "关系",
+      "label": "关联",
+      "visibleFrom": 1927
+    },
+    {
+      "source": "测不准关系",
+      "target": "哥本哈根诠释",
+      "kind": "关系",
+      "label": "关联",
+      "visibleFrom": 1927
+    },
+    {
+      "source": "互补原理",
+      "target": "哥本哈根诠释",
+      "kind": "关系",
+      "label": "关联",
+      "visibleFrom": 1927
+    },
+    {
+      "source": "狄拉克",
+      "target": "狄拉克方程",
+      "kind": "关系",
+      "label": "建立",
+      "visibleFrom": 1928
+    },
+    {
+      "source": "狭义相对论",
+      "target": "狄拉克方程",
+      "kind": "关系",
+      "label": "约束",
+      "visibleFrom": 1928
+    },
+    {
+      "source": "狄拉克方程",
+      "target": "正电子",
+      "kind": "关系",
+      "label": "预言",
+      "visibleFrom": 1931
+    },
+    {
+      "source": "安德森",
+      "target": "正电子",
+      "kind": "关系",
+      "label": "发现",
+      "visibleFrom": 1932
+    },
+    {
+      "source": "爱因斯坦等三人",
+      "target": "完备性质疑",
+      "kind": "关系",
+      "label": "EPR 论证",
+      "visibleFrom": 1935
+    },
+    {
+      "source": "玻尔",
+      "target": "对 EPR 的回应",
+      "kind": "关系",
+      "label": "答辩",
+      "visibleFrom": 1935
+    },
+    {
+      "source": "完备性质疑",
+      "target": "纠缠与测量",
+      "kind": "关系",
+      "label": "关联",
+      "visibleFrom": 1935
+    },
+    {
+      "source": "对 EPR 的回应",
+      "target": "纠缠与测量",
+      "kind": "关系",
+      "label": "关联",
+      "visibleFrom": 1935
+    },
+    {
+      "source": "纠缠与测量",
+      "target": "贝尔不等式",
+      "kind": "关系",
+      "label": "贝尔推导",
+      "visibleFrom": 1964
+    },
+    {
+      "source": "贝尔不等式",
+      "target": "弗里德曼与克劳泽",
+      "kind": "关系",
+      "label": "1972 年检验",
+      "visibleFrom": 1972
+    },
+    {
+      "source": "贝尔不等式",
+      "target": "阿斯佩团队",
+      "kind": "关系",
+      "label": "1982 年检验",
+      "visibleFrom": 1982
+    },
+    {
+      "source": "狄拉克",
+      "target": "辐射场量子化",
+      "kind": "关系",
+      "label": "1927",
+      "visibleFrom": 1927
+    },
+    {
+      "source": "辐射场量子化",
+      "target": "重整化 QED",
+      "kind": "关系",
+      "label": "场论发展",
+      "visibleFrom": 1949
+    },
+    {
+      "source": "重整化 QED",
+      "target": "电子磁矩",
+      "kind": "关系",
+      "label": "精密预测",
+      "visibleFrom": 1949
+    },
+    {
+      "source": "泡利",
+      "target": "中微子假说",
+      "kind": "关系",
+      "label": "1930",
+      "visibleFrom": 1930
+    },
+    {
+      "source": "费米",
+      "target": "β 衰变理论",
+      "kind": "关系",
+      "label": "1933—34",
+      "visibleFrom": 1934
+    },
+    {
+      "source": "中微子假说",
+      "target": "β 衰变理论",
+      "kind": "关系",
+      "label": "解释能谱",
+      "visibleFrom": 1934
+    },
+    {
+      "source": "β 衰变理论",
+      "target": "反应堆反中微子",
+      "kind": "关系",
+      "label": "逆 β 衰变检验",
+      "visibleFrom": 1956
+    },
+    {
+      "source": "杨振宁与米尔斯",
+      "target": "非阿贝尔规范场",
+      "kind": "关系",
+      "label": "1954",
+      "visibleFrom": 1954
+    },
+    {
+      "source": "盖尔曼与茨威格",
+      "target": "夸克模型",
+      "kind": "关系",
+      "label": "各自提出",
+      "visibleFrom": 1964
+    },
+    {
+      "source": "非阿贝尔规范场",
+      "target": "量子色动力学",
+      "kind": "关系",
+      "label": "色规范场",
+      "visibleFrom": 1973
+    },
+    {
+      "source": "夸克模型",
+      "target": "量子色动力学",
+      "kind": "关系",
+      "label": "色荷",
+      "visibleFrom": 1973
+    },
+    {
+      "source": "格拉肖",
+      "target": "电弱规范结构",
+      "kind": "关系",
+      "label": "1961",
+      "visibleFrom": 1961
+    },
+    {
+      "source": "布劳特等人",
+      "target": "希格斯机制",
+      "kind": "关系",
+      "label": "1964",
+      "visibleFrom": 1964
+    },
+    {
+      "source": "电弱规范结构",
+      "target": "电弱理论",
+      "kind": "关系",
+      "label": "统一描述",
+      "visibleFrom": 1967
+    },
+    {
+      "source": "希格斯机制",
+      "target": "电弱理论",
+      "kind": "关系",
+      "label": "破缺对称性",
+      "visibleFrom": 1967
+    },
+    {
+      "source": "量子色动力学",
+      "target": "粒子物理标准模型",
+      "kind": "关系",
+      "label": "强作用",
+      "visibleFrom": 1974
+    },
+    {
+      "source": "电弱理论",
+      "target": "粒子物理标准模型",
+      "kind": "关系",
+      "label": "电磁与弱作用",
+      "visibleFrom": 1974
+    },
+    {
+      "source": "粒子物理标准模型",
+      "target": "夸克与轻子",
+      "kind": "关系",
+      "label": "物质",
+      "visibleFrom": 2012
+    },
+    {
+      "source": "粒子物理标准模型",
+      "target": "规范玻色子",
+      "kind": "关系",
+      "label": "传递作用",
+      "visibleFrom": 2012
+    },
+    {
+      "source": "粒子物理标准模型",
+      "target": "希格斯玻色子",
+      "kind": "关系",
+      "label": "标量粒子",
+      "visibleFrom": 2012
+    },
+    {
+      "source": "玻色",
+      "target": "玻色与爱因斯坦",
+      "kind": "合作",
+      "label": "参与",
+      "visibleFrom": 1924
+    },
+    {
+      "source": "爱因斯坦",
+      "target": "玻色与爱因斯坦",
+      "kind": "合作",
+      "label": "参与",
+      "visibleFrom": 1924
+    },
+    {
+      "source": "狄拉克",
+      "target": "费米与狄拉克",
+      "kind": "关系",
+      "label": "独立提出",
+      "visibleFrom": 1926
+    },
+    {
+      "source": "费米",
+      "target": "费米与狄拉克",
+      "kind": "关系",
+      "label": "独立提出",
+      "visibleFrom": 1926
+    },
+    {
+      "source": "不相容原理",
+      "target": "费米–狄拉克统计",
+      "kind": "关系",
+      "label": "占据约束",
+      "visibleFrom": 1926
+    },
+    {
+      "source": "费米子",
+      "target": "夸克与轻子",
+      "kind": "关系",
+      "label": "粒子类别",
+      "visibleFrom": 1974
+    },
+    {
+      "source": "玻色子",
+      "target": "规范玻色子",
+      "kind": "关系",
+      "label": "粒子类别",
+      "visibleFrom": 1974
+    },
+    {
+      "source": "玻色子",
+      "target": "希格斯玻色子",
+      "kind": "关系",
+      "label": "粒子类别",
+      "visibleFrom": 1964
+    },
+    {
+      "source": "科万",
+      "target": "反应堆反中微子",
+      "kind": "关系",
+      "label": "探测",
+      "visibleFrom": 1956
+    },
+    {
+      "source": "莱因斯",
+      "target": "反应堆反中微子",
+      "kind": "关系",
+      "label": "探测",
+      "visibleFrom": 1956
+    },
+    {
+      "source": "β 衰变理论",
+      "target": "电弱理论",
+      "kind": "关系",
+      "label": "低能极限",
+      "visibleFrom": 1967
+    },
+    {
+      "source": "玻尔",
+      "target": "玻尔的原子模型",
+      "kind": "关系",
+      "label": "提出",
+      "visibleFrom": 1913
+    },
+    {
+      "source": "玻尔的原子模型",
+      "target": "哥本哈根研究所",
+      "kind": "关系",
+      "label": "研究背景",
+      "visibleFrom": 1921
+    },
+    {
+      "source": "玻恩",
+      "target": "矩阵力学",
+      "kind": "关系",
+      "label": "发展",
+      "visibleFrom": 1925
+    },
+    {
+      "source": "约尔丹",
+      "target": "矩阵力学",
+      "kind": "关系",
+      "label": "发展",
+      "visibleFrom": 1925
+    },
+    {
+      "source": "薛定谔",
+      "target": "波动力学",
+      "kind": "关系",
+      "label": "建立",
+      "visibleFrom": 1926
     },
     {
       "source": "波动力学",
       "target": "概率诠释",
-      "label": "解释波函数",
-      "kind": "联系",
+      "kind": "关系",
+      "label": "波函数的统计意义",
       "visibleFrom": 1926
     },
     {
-      "source": "矩阵力学",
-      "target": "测不准关系",
-      "label": "非对易结构",
-      "kind": "联系",
-      "visibleFrom": 1927
+      "source": "乌伦贝克",
+      "target": "乌伦贝克与古兹密特",
+      "kind": "合作",
+      "label": "参与",
+      "visibleFrom": 1925
     },
     {
-      "source": "EPR 三人",
-      "target": "EPR 论证",
-      "kind": "贡献",
+      "source": "古兹密特",
+      "target": "乌伦贝克与古兹密特",
+      "kind": "合作",
+      "label": "参与",
+      "visibleFrom": 1925
+    },
+    {
+      "source": "电子自旋",
+      "target": "狄拉克方程",
+      "kind": "关系",
+      "label": "方程容纳自旋",
+      "visibleFrom": 1928
+    },
+    {
+      "source": "不相容原理",
+      "target": "夸克与轻子",
+      "kind": "关系",
+      "label": "适用于费米子",
+      "visibleFrom": 1975
+    },
+    {
+      "source": "狄拉克方程",
+      "target": "重整化 QED",
+      "kind": "关系",
+      "label": "相对论性电子场",
+      "visibleFrom": 1949
+    },
+    {
+      "source": "爱因斯坦",
+      "target": "狭义相对论",
+      "kind": "关系",
+      "label": "提出",
+      "visibleFrom": 1905
+    },
+    {
+      "source": "哥本哈根诠释",
+      "target": "对 EPR 的回应",
+      "kind": "关系",
+      "label": "互补性观点",
+      "visibleFrom": 1935
+    },
+    {
+      "source": "爱因斯坦",
+      "target": "爱因斯坦等三人",
+      "kind": "合作",
+      "label": "参与",
+      "visibleFrom": 1935
+    },
+    {
+      "source": "波多尔斯基",
+      "target": "爱因斯坦等三人",
+      "kind": "合作",
+      "label": "参与",
+      "visibleFrom": 1935
+    },
+    {
+      "source": "罗森",
+      "target": "爱因斯坦等三人",
+      "kind": "合作",
+      "label": "参与",
       "visibleFrom": 1935
     },
     {
       "source": "贝尔",
       "target": "贝尔不等式",
-      "kind": "贡献",
+      "kind": "关系",
+      "label": "推导",
       "visibleFrom": 1964
-    },
-    {
-      "source": "概率诠释",
-      "target": "EPR 论证",
-      "label": "质疑完备性",
-      "kind": "联系",
-      "visibleFrom": 1935
-    },
-    {
-      "source": "EPR 论证",
-      "target": "贝尔不等式",
-      "label": "转为可检验问题",
-      "kind": "联系",
-      "visibleFrom": 1964
-    },
-    {
-      "source": "弗里德曼与克劳泽",
-      "target": "光子关联实验",
-      "kind": "贡献",
-      "visibleFrom": 1972
-    },
-    {
-      "source": "阿斯佩团队",
-      "target": "快速切换实验",
-      "kind": "贡献",
-      "visibleFrom": 1982
-    },
-    {
-      "source": "贝尔不等式",
-      "target": "光子关联实验",
-      "label": "实验检验",
-      "kind": "联系",
-      "visibleFrom": 1972
-    },
-    {
-      "source": "贝尔不等式",
-      "target": "快速切换实验",
-      "label": "改进检验",
-      "kind": "联系",
-      "visibleFrom": 1982
-    },
-    {
-      "source": "光子关联实验",
-      "target": "快速切换实验",
-      "label": "改进测量设置",
-      "kind": "联系",
-      "visibleFrom": 1982
-    },
-    {
-      "source": "爱因斯坦",
-      "target": "EPR 三人",
-      "kind": "成员",
-      "visibleFrom": 1935
-    },
-    {
-      "source": "波多尔斯基",
-      "target": "EPR 三人",
-      "kind": "成员",
-      "visibleFrom": 1935
-    },
-    {
-      "source": "罗森",
-      "target": "EPR 三人",
-      "kind": "成员",
-      "visibleFrom": 1935
     },
     {
       "source": "弗里德曼",
       "target": "弗里德曼与克劳泽",
-      "kind": "成员",
+      "kind": "合作",
+      "label": "参与",
       "visibleFrom": 1972
     },
     {
       "source": "克劳泽",
       "target": "弗里德曼与克劳泽",
-      "kind": "成员",
+      "kind": "合作",
+      "label": "参与",
       "visibleFrom": 1972
     },
     {
       "source": "阿斯佩",
       "target": "阿斯佩团队",
-      "kind": "成员",
+      "kind": "合作",
+      "label": "参与",
       "visibleFrom": 1982
+    },
+    {
+      "source": "朝永振一郎",
+      "target": "重整化 QED",
+      "kind": "关系",
+      "label": "发展",
+      "visibleFrom": 1949
+    },
+    {
+      "source": "施温格",
+      "target": "重整化 QED",
+      "kind": "关系",
+      "label": "发展",
+      "visibleFrom": 1949
+    },
+    {
+      "source": "费曼",
+      "target": "重整化 QED",
+      "kind": "关系",
+      "label": "发展",
+      "visibleFrom": 1949
+    },
+    {
+      "source": "重整化 QED",
+      "target": "电弱理论",
+      "kind": "关系",
+      "label": "电磁部门",
+      "visibleFrom": 1968
+    },
+    {
+      "source": "杨振宁",
+      "target": "杨振宁与米尔斯",
+      "kind": "合作",
+      "label": "参与",
+      "visibleFrom": 1954
+    },
+    {
+      "source": "米尔斯",
+      "target": "杨振宁与米尔斯",
+      "kind": "合作",
+      "label": "参与",
+      "visibleFrom": 1954
+    },
+    {
+      "source": "非阿贝尔规范场",
+      "target": "电弱规范结构",
+      "kind": "关系",
+      "label": "数学框架",
+      "visibleFrom": 1961
+    },
+    {
+      "source": "盖尔曼",
+      "target": "夸克模型",
+      "kind": "关系",
+      "label": "独立提出",
+      "visibleFrom": 1964
+    },
+    {
+      "source": "茨威格",
+      "target": "夸克模型",
+      "kind": "关系",
+      "label": "独立提出",
+      "visibleFrom": 1964
+    },
+    {
+      "source": "格罗斯",
+      "target": "渐近自由",
+      "kind": "关系",
+      "label": "发现",
+      "visibleFrom": 1973
+    },
+    {
+      "source": "维尔切克",
+      "target": "渐近自由",
+      "kind": "关系",
+      "label": "发现",
+      "visibleFrom": 1973
+    },
+    {
+      "source": "波利策",
+      "target": "渐近自由",
+      "kind": "关系",
+      "label": "发现",
+      "visibleFrom": 1973
+    },
+    {
+      "source": "量子色动力学",
+      "target": "渐近自由",
+      "kind": "关系",
+      "label": "短距离性质",
+      "visibleFrom": 1973
+    },
+    {
+      "source": "温伯格",
+      "target": "电弱理论",
+      "kind": "关系",
+      "label": "建立",
+      "visibleFrom": 1967
+    },
+    {
+      "source": "萨拉姆",
+      "target": "电弱理论",
+      "kind": "关系",
+      "label": "建立",
+      "visibleFrom": 1968
+    },
+    {
+      "source": "电弱理论",
+      "target": "W 与 Z 玻色子",
+      "kind": "关系",
+      "label": "预言",
+      "visibleFrom": 1968
+    },
+    {
+      "source": "希格斯机制",
+      "target": "希格斯玻色子",
+      "kind": "关系",
+      "label": "物理激发",
+      "visibleFrom": 1964
+    },
+    {
+      "source": "ATLAS",
+      "target": "希格斯玻色子",
+      "kind": "关系",
+      "label": "发现新粒子",
+      "visibleFrom": 2012
+    },
+    {
+      "source": "CMS",
+      "target": "希格斯玻色子",
+      "kind": "关系",
+      "label": "发现新粒子",
+      "visibleFrom": 2012
+    },
+    {
+      "source": "布劳特",
+      "target": "布劳特等人",
+      "kind": "合作",
+      "label": "参与",
+      "visibleFrom": 1964
+    },
+    {
+      "source": "恩格勒",
+      "target": "布劳特等人",
+      "kind": "合作",
+      "label": "参与",
+      "visibleFrom": 1964
+    },
+    {
+      "source": "希格斯",
+      "target": "布劳特等人",
+      "kind": "合作",
+      "label": "参与",
+      "visibleFrom": 1964
+    },
+    {
+      "source": "古拉尼",
+      "target": "布劳特等人",
+      "kind": "合作",
+      "label": "参与",
+      "visibleFrom": 1964
+    },
+    {
+      "source": "哈根",
+      "target": "布劳特等人",
+      "kind": "合作",
+      "label": "参与",
+      "visibleFrom": 1964
+    },
+    {
+      "source": "基布尔",
+      "target": "布劳特等人",
+      "kind": "合作",
+      "label": "参与",
+      "visibleFrom": 1964
+    },
+    {
+      "source": "玻尔",
+      "target": "哥本哈根学派",
+      "kind": "关系",
+      "label": "学术核心",
+      "visibleFrom": 1927
+    },
+    {
+      "source": "哥本哈根研究所",
+      "target": "哥本哈根学派",
+      "kind": "关系",
+      "label": "交流中心",
+      "visibleFrom": 1927
+    },
+    {
+      "source": "哥本哈根学派",
+      "target": "互补原理",
+      "kind": "关系",
+      "label": "核心议题",
+      "visibleFrom": 1927
+    },
+    {
+      "source": "哥本哈根学派",
+      "target": "哥本哈根诠释",
+      "kind": "关系",
+      "label": "思想渊源",
+      "visibleFrom": 1927
     }
   ],
   "presentation": [
     {
-      "id": "s1",
-      "title": "光，一份一份",
-      "durationSec": 8,
-      "domainAt": 1905,
-      "narration": "普朗克用能量元解释黑体辐射。爱因斯坦进一步提出，光本身也能以一份份能量被吸收。",
-      "highlight": {
-        "nodeIds": [
-          "普朗克",
-          "能量元",
-          "爱因斯坦",
-          "光量子"
-        ]
-      },
+      "id": "chapter-1",
+      "title": "光谱里的台阶",
+      "narration": "普朗克以 hν 为单位计算频率为 ν 的振子的能量。爱因斯坦赋予光本身粒子性。玻尔把氢的谱线频率与两个定态的能量差联系起来。",
+      "durationSec": 12,
+      "domainAt": 1913,
+      "transitionMs": 700,
       "camera": {
         "fitIds": [
           "普朗克",
-          "能量元",
           "爱因斯坦",
-          "光量子"
-        ]
-      }
-    },
-    {
-      "id": "s2",
-      "title": "原子的台阶",
-      "durationSec": 8,
-      "domainAt": 1924,
-      "narration": "玻尔用能级之差解释氢光谱。德布罗意把波的概念赋予粒子，为理解离散轨道提供了新线索。",
-      "highlight": {
-        "nodeIds": [
-          "玻尔",
-          "量子化能级",
-          "德布罗意",
-          "物质波"
+          "能量元",
+          "光量子",
+          "玻尔的原子模型"
         ]
       },
-      "camera": {
-        "fitIds": [
-          "玻尔",
-          "量子化能级",
-          "德布罗意",
-          "物质波"
-        ]
-      }
-    },
-    {
-      "id": "s3",
-      "title": "两种算法",
-      "durationSec": 8,
-      "domainAt": 1926,
-      "narration": "海森堡从光谱跃迁出发，薛定谔从物质波出发。两种形式在共同的适用范围内给出相同的能谱。",
       "highlight": {
         "nodeIds": [
-          "海森堡",
-          "矩阵力学",
-          "薛定谔",
-          "波动力学"
-        ]
-      },
-      "camera": {
-        "fitIds": [
-          "海森堡",
-          "矩阵力学",
-          "薛定谔",
-          "波动力学"
+          "普朗克",
+          "爱因斯坦",
+          "能量元",
+          "光量子",
+          "玻尔的原子模型"
         ]
       }
     },
     {
-      "id": "s4",
-      "title": "能预言什么？",
-      "durationSec": 8,
+      "id": "chapter-2",
+      "title": "一间研究所的引力",
+      "narration": "1921 年，玻尔主持的研究所在哥本哈根开所。海森堡与他日常辩论，泡利和狄拉克先后来访。怎样从实验读出原子的规律，成了共同的问题。",
+      "durationSec": 14,
       "domainAt": 1927,
-      "narration": "玻恩把波函数振幅与测量概率相联。海森堡指出，同一量子态的位置和动量分布宽度受到共同约束。",
-      "highlight": {
-        "nodeIds": [
-          "玻恩",
-          "概率诠释",
-          "海森堡",
-          "测不准关系"
-        ]
-      },
+      "transitionMs": 700,
       "camera": {
         "fitIds": [
-          "玻恩",
-          "概率诠释",
+          "玻尔",
+          "哥本哈根研究所",
           "海森堡",
-          "测不准关系"
+          "泡利",
+          "狄拉克",
+          "哥本哈根学派"
+        ]
+      },
+      "highlight": {
+        "nodeIds": [
+          "玻尔",
+          "哥本哈根研究所",
+          "海森堡",
+          "泡利",
+          "狄拉克",
+          "哥本哈根学派"
         ]
       }
     },
     {
-      "id": "s5",
-      "title": "相隔两地的测量",
-      "durationSec": 8,
-      "domainAt": 1964,
-      "narration": "爱因斯坦、波多尔斯基和罗森质疑量子描述的完备性。贝尔把局域隐变量模型的限制写成可检验的不等式。",
-      "highlight": {
-        "nodeIds": [
-          "EPR 三人",
-          "EPR 论证",
-          "贝尔",
-          "贝尔不等式"
-        ]
-      },
+      "id": "chapter-3",
+      "title": "两条路，同一能谱",
+      "narration": "海森堡从跃迁量出发，玻恩和约尔丹把它写成矩阵运算。薛定谔从德布罗意的物质波出发建立波动力学，两种方法会合在相同的能级预测上。",
+      "durationSec": 14,
+      "domainAt": 1926,
+      "transitionMs": 700,
       "camera": {
         "fitIds": [
-          "EPR 三人",
-          "EPR 论证",
-          "贝尔",
-          "贝尔不等式"
+          "海森堡",
+          "德布罗意",
+          "矩阵力学",
+          "物质波",
+          "能级预测",
+          "波动力学"
+        ]
+      },
+      "highlight": {
+        "nodeIds": [
+          "海森堡",
+          "德布罗意",
+          "矩阵力学",
+          "物质波",
+          "能级预测",
+          "波动力学"
         ]
       }
     },
     {
-      "id": "s6",
-      "title": "把争论交给光子",
-      "durationSec": 8,
+      "id": "chapter-4",
+      "title": "电子如何排座位？",
+      "narration": "泡利规定，两个电子不能占据同一单粒子量子态。电子自旋给出两种投影，所以一个空间轨道可容纳两个自旋相反的电子。这为理解元素周期律提供了依据。",
+      "durationSec": 14,
+      "domainAt": 1927,
+      "transitionMs": 700,
+      "camera": {
+        "fitIds": [
+          "泡利",
+          "乌伦贝克与古兹密特",
+          "不相容原理",
+          "电子自旋",
+          "原子壳层"
+        ]
+      },
+      "highlight": {
+        "nodeIds": [
+          "泡利",
+          "乌伦贝克与古兹密特",
+          "不相容原理",
+          "电子自旋",
+          "原子壳层"
+        ]
+      }
+    },
+    {
+      "id": "chapter-5",
+      "title": "粒子怎样共享状态？",
+      "narration": "玻色为光量子计数，爱因斯坦将这一方法推广到原子气体。费米和狄拉克各自发展了服从泡利原理的统计。这个区别后来也出现在标准模型中，电子是费米子，光子是玻色子。",
+      "durationSec": 14,
+      "domainAt": 1926,
+      "transitionMs": 700,
+      "camera": {
+        "fitIds": [
+          "玻色与爱因斯坦",
+          "费米与狄拉克",
+          "玻色–爱因斯坦统计",
+          "费米–狄拉克统计",
+          "玻色子",
+          "费米子"
+        ]
+      },
+      "highlight": {
+        "nodeIds": [
+          "玻色与爱因斯坦",
+          "费米与狄拉克",
+          "玻色–爱因斯坦统计",
+          "费米–狄拉克统计",
+          "玻色子",
+          "费米子"
+        ]
+      }
+    },
+    {
+      "id": "chapter-6",
+      "title": "测量能告诉我们什么？",
+      "narration": "玻恩用振幅的模平方解释概率；海森堡联系位置与动量的散布；玻尔强调，显示干涉与辨认路径需要不同实验安排。后人常将这些思想并称为哥本哈根诠释。",
+      "durationSec": 15,
+      "domainAt": 1927,
+      "transitionMs": 700,
+      "camera": {
+        "fitIds": [
+          "玻恩",
+          "海森堡",
+          "玻尔",
+          "概率诠释",
+          "测不准关系",
+          "互补原理",
+          "哥本哈根诠释",
+          "哥本哈根学派"
+        ]
+      },
+      "highlight": {
+        "nodeIds": [
+          "玻恩",
+          "海森堡",
+          "玻尔",
+          "概率诠释",
+          "测不准关系",
+          "互补原理",
+          "哥本哈根诠释",
+          "哥本哈根学派"
+        ]
+      }
+    },
+    {
+      "id": "chapter-7",
+      "title": "方程预告了反物质",
+      "narration": "狄拉克的相对论性电子方程自然容纳自旋。他于 1931 年明确预言与电子等质量、带正电的粒子。次年，安德森在宇宙线径迹中发现正电子。",
+      "durationSec": 13,
+      "domainAt": 1932,
+      "transitionMs": 700,
+      "camera": {
+        "fitIds": [
+          "狄拉克",
+          "狭义相对论",
+          "狄拉克方程",
+          "正电子",
+          "安德森"
+        ]
+      },
+      "highlight": {
+        "nodeIds": [
+          "狄拉克",
+          "狭义相对论",
+          "狄拉克方程",
+          "正电子",
+          "安德森"
+        ]
+      }
+    },
+    {
+      "id": "chapter-8",
+      "title": "两地的粒子，一个态",
+      "narration": "爱因斯坦、波多尔斯基和罗森利用两地系统的关联，质疑波函数描述是否完备。玻尔回应，必须把作出预测所需的整个实验安排考虑在内。",
+      "durationSec": 12,
+      "domainAt": 1935,
+      "transitionMs": 700,
+      "camera": {
+        "fitIds": [
+          "爱因斯坦等三人",
+          "玻尔",
+          "完备性质疑",
+          "对 EPR 的回应",
+          "纠缠与测量"
+        ]
+      },
+      "highlight": {
+        "nodeIds": [
+          "爱因斯坦等三人",
+          "玻尔",
+          "完备性质疑",
+          "对 EPR 的回应",
+          "纠缠与测量"
+        ]
+      }
+    },
+    {
+      "id": "chapter-9",
+      "title": "把分歧变成一道界限",
+      "narration": "贝尔导出了局域隐变量模型须满足的不等式。两代光子实验测到越过界限的关联，阿斯佩团队还在光子飞行途中切换测量设置。",
+      "durationSec": 12,
       "domainAt": 1982,
-      "narration": "两代光子实验观察到违反贝尔不等式的关联。阿斯佩团队在光子飞行途中切换测量设置，进一步检验局域解释。",
-      "highlight": {
-        "nodeIds": [
-          "弗里德曼与克劳泽",
-          "光子关联实验",
-          "阿斯佩团队",
-          "快速切换实验"
-        ]
-      },
+      "transitionMs": 700,
       "camera": {
         "fitIds": [
+          "纠缠与测量",
+          "贝尔不等式",
           "弗里德曼与克劳泽",
-          "光子关联实验",
-          "阿斯佩团队",
-          "快速切换实验"
+          "阿斯佩团队"
+        ]
+      },
+      "highlight": {
+        "nodeIds": [
+          "纠缠与测量",
+          "贝尔不等式",
+          "弗里德曼与克劳泽",
+          "阿斯佩团队"
+        ]
+      }
+    },
+    {
+      "id": "chapter-10",
+      "title": "让光与电子交换动量",
+      "narration": "狄拉克量子化辐射场，处理光的发射与吸收。朝永振一郎、施温格和费曼建立了重整化量子电动力学（QED），能算出电子磁矩的微小修正。",
+      "durationSec": 14,
+      "domainAt": 1949,
+      "transitionMs": 700,
+      "camera": {
+        "fitIds": [
+          "狄拉克",
+          "辐射场量子化",
+          "重整化 QED",
+          "电子磁矩"
+        ]
+      },
+      "highlight": {
+        "nodeIds": [
+          "狄拉克",
+          "辐射场量子化",
+          "重整化 QED",
+          "电子磁矩"
+        ]
+      }
+    },
+    {
+      "id": "chapter-11",
+      "title": "消失的能量去了哪里？",
+      "narration": "泡利用一种难以探测的中性粒子解释 β 衰变中缺少的能量。费米以此构造弱作用理论。1956 年，科万和莱因斯等人用反应堆电子反中微子引发的反应给出了直接证据。",
+      "durationSec": 14,
+      "domainAt": 1956,
+      "transitionMs": 700,
+      "camera": {
+        "fitIds": [
+          "泡利",
+          "费米",
+          "中微子假说",
+          "β 衰变理论",
+          "反应堆反中微子"
+        ]
+      },
+      "highlight": {
+        "nodeIds": [
+          "泡利",
+          "费米",
+          "中微子假说",
+          "β 衰变理论",
+          "反应堆反中微子"
+        ]
+      }
+    },
+    {
+      "id": "chapter-12",
+      "title": "质子里是什么？",
+      "narration": "盖尔曼和茨威格分别用夸克解释强子的分类。量子色动力学采用杨–米尔斯规范场描述胶子。格罗斯、维尔切克和波利策发现，夸克间的强耦合在短距离上变弱。",
+      "durationSec": 15,
+      "domainAt": 1973,
+      "transitionMs": 700,
+      "camera": {
+        "fitIds": [
+          "杨振宁与米尔斯",
+          "盖尔曼与茨威格",
+          "非阿贝尔规范场",
+          "夸克模型",
+          "量子色动力学"
+        ]
+      },
+      "highlight": {
+        "nodeIds": [
+          "杨振宁与米尔斯",
+          "盖尔曼与茨威格",
+          "非阿贝尔规范场",
+          "夸克模型",
+          "量子色动力学"
+        ]
+      }
+    },
+    {
+      "id": "chapter-13",
+      "title": "光和弱力同出一门",
+      "narration": "布劳特、恩格勒、希格斯等人揭示了规范粒子获得质量的机制。温伯格和萨拉姆将它用于格拉肖的电弱框架，光子保持无质量，W 和 Z 获得质量。1983 年，W 和 Z 被发现。",
+      "durationSec": 15,
+      "domainAt": 1983,
+      "transitionMs": 700,
+      "camera": {
+        "fitIds": [
+          "格拉肖",
+          "布劳特等人",
+          "电弱规范结构",
+          "希格斯机制",
+          "电弱理论"
+        ]
+      },
+      "highlight": {
+        "nodeIds": [
+          "格拉肖",
+          "布劳特等人",
+          "电弱规范结构",
+          "希格斯机制",
+          "电弱理论"
+        ]
+      }
+    },
+    {
+      "id": "chapter-14",
+      "title": "标准模型的全图",
+      "narration": "标准模型用量子场描述三代夸克和轻子、传递相互作用的规范玻色子，以及希格斯场。2012 年，ATLAS 和 CMS 发现了与希格斯玻色子相符的新粒子。",
+      "durationSec": 15,
+      "domainAt": 2012,
+      "transitionMs": 700,
+      "camera": {
+        "fitIds": [
+          "量子色动力学",
+          "电弱理论",
+          "粒子物理标准模型",
+          "夸克与轻子",
+          "规范玻色子",
+          "希格斯玻色子"
+        ]
+      },
+      "highlight": {
+        "nodeIds": [
+          "量子色动力学",
+          "电弱理论",
+          "粒子物理标准模型",
+          "夸克与轻子",
+          "规范玻色子",
+          "希格斯玻色子"
         ]
       }
     }
-  ],
-  "timeline": {
-    "unit": "年"
-  }
+  ]
 }
