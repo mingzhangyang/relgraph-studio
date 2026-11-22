@@ -14,7 +14,11 @@
 //    portrait-1080x1440 and square-1080 (ADR 004, D7 step 1). Hashes are
 //    enforced only when skia-canvas and the vendored fonts are the versions
 //    that produced them; otherwise the differences are reported without
-//    failing, as in check:browser.
+//    failing, as in check:browser. Time drawn vertically (ADR 004, D7 step
+//    2) has a manifest of its own, examples/golden-frames.vertical.json: the
+//    examples whose nodes carry times, as Studio projects with
+//    `config.view.timeAxis: "vertical"`, at every film spec. The other
+//    manifests are untouched by it.
 // 2. Export: `relgraph render --frame-spec <spec>` writes a complete MP4 of
 //    each example at each of those specs. ffprobe must report the codec,
 //    pixel format, frame rate, colour tags, frame count `frameCount(graph,
@@ -105,7 +109,7 @@ if (!args.has('--no-build')) {
   await npm('build:packages');
 }
 
-const { frameCount, layoutGraph, loadDocument } = await import('@relgraph/core');
+const { frameCount, hasTimes, layoutGraph, loadDocument } = await import('@relgraph/core');
 const { FILM_FONT_FACES, frameSpecFor } = await import('@relgraph/render');
 const { createHeadlessRenderer, FILM_FONTS_DIR, SKIA_CANVAS_VERSION } =
   await import('@relgraph/render/skia');
@@ -255,6 +259,89 @@ for (const specName of FILM_SPECS) {
     const missing = [...expected.keys()].filter((key) => !golden.some((e) => id(e) === key));
     await check(
       `${golden.length} golden frames ${enforce ? 'match' : 'compared with'} ${file}`,
+      async () => {
+        const problems = [
+          ...changed.map((entry) =>
+            expected.has(id(entry)) ? `${id(entry)} changed` : `${id(entry)} not in manifest`,
+          ),
+          ...missing.map((key) => `${key} no longer rendered`),
+        ];
+        if (!problems.length) return;
+        const summary = `${problems.join(', ')} (run with --update if the change is intended)`;
+        if (!enforce) {
+          console.log(`    (informational, different skia-canvas or fonts) ${summary}`);
+          return;
+        }
+        assert.fail(summary);
+      },
+    );
+  }
+}
+
+// --------------------------------------------- vertical time golden frames
+
+const VERTICAL_MANIFEST = join(root, 'examples/golden-frames.vertical.json');
+const verticalExamples = await Promise.all(
+  examples
+    .filter((example) => hasTimes(example.result.graph.nodes))
+    .map(async (example) => {
+      const source = JSON.parse(await readFile(join(root, example.file), 'utf8'));
+      const result = loadDocument({
+        format: 'relgraph.studio/1',
+        source,
+        config: { view: { timeAxis: 'vertical' } },
+      });
+      assert.equal(result.valid, true, `${example.file} as a vertical project is valid`);
+      return {
+        ...example,
+        key: `${example.key}-vertical`,
+        result,
+        layout: layoutGraph(result.graph),
+      };
+    }),
+);
+const verticalGolden = [];
+{
+  const file = VERTICAL_MANIFEST.slice(root.length);
+  let manifest = null;
+  if (!update) {
+    try {
+      manifest = JSON.parse(await readFile(VERTICAL_MANIFEST, 'utf8'));
+    } catch (error) {
+      if (error?.code !== 'ENOENT') throw error;
+      console.log(`  No ${file}; run with --update to create it.`);
+    }
+  }
+  const enforce =
+    manifest !== null &&
+    manifest.environment?.skiaCanvas === environment.skiaCanvas &&
+    manifest.environment?.fonts === environment.fonts;
+  if (manifest && !enforce)
+    console.log(`  ${file}: golden hashes are informational (different skia-canvas or fonts)`);
+  for (const specName of FILM_SPECS) {
+    const fps = frameSpecFor(specName).fps;
+    for (const example of verticalExamples)
+      for (const theme of THEMES)
+        for (const key of keyFrames(example.result.graph, fps))
+          verticalGolden.push({
+            frameSpec: specName,
+            example: example.key,
+            theme,
+            shot: key.shot,
+            kind: key.kind,
+            frame: key.frame,
+            sha256: sha256(headless(example, theme, specName).rgbaAt(key.frame)),
+          });
+  }
+  const id = (entry) => `${entry.frameSpec}-${entry.example}-${entry.theme}-f${entry.frame}`;
+  if (manifest) {
+    const expected = new Map(manifest.frames.map((entry) => [id(entry), entry.sha256]));
+    const changed = verticalGolden.filter((entry) => expected.get(id(entry)) !== entry.sha256);
+    const missing = [...expected.keys()].filter(
+      (key) => !verticalGolden.some((e) => id(e) === key),
+    );
+    await check(
+      `${verticalGolden.length} vertical golden frames ${enforce ? 'match' : 'compared with'} ${file}`,
       async () => {
         const problems = [
           ...changed.map((entry) =>
@@ -804,6 +891,23 @@ if (update && failed.length) {
       `Saved ${golden.length} golden frame hashes to ${manifestPathFor(specName).slice(root.length)}`,
     );
   }
+  await writeFile(
+    VERTICAL_MANIFEST,
+    JSON.stringify(
+      {
+        note: 'SHA-256 of RGBA pixels of headless key frames with time drawn vertically (config.view.timeAxis, ADR 004 D7 step 2); regenerate with npm run check:export -- --update. Enforced only for the same skia-canvas version and font digest.',
+        environment,
+        timeAxis: 'vertical',
+        locale: LOCALE,
+        frames: verticalGolden,
+      },
+      null,
+      2,
+    ) + '\n',
+  );
+  console.log(
+    `Saved ${verticalGolden.length} vertical golden frame hashes to ${VERTICAL_MANIFEST.slice(root.length)}`,
+  );
 }
 
 console.log(

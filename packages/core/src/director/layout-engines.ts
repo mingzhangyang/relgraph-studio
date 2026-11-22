@@ -35,10 +35,20 @@ export interface EngineOptions {
   iterations: number;
   /** Nodes that must stay exactly where they are. */
   fixed?: ReadonlyMap<string, EnginePoint>;
+  /**
+   * The width:height the drawing aims for, in world units (ADR 004, D7
+   * step 2): what the film's graph area asks for, read from its frame spec
+   * when a layout is computed for a portrait, 3:4 or square film
+   * (`engineAspect`). Without it, `ASPECT`.
+   */
+  aspect?: number;
 }
 
 /** Landscape proportion the engines aim for; the film stage is about 2.8:1. */
-const ASPECT = 2.2;
+export const ASPECT = 2.2;
+/** The proportion an engine aims for: the option, when it is a usable one. */
+const aspectOf = ({ aspect }: Pick<EngineOptions, 'aspect'>): number =>
+  aspect !== undefined && Number.isFinite(aspect) && aspect > 0 ? aspect : ASPECT;
 const TAU = Math.PI * 2;
 const hash = (value: string, seed: number): number => {
   let state = (2166136261 ^ seed) >>> 0;
@@ -135,6 +145,7 @@ function pack(
   gutter: number,
   align: 'center' | 'start' = 'center',
   largestFirst = true,
+  aspect = ASPECT,
 ): Map<string, EnginePoint> {
   const boxes = parts.map((ids) => boxOf(ids, at));
   const width = (b: Box): number => b.maxX - b.minX,
@@ -147,7 +158,7 @@ function pack(
           (width(a.box) + gutter) * (height(a.box) + gutter) || compare(a.box.ids[0], b.box.ids[0]),
     );
   const area = boxes.reduce((sum, b) => sum + (width(b) + gutter) * (height(b) + gutter), 0);
-  const limit = Math.max(...boxes.map((b) => width(b)), Math.sqrt(area * ASPECT));
+  const limit = Math.max(...boxes.map((b) => width(b)), Math.sqrt(area * aspect));
   const rows: { box: Box; x: number }[][] = [[]];
   let x = 0;
   for (const { box } of order) {
@@ -183,7 +194,12 @@ function pack(
 }
 
 /** Isolated nodes as a compact block, grouped and ordered for calm reading. */
-function blockOf(p: Prepared, ids: string[], spacing: number): Map<string, EnginePoint> {
+function blockOf(
+  p: Prepared,
+  ids: string[],
+  spacing: number,
+  aspect = ASPECT,
+): Map<string, EnginePoint> {
   const sorted = [...ids].sort(
     (a, b) =>
       compare(p.kind.get(a) ?? '', p.kind.get(b) ?? '') ||
@@ -192,7 +208,7 @@ function blockOf(p: Prepared, ids: string[], spacing: number): Map<string, Engin
   );
   const dx = spacing * 1.15,
     dy = spacing * 0.62;
-  const columns = Math.max(1, Math.ceil(Math.sqrt((sorted.length * ASPECT * dy) / dx)));
+  const columns = Math.max(1, Math.ceil(Math.sqrt((sorted.length * aspect * dy) / dx)));
   return new Map(
     sorted.map((id, i) => [id, { x: (i % columns) * dx, y: Math.floor(i / columns) * dy }]),
   );
@@ -202,7 +218,9 @@ function blockOf(p: Prepared, ids: string[], spacing: number): Map<string, Engin
  * A tidy matrix for items that are compared rather than connected. This is
  * the one engine that keeps the author's order: a list has a reading order.
  */
-function gridLayout(p: Prepared, { spacing }: EngineOptions): Map<string, EnginePoint> {
+function gridLayout(p: Prepared, options: EngineOptions): Map<string, EnginePoint> {
+  const { spacing } = options,
+    aspect = aspectOf(options);
   const byGroup = new Map<string, string[]>();
   for (const id of p.authored) {
     const key = p.group.get(id) ?? '\uffff';
@@ -213,14 +231,16 @@ function gridLayout(p: Prepared, { spacing }: EngineOptions): Map<string, Engine
   const dx = spacing * 1.15,
     dy = spacing * 0.62;
   for (const members of byGroup.values()) {
-    const columns = Math.max(1, Math.ceil(Math.sqrt((members.length * ASPECT * dy) / dx)));
+    const columns = Math.max(1, Math.ceil(Math.sqrt((members.length * aspect * dy) / dx)));
     members.forEach((id, i) =>
       at.set(id, { x: (i % columns) * dx, y: Math.floor(i / columns) * dy }),
     );
     parts.push(members);
   }
   if (!parts.length) return at;
-  return parts.length > 1 ? pack(parts, at, spacing * 0.9, 'start', false) : pack(parts, at, 0);
+  return parts.length > 1
+    ? pack(parts, at, spacing * 0.9, 'start', false, aspect)
+    : pack(parts, at, 0, 'center', true, aspect);
 }
 
 /**
@@ -234,8 +254,10 @@ function relax(
   at: Map<string, EnginePoint>,
   fixed: ReadonlySet<string>,
   centre: EnginePoint,
-  { seed, spacing: k, iterations }: EngineOptions,
+  options: EngineOptions,
 ): void {
+  const { seed, spacing: k, iterations } = options,
+    aspect = aspectOf(options);
   const n = members.length;
   if (n < 2) return;
   const inside = new Set(members),
@@ -323,7 +345,7 @@ function relax(
     // Stronger vertical gravity flattens the result towards the stage shape.
     for (const i of movable) {
       fx[i] += (centre.x - points[i].x) * 0.05;
-      fy[i] += (centre.y - points[i].y) * 0.05 * ASPECT * ASPECT;
+      fy[i] += (centre.y - points[i].y) * 0.05 * aspect * aspect;
     }
     const cooling = 1 - step / steps,
       limit = k * (0.02 + 0.6 * cooling * cooling);
@@ -405,14 +427,16 @@ function separate(
 
 /**
  * Fit a relaxed part to the stage: turn its longest axis level (a rotation
- * changes no distance), then, if it is still too tall, lower it gently and
- * restore the room between nodes.
+ * changes no distance), or upright for a stage taller than wide, then, if it
+ * is still too tall (too wide), lower (narrow) it gently and restore the room
+ * between nodes.
  */
 function landscape(
   members: readonly string[],
   at: Map<string, EnginePoint>,
   k: number,
   seed: number,
+  aspect = ASPECT,
 ): void {
   const n = members.length;
   if (n < 3) return;
@@ -433,7 +457,8 @@ function landscape(
   }
   // Principal axis; a nearly round part has none worth turning to.
   const spread = Math.hypot(sxx - syy, 2 * sxy);
-  const angle = spread > (sxx + syy) * 0.12 ? 0.5 * Math.atan2(2 * sxy, sxx - syy) : 0;
+  const level = spread > (sxx + syy) * 0.12 ? 0.5 * Math.atan2(2 * sxy, sxx - syy) : 0;
+  const angle = aspect < 1 && level !== 0 ? level + Math.PI / 2 : level;
   const cos = Math.cos(-angle),
     sin = Math.sin(-angle);
   let minX = Infinity,
@@ -453,8 +478,18 @@ function landscape(
   }
   const width = maxX - minX,
     height = maxY - minY;
+  if (aspect < 1) {
+    // Upright: the same rule across.
+    if (!(width > k) || !(height > 0)) return;
+    const narrow = Math.max(0.55, Math.min(1, (height / width) * aspect));
+    if (narrow < 0.98) {
+      for (const id of members) at.get(id)!.x *= narrow;
+      separate(members, at, new Set(), k, seed);
+    }
+    return;
+  }
   if (!(height > k) || !(width > 0)) return;
-  const squash = Math.max(0.55, Math.min(1, width / height / ASPECT));
+  const squash = Math.max(0.55, Math.min(1, width / height / aspect));
   if (squash < 0.98) {
     for (const id of members) at.get(id)!.y *= squash;
     separate(members, at, new Set(), k, seed);
@@ -463,6 +498,7 @@ function landscape(
 
 function forceLayout(p: Prepared, options: EngineOptions): Map<string, EnginePoint> {
   const { seed, spacing } = options,
+    aspect = aspectOf(options),
     fixed = options.fixed ?? new Map<string, EnginePoint>();
   const at = new Map<string, EnginePoint>();
   const jitter = (id: string, q: EnginePoint): EnginePoint => {
@@ -509,16 +545,17 @@ function forceLayout(p: Prepared, options: EngineOptions): Map<string, EnginePoi
     const pieces = componentsOf(p, members);
     for (const piece of pieces)
       for (const [id, q] of radialPositions(p, piece, spacing * 0.8, 0)) at.set(id, jitter(id, q));
-    if (pieces.length > 1) for (const [id, q] of pack(pieces, at, spacing * 0.6)) at.set(id, q);
+    if (pieces.length > 1)
+      for (const [id, q] of pack(pieces, at, spacing * 0.6, 'center', true, aspect)) at.set(id, q);
     relax(p, members, at, new Set(), { x: 0, y: 0 }, options);
-    landscape(members, at, spacing, seed);
+    landscape(members, at, spacing, seed, aspect);
     parts.push(members);
   }
   if (singles.length) {
-    for (const [id, q] of blockOf(p, singles, spacing)) at.set(id, q);
+    for (const [id, q] of blockOf(p, singles, spacing, aspect)) at.set(id, q);
     parts.push(singles.sort(compare));
   }
-  return parts.length ? pack(parts, at, spacing * 1.1) : at;
+  return parts.length ? pack(parts, at, spacing * 1.1, 'center', true, aspect) : at;
 }
 
 /**
@@ -550,7 +587,8 @@ function tidySlots(tree: Tree, top: readonly string[] = tree.children.get(tree.r
 }
 
 /** A tidy tree growing to the right: depth along x, reading order down y. */
-function treeLayout(p: Prepared, { spacing }: EngineOptions): Map<string, EnginePoint> {
+function treeLayout(p: Prepared, options: EngineOptions): Map<string, EnginePoint> {
+  const { spacing } = options;
   const across = spacing * 0.56,
     along = spacing * 1.5;
   const at = new Map<string, EnginePoint>(),
@@ -567,7 +605,7 @@ function treeLayout(p: Prepared, { spacing }: EngineOptions): Map<string, Engine
       });
     parts.push(members);
   }
-  return parts.length ? pack(parts, at, spacing * 0.8, 'start') : at;
+  return parts.length ? pack(parts, at, spacing * 0.8, 'start', true, aspectOf(options)) : at;
 }
 
 /**
@@ -575,7 +613,8 @@ function treeLayout(p: Prepared, { spacing }: EngineOptions): Map<string, Engine
  * right and the left so both sides carry a similar load, each growing outward
  * as a tidy tree. Both sides read from the top down, the right side first.
  */
-function mindmapLayout(p: Prepared, { spacing }: EngineOptions): Map<string, EnginePoint> {
+function mindmapLayout(p: Prepared, options: EngineOptions): Map<string, EnginePoint> {
+  const { spacing } = options;
   const across = spacing * 0.5,
     along = spacing * 1.55;
   const at = new Map<string, EnginePoint>(),
@@ -620,7 +659,7 @@ function mindmapLayout(p: Prepared, { spacing }: EngineOptions): Map<string, Eng
     }
     parts.push(members);
   }
-  return parts.length ? pack(parts, at, spacing * 0.8) : at;
+  return parts.length ? pack(parts, at, spacing * 0.8, 'center', true, aspectOf(options)) : at;
 }
 
 /**
@@ -631,6 +670,26 @@ function mindmapLayout(p: Prepared, { spacing }: EngineOptions): Map<string, Eng
 function timelineLayout(p: Prepared, graph: LayoutGraph, options: EngineOptions) {
   const axis = timeAxis(graph.nodes);
   if (!axis) return treeLayout(p, options);
+  const at = timelineLanes(p, axis, options);
+  // A drawing computed for a stage of another shape keeps every year and the
+  // order of its lanes, and spreads the lanes towards that shape, up to four
+  // times as far apart; it never packs them closer (ADR 004, D7 step 2).
+  if (options.aspect !== undefined) {
+    const ys = [...at.values()].map((q) => q.y);
+    const height = Math.max(...ys) - Math.min(...ys),
+      wanted = ((axis.to - axis.from) * axis.scale) / aspectOf(options);
+    const spread = height > 0 ? Math.min(4, Math.max(1, wanted / height)) : 1;
+    if (spread > 1) for (const q of at.values()) q.y *= spread;
+  }
+  return at;
+}
+
+/** The timeline engine's lanes for the landscape stage. */
+function timelineLanes(
+  p: Prepared,
+  axis: NonNullable<ReturnType<typeof timeAxis>>,
+  options: EngineOptions,
+): Map<string, EnginePoint> {
   const lane = options.spacing * TIMELINE_LANE,
     at = new Map<string, EnginePoint>();
   // A span without an end is still going on; a mere first appearance is a point.
@@ -693,9 +752,10 @@ function timelineLayout(p: Prepared, graph: LayoutGraph, options: EngineOptions)
  */
 function layeredLayout(
   p: Prepared,
-  { spacing }: EngineOptions,
+  options: EngineOptions,
   horizontal: boolean,
 ): Map<string, EnginePoint> {
+  const { spacing } = options;
   // Labels run sideways: ranks need more room when they advance horizontally.
   const across = horizontal ? spacing * 0.7 : spacing * 1.15,
     along = horizontal ? spacing * 1.45 : spacing * 0.85;
@@ -793,10 +853,12 @@ function layeredLayout(
     parts.push(members);
   }
   if (!parts.length) return at;
-  return pack(parts, at, spacing, 'start');
+  return pack(parts, at, spacing, 'start', true, aspectOf(options));
 }
 
-function radialLayout(p: Prepared, { seed, spacing }: EngineOptions): Map<string, EnginePoint> {
+function radialLayout(p: Prepared, options: EngineOptions): Map<string, EnginePoint> {
+  const { seed, spacing } = options,
+    aspect = aspectOf(options);
   const rotation = (seed / 0x100000000) * TAU - Math.PI / 2;
   const at = new Map<string, EnginePoint>(),
     parts: string[][] = [],
@@ -806,16 +868,18 @@ function radialLayout(p: Prepared, { seed, spacing }: EngineOptions): Map<string
       singles.push(members[0]);
       continue;
     }
-    // Slightly wider than tall: labels need the room, and so does the stage.
+    // Slightly wider than tall: labels need the room, and so does the stage
+    // (taller than wide for a stage that is).
+    const [sx, sy] = aspect < 1 ? [0.9, 1.45] : [1.45, 0.9];
     for (const [id, q] of radialPositions(p, members, spacing, rotation))
-      at.set(id, { x: q.x * 1.45, y: q.y * 0.9 });
+      at.set(id, { x: q.x * sx, y: q.y * sy });
     parts.push(members);
   }
   if (singles.length) {
-    for (const [id, q] of blockOf(p, singles, spacing)) at.set(id, q);
+    for (const [id, q] of blockOf(p, singles, spacing, aspect)) at.set(id, q);
     parts.push(singles.sort(compare));
   }
-  return parts.length ? pack(parts, at, spacing * 1.1) : at;
+  return parts.length ? pack(parts, at, spacing * 1.1, 'center', true, aspect) : at;
 }
 
 /** One ring: groups stay contiguous, and neighbours are drawn towards each other. */

@@ -27,6 +27,8 @@ render 选项：
   --out <file.mp4>        用 FFmpeg 编码为 H.264 MP4（yuv420p，BT.709）
   --frames <pattern>      每帧写一个 PNG；pattern 含 %d 或 %05d 形式的帧号
   --frame-spec <name>     画面规格：${Object.keys(FRAME_SPECS).join(' | ')}（默认 landscape-1080p）
+                          时间轴方向只由工作台项目决定（config.view.timeAxis），不随规格变化，
+                          也没有命令行开关；竖屏规格横向绘制时间轴时给出警告
   --theme <light|dark>    影片主题（默认 light，与工作台主题无关）
   --locale <${LOCALES.join('|')}>     渲染器文案语言（默认 zh-CN）
   --from <N> --to <M>     只渲染第 N 到第 M 帧（含两端，从 0 起）
@@ -43,11 +45,13 @@ check-labels：不渲染，逐镜头检查画面稳定后（镜头切换和揭�
   每个镜头检查稳定段的首、中、末三帧，有省略时退出码为 1。--frame-spec 和 --locale 同 render。
 
 check-layout：在同样的稳定帧中检查连线贴近或穿过它不连接的节点、节点彼此过挤；
-  给出 --chronology-tolerance 时，再按存储的坐标检查时间先后在横向上是否颠倒。有问题时退出码为 1。
+  给出 --chronology-tolerance 时，再按存储的坐标检查时间先后是否颠倒（项目把时间轴设为竖向时，
+  画面上看上下而非左右）。有问题时退出码为 1。
   --clearance <px>        连线与无关节点之间的最小间隙，720p 像素（默认 4；相接总会报告）
   --crowding <px>         两个节点图形之间的最小间隙，720p 像素（默认 2）
   --chronology-tolerance <N>
                           时间相差至少 N（领域时间单位）的两个节点，较早者必须画在左侧
+                          （竖向时间轴为上方）
 
 events：不渲染，导出 relgraph.events/1：镜头、字幕、节点和关系的出现、领域时间的变化，
   帧号与渲染完全一致，另附影片中出现过的节点表（标签、类型、分组、世界坐标）。

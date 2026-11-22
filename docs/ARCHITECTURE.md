@@ -78,6 +78,15 @@ above the preview canvas. Scope counts do not include future source objects.
 The overlay is never sent to the renderer or export pipeline, and the sidebar
 scrolls independently on desktop/medium layouts.
 
+`config.view.timeAxis` (ADR 004, D7 step 2) is presentation, not data: with
+`vertical`, `drawnPositions` (`director/time-direction.ts`) transposes the
+stored positions wherever they become a picture, namely the camera in
+`directorFrameAt`, the composer's `frameContext` and the studio's hit tests
+and drags, while writing positions back, the time anchor and the layout
+strategies keep the stored ones. The composer draws timeline bars down the
+frame, the axis's rules across it with their labels at the left, and elbows
+upright, all from that one flag.
+
 `layout-strategies.ts` is a synchronous DOM-free authoring step over stable IDs.
 It plans the eleven strategies of `LAYOUT_TYPES` (`project-layout.ts`):
 `manual`, `auto`, and the nine engines of `director/layout-engines.ts` (force,

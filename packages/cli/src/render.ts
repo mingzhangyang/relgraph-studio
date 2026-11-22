@@ -4,12 +4,16 @@ import { basename, dirname, join, resolve } from 'node:path';
 import { Worker } from 'node:worker_threads';
 import {
   compileTimeline,
+  drawsTimeVertically,
   formatFilmEvents,
   frameCount,
   layoutGraph,
+  styleForDrawing,
+  styleForGraph,
   type Locale,
+  type VisualGraph,
 } from '@relgraph/core';
-import { frameSpecFor, type FrameSpecName } from '@relgraph/render';
+import { frameSpecFor, type FrameSpec, type FrameSpecName } from '@relgraph/render';
 import { createHeadlessRenderer, uncoveredCharacters } from '@relgraph/render/skia';
 import { documentStrings, formatDiagnostics, loadFile } from './document.js';
 import { graphEvents, writeAtomically } from './events.js';
@@ -229,7 +233,9 @@ export async function renderFilm(request: RenderRequest): Promise<RenderSummary>
     );
   // Layout runs here too so a document the threads cannot lay out fails early;
   // the events come from the same layout and timeline the threads use.
-  layoutGraph(graph);
+  const positions = layoutGraph(graph);
+  const direction = timeAxisWarning(graph, positions, spec);
+  if (direction) log(direction);
   const events = request.events === undefined ? null : graphEvents(result, fps);
   // An evidence card that does not fit, that its shot ends before showing or
   // that would cover its own node or relation end is never cut, drawn over
@@ -448,5 +454,26 @@ export async function renderFilm(request: RenderRequest): Promise<RenderSummary>
       seconds: (performance.now() - started) / 1000,
     },
     out,
+  );
+}
+
+/**
+ * A warning when a portrait film draws its time axis across a narrow frame
+ * (ADR 004, D7 step 2), else null. Only the project turns time upright:
+ * there is no CLI switch, so a render is reproducible from the file and the
+ * frame spec alone. Square and landscape films, drawings without an axis
+ * and drawings that already run vertically are not warned about.
+ */
+export function timeAxisWarning(
+  graph: VisualGraph,
+  positions: ReadonlyMap<string, { x: number; y: number }>,
+  spec: Pick<FrameSpec, 'name' | 'width' | 'height'>,
+): string | null {
+  if (!(spec.height > spec.width) || drawsTimeVertically(graph)) return null;
+  if (!styleForDrawing(styleForGraph(graph), graph, positions).timeAxis) return null;
+  return (
+    `警告：竖屏画面规格 ${spec.name} 把时间轴横向绘制，时间轴会被压得很窄。` +
+    '如需让时间从上往下走，请在工作台的“时间轴”菜单中选择竖向，' +
+    '保存的项目会记下 config.view.timeAxis: "vertical"；命令行没有对应的开关。\n'
   );
 }

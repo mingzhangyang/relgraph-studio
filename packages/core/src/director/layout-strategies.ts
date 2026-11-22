@@ -233,11 +233,23 @@ export function computeLayout(
   return planLayout(graph, settings, current).positions;
 }
 
+/** How a strategy is computed, beyond the settings a project stores. */
+export interface PlanOptions {
+  /**
+   * The width:height the engines aim for, in world units: the film's, when
+   * the layout is computed for a portrait, 3:4 or square film
+   * (`engineAspect`, ADR 004, D7 step 2). Without it they aim for the
+   * landscape stage. Filling gaps (`missing`) keeps the drawing's own shape.
+   */
+  aspect?: number;
+}
+
 /** `computeLayout`, together with the engine that ran, why, and how much it moved. */
 export function planLayout(
   graph: VisualGraph,
   settings: LayoutSettings,
   current: ReadonlyMap<string, LayoutPoint> = layoutGraph(graph),
+  options: PlanOptions = {},
 ): LayoutPlan {
   const now = Boolean(timeAnchor(graph));
   const plan = (
@@ -306,6 +318,7 @@ export function planLayout(
     );
   const nodes = graph.nodes.map((n) => ({ ...n, position: anchors.get(n.id) }));
   let result: Map<string, LayoutPoint>;
+  const aspect = mode === 'missing' ? undefined : options.aspect;
   if (engine === 'force') {
     // Anchors beyond any drawable range keep the overflow-safe incremental
     // solver; everything else gets the full structural relaxation.
@@ -318,12 +331,14 @@ export function planLayout(
           iterations,
           spacing,
           fixed: anchors,
+          ...(aspect === undefined ? {} : { aspect }),
         });
   } else
     result = runLayoutEngine({ nodes, edges: graph.edges }, engine, {
       seed,
       iterations,
       spacing,
+      ...(aspect === undefined ? {} : { aspect }),
     });
   for (const [id, p] of result)
     result.set(id, { x: roundPositionCoordinate(p.x) || 0, y: roundPositionCoordinate(p.y) || 0 });

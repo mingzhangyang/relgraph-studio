@@ -1,4 +1,5 @@
 import {
+  drawsTimeVertically,
   edgeAppearance,
   edgeStyleFor,
   feedbackRelations,
@@ -93,34 +94,37 @@ function feedbackOf(graph: Pick<VisualGraph, 'nodes' | 'edges'>): Set<string> {
  * The relations routed as returns: the feedback of the process
  * (`feedbackRelations`: those that lead back to a step already under way,
  * by structure and the author's order, never by how many there are or which
- * way they point), in a drawing that advances sideways, and drawn more
- * sideways than upright. None without `returns: 'over'`.
+ * way they point), in a drawing that advances along its flow axis. None without `returns: 'over'`.
  */
 function returnsOf(
   view: Pick<ProjectedVisualGraph, 'edges'>,
   points: ReadonlyMap<string, Point>,
   style: Pick<DomainStyle, 'returns'>,
-  graph: Pick<VisualGraph, 'nodes' | 'edges'>,
+  graph: Pick<VisualGraph, 'nodes' | 'edges' | 'project'>,
 ): Set<string> {
   const returns = new Set<string>();
   if (style.returns !== 'over') return returns;
   const feedback = feedbackOf(graph);
   if (!feedback.size) return returns;
-  let sideways = 0,
-    upright = 0;
+  const vertical = drawsTimeVertically(graph);
+  const along = vertical ? 'y' : 'x',
+    across = vertical ? 'x' : 'y';
+  let advance = 0,
+    drift = 0;
   for (const edge of view.edges) {
     const a = points.get(edge.source),
       b = points.get(edge.target);
     if (!a || !b || edge.source === edge.target) continue;
-    sideways += Math.abs(b.x - a.x);
-    upright += Math.abs(b.y - a.y);
+    advance += Math.abs(b[along] - a[along]);
+    drift += Math.abs(b[across] - a[across]);
   }
-  if (!(sideways >= upright)) return returns;
+  if (advance < drift) return returns;
   for (const edge of view.edges) {
     if (!feedback.has(edge.id)) continue;
     const a = points.get(edge.source),
       b = points.get(edge.target);
-    if (a && b && Math.abs(b.x - a.x) > Math.abs(b.y - a.y) * 0.35) returns.add(edge.id);
+    if (a && b && Math.abs(b[along] - a[along]) > Math.abs(b[across] - a[across]) * 0.35)
+      returns.add(edge.id);
   }
   return returns;
 }
@@ -129,7 +133,7 @@ export function relationLayout(
   view: Pick<ProjectedVisualGraph, 'nodes' | 'edges'>,
   points: ReadonlyMap<string, Point>,
   style: Pick<DomainStyle, 'returns'>,
-  graph: Pick<VisualGraph, 'nodes' | 'edges'>,
+  graph: Pick<VisualGraph, 'nodes' | 'edges' | 'project'>,
 ): RelationLayout {
   const returns = returnsOf(view, points, style, graph);
   // Parallel and reciprocal links get stable, symmetric curve offsets. A
@@ -186,7 +190,7 @@ export function relationLayout(
   return { pairs, pull, spokeAngles, degree, loopsOf, returns };
 }
 
-/** Where a return crosses: above (-1) or below (1) the steps, and at what height. */
+/** Where a return crosses: the outward side and the cross-axis coordinate of the lane. */
 export interface ReturnRoute {
   side: -1 | 1;
   peak: number;
@@ -194,36 +198,40 @@ export interface ReturnRoute {
 
 /**
  * The route of every return, so that none passes through a step it does not
- * join and no two share a line. A return leaves and arrives upright, so it
- * crosses on the side where fewer steps stand in the column of its ends
- * (above when equal), beyond every step between its ends. Shorter returns
+ * join and no two share a line. A return leaves and arrives across the flow axis. It
+ * crosses on the side where fewer steps block its ends
+ * (above, or left on a vertical drawing, when equal), beyond every step between its ends. Shorter returns
  * are routed first and keep the inside; one that would run along another
  * moves a lane further out. An authored `curve` only takes a return further
  * out, and counts before the lanes are resolved.
  */
 export function returnRoutes(
-  ctx: Pick<FrameContext, 'view' | 'u' | 'config'>,
+  ctx: Pick<FrameContext, 'view' | 'u' | 'config' | 'vertical'>,
   drawnById: ReadonlyMap<string, DrawnNode>,
   returns: ReadonlySet<string>,
 ): Map<string, ReturnRoute> {
   const routes = new Map<string, ReturnRoute>();
   if (!returns.size) return routes;
-  const { u } = ctx;
+  const { u, vertical } = ctx;
+  const along = vertical ? 'y' : 'x',
+    across = vertical ? 'x' : 'y';
+  const halfAlong = vertical ? 'halfHeight' : 'halfWidth',
+    halfAcross = vertical ? 'halfWidth' : 'halfHeight';
   const steps = [...drawnById.values()].filter((entry) => entry.visibility > 0);
   const spans = ctx.view.edges
     .filter((edge) => returns.has(edge.id))
     .flatMap((edge) => {
       const from = drawnById.get(edge.source),
         to = drawnById.get(edge.target);
-      return from && to ? [{ edge, from, to, reach: Math.abs(to.p.x - from.p.x) }] : [];
+      return from && to ? [{ edge, from, to, reach: Math.abs(to.p[along] - from.p[along]) }] : [];
     })
     .sort((m, n) => m.reach - n.reach || (m.edge.id < n.edge.id ? -1 : 1));
   const placed: { lo: number; hi: number; side: number; peak: number }[] = [];
   const lane = u(22);
   for (const { edge, from, to } of spans) {
-    const lo = Math.min(from.p.x, to.p.x),
-      hi = Math.max(from.p.x, to.p.x);
-    // Steps standing in the way of an upright leg from `end` towards `side`.
+    const lo = Math.min(from.p[along], to.p[along]),
+      hi = Math.max(from.p[along], to.p[along]);
+    // Steps standing in the way of a return leg from `end` towards `side`.
     const blocked = (side: number): number =>
       [from, to].reduce(
         (count, end) =>
@@ -232,18 +240,24 @@ export function returnRoutes(
             (other) =>
               other !== from &&
               other !== to &&
-              Math.abs(other.p.x - end.p.x) <= other.geometry.halfWidth + u(6) &&
-              (other.p.y - end.p.y) * side > 0,
+              Math.abs(other.p[along] - end.p[along]) <= other.geometry[halfAlong] + u(6) &&
+              (other.p[across] - end.p[across]) * side > 0,
           ).length,
         0,
       );
     const side = blocked(1) < blocked(-1) ? 1 : -1;
-    let edgeOfSteps = side * Math.max(from.p.y * side, to.p.y * side);
+    let edgeOfSteps = side * Math.max(from.p[across] * side, to.p[across] * side);
     for (const other of steps)
-      if (other.p.x + other.geometry.halfWidth >= lo && other.p.x - other.geometry.halfWidth <= hi)
+      if (
+        other.p[along] + other.geometry[halfAlong] >= lo &&
+        other.p[along] - other.geometry[halfAlong] <= hi
+      )
         edgeOfSteps =
           side *
-          Math.max(edgeOfSteps * side, (other.p.y + side * other.geometry.halfHeight) * side);
+          Math.max(
+            edgeOfSteps * side,
+            (other.p[across] + side * other.geometry[halfAcross]) * side,
+          );
     // A lane out, and room for the turn and the arrowhead that comes back in.
     // An authored curve only takes the return further out: it is applied
     // before the lanes are resolved, and never brings it inside the clearance.
@@ -415,14 +429,24 @@ export function composeRelations(
       // Tree, mind-map and process links leave and arrive sideways when the
       // two nodes are clearly side by side. A pair joined both ways, such as
       // a step and the retry that returns to it, opens into two arcs instead.
+      // With time running down (ADR 004, D7 step 2) the drawing is
+      // transposed, and so are its elbows: they leave and arrive upright.
+      const upright = ctx.vertical;
       const elbow =
         !back &&
         style.routing === 'elbow' &&
         siblings.length === 1 &&
-        Math.abs(dx) > Math.abs(dy) * 0.35;
-      // A return leaves its step upright and enters its target from the same side.
-      const ux = back ? 0 : elbow ? Math.sign(dx) : dx / len,
-        uy = back ? back.side : elbow ? 0 : dy / len;
+        (upright ? Math.abs(dy) > Math.abs(dx) * 0.35 : Math.abs(dx) > Math.abs(dy) * 0.35);
+      // A return leaves across the flow axis and enters its target from the same side.
+      let ux = dx / len,
+        uy = dy / len;
+      if (back) {
+        ux = upright ? back.side : 0;
+        uy = upright ? 0 : back.side;
+      } else if (elbow) {
+        ux = upright ? 0 : Math.sign(dx);
+        uy = upright ? Math.sign(dy) : 0;
+      }
       const sourceRim = nodeGlyphRayDistance(
           from.node,
           { x: ux, y: uy },
@@ -433,7 +457,7 @@ export function composeRelations(
         ),
         targetRim = nodeGlyphRayDistance(
           to.node,
-          back ? { x: 0, y: back.side } : { x: -ux, y: -uy },
+          back ? { x: ux, y: uy } : { x: -ux, y: -uy },
           cam.scale,
           spec,
           style,
@@ -454,22 +478,31 @@ export function composeRelations(
               : width / 2 + u(2.5);
       const rb = targetRim + reach;
       // Glyphs that touch or overlap leave no room for a readable stroke.
-      if (!back && (elbow ? Math.abs(dx) : len) <= ra + rb + u(1)) continue;
+      if (!back && (elbow ? Math.abs(upright ? dy : dx) : len) <= ra + rb + u(1)) continue;
       const start = { x: a.x + ux * ra, y: a.y + uy * ra },
-        end = back ? { x: b.x, y: b.y + back.side * rb } : { x: b.x - ux * rb, y: b.y - uy * rb };
+        end = { x: b.x + ux * (back ? rb : -rb), y: b.y + uy * (back ? rb : -rb) };
       let segments: Segment[];
       if (back) {
-        // Out upright, across beyond every step between the two, and back
-        // in upright (`returnRoutes`).
-        const peak = back.peak,
-          way = Math.sign(dx),
-          turn = Math.min(Math.abs(dx) / 3, u(18));
-        const leave = { x: start.x + way * turn, y: peak },
-          arrive = { x: end.x - way * turn, y: peak };
+        // Construct the crossing along the flow axis at the assigned lane.
+        const along = upright ? 'y' : 'x';
+        const delta = b[along] - a[along];
+        const turn = Math.sign(delta) * Math.min(Math.abs(delta) / 3, u(18));
+        const onLane = (at: number): Point =>
+          upright ? { x: back.peak, y: at } : { x: at, y: back.peak };
+        const leave = onLane(start[along] + turn),
+          arrive = onLane(end[along] - turn);
         segments = [
-          [start, { x: start.x, y: peak }, leave],
-          [leave, { x: (leave.x + arrive.x) / 2, y: peak }, arrive],
-          [arrive, { x: end.x, y: peak }, end],
+          [start, onLane(start[along]), leave],
+          [leave, onLane((leave[along] + arrive[along]) / 2), arrive],
+          [arrive, onLane(end[along]), end],
+        ];
+      } else if (elbow && upright) {
+        // Out upright, across, in upright: the level elbow, transposed.
+        const turn = (start.y + end.y) / 2 + u(custom.curve ?? 0),
+          middle = { x: (start.x + end.x) / 2, y: turn };
+        segments = [
+          [start, { x: start.x, y: turn }, middle],
+          [middle, { x: end.x, y: turn }, end],
         ];
       } else if (elbow) {
         // Out level, across, in level: two quadratic arcs that meet upright.

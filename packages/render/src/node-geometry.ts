@@ -1,5 +1,6 @@
 import {
   displayNodeText,
+  drawsTimeVertically,
   nodeStyleFor,
   nodeAppearance,
   type ProjectConfig,
@@ -184,12 +185,15 @@ export function glyphGeometry(
       axis.scale *
       cameraScale *
       unit;
-    const halfHeight = importanceStep(importance).bar * unit;
+    const across = importanceStep(importance).bar * unit,
+      along = Math.max(across, length / 2);
+    // Drawn with time running down, the bar runs down (ADR 004, D7 step 2).
+    const vertical = drawsTimeVertically({ project: config });
     return {
       shape: 'span',
       radius: radius * revealScale,
-      halfWidth: Math.max(halfHeight, length / 2) * revealScale,
-      halfHeight: halfHeight * revealScale,
+      halfWidth: (vertical ? across : along) * revealScale,
+      halfHeight: (vertical ? along : across) * revealScale,
       cornerRadius: 4 * unit * revealScale,
       halfStroke,
     };

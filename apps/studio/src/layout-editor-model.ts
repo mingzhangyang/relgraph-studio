@@ -1,5 +1,6 @@
 import {
   type DomainStyle,
+  drawnPositions,
   roundPositionCoordinate,
   type DirectorFrameState,
   type VisualNode,
@@ -84,9 +85,11 @@ export function startPositionDrag(
   config?: ProjectConfig,
 ): PositionDrag | null {
   if (!(radius > 0) || !Number.isFinite(radius)) return null;
+  // Hit the glyphs where they are drawn: transposed when the project draws
+  // time vertically. The drag itself keeps the stored point.
   const id = hitVisibleNode(
     frame.view.nodes,
-    positions,
+    drawnPositions({ project: config }, positions),
     frame.reveal,
     frame.cameraResolved,
     spec,
@@ -106,17 +109,25 @@ export function startPositionDrag(
   };
 }
 
-/** Relative pixel displacement preserves the original grab offset exactly. */
+/**
+ * Relative pixel displacement preserves the original grab offset exactly.
+ * `vertical`: the drawing is the stored one transposed (ADR 004, D7 step 2),
+ * so a move across the screen changes the stored y and a move down it the
+ * stored x.
+ */
 export function positionForDrag(
   drag: PositionDrag,
   currentPoint: Point,
   camera: Camera,
   spec: FrameSpec,
+  vertical = false,
 ): Point | null {
   const scale = camera.scale * spec.typeScale;
   if (!(scale > 0) || !Number.isFinite(scale)) return null;
-  const dx = currentPoint.x - drag.start.x;
-  const dy = currentPoint.y - drag.start.y;
+  const across = currentPoint.x - drag.start.x,
+    down = currentPoint.y - drag.start.y;
+  const dx = vertical ? down : across,
+    dy = vertical ? across : down;
   if (!Number.isFinite(dx) || !Number.isFinite(dy)) return null;
   if (dx === 0 && dy === 0) return { ...drag.previous };
   const x = worldWithScreenOffset(drag.previous.x, dx, scale);

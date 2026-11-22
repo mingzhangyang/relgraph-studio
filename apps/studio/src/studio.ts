@@ -49,19 +49,23 @@ import { WORKSPACE_WORDING } from './diagnostic-text.js';
 import {
   anchoredPoint,
   anchorToTime,
+  canDrawTimeVertically,
   declaresTimeAxis,
+  drawsTimeVertically,
   drawingOrigin,
   layoutGraph,
   offTime,
   placeInTime,
   styleForGraph,
   timeAnchor,
+  timeDirection,
 } from '@relgraph/core';
 import { frameCount } from '@relgraph/core';
 import type { Bio } from '@relgraph/core';
 import type { DirectorFrameState, DrawingOrigin, VisualGraph } from '@relgraph/core';
 import {
   createCanvasRenderer,
+  engineAspect,
   FILM_FONT_FACES,
   filmFontQuery,
   FRAME_SPECS,
@@ -158,6 +162,7 @@ const canvas = requiredElement('stage', HTMLCanvasElement),
   themeToggle = requiredElement('themeToggle', HTMLButtonElement),
   languageSelect = requiredElement('languageSelect', HTMLSelectElement),
   frameSpecSelect = requiredElement('frameSpecSelect', HTMLSelectElement),
+  timeAxisSelect = requiredElement('timeAxisSelect', HTMLSelectElement),
   layoutToggle = requiredElement('layoutToggle', HTMLButtonElement),
   layoutReset = requiredElement('layoutReset', HTMLButtonElement),
   layoutExport = requiredElement('layoutExport', HTMLButtonElement),
@@ -279,7 +284,10 @@ function applyProjectHistory({
   // an in-flight pointer transaction before they replace its underlying layout.
   // Otherwise the late pointerup could commit stale coordinates over undo/redo.
   cancelActiveLayoutDrag();
-  graph.project = projectHistory.value;
+  const next = projectHistory.value;
+  if (timeDirection(graph) !== timeDirection({ project: next }))
+    transitionStudio('exitPositionEdit');
+  graph.project = next;
   restoreLayoutPositions(currentLayout, originalLayout);
   for (const [id, p] of Object.entries(graph.project.layout?.positions ?? {}))
     currentLayout.set(id, { ...p });
@@ -293,6 +301,29 @@ function applyProjectHistory({
   rebuildRenderer();
   updateLayoutFields();
   updateLayoutControls();
+  renderTimeAxisControl();
+}
+/**
+ * The project's direction of time (ADR 004, D7 step 2): a project field,
+ * so it is committed, undone and saved like any other, and never follows
+ * the preview's frame spec. Only a graph whose nodes carry times can turn
+ * upright.
+ */
+function renderTimeAxisControl(): void {
+  timeAxisSelect.value = timeDirection(graph ? { project: projectHistory.value } : null);
+  timeAxisSelect.disabled = !graph || loading || !canDrawTimeVertically(graph);
+}
+function applyTimeAxis(next: string): void {
+  if (!graph || (next !== 'horizontal' && next !== 'vertical')) {
+    renderTimeAxisControl();
+    return;
+  }
+  if (next === timeDirection({ project: projectHistory.value })) return;
+  const config: ProjectConfig = { ...projectHistory.value };
+  // Horizontal is the default: the field is written only for vertical.
+  if (next === 'vertical') config.view = { ...config.view, timeAxis: 'vertical' };
+  else delete config.view;
+  if (!projectActions.change(config)) renderTimeAxisControl();
 }
 /** A node as the workspace names it: its display label, else its own. */
 function nodeName(id: string): string {
@@ -308,7 +339,11 @@ const strategyView = createLayoutStrategyView(document, $('layoutStrategyEditor'
     transitionStudio('beginPreview');
     try {
       const before = new Map([...currentLayout].map(([id, p]) => [id, { ...p }]));
-      const plan = planLayout(graph, settings, currentLayout);
+      // Computed for the film in the preview: a portrait, 3:4 or square spec
+      // gives the engines its proportion (ADR 004, D7 step 2).
+      const plan = planLayout(graph, settings, currentLayout, {
+        aspect: engineAspect(FRAME_SPECS[previewSpec], timeDirection(graph)),
+      });
       // A lock is never moved, and the time axis would have to move these.
       if (plan.blocked.length) {
         strategyView.error(blockedLayoutMessage(plan.blocked.map(nodeName)));
@@ -742,6 +777,7 @@ function clearStudio(): void {
   renderEditorAvailability(layoutControls, false);
   updateLayoutEditor();
   updateLayoutControls();
+  renderTimeAxisControl();
   renderDocumentToolbar();
   currentFrameState = null;
   currentDetailAt = () => undefined;
@@ -796,6 +832,7 @@ function applyResult(result: LoadResult, name: string, sourceText?: string, exam
   setStatus('就绪', 'ready');
   setFrame(0);
   refreshUnsavedState();
+  renderTimeAxisControl();
 }
 function beginLoad(): number {
   transitionStudio('navigate');
@@ -803,6 +840,7 @@ function beginLoad(): number {
   projectEditor.imageBusy(false);
   const serial = ++requestSerial;
   loading = true;
+  renderTimeAxisControl();
   renderDocumentToolbar();
   refreshUnsavedState();
   strategyView.render(currentFrameState, projectHistory.value.layout, false, true);
@@ -1273,11 +1311,14 @@ function moveLayoutNode(event: PointerEvent): void {
     return;
   const point = pointerLocation(event);
   if (!point) return;
+  // The camera frames the drawing as drawn; a vertical drawing is stored
+  // transposed (ADR 004, D7 step 2).
   const dragged = positionForDrag(
     dragging,
     point,
     currentFrameState.cameraResolved,
     renderer.frameSpec,
+    drawsTimeVertically(graph),
   );
   // On a timeline a bar changes lane, never its years.
   const moved = dragged && graph ? anchoredPoint(graph, dragging.id, dragged) : dragged;
@@ -1428,6 +1469,7 @@ languageSelect.addEventListener('change', () => {
 themeToggle.addEventListener('click', () => applyTheme(theme === 'light' ? 'dark' : 'light', true));
 frameSpecSelect.value = previewSpec;
 frameSpecSelect.addEventListener('change', () => applyFrameSpec(frameSpecSelect.value));
+timeAxisSelect.addEventListener('change', () => applyTimeAxis(timeAxisSelect.value));
 lightQuery?.addEventListener?.('change', (event) => {
   if (!pinnedTheme) applyTheme(event.matches ? 'light' : 'dark', false);
 });

@@ -1,6 +1,6 @@
 import { edgeStyleFor, localize, nodeStyleFor } from '@relgraph/core';
 import type { DisplayItem } from '../display-list.js';
-import { LEGEND_ROW_HEIGHT } from '../frame-spec.js';
+import { LEGEND_ROW_HEIGHT, type Rect } from '../frame-spec.js';
 import { miniatureGeometry, nodeOutline } from '../node-geometry.js';
 import type { RectIndex } from '../spatial.js';
 import { edgePaint, mixHex, toneOf } from '../theme.js';
@@ -22,6 +22,20 @@ export const LEGEND = Object.freeze({
   /** Space between the rows of a legend strip. */
   rowGap: 6,
 });
+
+/**
+ * Where the legend may be drawn: the spec's legend strip, or the landscape
+ * legend's one row at the bottom left of the stage, as `composeLegend`
+ * places it. Other furniture of the stage keeps out of it.
+ */
+export function legendArea(ctx: Pick<FrameContext, 'spec' | 'u'>): Rect {
+  const { spec, u } = ctx;
+  if (spec.safe.legend) return spec.safe.legend;
+  const { stage } = spec,
+    x = spec.safe.title.x + u(2),
+    h = u(LEGEND.plate);
+  return { x, y: stage.y + stage.h - h - u(8), w: stage.x + stage.w - u(12) - x, h };
+}
 
 /** How far the most advanced item of each kind has come. */
 const kindProgress = (
@@ -108,10 +122,16 @@ export function composeLegend(ctx: FrameContext, occupied: RectIndex): DisplayIt
         c = color(kindStyle.color, toneOf(P, kindStyle.tone) ?? P.legendText),
         half = mark * 0.43,
         // The miniature is the glyph as drawn: off the time axis a span is a point.
-        shape = kindStyle.shape === 'span' && !style.timeAxis ? 'circle' : kindStyle.shape;
+        shape = kindStyle.shape === 'span' && !style.timeAxis ? 'circle' : kindStyle.shape,
+        miniature = miniatureGeometry(shape, half);
+      // A bar runs down with time drawn vertically (ADR 004, D7 step 2).
+      const drawn =
+        shape === 'span' && ctx.vertical
+          ? { ...miniature, halfWidth: miniature.halfHeight, halfHeight: miniature.halfWidth }
+          : miniature;
       row.push({
         type: 'path',
-        d: nodeOutline({ x: x + mark / 2, y: cy }, miniatureGeometry(shape, half)),
+        d: nodeOutline({ x: x + mark / 2, y: cy }, drawn),
         fill: mixHex(color(c, P.fallbackNode), P.nodeFill, P.nodeTint),
         stroke: c,
         width: u(1.5),

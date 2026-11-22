@@ -7,6 +7,7 @@ import {
   timelinePlaybackAt,
 } from './timeline.js';
 import type { FilmTimeline } from './timeline.js';
+import { drawnPositions } from './time-direction.js';
 // Defined beside compileTimeline, which needs it to tell which shots have frames.
 export { frameCount } from './timeline.js';
 import type {
@@ -194,7 +195,11 @@ function cameraFor(
   return { x: shifted(x, area.offsetX), y: shifted(y, area.offsetY), scale: clamped };
 }
 
-/** Every value comes from the requested frame and its compiled, projected tracks. */
+/**
+ * Every value comes from the requested frame and its compiled, projected
+ * tracks. `positions` are the stored ones; the camera reads them as drawn
+ * (`drawnPositions`), so `cameraResolved` is in drawn coordinates.
+ */
 export function directorFrameAt(
   graph: VisualGraph,
   positions: ReadonlyMap<string, Position>,
@@ -228,7 +233,10 @@ export function directorFrameAt(
     overlay: shot?.overlay ?? fallback?.overlay ?? null,
     evidence: shot?.evidence ?? null,
   };
-  const target = cameraFor(view, cameraSpec, positions, highlight, fit, state.evidence);
+  // The camera frames the drawing as it is drawn: transposed when the
+  // project draws time vertically (ADR 004, D7 step 2).
+  const drawn = drawnPositions(graph, positions);
+  const target = cameraFor(view, cameraSpec, drawn, highlight, fit, state.evidence);
   let camera = target,
     transition = 1;
   let previousHighlight: ResolvedHighlight = { nodeIds: [], edgeIds: [], groupId: null };
@@ -262,7 +270,7 @@ export function directorFrameAt(
     const from = cameraFor(
       previousView,
       timeline.camera[previousPlayback.index].value,
-      positions,
+      drawn,
       previousHighlight,
       fit,
       previousShot.evidence,

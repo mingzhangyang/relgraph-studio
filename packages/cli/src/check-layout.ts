@@ -4,6 +4,7 @@ import {
   frameCount,
   layoutGraph,
   nodeTimes,
+  timeDirection,
   timelinePlaybackAt,
   type ChronologyInversion,
   type Locale,
@@ -66,6 +67,12 @@ export interface CheckLayoutSummary {
   /** Present when a chronology tolerance was given. */
   chronology?: {
     tolerance: number;
+    /**
+     * The direction time is drawn in (ADR 004, D7 step 2): order is checked
+     * along it, across the frame or down it. The stored x is time either
+     * way; a vertical drawing shows it transposed.
+     */
+    direction: 'horizontal' | 'vertical';
     timedNodes: number;
     inversions: (ChronologyInversion & { text: string })[];
   };
@@ -188,17 +195,21 @@ export async function checkLayout(request: CheckLayoutRequest): Promise<CheckLay
     crowding,
     shotIssues,
   };
-  if (request.chronologyTolerance !== undefined)
+  if (request.chronologyTolerance !== undefined) {
+    const direction = timeDirection(graph);
+    const place = direction === 'vertical' ? '下方或同行' : '右侧或同列';
     summary.chronology = {
       tolerance: request.chronologyTolerance,
+      direction,
       timedNodes: nodeTimes(graph).size,
       inversions: chronologyInversions(graph, positions, request.chronologyTolerance).map(
         (inversion) => ({
           ...inversion,
-          text: `${label.node(inversion.earlier)} 早于 ${label.node(inversion.later)} 约 ${Math.round(inversion.gap * 10) / 10}，却画在其右侧或同列`,
+          text: `${label.node(inversion.earlier)} 早于 ${label.node(inversion.later)} 约 ${Math.round(inversion.gap * 10) / 10}，却画在其${place}`,
         }),
       ),
     };
+  }
   return summary;
 }
 
@@ -223,9 +234,9 @@ export function formatLayoutIssues(summary: CheckLayoutSummary): string {
       );
   }
   if (summary.chronology) {
-    const { tolerance, timedNodes, inversions } = summary.chronology;
+    const { tolerance, timedNodes, inversions, direction } = summary.chronology;
     lines.push(
-      `时间顺序：${timedNodes} 个有时间的节点，时间相差至少 ${tolerance} 的两点在横向上` +
+      `时间顺序：${timedNodes} 个有时间的节点，时间相差至少 ${tolerance} 的两点在${direction === 'vertical' ? '纵向' : '横向'}上` +
         (inversions.length ? `有 ${inversions.length} 对先后颠倒：` : '没有先后颠倒。'),
     );
     for (const inversion of inversions) lines.push(`    ${inversion.text}`);

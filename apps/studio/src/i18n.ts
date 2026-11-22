@@ -35,6 +35,12 @@ const english: Record<string, string> = {
   '竖屏 9:16': 'Portrait 9:16',
   '竖屏 3:4': 'Portrait 3:4',
   '方形 1:1': 'Square 1:1',
+  时间轴: 'Time axis',
+  时间轴方向: 'Time axis direction',
+  横向: 'Horizontal',
+  竖向: 'Vertical',
+  '时间轴方向保存在项目中，可撤销；竖向时时间从上往下走':
+    'Saved in the project and undoable; vertical runs time from top to bottom',
   导演预览: 'Director preview',
   '正在加载…': 'Loading…',
   就绪: 'Ready',
