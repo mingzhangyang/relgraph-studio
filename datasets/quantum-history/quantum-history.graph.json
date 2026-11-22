@@ -1,0 +1,502 @@
+{
+  "format": "relgraph.graph/1",
+  "meta": {
+    "title": "量子力学 · 思想关系图",
+    "description": "1900—1982，六幕追踪物理学家与成果的联系。",
+    "sourceNote": "主要文献：Planck (1900), Einstein (1905), Bohr (1913), de Broglie (1924), Heisenberg (1925, 1927), Schrödinger (1926), Born (1926), Einstein–Podolsky–Rosen (1935), Bell (1964), Freedman–Clauser (1972), Aspect–Dalibard–Roger (1982)。连线表示理论或实验联系。"
+  },
+  "directed": true,
+  "nodes": [
+    {
+      "id": "普朗克",
+      "kind": "人物",
+      "visibleFrom": 1900
+    },
+    {
+      "id": "能量元",
+      "kind": "成果",
+      "visibleFrom": 1900
+    },
+    {
+      "id": "爱因斯坦",
+      "kind": "人物",
+      "visibleFrom": 1905
+    },
+    {
+      "id": "光量子",
+      "kind": "成果",
+      "visibleFrom": 1905
+    },
+    {
+      "id": "玻尔",
+      "kind": "人物",
+      "visibleFrom": 1913
+    },
+    {
+      "id": "量子化能级",
+      "kind": "成果",
+      "visibleFrom": 1913
+    },
+    {
+      "id": "德布罗意",
+      "kind": "人物",
+      "visibleFrom": 1924
+    },
+    {
+      "id": "物质波",
+      "kind": "成果",
+      "visibleFrom": 1924
+    },
+    {
+      "id": "海森堡",
+      "kind": "人物",
+      "visibleFrom": 1925
+    },
+    {
+      "id": "矩阵力学",
+      "kind": "成果",
+      "visibleFrom": 1925
+    },
+    {
+      "id": "薛定谔",
+      "kind": "人物",
+      "visibleFrom": 1926
+    },
+    {
+      "id": "波动力学",
+      "kind": "成果",
+      "visibleFrom": 1926
+    },
+    {
+      "id": "玻恩",
+      "kind": "人物",
+      "visibleFrom": 1926
+    },
+    {
+      "id": "概率诠释",
+      "kind": "成果",
+      "visibleFrom": 1926
+    },
+    {
+      "id": "测不准关系",
+      "kind": "成果",
+      "visibleFrom": 1927
+    },
+    {
+      "id": "EPR 三人",
+      "kind": "合作组",
+      "visibleFrom": 1935
+    },
+    {
+      "id": "EPR 论证",
+      "kind": "成果",
+      "visibleFrom": 1935
+    },
+    {
+      "id": "贝尔",
+      "kind": "人物",
+      "visibleFrom": 1964
+    },
+    {
+      "id": "贝尔不等式",
+      "kind": "成果",
+      "visibleFrom": 1964
+    },
+    {
+      "id": "弗里德曼与克劳泽",
+      "kind": "合作组",
+      "visibleFrom": 1972
+    },
+    {
+      "id": "光子关联实验",
+      "kind": "成果",
+      "visibleFrom": 1972
+    },
+    {
+      "id": "阿斯佩团队",
+      "kind": "合作组",
+      "visibleFrom": 1982
+    },
+    {
+      "id": "快速切换实验",
+      "kind": "成果",
+      "visibleFrom": 1982
+    },
+    {
+      "id": "波多尔斯基",
+      "kind": "人物",
+      "visibleFrom": 1935
+    },
+    {
+      "id": "罗森",
+      "kind": "人物",
+      "visibleFrom": 1935
+    },
+    {
+      "id": "弗里德曼",
+      "kind": "人物",
+      "visibleFrom": 1972
+    },
+    {
+      "id": "克劳泽",
+      "kind": "人物",
+      "visibleFrom": 1972
+    },
+    {
+      "id": "阿斯佩",
+      "kind": "人物",
+      "visibleFrom": 1982
+    }
+  ],
+  "edges": [
+    {
+      "source": "普朗克",
+      "target": "能量元",
+      "kind": "贡献",
+      "visibleFrom": 1900
+    },
+    {
+      "source": "爱因斯坦",
+      "target": "光量子",
+      "kind": "贡献",
+      "visibleFrom": 1905
+    },
+    {
+      "source": "能量元",
+      "target": "光量子",
+      "label": "推广",
+      "kind": "联系",
+      "visibleFrom": 1905
+    },
+    {
+      "source": "玻尔",
+      "target": "量子化能级",
+      "kind": "贡献",
+      "visibleFrom": 1913
+    },
+    {
+      "source": "德布罗意",
+      "target": "物质波",
+      "kind": "贡献",
+      "visibleFrom": 1924
+    },
+    {
+      "source": "能量元",
+      "target": "量子化能级",
+      "label": "引入量子条件",
+      "kind": "联系",
+      "visibleFrom": 1913
+    },
+    {
+      "source": "光量子",
+      "target": "物质波",
+      "label": "推广波粒二象性",
+      "kind": "联系",
+      "visibleFrom": 1924
+    },
+    {
+      "source": "量子化能级",
+      "target": "物质波",
+      "label": "寻求波动解释",
+      "kind": "联系",
+      "visibleFrom": 1924
+    },
+    {
+      "source": "海森堡",
+      "target": "矩阵力学",
+      "kind": "贡献",
+      "visibleFrom": 1925
+    },
+    {
+      "source": "薛定谔",
+      "target": "波动力学",
+      "kind": "贡献",
+      "visibleFrom": 1926
+    },
+    {
+      "source": "量子化能级",
+      "target": "矩阵力学",
+      "label": "解释跃迁",
+      "kind": "联系",
+      "visibleFrom": 1925
+    },
+    {
+      "source": "物质波",
+      "target": "波动力学",
+      "label": "发展为波方程",
+      "kind": "联系",
+      "visibleFrom": 1926
+    },
+    {
+      "source": "矩阵力学",
+      "target": "波动力学",
+      "label": "形式等价",
+      "kind": "联系",
+      "visibleFrom": 1926
+    },
+    {
+      "source": "玻恩",
+      "target": "概率诠释",
+      "kind": "贡献",
+      "visibleFrom": 1926
+    },
+    {
+      "source": "海森堡",
+      "target": "测不准关系",
+      "kind": "贡献",
+      "visibleFrom": 1927
+    },
+    {
+      "source": "波动力学",
+      "target": "概率诠释",
+      "label": "解释波函数",
+      "kind": "联系",
+      "visibleFrom": 1926
+    },
+    {
+      "source": "矩阵力学",
+      "target": "测不准关系",
+      "label": "非对易结构",
+      "kind": "联系",
+      "visibleFrom": 1927
+    },
+    {
+      "source": "EPR 三人",
+      "target": "EPR 论证",
+      "kind": "贡献",
+      "visibleFrom": 1935
+    },
+    {
+      "source": "贝尔",
+      "target": "贝尔不等式",
+      "kind": "贡献",
+      "visibleFrom": 1964
+    },
+    {
+      "source": "概率诠释",
+      "target": "EPR 论证",
+      "label": "质疑完备性",
+      "kind": "联系",
+      "visibleFrom": 1935
+    },
+    {
+      "source": "EPR 论证",
+      "target": "贝尔不等式",
+      "label": "转为可检验问题",
+      "kind": "联系",
+      "visibleFrom": 1964
+    },
+    {
+      "source": "弗里德曼与克劳泽",
+      "target": "光子关联实验",
+      "kind": "贡献",
+      "visibleFrom": 1972
+    },
+    {
+      "source": "阿斯佩团队",
+      "target": "快速切换实验",
+      "kind": "贡献",
+      "visibleFrom": 1982
+    },
+    {
+      "source": "贝尔不等式",
+      "target": "光子关联实验",
+      "label": "实验检验",
+      "kind": "联系",
+      "visibleFrom": 1972
+    },
+    {
+      "source": "贝尔不等式",
+      "target": "快速切换实验",
+      "label": "改进检验",
+      "kind": "联系",
+      "visibleFrom": 1982
+    },
+    {
+      "source": "光子关联实验",
+      "target": "快速切换实验",
+      "label": "改进测量设置",
+      "kind": "联系",
+      "visibleFrom": 1982
+    },
+    {
+      "source": "爱因斯坦",
+      "target": "EPR 三人",
+      "kind": "成员",
+      "visibleFrom": 1935
+    },
+    {
+      "source": "波多尔斯基",
+      "target": "EPR 三人",
+      "kind": "成员",
+      "visibleFrom": 1935
+    },
+    {
+      "source": "罗森",
+      "target": "EPR 三人",
+      "kind": "成员",
+      "visibleFrom": 1935
+    },
+    {
+      "source": "弗里德曼",
+      "target": "弗里德曼与克劳泽",
+      "kind": "成员",
+      "visibleFrom": 1972
+    },
+    {
+      "source": "克劳泽",
+      "target": "弗里德曼与克劳泽",
+      "kind": "成员",
+      "visibleFrom": 1972
+    },
+    {
+      "source": "阿斯佩",
+      "target": "阿斯佩团队",
+      "kind": "成员",
+      "visibleFrom": 1982
+    }
+  ],
+  "presentation": [
+    {
+      "id": "s1",
+      "title": "光，一份一份",
+      "durationSec": 8,
+      "domainAt": 1905,
+      "narration": "普朗克用能量元解释黑体辐射。爱因斯坦进一步提出，光本身也能以一份份能量被吸收。",
+      "highlight": {
+        "nodeIds": [
+          "普朗克",
+          "能量元",
+          "爱因斯坦",
+          "光量子"
+        ]
+      },
+      "camera": {
+        "fitIds": [
+          "普朗克",
+          "能量元",
+          "爱因斯坦",
+          "光量子"
+        ]
+      }
+    },
+    {
+      "id": "s2",
+      "title": "原子的台阶",
+      "durationSec": 8,
+      "domainAt": 1924,
+      "narration": "玻尔用能级之差解释氢光谱。德布罗意把波的概念赋予粒子，为理解离散轨道提供了新线索。",
+      "highlight": {
+        "nodeIds": [
+          "玻尔",
+          "量子化能级",
+          "德布罗意",
+          "物质波"
+        ]
+      },
+      "camera": {
+        "fitIds": [
+          "玻尔",
+          "量子化能级",
+          "德布罗意",
+          "物质波"
+        ]
+      }
+    },
+    {
+      "id": "s3",
+      "title": "两种算法",
+      "durationSec": 8,
+      "domainAt": 1926,
+      "narration": "海森堡从光谱跃迁出发，薛定谔从物质波出发。两种形式在共同的适用范围内给出相同的能谱。",
+      "highlight": {
+        "nodeIds": [
+          "海森堡",
+          "矩阵力学",
+          "薛定谔",
+          "波动力学"
+        ]
+      },
+      "camera": {
+        "fitIds": [
+          "海森堡",
+          "矩阵力学",
+          "薛定谔",
+          "波动力学"
+        ]
+      }
+    },
+    {
+      "id": "s4",
+      "title": "能预言什么？",
+      "durationSec": 8,
+      "domainAt": 1927,
+      "narration": "玻恩把波函数振幅与测量概率相联。海森堡指出，同一量子态的位置和动量分布宽度受到共同约束。",
+      "highlight": {
+        "nodeIds": [
+          "玻恩",
+          "概率诠释",
+          "海森堡",
+          "测不准关系"
+        ]
+      },
+      "camera": {
+        "fitIds": [
+          "玻恩",
+          "概率诠释",
+          "海森堡",
+          "测不准关系"
+        ]
+      }
+    },
+    {
+      "id": "s5",
+      "title": "相隔两地的测量",
+      "durationSec": 8,
+      "domainAt": 1964,
+      "narration": "爱因斯坦、波多尔斯基和罗森质疑量子描述的完备性。贝尔把局域隐变量模型的限制写成可检验的不等式。",
+      "highlight": {
+        "nodeIds": [
+          "EPR 三人",
+          "EPR 论证",
+          "贝尔",
+          "贝尔不等式"
+        ]
+      },
+      "camera": {
+        "fitIds": [
+          "EPR 三人",
+          "EPR 论证",
+          "贝尔",
+          "贝尔不等式"
+        ]
+      }
+    },
+    {
+      "id": "s6",
+      "title": "把争论交给光子",
+      "durationSec": 8,
+      "domainAt": 1982,
+      "narration": "两代光子实验观察到违反贝尔不等式的关联。阿斯佩团队在光子飞行途中切换测量设置，进一步检验局域解释。",
+      "highlight": {
+        "nodeIds": [
+          "弗里德曼与克劳泽",
+          "光子关联实验",
+          "阿斯佩团队",
+          "快速切换实验"
+        ]
+      },
+      "camera": {
+        "fitIds": [
+          "弗里德曼与克劳泽",
+          "光子关联实验",
+          "阿斯佩团队",
+          "快速切换实验"
+        ]
+      }
+    }
+  ],
+  "timeline": {
+    "unit": "年"
+  }
+}
