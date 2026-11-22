@@ -37,6 +37,8 @@ export type DetailLookup = (
 ) => { summary?: string } | null | undefined;
 
 export interface ComposeOptions {
+  /** Optional form requests keyed by visible edge id. */
+  edgeForms?: ReadonlyMap<string, string>;
   /**
    * The full graph. The frame state is already projected; what is read here
    * does not depend on the frame: the scene count, the project, every node's

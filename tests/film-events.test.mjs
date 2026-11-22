@@ -12,6 +12,7 @@ import { layoutGraph } from '../packages/core/src/director/layout.ts';
 import { directorFrameAt, frameCount } from '../packages/core/src/director/state.ts';
 import {
   compileTimeline,
+  evidenceFrames,
   frameAtOrAfter,
   revealStateAt,
   shotStartFrames,
@@ -492,8 +493,10 @@ test('the node table: authored ids, drawn labels, groups and the world coordinat
 
 test('events are ordered, deterministic and independent of how they are asked for', async () => {
   for (const { name, source } of DOCUMENTS) {
-    const { events } = film(source);
-    const rank = { shot: 0, 'domain-time': 1, caption: 2, reveal: 3 };
+    const { events, timeline } = film(source);
+    const cards = evidenceFrames(timeline, events.frameCount);
+    const starts = shotStartFrames(timeline);
+    const rank = { shot: 0, 'domain-time': 1, caption: 2, beat: 3, evidence: 4, reveal: 5 };
     for (let i = 1; i < events.events.length; i += 1) {
       const [a, b] = [events.events[i - 1], events.events[i]];
       assert.ok(
@@ -504,7 +507,10 @@ test('events are ordered, deterministic and independent of how they are asked fo
       );
     }
     for (const event of events.events)
-      assert.equal(event.frame, shotStartFrames(film(source).timeline)[event.shot]);
+      assert.equal(
+        event.frame,
+        event.type === 'evidence' ? cards[event.shot]?.first : starts[event.shot],
+      );
     // A fresh load gives the same bytes.
     assert.equal(formatFilmEvents(film(structuredClone(source)).events), formatFilmEvents(events));
     assert.equal(formatFilmEvents(graphEvents(load(source), 24)), formatFilmEvents(events));

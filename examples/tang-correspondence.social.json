@@ -1,0 +1,28 @@
+{
+  "format": "relgraph.social/0.1-draft",
+  "meta": { "title": "杜甫与李白", "sourceNote": "诗题与诗句据杜甫《春日忆李白》。" },
+  "kinds": {
+    "edges": {
+      "当面交往": { "assertsCoPresence": true, "basis": "attested" },
+      "诗文往来": { "assertsCoPresence": false, "basis": "attested" },
+      "交往推定": { "basis": "inferred" }
+    }
+  },
+  "nodes": [
+    { "id": "du", "label": "杜甫", "kind": "诗人" },
+    { "id": "li", "label": "李白", "kind": "诗人" }
+  ],
+  "edges": [
+    {
+      "id": "verse",
+      "source": "du",
+      "target": "li",
+      "kind": "诗文往来",
+      "directed": true,
+      "evidence": [{ "cite": "杜甫《春日忆李白》", "quote": "何时一樽酒，重与细论文。" }]
+    }
+  ],
+  "presentation": [
+    { "id": "poem", "title": "杜甫忆李白", "durationSec": 3, "evidence": { "edgeId": "verse" } }
+  ]
+}

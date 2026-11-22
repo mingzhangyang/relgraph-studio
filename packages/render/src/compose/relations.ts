@@ -3,7 +3,6 @@ import {
   edgeAppearance,
   edgeStyleFor,
   feedbackRelations,
-  LINE_DASH,
   localize,
 } from '@relgraph/core';
 import type { DomainStyle, ProjectedVisualGraph, VisualGraph } from '@relgraph/core';
@@ -21,6 +20,7 @@ import {
   type Point,
   type Segment,
 } from './geometry.js';
+import { resolveEdgeForm, type FormDiagnostic } from '../forms.js';
 import type { DrawnNode } from './nodes.js';
 import { captionWithLabel } from './text.js';
 
@@ -291,10 +291,18 @@ export function composeRelations(
   ctx: FrameContext,
   drawnById: ReadonlyMap<string, DrawnNode>,
   layout: RelationLayout,
-): { items: DisplayItem[]; selection: Selection; labels: EdgeLabel[]; obstacles: RectIndex } {
+  requests?: ReadonlyMap<string, string>,
+): {
+  formDiagnostics: FormDiagnostic[];
+  items: DisplayItem[];
+  selection: Selection;
+  labels: EdgeLabel[];
+  obstacles: RectIndex;
+} {
   const { view, config, style, theme: P, u, sans, cam, spec, locale } = ctx;
   const { pairs, spokeAngles, degree, loopsOf, returns } = layout;
   const strong = style.edgeContrast === 'strong';
+  const formDiagnostics: FormDiagnostic[] = [];
   const routes = returnRoutes(ctx, drawnById, returns);
   const items: DisplayItem[] = [];
   const selection: Selection = [];
@@ -330,7 +338,17 @@ export function composeRelations(
     const head = view.domain === 'biology' ? edgeStyle.head : (custom.head ?? edgeStyle.head);
     const arrow = Boolean(edge.directed) && head === 'arrow',
       arrowLength = u(8) + width * 1.3;
-    const dash = custom.dash === undefined ? edgeStyle.dash : LINE_DASH[custom.dash];
+    const form = resolveEdgeForm(
+      edgeStyle,
+      edge.kind,
+      edge.id,
+      requests?.get(edge.id) ?? custom.dash ?? 'line',
+    );
+    if ('diagnostic' in form) {
+      formDiagnostics.push(form.diagnostic);
+      continue;
+    }
+    const { dash } = form;
     const parts: DisplayItem[] = [];
     let labelAt: Point, labelPush: Point | undefined, labelAside: Point | undefined;
     if (edge.source === edge.target) {
@@ -642,5 +660,5 @@ export function composeRelations(
         alpha: active * Math.min(1, (visibility - 0.5) * 2),
       });
   }
-  return { items, selection, labels: edgeLabels, obstacles: edgeObstacles };
+  return { formDiagnostics, items, selection, labels: edgeLabels, obstacles: edgeObstacles };
 }

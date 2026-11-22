@@ -11,6 +11,7 @@
       "types": "./dist/src/index.d.ts",
       "import": "./dist/src/index.js"
     },
+    "./schema/social.schema.json": "./dist/schema/social.schema.json",
     "./schema/relationship-graph.schema.json": "./dist/schema/relationship-graph.schema.json"
   },
   "scripts": {

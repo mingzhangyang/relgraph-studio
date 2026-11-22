@@ -6,6 +6,8 @@
 
 /** The line rhythms an author may ask for by name. */
 export const LINE_STYLES = ['solid', 'dashed', 'dotted'] as const;
+/** Forms a domain can safely inherit without making any spatial claim. */
+export const DEFAULT_EDGE_FORMS = Object.freeze(['line', ...LINE_STYLES]);
 export type LineStyle = (typeof LINE_STYLES)[number];
 
 /** The dash pattern of each named rhythm; solid has none. */

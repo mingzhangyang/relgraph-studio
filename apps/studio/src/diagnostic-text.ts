@@ -126,6 +126,15 @@ export const ENGLISH_DIAGNOSTICS: EnglishCatalogue = {
       'Set initial positions for key characters to prevent opening layout jumps.',
     ),
   },
+  'social-source': {
+    SOCIAL_FORMAT: wording('Invalid social network format.', 'Use relgraph.social/0.1-draft.'),
+    SOCIAL_CO_PRESENCE: wording('assertsCoPresence requires a boolean.', 'Use true or false.'),
+    SOCIAL_BASIS: wording('Unknown relation basis.', 'Use attested or inferred.'),
+    INFERRED_SOLID: wording(
+      'A solid line presents an inferred relation as attested.',
+      'Use dashed or dotted.',
+    ),
+  },
   'graph-source': {
     STRUCTURE: wording('Not a generic graph document.', (p) => `Use format: "${p.format}".`),
     'TOO_LARGE.limits': wording(
@@ -264,7 +273,7 @@ export const ENGLISH_DIAGNOSTICS: EnglishCatalogue = {
     JSON: wording((p) => `JSON syntax error: ${p.detail}`, 'Check quotes, commas, and brackets.'),
     FORMAT: wording(
       'Unrecognized data format.',
-      'Generic graphs use format: "relgraph.graph/1"; literature requires schemaVersion: "0.1"; biology requires format: "relgraph.bio/0.1-draft".',
+      'Generic graphs use format: "relgraph.graph/1"; literature requires schemaVersion: "0.1"; social networks use format: "relgraph.social/0.1-draft"; biology requires format: "relgraph.bio/0.1-draft".',
     ),
     'PROJECT_CONFIG.field': wording(
       'Invalid project configuration.',

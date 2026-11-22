@@ -481,6 +481,13 @@ const literatureFrames = Math.ceil(
     assert.equal(await page.evaluate(() => localStorage.getItem('relgraph-theme')), null);
   });
 
+  await check('social example loads its evidence card', async () => {
+    await loadExample(page, example('exampleSocial'));
+    assert.equal(await status(page), 'ready');
+    assert.equal(await page.evaluate(() => window.renderAt(36)), true);
+    assert.match(await page.locator('#transcript').textContent(), /何时一樽酒/);
+  });
+
   await check('the biology example plays through domain-time stages', async () => {
     await loadExample(page, EXAMPLES[1]);
     assert.equal(await status(page), 'ready');

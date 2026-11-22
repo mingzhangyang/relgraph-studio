@@ -59,6 +59,7 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
     ctx,
     new Map(drawn.map((entry) => [entry.node.id, entry])),
     layout,
+    options.edgeForms,
   );
   const glyphs = composeNodes(ctx, drawn);
   const legend = stripLegend ?? composeLegend(ctx, occupied);
@@ -105,6 +106,7 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
     selection: [...relations.selection, ...glyphs.selection],
     selectionClip: { ...stage },
     omitted,
+    formDiagnostics: relations.formDiagnostics,
     evidenceOverflow: evidence.overflow,
     evidenceCovers: evidence.covers,
   };

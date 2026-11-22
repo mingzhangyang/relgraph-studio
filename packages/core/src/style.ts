@@ -20,7 +20,7 @@ export type EdgeStroke = 'plain' | 'physical' | 'regulatory';
 export const EDGE_HEADS = ['arrow', 'bar', 'hollow-circle', 'none'] as const;
 export type EdgeHead = (typeof EDGE_HEADS)[number];
 import { LINE_DASH, type LineStyle } from './line-styles.js';
-export { LINE_DASH, LINE_STYLES, type LineStyle } from './line-styles.js';
+export { DEFAULT_EDGE_FORMS, LINE_DASH, LINE_STYLES, type LineStyle } from './line-styles.js';
 /**
  * Number of categorical tones every video theme provides. A tone is an index
  * into the theme's validated palette, so the same kind keeps one identity in
@@ -29,6 +29,8 @@ export { LINE_DASH, LINE_STYLES, type LineStyle } from './line-styles.js';
  */
 export const TONE_COUNT = 8;
 export interface EdgeStyle {
+  /** Neutral forms this relation kind permits. Defaults to ordinary line treatments. */
+  forms?: readonly string[];
   stroke: EdgeStroke;
   /** Categorical palette slot, resolved by the video theme. */
   tone?: number;
@@ -156,6 +158,8 @@ export const nodeStyleFor = (style: DomainStyle, kind: string): NodeStyle =>
 
 /** Declared presentation of one kind in a generic graph document. */
 export interface KindDeclaration {
+  /** Supplied by an adapter, never copied from generic source JSON. */
+  forms?: readonly string[];
   label?: string;
   color?: string;
   shape?: NodeShape;
@@ -275,6 +279,7 @@ export function deriveGraphStyle(
         ? AUTO_DASH[index % AUTO_DASH.length]
         : NEUTRAL_DASH[neutral++ % NEUTRAL_DASH.length];
     edges[kind] = Object.freeze({
+      ...(declared?.forms ? { forms: declared.forms } : {}),
       stroke: 'plain',
       // Branches of a tree or mind map need no arrowhead: the root says the way.
       head: declared?.head ?? (diagram === 'tree' || diagram === 'mindmap' ? 'none' : 'arrow'),

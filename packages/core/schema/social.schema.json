@@ -1,0 +1,181 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Evidence-based social network",
+  "description": "Social declarations over the graph/1 grammar. The shared graph parser checks node/edge records, ids, evidence, timeline and storyboard references.",
+  "type": "object",
+  "required": ["format"],
+  "anyOf": [
+    {
+      "required": ["nodes"],
+      "properties": {
+        "nodes": {
+          "minItems": 1
+        }
+      }
+    },
+    {
+      "required": ["edges"],
+      "properties": {
+        "edges": {
+          "minItems": 1
+        }
+      }
+    }
+  ],
+  "properties": {
+    "format": {
+      "const": "relgraph.social/0.1-draft"
+    },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/id"
+          },
+          {
+            "type": "object",
+            "required": ["id"],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "evidence": {
+                "$ref": "#/$defs/evidence"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "edges": {
+      "type": "array",
+      "maxItems": 20000,
+      "items": {
+        "type": "object",
+        "required": ["source", "target"],
+        "properties": {
+          "source": {
+            "$ref": "#/$defs/id"
+          },
+          "target": {
+            "$ref": "#/$defs/id"
+          },
+          "directed": {
+            "type": "boolean"
+          },
+          "evidence": {
+            "$ref": "#/$defs/evidence"
+          }
+        }
+      }
+    },
+    "presentation": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "kinds": {
+      "type": "object",
+      "properties": {
+        "edges": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "assertsCoPresence": {
+                "type": "boolean",
+                "default": false
+              },
+              "basis": {
+                "enum": ["attested", "inferred"],
+                "default": "inferred"
+              },
+              "line": {
+                "enum": ["solid", "dashed", "dotted"]
+              }
+            }
+          }
+        },
+        "nodes": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "groups": {
+      "type": "array"
+    }
+  },
+  "$defs": {
+    "id": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "string",
+          "pattern": "\\S",
+          "maxLength": 200
+        }
+      ]
+    },
+    "text": {
+      "type": "string",
+      "pattern": "\\S",
+      "maxLength": 2000
+    },
+    "evidence": {
+      "type": ["array", "null"],
+      "items": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/text"
+          },
+          {
+            "type": "object",
+            "required": ["cite"],
+            "properties": {
+              "cite": {
+                "$ref": "#/$defs/text"
+              },
+              "quote": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/text"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "url": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/text"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "locator": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/text"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}
