@@ -49,12 +49,13 @@ export type GenericAdaptation = ReturnType<typeof adaptParsed>;
  */
 export function inspectGenericDocument(
   doc: unknown,
+  notesFor?: Parameters<typeof parseGenericSource>[3],
 ):
   | { valid: false; errors: GenericDiagnostic[]; warnings: GenericDiagnostic[] }
   | { valid: true; adapted: GenericAdaptation } {
   const errors: GenericDiagnostic[] = [],
     warnings: GenericDiagnostic[] = [];
-  const parsed = parseGenericSource(doc, errors, warnings);
+  const parsed = parseGenericSource(doc, errors, warnings, notesFor);
   if (!parsed || errors.length) return { valid: false, errors, warnings };
   return { valid: true, adapted: adaptParsed(parsed, warnings) };
 }
@@ -75,6 +76,7 @@ function adaptParsed(parsed: ParsedGenericSource, warnings: GenericDiagnostic[])
   });
   const graph: VisualGraph = {
     domain: 'graph',
+    ...(parsed.pairNotes ? { pairNotes: parsed.pairNotes } : {}),
     meta: {
       title: parsed.title,
       description: parsed.description,

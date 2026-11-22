@@ -128,8 +128,8 @@ export interface EvidenceEvent extends EventBase {
   type: 'evidence';
   /** The shot's id, as in its shot event. */
   id: string | null;
-  object: 'node' | 'edge';
-  /** The node's or relation's id. */
+  object: 'node' | 'edge' | 'pairNote';
+  /** The evidence owner's id. */
   target: string;
   /** Indices of the items shown, into the object's evidence, in card order. */
   items: number[];
@@ -325,7 +325,11 @@ export function filmEvents(
           id: shotId(index),
           object: shot.evidence.object,
           target:
-            shot.evidence.object === 'node' ? nodeId(shot.evidence.id) : edgeId(shot.evidence.id),
+            shot.evidence.object === 'pairNote'
+              ? shot.evidence.id
+              : shot.evidence.object === 'node'
+                ? nodeId(shot.evidence.id)
+                : edgeId(shot.evidence.id),
           items: shot.evidence.items.map((item) => item.index),
           lastFrame,
           endSec: seconds(shot.endSec),

@@ -127,6 +127,15 @@ export const ENGLISH_DIAGNOSTICS: EnglishCatalogue = {
     ),
   },
   'social-source': {
+    SOCIAL_MARK: wording('Invalid person marker.', 'Use true or false.'),
+    SOCIAL_INCIDENT: wording(
+      'An incident relation conflicts with the person marker.',
+      'Check the relation and person marker.',
+    ),
+    SOCIAL_PAIR: wording(
+      'Invalid rejected pair.',
+      'Supply a unique ID, two distinct people, a reason and evidence.',
+    ),
     SOCIAL_FORMAT: wording('Invalid social network format.', 'Use relgraph.social/0.1-draft.'),
     SOCIAL_CO_PRESENCE: wording('assertsCoPresence requires a boolean.', 'Use true or false.'),
     SOCIAL_BASIS: wording('Unknown relation basis.', 'Use attested or inferred.'),

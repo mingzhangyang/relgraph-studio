@@ -1,0 +1,26 @@
+{
+  "format": "relgraph.social/0.1-draft",
+  "meta": { "title": "初唐四杰 · 齐名不等于相识" },
+  "kinds": { "nodes": { "诗人": { "shape": "square" } } },
+  "nodes": [
+    { "id": "wang", "label": "王勃", "kind": "诗人", "noAttestedRelation": true },
+    { "id": "lu", "label": "卢照邻", "kind": "诗人", "noAttestedRelation": true }
+  ],
+  "rejectedPairs": [
+    {
+      "id": "wang-lu",
+      "nodes": ["wang", "lu"],
+      "reason": "齐名不等于相识。同在蜀中登高的线索，尚缺可核年谱。",
+      "evidence": [
+        {
+          "cite": "唐代诗人交往网络 · 64 人版",
+          "locator": "卢照邻条",
+          "url": "https://github.com/mingzhangyang/relgraph-studio/tree/main/datasets/tang-poets-met"
+        }
+      ]
+    }
+  ],
+  "presentation": [
+    { "id": "four", "title": "初唐四杰", "durationSec": 3, "evidence": { "pairNoteId": "wang-lu" } }
+  ]
+}

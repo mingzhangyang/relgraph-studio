@@ -237,10 +237,44 @@ export function validateVisualGraph(graph: unknown): { valid: boolean; errors: G
     step(e.revealStep, 'edges[' + i + '].revealStep', e.id);
     evidence(e.evidence, 'edges[' + i + '].evidence', e.id);
   });
-  const evidenceCount = (kind: 'nodes' | 'edges', id: unknown): number => {
-    const owner = (collections[kind] as unknown[]).find(
-      (item) => object(item) && item.id === id,
-    ) as { evidence?: unknown } | undefined;
+  const notes = new Map<unknown, Record<string, unknown>>();
+  if (graph.pairNotes !== undefined && !Array.isArray(graph.pairNotes))
+    fail('PAIR_NOTE', 'pairNotes', '', 'Invalid notes', 'Supply a list.');
+  if (Array.isArray(graph.pairNotes))
+    graph.pairNotes.forEach((note, i) => {
+      const path = `pairNotes[${i}]`;
+      if (
+        !object(note) ||
+        typeof note.id !== 'string' ||
+        !note.id.trim() ||
+        notes.has(note.id) ||
+        !Array.isArray(note.nodes) ||
+        note.nodes.length !== 2 ||
+        note.nodes[0] === note.nodes[1] ||
+        !note.nodes.every((id) => ids.nodes.has(id)) ||
+        typeof note.label !== 'string' ||
+        !note.label.trim() ||
+        !Array.isArray(note.evidence) ||
+        !note.evidence.length
+      ) {
+        fail(
+          'PAIR_NOTE',
+          path,
+          '',
+          'Invalid pair note',
+          'Check id, endpoints, label and evidence.',
+        );
+        return;
+      }
+      evidence(note.evidence, path + '.evidence', note.id);
+      notes.set(note.id, note);
+    });
+  const evidenceCount = (kind: 'nodes' | 'edges' | 'pairNotes', id: unknown): number => {
+    const owner =
+      kind === 'pairNotes'
+        ? notes.get(id)
+        : ((collections[kind] as unknown[]).find((item) => object(item) && item.id === id) as
+            { evidence?: unknown } | undefined);
     return Array.isArray(owner?.evidence) ? owner.evidence.length : 0;
   };
   collections.scenes.forEach((s, i) => {
@@ -345,19 +379,23 @@ export function validateVisualGraph(graph: unknown): { valid: boolean; errors: G
     if (s.evidence !== undefined) {
       const ref = s.evidence as Record<string, unknown> | null;
       const at = path + '.evidence';
-      if (!object(ref) || (ref.nodeId === undefined) === (ref.edgeId === undefined))
+      if (
+        !object(ref) ||
+        [ref.nodeId, ref.edgeId, ref.pairNoteId].filter((v) => v !== undefined).length !== 1
+      )
         fail(
           'SCENE_EVIDENCE',
           at,
           s.id,
-          'evidence must name exactly one of nodeId and edgeId',
-          'Provide { nodeId } or { edgeId }, with optional items.',
+          'evidence must name exactly one object',
+          'Provide nodeId, edgeId or pairNoteId, with optional items.',
         );
       else {
-        const kind = ref.nodeId !== undefined ? 'nodes' : 'edges';
-        const target = ref.nodeId ?? ref.edgeId;
+        const kind =
+          ref.pairNoteId !== undefined ? 'pairNotes' : ref.nodeId !== undefined ? 'nodes' : 'edges';
+        const target = ref.nodeId ?? ref.edgeId ?? ref.pairNoteId;
         const count = evidenceCount(kind, target);
-        if (!ids[kind].has(target))
+        if (!(kind === 'pairNotes' ? notes : ids[kind]).has(target))
           fail('SCENE_REF', at, s.id, 'Unknown ' + (target as string), 'Use an existing id.');
         else if (!count)
           fail(
@@ -455,6 +493,9 @@ export function projectVisualGraph(
     timeline: graph.timeline ? { ...graph.timeline } : undefined,
     nodes,
     edges,
+    ...(graph.pairNotes
+      ? { pairNotes: graph.pairNotes.filter((note) => note.nodes.every((id) => ids.has(id))) }
+      : {}),
     groups: graph.groups.filter((g) => used.has(g.id)),
   };
 }
@@ -560,7 +601,10 @@ export function projectFrameScene(
     s.openDetailNodeId && ns.has(s.openDetailNodeId) ? { nodeId: s.openDetailNodeId } : null;
   const card = evidenceCard(view, s.evidence, domainAt);
   // The card's object is emphasised for the whole shot.
-  if (card.card) {
+  if (card.card?.object === 'pairNote') {
+    for (const id of view.pairNotes!.find((note) => note.id === card.card!.id)!.nodes)
+      if (!highlight.nodeIds.includes(id)) highlight.nodeIds.push(id);
+  } else if (card.card) {
     const list = card.card.object === 'node' ? highlight.nodeIds : highlight.edgeIds;
     if (!list.includes(card.card.id)) list.push(card.card.id);
   }
@@ -604,12 +648,15 @@ function evidenceCard(
   domainAt: number | null,
 ): { card: EvidenceCard | null; hidden: boolean } {
   if (!ref) return { card: null, hidden: false };
-  const object = ref.nodeId !== undefined ? 'node' : 'edge';
-  const id = ref.nodeId ?? ref.edgeId;
+  const object =
+    ref.pairNoteId !== undefined ? 'pairNote' : ref.nodeId !== undefined ? 'node' : 'edge';
+  const id = ref.nodeId ?? ref.edgeId ?? ref.pairNoteId;
   const owner =
-    object === 'node'
-      ? view.nodes.find((node) => node.id === id)
-      : view.edges.find((edge) => edge.id === id);
+    object === 'pairNote'
+      ? view.pairNotes?.find((note) => note.id === id)
+      : object === 'node'
+        ? view.nodes.find((node) => node.id === id)
+        : view.edges.find((edge) => edge.id === id);
   if (!owner || id === undefined) return { card: null, hidden: true };
   const all = owner.evidence ?? [];
   const allowed = (item: VisualEvidence): boolean =>
@@ -667,7 +714,19 @@ export function projectBeatStages(
       index,
       domainAt,
       revealStep,
-      { ...view, nodes, edges, groups: view.groups.filter((g) => groups.has(g.id)) },
+      {
+        ...view,
+        nodes,
+        edges,
+        ...(view.pairNotes
+          ? {
+              pairNotes: view.pairNotes.filter((note) =>
+                note.nodes.every((id) => !waitingNodes.has(id)),
+              ),
+            }
+          : {}),
+        groups: view.groups.filter((g) => groups.has(g.id)),
+      },
     );
     if (!state.scene) throw new Error('Missing projected shot');
     redacted ||= state.scene.redacted;
