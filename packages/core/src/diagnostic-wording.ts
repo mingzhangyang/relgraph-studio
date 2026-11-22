@@ -219,7 +219,7 @@ export const SOCIAL_WORDING = {
   SOCIAL_FORMAT: wording('无法识别社会网络格式。', '使用 relgraph.social/0.1-draft。'),
   SOCIAL_CO_PRESENCE: wording('assertsCoPresence 需要布尔值。', '使用 true 或 false。'),
   SOCIAL_BASIS: wording('无法识别关系依据。', '使用 attested 或 inferred。'),
-  INFERRED_SOLID: wording('实线会让推定关系看起来像有据关系。', '将 line 设为 dashed 或 dotted。'),
+  INFERRED_SOLID: wording('实线会让推定关系看起来像有据关系。', '将线型设为 dashed 或 dotted。'),
 } as const satisfies Record<string, DiagnosticWording>;
 
 /** Every worded layer and its table. */

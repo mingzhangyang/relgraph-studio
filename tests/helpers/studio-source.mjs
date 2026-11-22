@@ -104,6 +104,7 @@ import { createSelectionOverlayView } from '../../apps/studio/src/selection-over
 import { STUDIO_EXAMPLES } from '../../apps/studio/src/examples.ts';
 import { WORKSPACE_WORDING } from '../../apps/studio/src/diagnostic-text.ts';
 import { worded } from '../../packages/core/src/diagnostic-wording.ts';
+import { socialAppearanceWarnings } from '../../packages/core/src/domains/social.ts';
 
 // VM tests exercise the actual TypeScript workspace against a minimal simulated DOM.
 // The imported dependencies are supplied explicitly by each harness.
@@ -119,6 +120,7 @@ export function studioSource() {
 // Workspace dependency functions and views are supplied to the source VM as-is;
 // only Canvas drawing, network, animation and browser storage are stubbed.
 export const studioImports = {
+  socialAppearanceWarnings,
   captureStaticStudioUi,
   initializeStudioLanguage,
   refreshStudioUi,

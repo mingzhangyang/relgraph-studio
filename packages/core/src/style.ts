@@ -160,6 +160,8 @@ export const nodeStyleFor = (style: DomainStyle, kind: string): NodeStyle =>
 export interface KindDeclaration {
   /** Supplied by an adapter, never copied from generic source JSON. */
   forms?: readonly string[];
+  /** Adapter-only defaults retain automatic ranking; never copied from source JSON. */
+  implicit?: true;
   label?: string;
   color?: string;
   shape?: NodeShape;
@@ -233,8 +235,14 @@ export function deriveGraphStyle(
     axis = diagram === 'timeline' ? timeAxis(graph.nodes) : null;
   const declaredNodes = graph.kinds?.nodes ?? {},
     declaredEdges = graph.kinds?.edges ?? {};
-  const nodeKinds = rankedKinds(graph.nodes, Object.keys(declaredNodes)),
-    edgeKinds = rankedKinds(graph.edges, Object.keys(declaredEdges));
+  const nodeKinds = rankedKinds(
+      graph.nodes,
+      Object.keys(declaredNodes).filter((kind) => !declaredNodes[kind].implicit),
+    ),
+    edgeKinds = rankedKinds(
+      graph.edges,
+      Object.keys(declaredEdges).filter((kind) => !declaredEdges[kind].implicit),
+    );
   const grouped = graph.groups.length > 0;
   // Hue slots already spoken for, read from what will actually be drawn: the
   // tone of each group (one with an authored colour holds no slot) and of
