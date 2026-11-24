@@ -7,6 +7,7 @@ import { pipeline } from 'node:stream/promises';
 import { compileTimeline, filmEvents, layoutGraph, parseDocument } from '@relgraph/core';
 import { frameSpecFor } from '@relgraph/render';
 import { createHeadlessRenderer } from '@relgraph/render/skia';
+import { applyRecipePositions } from './video-shot-positions.mjs';
 
 const [recipeFile, destination] = process.argv.slice(2);
 if (!recipeFile || !destination || process.argv.length !== 4)
@@ -48,16 +49,7 @@ const panel = {
   ],
 };
 const spec = { ...frameSpecFor('portrait-1080x1440'), fps };
-const positions = layoutGraph(panel);
-for (const node of panel.nodes) {
-  const name = authoredIds?.nodes.get(node.id) ?? node.id;
-  const point = recipe.positions?.[name];
-  if (point && !node.position) {
-    if (!Number.isFinite(point.x) || !Number.isFinite(point.y))
-      throw new Error('Invalid position for ' + name);
-    positions.set(node.id, point);
-  }
-}
+const positions = applyRecipePositions(panel, layoutGraph(panel), recipe.positions, authoredIds);
 const renderer = createHeadlessRenderer(panel, positions, {
   theme: 'light',
   frameSpec: spec,
