@@ -1,0 +1,29 @@
+{
+  "document": "../quantum-history.graph.json",
+  "shot": "chapter-7",
+  "fps": 60,
+  "plate": "dirac-energy.png",
+  "music": "../score.m4a",
+  "positions": {
+    "狄拉克": {
+      "x": -180,
+      "y": -160
+    },
+    "狭义相对论": {
+      "x": 70,
+      "y": -160
+    },
+    "狄拉克方程": {
+      "x": -55,
+      "y": 0
+    },
+    "安德森": {
+      "x": 195,
+      "y": 0
+    },
+    "正电子": {
+      "x": 70,
+      "y": 175
+    }
+  }
+}

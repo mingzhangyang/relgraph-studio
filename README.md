@@ -115,6 +115,8 @@ The **调整节点位置** button pauses playback and locks the current shot cam
 
 ## Export a film without a browser
 
+Combine native Studio rendering with external illustrations, music and editing using the [collaborative video workflow and runnable portrait example](docs/VIDEO-WORKFLOW.md).
+
 The `relgraph` command line (`packages/cli`) renders a document with the same composition code as the workspace, drawn by [skia-canvas](https://skia-canvas.org) instead of a browser canvas, and encodes the frames with FFmpeg.
 
 Requirements:
