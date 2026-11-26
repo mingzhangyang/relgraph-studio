@@ -83,6 +83,18 @@ export const SEMANTIC_WORDING = {
   TRANSITION: wording('transitionMs must not be negative', '改为非负毫秒数。'),
   CAMERA_CONFLICT: wording('focusNodeId and fitIds are mutually exclusive', '选择一种镜头目标。'),
   UNKNOWN_REF: wording((p) => `Unknown ${p.kind}: ${p.ref}`, '替换为对应集合中的有效 id。'),
+  'SCENE_EVIDENCE.empty': wording(
+    'The evidence card refers to a relation without quotations',
+    '为该关系的 evidence 添加引文，或删除卡片。',
+  ),
+  'SCENE_EVIDENCE.items': wording(
+    (p) => `items must be distinct indices of quotations with text (0 to ${p.last})`,
+    '列出要显示的引文序号（不能指向空引文），或删除 items 以显示全部。',
+  ),
+  'SCENE_EVIDENCE.card': wording(
+    'A shot shows one card: a biography (openBioId) or an evidence card',
+    '删除 openBioId 或 evidence 之一。',
+  ),
   TOO_MANY_LEADS: wording('More than two importance 5 characters', '建议最多两个绝对主角。'),
   TOO_MANY_STRONG: wording('More than 15% of edges have strength 5', '只保留最核心的关系。'),
   ORPHAN: wording('Unconnected character', '核实关系或标为仅提及。'),

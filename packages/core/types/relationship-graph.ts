@@ -11,6 +11,7 @@ export type {
   Quote,
   Relation,
   Step as PresentationStep,
+  ShotEvidence,
 } from './generated/relationship-graph.js';
 
 export type Slug = string;

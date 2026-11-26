@@ -223,8 +223,23 @@ studio transcript, and the film events (an `evidence` event on the frame the
 card begins to fade in, with the shot, `object`, `target` and the shown
 `items`). The literary format's relation
 quotations and the biology format's `{ source, recordId }` records map to the
-same evidence on the neutral graph; a shot `evidence` field for those two
-formats is not part of this step.
+same evidence on the neutral graph, and a shot in either format shows them
+with the same `evidence` field:
+
+- **Literature** (`schemaVersion: "0.1"`): `"evidence": { "edgeId": <relation
+  id>, "items": […] }`. Only relations carry quotations (a character's
+  `bio.quotes` stay on the biography card), so the card names a relation.
+  `items` counts the relation's quotations as written, from 0; a quotation
+  without text is never shown and cannot be named. A quotation's `at` chapter
+  dates it as above. The card and `openBioId` exclude each other. Errors are
+  `UNKNOWN_REF`, `SCENE_EVIDENCE` (`empty`, `items`, `card`) and the schema's
+  own checks.
+- **Biology** (`relgraph.bio/0.1-draft`): `"evidence": { "nodeId" | "edgeId",
+  "items": […] }`, where `nodeId` is an entity id or `process-<process id>`
+  (as in `camera` and `highlight`) and `edgeId` an interaction id; `items`
+  indexes the object's `evidence` records. Participant arcs have no records.
+  The card and `openDetailNodeId` exclude each other. Errors are
+  `SCENE_EVIDENCE`, at the field's path.
 
 ## Size
 

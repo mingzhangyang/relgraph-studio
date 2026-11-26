@@ -105,6 +105,18 @@ export const ENGLISH_DIAGNOSTICS: EnglishCatalogue = {
       (p) => `Unknown ${p.kind}: ${p.ref}`,
       'Use a valid ID from the corresponding collection.',
     ),
+    'SCENE_EVIDENCE.empty': wording(
+      'The evidence card refers to a relation without quotations',
+      "Add quotations to the relation's evidence, or remove the card.",
+    ),
+    'SCENE_EVIDENCE.items': wording(
+      (p) => `items must be distinct indices of quotations with text (0 to ${p.last})`,
+      'List the quotations to show (none without text), or remove items to show them all.',
+    ),
+    'SCENE_EVIDENCE.card': wording(
+      'A shot shows one card: a biography (openBioId) or an evidence card',
+      'Remove openBioId or evidence.',
+    ),
     TOO_MANY_LEADS: wording(
       'More than two importance 5 characters',
       'Prefer at most two central protagonists.',

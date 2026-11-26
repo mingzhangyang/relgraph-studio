@@ -117,6 +117,7 @@ export interface Step {
   highlight?: Highlight;
   chapterAt?: number;
   openBioId?: string;
+  evidence?: ShotEvidence;
   transitionMs?: number;
   extra?: {
     [k: string]: unknown;
@@ -131,4 +132,14 @@ export interface Highlight {
   characterIds?: string[];
   relationIds?: string[];
   factionId?: string;
+}
+/**
+ * An evidence card for one relation: its quotations, all or the listed indices (from 0) in the order listed.
+ */
+export interface ShotEvidence {
+  edgeId: string;
+  /**
+   * @minItems 1
+   */
+  items?: [number, ...number[]];
 }
