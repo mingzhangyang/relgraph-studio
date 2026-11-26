@@ -206,7 +206,8 @@ export function inspectRelGraph(doc: unknown): LiteraryInspection {
   }
   const chars = new Set(doc.characters.map((c) => c.id)),
     factions = new Set((doc.factions || []).map((f) => f.id)),
-    rels = new Set(doc.relations.map((r) => r.id));
+    rels = new Set(doc.relations.map((r) => r.id)),
+    relationById = new Map(doc.relations.map((r) => [r.id, r]));
   const limit = doc.timeline?.total;
   const time = (v: number | undefined, path: string, who: string) => {
     if (v !== undefined && (v < 1 || (limit !== undefined && v > limit)))
@@ -269,6 +270,22 @@ export function inspectRelGraph(doc: unknown): LiteraryInspection {
     testRef(h.factionId, factions, `${path}.highlight.factionId`, 'faction');
     testRef(s.openBioId, chars, `${path}.openBioId`, 'character');
     time(s.chapterAt, `${path}.chapterAt`, s.id);
+    if (s.evidence) {
+      // A card shows a relation's quotations; indices count every quotation
+      // as written, and one without text can never be shown.
+      const at = `${path}.evidence`,
+        { edgeId, items } = s.evidence,
+        relation = relationById.get(edgeId);
+      if (!relation) testRef(edgeId, rels, `${at}.edgeId`, 'relation');
+      else {
+        const quotes = relation.evidence || [],
+          shown = (n: number) => n < quotes.length && quotes[n].text.trim() !== '';
+        if (!quotes.some((_, n) => shown(n))) fail('SCENE_EVIDENCE.empty', at, s.id);
+        else if (items?.some((n, j) => !shown(n) || items.indexOf(n) !== j))
+          fail('SCENE_EVIDENCE.items', `${at}.items`, s.id, { last: quotes.length - 1 });
+      }
+      if (s.openBioId) fail('SCENE_EVIDENCE.card', at, s.id);
+    }
   });
   if (doc.characters.filter((c) => c.importance === 5).length > 2)
     warn('TOO_MANY_LEADS', '$.characters', '');

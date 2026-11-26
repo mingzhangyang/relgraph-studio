@@ -1,7 +1,7 @@
 /** Adapter for the literary relgraph 0.1 draft. */
 import { inspectRelGraph, visibleStory } from '../relgraph.js';
-import type { Bio, GraphDoc } from '../../types/relationship-graph.js';
-import type { VisualGraph } from '../../types/visual-graph.js';
+import type { Bio, GraphDoc, ShotEvidence } from '../../types/relationship-graph.js';
+import type { VisualEvidenceRef, VisualGraph } from '../../types/visual-graph.js';
 import { validateVisualGraph } from '../graph/core.js';
 const defaults = {
   family: 'positive',
@@ -21,6 +21,16 @@ export function adaptLiteratureDocument(input: unknown) {
   if (!inspected.valid)
     throw Object.assign(new Error('Invalid literary document'), { issues: diagnostics.errors });
   const doc = inspected.document;
+  // A shot names quotations by their place in the source. Quotations without
+  // text are not projected, so the card's indices follow the projected list.
+  const evidenceCard = ({ edgeId, items }: ShotEvidence): VisualEvidenceRef => {
+    const quotes = doc.relations.find((r) => r.id === edgeId)?.evidence || [];
+    const projected = quotes.flatMap((q, n) => (q.text.trim() ? [n] : []));
+    return {
+      edgeId,
+      ...(items ? { items: items.map((n) => projected.indexOf(n)) } : {}),
+    };
+  };
   const graph: VisualGraph = {
     domain: 'literature',
     meta: {
@@ -86,6 +96,7 @@ export function adaptLiteratureDocument(input: unknown) {
           }
         : undefined,
       openDetailNodeId: s.openBioId,
+      ...(s.evidence ? { evidence: evidenceCard(s.evidence) } : {}),
     })),
   };
   const check = validateVisualGraph(graph);

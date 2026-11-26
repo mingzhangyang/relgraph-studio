@@ -5,6 +5,7 @@ import type {
   VisualCamera,
   VisualEdge,
   VisualEvidence,
+  VisualEvidenceRef,
   VisualGraph,
   VisualHighlight,
   VisualNode,
@@ -53,6 +54,7 @@ type BioProcess = BioVisual & {
 };
 type BioScene = {
   beats?: unknown;
+  evidence?: unknown;
   id: string;
   title: string;
   durationSec: number;
@@ -661,13 +663,14 @@ function validateBiologySource(doc: unknown): {
   }
   return { valid: errors.length === 0, errors, warnings: [] };
 }
-/** Beat targets may use generated process and participant aliases. Validate
- * them after adaptation, when the final node and relation tables exist. */
+/** Beat and evidence card targets may use generated process and participant
+ * aliases. Validate them after adaptation, when the final node and relation
+ * tables exist. */
 export function validateBiologyDocument(doc: unknown): ReturnType<typeof validateBiologySource> {
   if (
     object(doc) &&
     Array.isArray(doc.presentation) &&
-    doc.presentation.some((s) => object(s) && s.beats !== undefined)
+    doc.presentation.some((s) => object(s) && (s.beats !== undefined || s.evidence !== undefined))
   ) {
     try {
       return adaptBiologyDocument(doc).diagnostics;
@@ -782,6 +785,74 @@ export function adaptBiologyDocument(input: unknown) {
       });
     }
   }
+  // A shot's evidence card names an entity, a process (`process-<id>`) or an
+  // interaction, and indices into its source records.
+  const cardIssues: BiologyDiagnostic[] = [];
+  const shotEvidence = (s: BioScene, i: number): VisualEvidenceRef | undefined => {
+    const value = s.evidence;
+    if (value === undefined) return undefined;
+    const path = 'presentation[' + i + '].evidence';
+    const bad = (field: string, message: string, fix: string) => {
+      cardIssues.push({
+        level: 'error',
+        layer: 'biology',
+        code: 'SCENE_EVIDENCE',
+        path: path + field,
+        id: s.id,
+        message,
+        fix,
+      });
+      return undefined;
+    };
+    if (!object(value) || [value.nodeId, value.edgeId].filter((v) => v !== undefined).length !== 1)
+      return bad(
+        '',
+        'evidence must name exactly one of nodeId and edgeId',
+        'Use { "nodeId": … } or { "edgeId": … }, optionally with items.',
+      );
+    const isNode = value.nodeId !== undefined;
+    const raw = isNode ? value.nodeId : value.edgeId;
+    const id = typeof raw !== 'string' ? undefined : isNode ? nodeRef(raw) : edgeRef(raw);
+    const target =
+      id === undefined
+        ? undefined
+        : (isNode ? nodes : edges).find((item: VisualNode | VisualEdge) => item.id === id);
+    if (!target || id === undefined)
+      return bad(
+        isNode ? '.nodeId' : '.edgeId',
+        'Unknown ' + (isNode ? 'node' : 'relation') + ': ' + describeId(raw),
+        isNode ? 'Use an entity id or process-<process id>.' : 'Use an interaction id.',
+      );
+    const count = target.evidence?.length ?? 0;
+    if (!count)
+      return bad(
+        '',
+        'The object has no evidence',
+        'Add evidence records to it, or remove the card.',
+      );
+    const items = value.items;
+    if (
+      items !== undefined &&
+      (!Array.isArray(items) ||
+        !items.length ||
+        items.some((n, j) => !Number.isInteger(n) || n < 0 || n >= count || items.indexOf(n) !== j))
+    )
+      return bad(
+        '.items',
+        'items must be distinct evidence indices (0 to ' + (count - 1) + ')',
+        'List the indices of the records to show, or remove items to show them all.',
+      );
+    if (s.openDetailNodeId !== undefined)
+      bad(
+        '',
+        'A shot shows one card: a detail card or an evidence card',
+        'Remove openDetailNodeId or evidence.',
+      );
+    return {
+      ...(isNode ? { nodeId: id } : { edgeId: id }),
+      ...(Array.isArray(items) ? { items: [...(items as number[])] } : {}),
+    };
+  };
   const graph: VisualGraph = {
     domain: 'biology',
     meta: {
@@ -831,8 +902,10 @@ export function adaptBiologyDocument(input: unknown) {
           });
         },
       );
+      const evidence = shotEvidence(s, i);
       return {
         ...(beats ? { beats } : {}),
+        ...(evidence ? { evidence } : {}),
         id: s.id,
         title: s.title,
         narration: s.narration,
@@ -859,6 +932,8 @@ export function adaptBiologyDocument(input: unknown) {
       };
     }),
   };
+  if (cardIssues.length)
+    throw Object.assign(new Error('Invalid biological evidence card'), { issues: cardIssues });
   const check = validateVisualGraph(graph);
   if (!check.valid)
     throw Object.assign(new Error('Biological projection invalid'), { issues: check.errors });
