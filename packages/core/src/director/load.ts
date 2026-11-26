@@ -193,10 +193,16 @@ export function loadDocument(doc: unknown): LoadResult {
     const errors: Diagnostic[] = [];
     if (!graph.scenes.length) errors.push(issue('NO_SCENES', '$.presentation'));
     // Timed facts must not be revealed before the first explicit domain time.
-    const hasTimedFacts = [...graph.nodes, ...graph.edges].some(
-      (item) =>
-        item.visibility && (item.visibility.from !== undefined || item.visibility.to !== undefined),
+    const hasTimedEvidence = [...graph.nodes, ...graph.edges, ...(graph.pairNotes ?? [])].some(
+      (item) => item.evidence?.some((evidence) => evidence.from !== undefined),
     );
+    const hasTimedFacts =
+      hasTimedEvidence ||
+      [...graph.nodes, ...graph.edges].some(
+        (item) =>
+          item.visibility &&
+          (item.visibility.from !== undefined || item.visibility.to !== undefined),
+      );
     if (hasTimedFacts && graph.scenes.length && graph.scenes[0].domainAt === undefined) {
       const field = graph.domain === 'literature' ? 'chapterAt' : 'domainAt';
       errors.push(
