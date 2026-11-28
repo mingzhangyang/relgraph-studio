@@ -1,8 +1,8 @@
 # 《黎曼猜想：从欧拉乘积到机器检查的证明》制作笔记
 
-[观看成片](./riemann-hypothesis.mp4) · [竖向时间轴项目](./riemann-hypothesis.studio.json) · [通用图谱](./riemann-hypothesis.graph.json) · [试听配乐](./score.m4a)
+[竖向时间轴项目](./riemann-hypothesis.studio.json) · [通用图谱](./riemann-hypothesis.graph.json) · [试听配乐](./score.m4a)
 
-这部 3 分 53 秒的竖屏短片沿一条自上而下的时间轴，从 1737 年欧拉乘积公式讲到 2026 年 11 月的 Lean 形式化证明。**全部 5,592 帧由 RelGraph Studio 的无头渲染器直接绘制**：节点、关系、时间刻度、字幕和镜头运动都来自同一份图谱与分镜。图谱可以拖进 Studio 自由浏览，影片给第一次接触黎曼猜想的观众安排了一条 17 章的阅读路线。
+这部 3 分 53 秒的竖屏短片沿一条自上而下的时间轴，从 1737 年欧拉乘积公式讲到 2026 年 11 月的 Lean 形式化证明。**全部 5,592 帧由 RelGraph Studio 的无头渲染器直接绘制**（视频不入库，按下文“重现”一节在本地生成）：节点、关系、时间刻度、字幕和镜头运动都来自同一份图谱与分镜。图谱可以拖进 Studio 自由浏览，影片给第一次接触黎曼猜想的观众安排了一条 17 章的阅读路线。
 
 ## 图谱里有什么
 
@@ -86,7 +86,7 @@ npm run relgraph -- render $F --frame-spec portrait-1080x1920 --theme light \
 - `relgraph check-labels --frame-spec portrait-1080x1920`：17 个镜头的 51 个稳定帧没有标签被省略。
 - `relgraph check-layout`：仍报告部分淡色背景节点贴近或过挤（取景较宽时方框按屏幕尺寸绘制）；逐条核对后，每章取景和高亮的节点之间没有过挤。
 - `relgraph render` 没有报告字体缺字（起初的上标 ⁰ 和数学减号 − 已改写为内置字体覆盖的字符）。
-- `ffprobe`：H.264 1080 × 1920、24 fps、5,592 帧、233.0 秒；AAC 音轨 233.0 秒。
+- `ffprobe`（本地生成的成片）：H.264 1080 × 1920、24 fps、5,592 帧、233.0 秒；AAC 音轨 233.0 秒。
 - 抽取每章中段的画面，在手机尺寸下逐章检查了字幕、聚焦节点与关系箭头。
 
 ## 小红书配图与文案
@@ -100,7 +100,7 @@ node datasets/riemann-hypothesis/xiaohongshu/shoot.mjs          # 截图为 01-c
 
 ## 列表版
 
-[观看列表版](./riemann-hypothesis-list.mp4) · [列表项目](./riemann-hypothesis.list.studio.json)：同一份图谱、17 章分镜和配乐，同样 3 分 53 秒，画面换成 RelGraph Studio 的列表形式（`config.view.mode: "list"`）。每个节点占一行，按时间排列：时间、类别标记、名称、简介，以及写成短语的关系（“黎曼 提出”“提出 黎曼猜想”）。本章出现的行依次展开，后面的行随之下移；本章高亮的行加底板，其余变淡；镜头的取景和节拍让列表滚动到对应的行。全部帧仍由 `relgraph render` 绘制，在 Studio 的“画面形式”菜单里可以在关系图和时间列表之间切换。
+[列表项目](./riemann-hypothesis.list.studio.json)：同一份图谱、17 章分镜和配乐，同样 3 分 53 秒，画面换成 RelGraph Studio 的列表形式（`config.view.mode: "list"`）。每个节点占一行，按时间排列：时间、类别标记、名称、简介，以及写成短语的关系（“黎曼 提出”“提出 黎曼猜想”）。本章出现的行依次展开，后面的行随之下移；本章高亮的行加底板，其余变淡；镜头的取景和节拍让列表滚动到对应的行。全部帧仍由 `relgraph render` 绘制，视频同样不入库，用下面的命令生成；在 Studio 的“画面形式”菜单里可以在关系图和时间列表之间切换。
 
 ```sh
 npm run relgraph -- render datasets/riemann-hypothesis/riemann-hypothesis.list.studio.json \

@@ -53,12 +53,10 @@
   - [x] 62 golden frames including 18 mid-reveal samples; both MP4s re-exported and validated by `check:export`
 
 ADR 003 step 5 is split into two reviewable batches:
-
 - [x] **Step 5a:** seeded deterministic `relgraph layout` for missing coordinates, with opt-in validated source write-back and regression tests (merged PR #13).
 - [x] **Step 5b:** opt-in director canvas drag adjustment for currently visible nodes, frozen preview camera, reset, and validated JSON export. Default playback and original source are unchanged (PR #14 ported to main by merged PR #15).
 
 Workspace architecture follow-up (after step 5b, in separate reviewable PRs):
-
 - [x] **Playback Core:** move frame clock, play/pause/seek transitions, shot-marker time math and UI timestamp formatting into DOM-free `apps/studio/src/playback-model.ts`; retain the existing director timeline as authoritative and the workspace as the animation scheduler. PR #16 merged into the #15 stack; code is on main and locally verified with the final acceptance fixes.
 - [x] **Workspace Views:** keep playback and timing rules in the pure model, and put DOM presentation behind focused adapters. Both batches merged; locally verified together with the final acceptance fixes on 2026-11-08.
   - [x] **Batch 1 — Playback & Shot Views:** merged PR #17; stable shot buttons, safe titles and derived playback labels.

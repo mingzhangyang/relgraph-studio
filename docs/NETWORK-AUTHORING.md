@@ -48,12 +48,12 @@ This work precedes formal B2-2 production. #21 is merged; use the [source report
 
 Captured on the same Chromium 153 / Linux x64, before baseline update. The default increases label size/weight and line separation, reduces glowing node centers and makes parallel paths stable by ID. Space remains reserved for captions and shot detail; no label is placed into another node's reserved box. Biology retains process diamonds, molecule pills, role captions and marker semantics. Dense authored positions can still require layout/manual adjustment; automatic label omission takes precedence over text collisions.
 
-| Sample             | Main                                                  | Candidate                                           |
-| ------------------ | ----------------------------------------------------- | --------------------------------------------------- |
+| Sample | Main | Candidate |
+| --- | --- | --- |
 | Literature · light | [Before](visuals/network/literature-light-before.png) | [After](visuals/network/literature-light-after.png) |
-| Literature · dark  | [Before](visuals/network/literature-dark-before.png)  | [After](visuals/network/literature-dark-after.png)  |
-| Biology · light    | [Before](visuals/network/biology-light-before.png)    | [After](visuals/network/biology-light-after.png)    |
-| Biology · dark     | [Before](visuals/network/biology-dark-before.png)     | [After](visuals/network/biology-dark-after.png)     |
+| Literature · dark | [Before](visuals/network/literature-dark-before.png) | [After](visuals/network/literature-dark-after.png) |
+| Biology · light | [Before](visuals/network/biology-light-before.png) | [After](visuals/network/biology-light-after.png) |
+| Biology · dark | [Before](visuals/network/biology-dark-before.png) | [After](visuals/network/biology-dark-after.png) |
 
 ## Layout strategy and reproducible editing
 
