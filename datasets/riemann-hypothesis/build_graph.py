@@ -438,6 +438,9 @@ def build():
     project = {"format": "relgraph.studio/1", "config": {"view": {"timeAxis": "vertical"}}, "source": graph}
     (HERE / "riemann-hypothesis.graph.json").write_text(json.dumps(graph, ensure_ascii=False, indent=2) + "\n")
     (HERE / "riemann-hypothesis.studio.json").write_text(json.dumps(project, ensure_ascii=False, indent=2) + "\n")
+    # The same film as a time-ordered list of rows (config.view.mode: "list").
+    listed = {"format": "relgraph.studio/1", "config": {"view": {"mode": "list"}}, "source": graph}
+    (HERE / "riemann-hypothesis.list.studio.json").write_text(json.dumps(listed, ensure_ascii=False, indent=2) + "\n")
     print(len(nodes), "nodes", len(edges), "edges", len(presentation), "shots",
           sum(s["dur"] for s in SHOTS), "seconds")
 
