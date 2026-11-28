@@ -4,6 +4,7 @@ import { basename, dirname, join, resolve } from 'node:path';
 import { Worker } from 'node:worker_threads';
 import {
   compileTimeline,
+  drawsList,
   drawsTimeVertically,
   formatFilmEvents,
   frameCount,
@@ -469,7 +470,8 @@ export function timeAxisWarning(
   positions: ReadonlyMap<string, { x: number; y: number }>,
   spec: Pick<FrameSpec, 'name' | 'width' | 'height'>,
 ): string | null {
-  if (!(spec.height > spec.width) || drawsTimeVertically(graph)) return null;
+  // A list draws no axis (config.view.mode: "list").
+  if (!(spec.height > spec.width) || drawsTimeVertically(graph) || drawsList(graph)) return null;
   if (!styleForDrawing(styleForGraph(graph), graph, positions).timeAxis) return null;
   return (
     `警告：竖屏画面规格 ${spec.name} 把时间轴横向绘制，时间轴会被压得很窄。` +

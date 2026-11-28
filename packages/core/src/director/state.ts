@@ -8,6 +8,7 @@ import {
 } from './timeline.js';
 import type { FilmTimeline } from './timeline.js';
 import { drawnPositions } from './time-direction.js';
+import { drawsList, listCamera, listPositions } from './list-view.js';
 // Defined beside compileTimeline, which needs it to tell which shots have frames.
 export { frameCount } from './timeline.js';
 import type {
@@ -237,9 +238,13 @@ export function directorFrameAt(
     evidence: shot?.evidence ?? null,
   };
   // The camera frames the drawing as it is drawn: transposed when the
-  // project draws time vertically (ADR 004, D7 step 2).
-  const drawn = drawnPositions(graph, positions);
-  const target = cameraFor(view, cameraSpec, drawn, highlight, fit, state.evidence);
+  // project draws time vertically (ADR 004, D7 step 2), or the rows of the
+  // current view when the project shows a list (only y is read from them).
+  const list = drawsList(graph);
+  const drawn = list ? listPositions(view) : drawnPositions(graph, positions);
+  const target = list
+    ? listCamera(view, cameraSpec, drawn)
+    : cameraFor(view, cameraSpec, drawn, highlight, fit, state.evidence);
   let camera = target,
     transition = 1;
   let previousHighlight: ResolvedHighlight = { nodeIds: [], edgeIds: [], groupId: null };
@@ -270,14 +275,17 @@ export function directorFrameAt(
       edges: previousShot.view.edges.filter((edge) => edgeIds.has(edge.id)),
       groups: previousShot.view.groups.filter((group) => groupIds.has(group.id)),
     };
-    const from = cameraFor(
-      previousView,
-      timeline.camera[previousPlayback.index].value,
-      drawn,
-      previousHighlight,
-      fit,
-      previousShot.evidence,
-    );
+    const previousCamera = timeline.camera[previousPlayback.index].value;
+    const from = list
+      ? listCamera(previousView, previousCamera, drawn)
+      : cameraFor(
+          previousView,
+          previousCamera,
+          drawn,
+          previousHighlight,
+          fit,
+          previousShot.evidence,
+        );
     const duration = timeline.camera[playback.index].transitionSec;
     transition = duration <= 0 ? 1 : ease(playback.elapsedSec / duration);
     camera = {

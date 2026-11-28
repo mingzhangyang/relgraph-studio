@@ -1,3 +1,4 @@
+import { drawsList } from '@relgraph/core';
 import type { DirectorFrameState, ProjectedVisualGraph, ResolvedHighlight } from '@relgraph/core';
 import type { DisplayItem, DisplayList, OmittedLabel } from './display-list.js';
 import { composeBackground } from './compose/background.js';
@@ -12,6 +13,7 @@ import { composeDetailCard, composeFurniture, frameText } from './compose/furnit
 import { composeGroups } from './compose/groups.js';
 import { composeNodeLabels, composeRelationLabels } from './compose/labels.js';
 import { composeLegend } from './compose/legend.js';
+import { composeList, listLegendContext } from './compose/list.js';
 import { composeNodes, drawnNodes, nodeObstacles } from './compose/nodes.js';
 import { composeRelations, relationLayout } from './compose/relations.js';
 import { composeTimeAxis, withoutCoveredLabels } from './compose/time-axis.js';
@@ -42,6 +44,7 @@ export function shotAttention(
  * can only use what the earlier ones left free.
  */
 export function composeFrame(state: DirectorFrameState, options: ComposeOptions): DisplayList {
+  if (drawsList(options.graph)) return composeListFrame(state, options);
   const ctx = frameContext(state, options);
   const { stage, width, height } = ctx.spec;
   const items: DisplayItem[] = composeBackground(ctx);
@@ -109,5 +112,33 @@ export function composeFrame(state: DirectorFrameState, options: ComposeOptions)
     formDiagnostics: relations.formDiagnostics,
     evidenceOverflow: evidence.overflow,
     evidenceCovers: evidence.covers,
+  };
+}
+
+/**
+ * A frame of a project shown as a list (`config.view.mode: "list"`): the
+ * background, the rows (`composeList`) with a legend of node kinds, and the
+ * same frame furniture as a drawing. A list draws no relation lines, detail
+ * or evidence cards; a row already writes out its summary and relations.
+ */
+function composeListFrame(state: DirectorFrameState, options: ComposeOptions): DisplayList {
+  const ctx = frameContext(state, options);
+  const { stage, width, height } = ctx.spec;
+  const items: DisplayItem[] = composeBackground(ctx);
+  const list = composeList(ctx);
+  const legend = composeLegend(listLegendContext(ctx), ctx.rectIndex());
+  items.push({ type: 'group', clip: { ...stage }, items: [...list.items, ...legend] });
+  items.push(...composeFurniture(ctx));
+  return {
+    width,
+    height,
+    items,
+    a11y: frameText(ctx, null, null),
+    selection: list.selection,
+    selectionClip: { ...stage },
+    omitted: [],
+    formDiagnostics: [],
+    evidenceOverflow: null,
+    evidenceCovers: null,
   };
 }

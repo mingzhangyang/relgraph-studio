@@ -37,6 +37,11 @@ const english: Record<string, string> = {
   '方形 1:1': 'Square 1:1',
   时间轴: 'Time axis',
   时间轴方向: 'Time axis direction',
+  画面形式: 'View',
+  关系图: 'Graph',
+  时间列表: 'Timeline list',
+  '画面形式保存在项目中，可撤销；列表按时间逐行列出节点、简介与关系':
+    'Saved in the project and undoable; a list shows nodes row by row in time order, with summaries and relations',
   横向: 'Horizontal',
   竖向: 'Vertical',
   '时间轴方向保存在项目中，可撤销；竖向时时间从上往下走':

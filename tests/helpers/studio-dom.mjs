@@ -220,6 +220,7 @@ export function createSimulatedStudioDom({
     languageSelect: HTMLSelectElement,
     frameSpecSelect: HTMLSelectElement,
     timeAxisSelect: HTMLSelectElement,
+    viewModeSelect: HTMLSelectElement,
     layoutToggle: HTMLButtonElement,
     layoutReset: HTMLButtonElement,
     layoutExport: HTMLButtonElement,

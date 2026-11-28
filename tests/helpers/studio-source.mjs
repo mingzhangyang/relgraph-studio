@@ -39,6 +39,7 @@ import {
   drawsTimeVertically,
   timeDirection,
 } from '../../packages/core/src/director/time-direction.ts';
+import { drawsList, viewMode } from '../../packages/core/src/director/list-view.ts';
 import {
   currentStudioMode,
   planStudioModeTransition,
@@ -148,6 +149,8 @@ export const studioImports = {
   canDrawTimeVertically,
   drawsTimeVertically,
   timeDirection,
+  drawsList,
+  viewMode,
   engineAspect,
   createLayoutStrategyView,
   layoutPanelContext,

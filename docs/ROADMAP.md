@@ -53,10 +53,12 @@
   - [x] 62 golden frames including 18 mid-reveal samples; both MP4s re-exported and validated by `check:export`
 
 ADR 003 step 5 is split into two reviewable batches:
+
 - [x] **Step 5a:** seeded deterministic `relgraph layout` for missing coordinates, with opt-in validated source write-back and regression tests (merged PR #13).
 - [x] **Step 5b:** opt-in director canvas drag adjustment for currently visible nodes, frozen preview camera, reset, and validated JSON export. Default playback and original source are unchanged (PR #14 ported to main by merged PR #15).
 
 Workspace architecture follow-up (after step 5b, in separate reviewable PRs):
+
 - [x] **Playback Core:** move frame clock, play/pause/seek transitions, shot-marker time math and UI timestamp formatting into DOM-free `apps/studio/src/playback-model.ts`; retain the existing director timeline as authoritative and the workspace as the animation scheduler. PR #16 merged into the #15 stack; code is on main and locally verified with the final acceptance fixes.
 - [x] **Workspace Views:** keep playback and timing rules in the pure model, and put DOM presentation behind focused adapters. Both batches merged; locally verified together with the final acceptance fixes on 2026-11-08.
   - [x] **Batch 1 — Playback & Shot Views:** merged PR #17; stable shot buttons, safe titles and derived playback labels.
@@ -116,6 +118,7 @@ Accepted in [ADR 004](ADR-004-evidence-claims-and-output-formats.md) from the Ta
 - [x] **P2 · D7.2** vertical time axis as an explicit project field (render-time transpose)
   - `config.view.timeAxis: "horizontal" | "vertical"` in `relgraph.studio/1`, validated with `config` (vertical needs nodes with times), kept by undo/redo and project export, set from the studio's 时间轴 menu; never inferred from the frame spec, no CLI switch; `relgraph render` warns when a portrait spec draws a horizontal time axis. Stored coordinates unchanged; camera, composer, hit tests and drags read them transposed; bars, axis rules and labels, elbows and the legend bar follow; `check-layout` runs on the transposed frames. Engines take a target aspect (`engineAspect(spec, direction)`) when the studio computes a strategy for a portrait, 3:4 or square preview; the timeline engine spreads its lanes towards it. Existing golden manifests unchanged; `examples/golden-frames.vertical.json` for the vertical case. Tang 64 overview in 9:16: 20 names left out upright against 31 across
 - [x] **P2 · D7.3 + D8** in-shot camera keyframes and `beats`
+- [x] **List form** `config.view.mode: "list"`: the projected graph as time-ordered rows (time, kind marker, name, summary, relations as phrases), scrolled by the same shot and beat framing; studio 画面形式 menu; graph form unchanged
 - [x] **P3 · D5** [`relgraph.social/0.1-draft`](SOCIAL-GRAPH.md) for evidence-based social networks; form registry and per-kind allowlists
 - [x] **P3 · D6** absence in the social format: people without attested relations, rejected pairs never drawn as lines
 

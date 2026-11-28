@@ -31,6 +31,7 @@ export * from './graph/time-axis.js';
 export * from './project-layout.js';
 export * from './director/time-anchor.js';
 export * from './director/time-direction.js';
+export * from './director/list-view.js';
 export * from './director/incremental-placement.js';
 
 export * from './image-assets.js';
