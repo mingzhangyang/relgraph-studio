@@ -384,6 +384,76 @@ def assign_lanes(nodes, edges):
         n["position"] = {"y": round(placed[n["id"]][0])}
 
 
+# The list film's cards: one per event, the people and the result in one card.
+# (chapter, year, who, what)
+LIST_ENTRIES = [
+    (1, 1737, "欧拉", "欧拉乘积公式：全体素数的乘积等于全体正整数的级数。"),
+    (1, 1798, "高斯 · 勒让德", "猜测 x 以内约有 x / ln x 个素数。"),
+    (2, 1837, "狄利克雷", "L 函数：等差数列中有无穷多个素数。"),
+    (2, 1850, "切比雪夫", "把素数个数夹在 x / ln x 的两个常数倍之间。"),
+    (3, 1859, "黎曼", "8 页论文：把 ζ 函数延拓到复平面，写下“很可能所有非平凡零点都在 Re(s)=½ 上”。"),
+    (4, 1895, "冯·曼戈尔特", "严格证明显式公式（1895）与零点计数公式（1905）。"),
+    (4, 1896, "阿达马 · 德拉瓦莱普桑", "各自证明素数定理：关键是 Re(s)=1 上没有零点。"),
+    (5, 1900, "希尔伯特", "把黎曼猜想列为 23 个问题中的第 8 个。"),
+    (5, 1903, "格拉姆", "手算前 15 个零点，全在临界线上。"),
+    (6, 1914, "哈代", "证明临界线上有无穷多个零点。"),
+    (6, 1914, "李特尔伍德", "证明 π(x) 与 li(x) 的大小关系会无穷多次反转。"),
+    (7, 1932, "西格尔", "在黎曼遗稿中发现高效计算零点的公式。"),
+    (8, 1940, "英厄姆", "限制偏离临界线的零点个数（零点密度估计）。"),
+    (8, 1942, "塞尔伯格", "证明临界线上的零点占一个正比例。"),
+    (9, 1948, "韦伊", "证明有限域上曲线的“黎曼猜想”。"),
+    (9, 1974, "德利涅", "推广到一般代数簇，韦伊猜想全部证明。"),
+    (10, 1953, "图灵", "第一次用电子计算机检查零点。"),
+    (11, 1973, "蒙哥马利 · 戴森", "茶歇时发现：零点间距像随机矩阵的本征值。"),
+    (11, 1987, "奥德利兹科", "在第 10 的 20 次方个零点附近验证这一统计规律。"),
+    (12, 1974, "莱文森", "证明超过 1/3 的零点在临界线上。"),
+    (12, 1989, "康雷", "把比例推进到 2/5 以上。"),
+    (12, 2020, "普拉特等四人", "把比例提高到 5/12（约 41.7%）以上。"),
+    (13, 1999, "孔涅", "用非交换几何寻找“零点的算子”。"),
+    (13, 2000, "克雷数学研究所", "列为千禧年大奖难题，奖金 100 万美元。"),
+    (13, 2018, "阿蒂亚", "宣布证明，论证未被数学界接受。"),
+    (14, 2018, "罗杰斯 · 陶哲轩", "证明 Λ ≥ 0：黎曼猜想若成立，便是“刚好成立”。"),
+    (14, 2021, "普拉特 · 特鲁吉安", "严格验证前约 12.4 万亿个零点，全部在临界线上。"),
+    (14, 2024, "古思 · 梅纳德", "首次整体改进英厄姆 1940 年的零点密度界。"),
+    (15, 2026, "Claude 研究版", "2026 年 8 月：证明超过 67.25% 的零点是单零点且在临界线上；阿尔珀格与弗曼核验。"),
+    (15, 2026, "拉姆祖里", "2026 年 9 月：用一个希尔伯特空间不等式给出更短的新证明。"),
+    (16, 2026, "阿尔珀格", "2026 年 11 月：发布约 1700 万行的 Lean 证明库，声称证明黎曼猜想。Lean 社区确认陈述即 Mathlib 中的黎曼猜想、可编译并通过内核检查；数学家对证明思想的审阅仍在进行。"),
+]
+# The recap sweeps down the list: (second, who) for each stop after the first.
+LIST_RECAP = [(2, "哈代"), (4, "塞尔伯格"), (6, "蒙哥马利 · 戴森"), (8, "普拉特等四人"), (10, "阿尔珀格")]
+
+
+def list_graph():
+    """One node per card (no kinds, so no legend), the same 17 chapters, framed by card."""
+    ids = {who: f"c{i + 1:02d}" for i, (_, _, who, _) in enumerate(LIST_ENTRIES)}
+    nodes = [{"id": ids[who], "label": who, "visibleFrom": year, "summary": what}
+             for _, year, who, what in LIST_ENTRIES]
+    presentation = []
+    for n, sh in enumerate(SHOTS, 1):
+        cards = [ids[who] for ch, _, who, _ in LIST_ENTRIES if ch == n]
+        if not cards:  # the recap: from Riemann's card down the list
+            cards = [ids["黎曼"]]
+        shot = {"id": sh["id"], "title": sh["title"], "narration": sh["narration"],
+                "durationSec": sh["dur"], "domainAt": sh["at"], "transitionMs": 900,
+                "camera": {"fitIds": cards}, "highlight": {"nodeIds": cards}}
+        if n == len(SHOTS):
+            shot["beats"] = [{"atSec": at, "camera": {"fitIds": [ids[who]]}, "highlight": {"nodeIds": [ids[who]]}}
+                             for at, who in LIST_RECAP]
+        presentation.append(shot)
+    return {
+        "format": "relgraph.graph/1",
+        "diagram": "timeline",
+        "meta": {
+            "title": "黎曼猜想：从欧拉乘积到机器检查的证明",
+            "description": "列表版：每张卡片是一件事，人物与成果写在一起。",
+            "sourceNote": "与 riemann-hypothesis.graph.json 同一批资料整理；原始文献见该图谱各节点的 evidence。",
+        },
+        "timeline": {"unit": "年"},
+        "nodes": nodes,
+        "presentation": presentation,
+    }
+
+
 def build():
     nodes = []
     for pid, born, died, first in PEOPLE:
@@ -438,8 +508,9 @@ def build():
     project = {"format": "relgraph.studio/1", "config": {"view": {"timeAxis": "vertical"}}, "source": graph}
     (HERE / "riemann-hypothesis.graph.json").write_text(json.dumps(graph, ensure_ascii=False, indent=2) + "\n")
     (HERE / "riemann-hypothesis.studio.json").write_text(json.dumps(project, ensure_ascii=False, indent=2) + "\n")
-    # The same film as a time-ordered list of rows (config.view.mode: "list").
-    listed = {"format": "relgraph.studio/1", "config": {"view": {"mode": "list"}}, "source": graph}
+    # The same film as a list (config.view.mode: "list"): one card per event,
+    # the person and what they did together, from its own entry-level graph.
+    listed = {"format": "relgraph.studio/1", "config": {"view": {"mode": "list"}}, "source": list_graph()}
     (HERE / "riemann-hypothesis.list.studio.json").write_text(json.dumps(listed, ensure_ascii=False, indent=2) + "\n")
     print(len(nodes), "nodes", len(edges), "edges", len(presentation), "shots",
           sum(s["dur"] for s in SHOTS), "seconds")

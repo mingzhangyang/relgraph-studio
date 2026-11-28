@@ -100,7 +100,9 @@ node datasets/riemann-hypothesis/xiaohongshu/shoot.mjs          # 截图为 01-c
 
 ## 列表版
 
-[列表项目](./riemann-hypothesis.list.studio.json)：同一份图谱、17 章分镜和配乐，同样 3 分 53 秒，画面换成 RelGraph Studio 的列表形式（`config.view.mode: "list"`）。每个节点占一行，按时间排列：时间、类别标记、名称、简介，以及写成短语的关系（“黎曼 提出”“提出 黎曼猜想”）。本章出现的行依次展开，后面的行随之下移；本章高亮的行加底板，其余变淡；镜头的取景和节拍让列表滚动到对应的行。全部帧仍由 `relgraph render` 绘制，视频同样不入库，用下面的命令生成；在 Studio 的“画面形式”菜单里可以在关系图和时间列表之间切换。
+[列表项目](./riemann-hypothesis.list.studio.json)：同一批资料、17 章分镜和配乐，同样 3 分 53 秒，画面换成 RelGraph Studio 的列表形式（`config.view.mode: "list"`）。列表版有自己的一份按事件整理的图谱（`build_graph.py` 中的 `LIST_ENTRIES`）：**每张卡片是一件事**，人物与成果写在一起，例如“黎曼 · 8 页论文：把 ζ 函数延拓到复平面……”，不再把数学家、成果、研究课题拆成各自的条目；卡片不分类别，所以画面上没有图例，也没有关系短语。本章的卡片依次展开并加底板，其余变淡，镜头取景让列表滚动到本章；最后一章从黎曼一路回顾到 2026 年。全部帧由 `relgraph render` 绘制，视频不入库，用下面的命令生成。
+
+已知的折中：2026 年 8 月和 11 月的两件事都按整数年份 2026 出现，所以第 15 章（8 月）末尾会以淡色提前露出 11 月那张卡片。
 
 ```sh
 npm run relgraph -- render datasets/riemann-hypothesis/riemann-hypothesis.list.studio.json \
