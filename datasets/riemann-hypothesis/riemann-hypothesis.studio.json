@@ -1,0 +1,1492 @@
+{
+  "format": "relgraph.studio/1",
+  "config": {
+    "view": {
+      "timeAxis": "vertical"
+    }
+  },
+  "source": {
+    "format": "relgraph.graph/1",
+    "diagram": "timeline",
+    "meta": {
+      "title": "黎曼猜想：从欧拉乘积到机器检查的证明",
+      "description": "1737–2026 年，围绕 ζ 函数零点的人物、成果、数值验证与最新进展。",
+      "sourceNote": "原始论文见各节点 evidence；2026 年进展据 arXiv:2609.02882 与 Lean FRO / Mathlib Initiative 2026-11-21 联合声明。数学界对 2026 年 11 月形式化证明的人工审阅仍在进行。"
+    },
+    "directed": true,
+    "timeline": {
+      "unit": "年"
+    },
+    "kinds": {
+      "nodes": {
+        "人物": {
+          "label": "人物",
+          "color": "#377b77",
+          "shape": "capsule"
+        },
+        "研究团队": {
+          "label": "研究团队与 AI",
+          "color": "#3f62a8",
+          "shape": "capsule"
+        },
+        "理论与成果": {
+          "label": "理论与成果",
+          "color": "#b77830",
+          "shape": "box"
+        },
+        "数值验证": {
+          "label": "数值验证",
+          "color": "#5f7f3a",
+          "shape": "box"
+        },
+        "问题与事件": {
+          "label": "问题与事件",
+          "color": "#785e91",
+          "shape": "decision"
+        }
+      }
+    },
+    "nodes": [
+      {
+        "id": "欧拉",
+        "kind": "人物",
+        "visibleFrom": 1737,
+        "summary": "1707–1783",
+        "position": {
+          "y": 0
+        }
+      },
+      {
+        "id": "勒让德",
+        "kind": "人物",
+        "visibleFrom": 1798,
+        "summary": "1752–1833",
+        "position": {
+          "y": 0
+        }
+      },
+      {
+        "id": "高斯",
+        "kind": "人物",
+        "visibleFrom": 1798,
+        "summary": "1777–1855",
+        "position": {
+          "y": 160
+        }
+      },
+      {
+        "id": "狄利克雷",
+        "kind": "人物",
+        "visibleFrom": 1837,
+        "summary": "1805–1859",
+        "position": {
+          "y": 0
+        }
+      },
+      {
+        "id": "切比雪夫",
+        "kind": "人物",
+        "visibleFrom": 1850,
+        "summary": "1821–1894",
+        "position": {
+          "y": 0
+        }
+      },
+      {
+        "id": "黎曼",
+        "kind": "人物",
+        "visibleFrom": 1859,
+        "summary": "1826–1866",
+        "position": {
+          "y": 0
+        }
+      },
+      {
+        "id": "冯·曼戈尔特",
+        "kind": "人物",
+        "visibleFrom": 1895,
+        "summary": "1854–1925",
+        "position": {
+          "y": 271
+        }
+      },
+      {
+        "id": "阿达马",
+        "kind": "人物",
+        "visibleFrom": 1896,
+        "summary": "1865–1963",
+        "position": {
+          "y": 0
+        }
+      },
+      {
+        "id": "德拉瓦莱普桑",
+        "kind": "人物",
+        "visibleFrom": 1896,
+        "summary": "1866–1962",
+        "position": {
+          "y": 519
+        }
+      },
+      {
+        "id": "希尔伯特",
+        "kind": "人物",
+        "visibleFrom": 1900,
+        "summary": "1862–1943",
+        "position": {
+          "y": 0
+        }
+      },
+      {
+        "id": "格拉姆",
+        "kind": "人物",
+        "visibleFrom": 1903,
+        "summary": "1850–1916",
+        "position": {
+          "y": 186
+        }
+      },
+      {
+        "id": "哈代",
+        "kind": "人物",
+        "visibleFrom": 1914,
+        "summary": "1877–1947",
+        "position": {
+          "y": 0
+        }
+      },
+      {
+        "id": "李特尔伍德",
+        "kind": "人物",
+        "visibleFrom": 1914,
+        "summary": "1885–1977",
+        "position": {
+          "y": 186
+        }
+      },
+      {
+        "id": "西格尔",
+        "kind": "人物",
+        "visibleFrom": 1932,
+        "summary": "1896–1981",
+        "position": {
+          "y": 0
+        }
+      },
+      {
+        "id": "英厄姆",
+        "kind": "人物",
+        "visibleFrom": 1940,
+        "summary": "1900–1967",
+        "position": {
+          "y": 0
+        }
+      },
+      {
+        "id": "塞尔伯格",
+        "kind": "人物",
+        "visibleFrom": 1942,
+        "summary": "1917–2007",
+        "position": {
+          "y": 431
+        }
+      },
+      {
+        "id": "韦伊",
+        "kind": "人物",
+        "visibleFrom": 1948,
+        "summary": "1906–1998",
+        "position": {
+          "y": 0
+        }
+      },
+      {
+        "id": "图灵",
+        "kind": "人物",
+        "visibleFrom": 1953,
+        "summary": "1912–1954",
+        "position": {
+          "y": 0
+        }
+      },
+      {
+        "id": "蒙哥马利",
+        "kind": "人物",
+        "visibleFrom": 1973,
+        "summary": "1944 年生",
+        "position": {
+          "y": 0
+        }
+      },
+      {
+        "id": "戴森",
+        "kind": "人物",
+        "visibleFrom": 1973,
+        "summary": "1923–2020",
+        "position": {
+          "y": 173
+        }
+      },
+      {
+        "id": "莱文森",
+        "kind": "人物",
+        "visibleFrom": 1974,
+        "summary": "1912–1975",
+        "position": {
+          "y": 548
+        }
+      },
+      {
+        "id": "德利涅",
+        "kind": "人物",
+        "visibleFrom": 1974,
+        "summary": "1944 年生",
+        "position": {
+          "y": 720
+        }
+      },
+      {
+        "id": "奥德利兹科",
+        "kind": "人物",
+        "visibleFrom": 1987,
+        "summary": "1949 年生",
+        "position": {
+          "y": 0
+        }
+      },
+      {
+        "id": "康雷",
+        "kind": "人物",
+        "visibleFrom": 1989,
+        "summary": "1955 年生",
+        "position": {
+          "y": 186
+        }
+      },
+      {
+        "id": "孔涅",
+        "kind": "人物",
+        "visibleFrom": 1999,
+        "summary": "1947 年生",
+        "position": {
+          "y": 0
+        }
+      },
+      {
+        "id": "拉姆祖里",
+        "kind": "人物",
+        "visibleFrom": 2026,
+        "position": {
+          "y": 484
+        }
+      },
+      {
+        "id": "罗杰斯与陶哲轩",
+        "kind": "研究团队",
+        "visibleFrom": 2018,
+        "summary": "布拉德·罗杰斯与陶哲轩（1975 年生）。",
+        "position": {
+          "y": 0
+        }
+      },
+      {
+        "id": "Polymath15 合作",
+        "kind": "研究团队",
+        "visibleFrom": 2019,
+        "position": {
+          "y": 1070
+        }
+      },
+      {
+        "id": "普拉特等四人",
+        "kind": "研究团队",
+        "visibleFrom": 2020,
+        "summary": "普拉特、罗夫莱斯、扎哈雷斯库、蔡恩德勒",
+        "position": {
+          "y": 1351
+        }
+      },
+      {
+        "id": "普拉特与特鲁吉安",
+        "kind": "研究团队",
+        "visibleFrom": 2021,
+        "position": {
+          "y": 1841
+        }
+      },
+      {
+        "id": "古思与梅纳德",
+        "kind": "研究团队",
+        "visibleFrom": 2024,
+        "position": {
+          "y": 0
+        }
+      },
+      {
+        "id": "Claude 研究版",
+        "kind": "研究团队",
+        "visibleFrom": 2026,
+        "summary": "Anthropic 内部研究版本的 Claude 模型。",
+        "position": {
+          "y": 719
+        }
+      },
+      {
+        "id": "阿尔珀格",
+        "kind": "研究团队",
+        "visibleFrom": 2026,
+        "summary": "Anthropic 数学家。2026 年 8 月与弗曼核验 Claude 的证明；11 月发布 Lean 证明库。",
+        "position": {
+          "y": 955
+        }
+      },
+      {
+        "id": "Lean 社区",
+        "kind": "研究团队",
+        "visibleFrom": 2026,
+        "summary": "Lean FRO 与 Mathlib Initiative。",
+        "position": {
+          "y": 1162
+        }
+      },
+      {
+        "id": "欧拉乘积公式",
+        "kind": "理论与成果",
+        "visibleFrom": 1737,
+        "summary": "对所有素数 p 的乘积 ∏(1-p^-s)^-1 等于对所有正整数 n 的和 Σ n^-s。素数第一次与一个解析函数绑在一起。",
+        "evidence": ["Euler, Variae observationes circa series infinitas (1737/1744)"],
+        "position": {
+          "y": 210
+        }
+      },
+      {
+        "id": "素数定理猜想",
+        "kind": "问题与事件",
+        "visibleFrom": 1798,
+        "summary": "高斯少年时估计 x 以内的素数约有 x/ln x 个（后改用对数积分 li(x)）；勒让德 1798 年发表了类似的经验公式。",
+        "evidence": [
+          "Legendre, Essai sur la théorie des nombres (1798)",
+          "Gauss, letter to Encke (1849)"
+        ],
+        "position": {
+          "y": 420
+        }
+      },
+      {
+        "id": "狄利克雷 L 函数",
+        "kind": "理论与成果",
+        "visibleFrom": 1837,
+        "summary": "狄利克雷用带特征的级数证明：首项与公差互素的等差数列中有无穷多个素数。",
+        "evidence": ["Dirichlet, Beweis des Satzes … (1837)"],
+        "position": {
+          "y": 262
+        }
+      },
+      {
+        "id": "切比雪夫估计",
+        "kind": "理论与成果",
+        "visibleFrom": 1850,
+        "summary": "切比雪夫证明 π(x) 与 x/ln x 之比被夹在两个常数之间，为素数定理迈出第一步。",
+        "evidence": ["Chebyshev, Mémoire sur les nombres premiers (1850/1852)"],
+        "position": {
+          "y": 315
+        }
+      },
+      {
+        "id": "ζ 函数的解析延拓",
+        "kind": "理论与成果",
+        "visibleFrom": 1859,
+        "summary": "黎曼把 ζ(s) 延拓到整个复平面（s=1 除外），并给出联系 s 与 1-s 的函数方程。",
+        "evidence": ["Riemann, Über die Anzahl der Primzahlen unter einer gegebenen Grösse (1859)"],
+        "position": {
+          "y": 262
+        }
+      },
+      {
+        "id": "素数的显式公式",
+        "kind": "理论与成果",
+        "visibleFrom": 1859,
+        "summary": "素数计数可以写成主项减去对 ζ 的全部非平凡零点求和。零点的位置控制着素数分布的误差。",
+        "evidence": ["Riemann (1859)", "von Mangoldt (1895)"],
+        "position": {
+          "y": 543
+        }
+      },
+      {
+        "id": "黎曼猜想",
+        "kind": "问题与事件",
+        "visibleFrom": 1859,
+        "summary": "ζ(s) 的所有非平凡零点的实部都等于 1/2，即都落在“临界线”上。",
+        "evidence": [
+          {
+            "cite": "Riemann (1859)",
+            "quote": "es ist sehr wahrscheinlich, dass alle Wurzeln reell sind.",
+            "locator": "Monatsberichte der Berliner Akademie, 1859",
+            "url": "https://www.claymath.org/wp-content/uploads/2023/04/Wilkins-translation.pdf"
+          }
+        ],
+        "position": {
+          "y": -330
+        }
+      },
+      {
+        "id": "零点计数公式",
+        "kind": "理论与成果",
+        "visibleFrom": 1905,
+        "summary": "高度 T 以下的非平凡零点约有 (T/2π)·ln(T/2πe) 个。黎曼给出陈述，冯·曼戈尔特于 1905 年完成证明。",
+        "evidence": ["von Mangoldt, Zur Verteilung der Nullstellen … (1905)"],
+        "position": {
+          "y": -21
+        }
+      },
+      {
+        "id": "素数定理",
+        "kind": "理论与成果",
+        "visibleFrom": 1896,
+        "summary": "阿达马与德拉瓦莱普桑各自证明 π(x) ~ x/ln x。关键一步是 ζ(s) 在直线 Re(s)=1 上没有零点。",
+        "evidence": ["Hadamard (1896)", "de la Vallée Poussin (1896)"],
+        "position": {
+          "y": 740
+        }
+      },
+      {
+        "id": "希尔伯特第八问题",
+        "kind": "问题与事件",
+        "visibleFrom": 1900,
+        "summary": "1900 年巴黎国际数学家大会，希尔伯特把黎曼猜想列入 23 个问题的第八个。",
+        "evidence": ["Hilbert, Mathematische Probleme (1900)"],
+        "position": {
+          "y": -330
+        }
+      },
+      {
+        "id": "前 15 个零点",
+        "kind": "数值验证",
+        "visibleFrom": 1903,
+        "summary": "格拉姆手算出前 15 个非平凡零点，全部在临界线上。",
+        "evidence": ["Gram, Acta Mathematica 27 (1903)"],
+        "position": {
+          "y": 473
+        }
+      },
+      {
+        "id": "临界线上无穷多零点",
+        "kind": "理论与成果",
+        "visibleFrom": 1914,
+        "summary": "哈代证明临界线上有无穷多个零点。这还不能说明“全部”，甚至不能说明“占一定比例”。",
+        "evidence": ["Hardy, Comptes Rendus 158 (1914)"],
+        "position": {
+          "y": 462
+        }
+      },
+      {
+        "id": "π(x)-li(x) 变号",
+        "kind": "理论与成果",
+        "visibleFrom": 1914,
+        "summary": "李特尔伍德证明 π(x)-li(x) 会无穷多次改变符号，推翻了“li(x) 总是高估”的数值印象。",
+        "evidence": ["Littlewood, Comptes Rendus 158 (1914)"],
+        "position": {
+          "y": 767
+        }
+      },
+      {
+        "id": "黎曼–西格尔公式",
+        "kind": "理论与成果",
+        "visibleFrom": 1932,
+        "summary": "西格尔在黎曼的遗稿中整理出一套高效计算 ζ 在临界线上取值的公式，说明黎曼曾亲手计算零点。",
+        "evidence": ["Siegel, Über Riemanns Nachlaß zur analytischen Zahlentheorie (1932)"],
+        "position": {
+          "y": 228
+        }
+      },
+      {
+        "id": "零点密度估计",
+        "kind": "理论与成果",
+        "visibleFrom": 1940,
+        "summary": "英厄姆给出偏离临界线的零点个数上界 N(σ,T)，这一指数此后八十多年未被整体改进。",
+        "evidence": ["Ingham, Quarterly J. Math. 11 (1940)"],
+        "position": {
+          "y": 210
+        }
+      },
+      {
+        "id": "正比例零点在临界线上",
+        "kind": "理论与成果",
+        "visibleFrom": 1942,
+        "summary": "塞尔伯格证明临界线上的零点占全部零点的一个正比例。",
+        "evidence": ["Selberg, Skr. Norske Vid. Akad. Oslo (1942)"],
+        "position": {
+          "y": 706
+        }
+      },
+      {
+        "id": "有限域曲线上的黎曼猜想",
+        "kind": "理论与成果",
+        "visibleFrom": 1948,
+        "summary": "韦伊证明有限域上代数曲线的 ζ 函数满足类比的黎曼猜想。这是“另一个世界”里的已解决版本。",
+        "evidence": ["Weil, Sur les courbes algébriques … (1948)"],
+        "position": {
+          "y": 262
+        }
+      },
+      {
+        "id": "计算机算零点",
+        "kind": "数值验证",
+        "visibleFrom": 1953,
+        "summary": "图灵设计检验方法，用曼彻斯特 Mark 1 计算机检查零点，开启机器验证时代。",
+        "evidence": ["Turing, Proc. London Math. Soc. (3) 3 (1953)"],
+        "position": {
+          "y": 437
+        }
+      },
+      {
+        "id": "对关联猜想",
+        "kind": "理论与成果",
+        "visibleFrom": 1973,
+        "summary": "蒙哥马利研究零点间距的统计。戴森在普林斯顿高等研究院茶歇时认出：它与随机厄米矩阵本征值的对关联相同。",
+        "evidence": ["Montgomery, Proc. Sympos. Pure Math. 24 (1973)"],
+        "position": {
+          "y": 354
+        }
+      },
+      {
+        "id": "超过 1/3",
+        "kind": "理论与成果",
+        "visibleFrom": 1974,
+        "summary": "莱文森证明超过 1/3 的非平凡零点在临界线上。",
+        "evidence": ["Levinson, Advances in Math. 13 (1974)"],
+        "position": {
+          "y": 903
+        }
+      },
+      {
+        "id": "韦伊猜想",
+        "kind": "理论与成果",
+        "visibleFrom": 1974,
+        "summary": "德利涅证明高维代数簇上的黎曼猜想类比，完成韦伊猜想的最后一步。",
+        "evidence": ["Deligne, Publ. Math. IHÉS 43 (1974)"],
+        "position": {
+          "y": 1092
+        }
+      },
+      {
+        "id": "零点间距与随机矩阵",
+        "kind": "数值验证",
+        "visibleFrom": 1987,
+        "summary": "奥德利兹科在第 10 的 20 次方个零点附近计算大量零点，其间距分布与 GUE 随机矩阵预测高度吻合。",
+        "evidence": ["Odlyzko, Math. Comp. 48 (1987)"],
+        "position": {
+          "y": 468
+        }
+      },
+      {
+        "id": "超过 2/5",
+        "kind": "理论与成果",
+        "visibleFrom": 1989,
+        "summary": "康雷把临界线上零点的比例提高到 40% 以上。",
+        "evidence": ["Conrey, J. reine angew. Math. 399 (1989)"],
+        "position": {
+          "y": 725
+        }
+      },
+      {
+        "id": "迹公式进路",
+        "kind": "理论与成果",
+        "visibleFrom": 1999,
+        "summary": "孔涅用非交换几何把零点写成一种迹公式的谱，是“希尔伯特–波利亚”算子思路的代表方案之一。",
+        "evidence": ["Connes, Selecta Math. 5 (1999)"],
+        "position": {
+          "y": 327
+        }
+      },
+      {
+        "id": "千禧年大奖难题",
+        "kind": "问题与事件",
+        "visibleFrom": 2000,
+        "summary": "克雷数学研究所把黎曼猜想列为七个千禧年大奖难题之一，奖金 100 万美元。",
+        "evidence": ["Clay Mathematics Institute (2000)"],
+        "position": {
+          "y": -330
+        }
+      },
+      {
+        "id": "德布鲁因–纽曼常数",
+        "kind": "理论与成果",
+        "visibleFrom": 2018,
+        "summary": "黎曼猜想等价于 Λ ≤ 0。罗杰斯与陶哲轩证明 Λ ≥ 0；Polymath15 合作随后得到 Λ ≤ 0.22。",
+        "evidence": [
+          "Rodgers & Tao, Forum Math. Pi 8 (2020)",
+          "Polymath, Res. Math. Sci. 6 (2019)"
+        ],
+        "position": {
+          "y": 296
+        }
+      },
+      {
+        "id": "阿蒂亚的宣称",
+        "kind": "问题与事件",
+        "visibleFrom": 2018,
+        "summary": "菲尔兹奖得主阿蒂亚（1929–2019）在海德堡获奖者论坛宣布证明，论证未获数学界接受。",
+        "evidence": ["Heidelberg Laureate Forum (2018)"],
+        "position": {
+          "y": 760
+        }
+      },
+      {
+        "id": "超过 5/12",
+        "kind": "理论与成果",
+        "visibleFrom": 2020,
+        "summary": "普拉特、罗夫莱斯、扎哈雷斯库与蔡恩德勒把比例提高到 5/12（约 41.7%）以上。",
+        "evidence": ["Pratt, Robles, Zaharescu & Zeindler, Res. Math. Sci. 7 (2020)"],
+        "position": {
+          "y": 1582
+        }
+      },
+      {
+        "id": "验证到高度 3·10¹²",
+        "kind": "数值验证",
+        "visibleFrom": 2021,
+        "summary": "普拉特与特鲁吉安用区间算术严格验证：高度 3·10¹² 以下的约 12.4 万亿个零点全部在临界线上，且都是单零点。",
+        "evidence": [
+          {
+            "cite": "Platt & Trudgian, Bull. London Math. Soc. 53 (2021)",
+            "url": "https://arxiv.org/abs/2004.09765"
+          }
+        ],
+        "position": {
+          "y": 2157
+        }
+      },
+      {
+        "id": "零点密度新界",
+        "kind": "理论与成果",
+        "visibleFrom": 2024,
+        "summary": "古思与梅纳德给出狄利克雷多项式的新大值估计，首次整体改进英厄姆 1940 年的零点密度界。",
+        "evidence": [
+          {
+            "cite": "Guth & Maynard, arXiv:2405.20552 (2024); Annals of Math. 203 (2026)",
+            "url": "https://arxiv.org/abs/2405.20552"
+          }
+        ],
+        "position": {
+          "y": 262
+        }
+      },
+      {
+        "id": "超过 2/3 且为单零点",
+        "kind": "理论与成果",
+        "visibleFrom": 2026,
+        "summary": "Claude 研究版给出证明：超过 67.25% 的非平凡零点是单零点并在临界线上；阿尔珀格与弗曼核验。拉姆祖里随后发表更短的新证明。",
+        "evidence": [
+          {
+            "cite": "Lamzouri, arXiv:2609.02882 (2026)",
+            "quote": "more than 67.25% of the non-trivial zeros of the Riemann zeta function are simple and on the critical line",
+            "url": "https://arxiv.org/abs/2609.02882"
+          }
+        ],
+        "position": {
+          "y": 1437
+        }
+      },
+      {
+        "id": "Lean 形式化证明",
+        "kind": "理论与成果",
+        "visibleFrom": 2026,
+        "summary": "2026 年 11 月 20 日，阿尔珀格发布约 1700 万行的 Lean 证明库。Lean FRO 与 Mathlib Initiative 次日声明：定理陈述即 Mathlib 中的 RiemannHypothesis，代码可编译并通过内核检查。数学思想的人工审阅仍在进行。",
+        "evidence": [
+          {
+            "cite": "Lean FRO & Mathlib Initiative, joint statement (2026-11-21)",
+            "quote": "We hereby certify that both the statement and the proof of the Riemann Hypothesis are correct.",
+            "url": "https://leanprover-community.github.io/blog/posts/riemann-hypothesis/"
+          }
+        ],
+        "position": {
+          "y": 1746
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e01",
+        "source": "欧拉",
+        "target": "欧拉乘积公式",
+        "label": "发现",
+        "visibleFrom": 1737
+      },
+      {
+        "id": "e02",
+        "source": "高斯",
+        "target": "素数定理猜想",
+        "label": "估计",
+        "visibleFrom": 1798
+      },
+      {
+        "id": "e03",
+        "source": "勒让德",
+        "target": "素数定理猜想",
+        "label": "发表",
+        "visibleFrom": 1798
+      },
+      {
+        "id": "e04",
+        "source": "狄利克雷",
+        "target": "狄利克雷 L 函数",
+        "label": "引入",
+        "visibleFrom": 1837
+      },
+      {
+        "id": "e05",
+        "source": "欧拉乘积公式",
+        "target": "狄利克雷 L 函数",
+        "label": "推广为",
+        "visibleFrom": 1837
+      },
+      {
+        "id": "e06",
+        "source": "切比雪夫",
+        "target": "切比雪夫估计",
+        "label": "证明",
+        "visibleFrom": 1850
+      },
+      {
+        "id": "e07",
+        "source": "素数定理猜想",
+        "target": "切比雪夫估计",
+        "label": "推进",
+        "visibleFrom": 1850
+      },
+      {
+        "id": "e08",
+        "source": "黎曼",
+        "target": "ζ 函数的解析延拓",
+        "label": "建立",
+        "visibleFrom": 1859
+      },
+      {
+        "id": "e09",
+        "source": "欧拉乘积公式",
+        "target": "ζ 函数的解析延拓",
+        "label": "起点",
+        "visibleFrom": 1859
+      },
+      {
+        "id": "e10",
+        "source": "黎曼",
+        "target": "素数的显式公式",
+        "label": "写出",
+        "visibleFrom": 1859
+      },
+      {
+        "id": "e11",
+        "source": "黎曼",
+        "target": "黎曼猜想",
+        "label": "提出",
+        "visibleFrom": 1859
+      },
+      {
+        "id": "e12",
+        "source": "ζ 函数的解析延拓",
+        "target": "黎曼猜想",
+        "label": "引出",
+        "visibleFrom": 1859
+      },
+      {
+        "id": "e13",
+        "source": "冯·曼戈尔特",
+        "target": "素数的显式公式",
+        "label": "严格证明",
+        "visibleFrom": 1895
+      },
+      {
+        "id": "e14",
+        "source": "冯·曼戈尔特",
+        "target": "零点计数公式",
+        "label": "证明",
+        "visibleFrom": 1905
+      },
+      {
+        "id": "e15",
+        "source": "阿达马",
+        "target": "素数定理",
+        "label": "证明",
+        "visibleFrom": 1896
+      },
+      {
+        "id": "e16",
+        "source": "德拉瓦莱普桑",
+        "target": "素数定理",
+        "label": "证明",
+        "visibleFrom": 1896
+      },
+      {
+        "id": "e17",
+        "source": "素数的显式公式",
+        "target": "素数定理",
+        "label": "通向",
+        "visibleFrom": 1896
+      },
+      {
+        "id": "e18",
+        "source": "希尔伯特",
+        "target": "希尔伯特第八问题",
+        "label": "列入",
+        "visibleFrom": 1900
+      },
+      {
+        "id": "e19",
+        "source": "黎曼猜想",
+        "target": "希尔伯特第八问题",
+        "label": "成为",
+        "visibleFrom": 1900
+      },
+      {
+        "id": "e20",
+        "source": "格拉姆",
+        "target": "前 15 个零点",
+        "label": "计算",
+        "visibleFrom": 1903
+      },
+      {
+        "id": "e21",
+        "source": "哈代",
+        "target": "临界线上无穷多零点",
+        "label": "证明",
+        "visibleFrom": 1914
+      },
+      {
+        "id": "e22",
+        "source": "李特尔伍德",
+        "target": "π(x)-li(x) 变号",
+        "label": "证明",
+        "visibleFrom": 1914
+      },
+      {
+        "id": "e23",
+        "source": "哈代",
+        "target": "李特尔伍德",
+        "label": "合作",
+        "visibleFrom": 1914
+      },
+      {
+        "id": "e24",
+        "source": "西格尔",
+        "target": "黎曼–西格尔公式",
+        "label": "整理",
+        "visibleFrom": 1932
+      },
+      {
+        "id": "e25",
+        "source": "黎曼",
+        "target": "黎曼–西格尔公式",
+        "label": "遗稿",
+        "visibleFrom": 1932
+      },
+      {
+        "id": "e26",
+        "source": "英厄姆",
+        "target": "零点密度估计",
+        "label": "证明",
+        "visibleFrom": 1940
+      },
+      {
+        "id": "e27",
+        "source": "塞尔伯格",
+        "target": "正比例零点在临界线上",
+        "label": "证明",
+        "visibleFrom": 1942
+      },
+      {
+        "id": "e28",
+        "source": "临界线上无穷多零点",
+        "target": "正比例零点在临界线上",
+        "label": "加强为",
+        "visibleFrom": 1942
+      },
+      {
+        "id": "e29",
+        "source": "韦伊",
+        "target": "有限域曲线上的黎曼猜想",
+        "label": "证明",
+        "visibleFrom": 1948
+      },
+      {
+        "id": "e30",
+        "source": "图灵",
+        "target": "计算机算零点",
+        "label": "设计",
+        "visibleFrom": 1953
+      },
+      {
+        "id": "e31",
+        "source": "黎曼–西格尔公式",
+        "target": "计算机算零点",
+        "label": "用于",
+        "visibleFrom": 1953
+      },
+      {
+        "id": "e32",
+        "source": "蒙哥马利",
+        "target": "对关联猜想",
+        "label": "提出",
+        "visibleFrom": 1973
+      },
+      {
+        "id": "e33",
+        "source": "戴森",
+        "target": "对关联猜想",
+        "label": "认出随机矩阵",
+        "visibleFrom": 1973
+      },
+      {
+        "id": "e34",
+        "source": "莱文森",
+        "target": "超过 1/3",
+        "label": "证明",
+        "visibleFrom": 1974
+      },
+      {
+        "id": "e35",
+        "source": "正比例零点在临界线上",
+        "target": "超过 1/3",
+        "label": "改进为",
+        "visibleFrom": 1974
+      },
+      {
+        "id": "e36",
+        "source": "德利涅",
+        "target": "韦伊猜想",
+        "label": "证明",
+        "visibleFrom": 1974
+      },
+      {
+        "id": "e37",
+        "source": "有限域曲线上的黎曼猜想",
+        "target": "韦伊猜想",
+        "label": "推广为",
+        "visibleFrom": 1974
+      },
+      {
+        "id": "e38",
+        "source": "奥德利兹科",
+        "target": "零点间距与随机矩阵",
+        "label": "计算",
+        "visibleFrom": 1987
+      },
+      {
+        "id": "e39",
+        "source": "对关联猜想",
+        "target": "零点间距与随机矩阵",
+        "label": "被检验",
+        "visibleFrom": 1987
+      },
+      {
+        "id": "e40",
+        "source": "康雷",
+        "target": "超过 2/5",
+        "label": "证明",
+        "visibleFrom": 1989
+      },
+      {
+        "id": "e41",
+        "source": "超过 1/3",
+        "target": "超过 2/5",
+        "label": "改进为",
+        "visibleFrom": 1989
+      },
+      {
+        "id": "e42",
+        "source": "孔涅",
+        "target": "迹公式进路",
+        "label": "提出",
+        "visibleFrom": 1999
+      },
+      {
+        "id": "e43",
+        "source": "零点间距与随机矩阵",
+        "target": "迹公式进路",
+        "label": "启发",
+        "visibleFrom": 1999
+      },
+      {
+        "id": "e44",
+        "source": "希尔伯特第八问题",
+        "target": "千禧年大奖难题",
+        "label": "再次入选",
+        "visibleFrom": 2000
+      },
+      {
+        "id": "e45",
+        "source": "罗杰斯与陶哲轩",
+        "target": "德布鲁因–纽曼常数",
+        "label": "证明 Λ≥0",
+        "visibleFrom": 2018
+      },
+      {
+        "id": "e46",
+        "source": "Polymath15 合作",
+        "target": "德布鲁因–纽曼常数",
+        "label": "Λ≤0.22",
+        "visibleFrom": 2019
+      },
+      {
+        "id": "e47",
+        "source": "普拉特等四人",
+        "target": "超过 5/12",
+        "label": "证明",
+        "visibleFrom": 2020
+      },
+      {
+        "id": "e48",
+        "source": "超过 2/5",
+        "target": "超过 5/12",
+        "label": "改进为",
+        "visibleFrom": 2020
+      },
+      {
+        "id": "e49",
+        "source": "普拉特与特鲁吉安",
+        "target": "验证到高度 3·10¹²",
+        "label": "严格计算",
+        "visibleFrom": 2021
+      },
+      {
+        "id": "e50",
+        "source": "计算机算零点",
+        "target": "验证到高度 3·10¹²",
+        "label": "延续",
+        "visibleFrom": 2021
+      },
+      {
+        "id": "e51",
+        "source": "古思与梅纳德",
+        "target": "零点密度新界",
+        "label": "证明",
+        "visibleFrom": 2024
+      },
+      {
+        "id": "e52",
+        "source": "零点密度估计",
+        "target": "零点密度新界",
+        "label": "首次改进",
+        "visibleFrom": 2024
+      },
+      {
+        "id": "e53",
+        "source": "Claude 研究版",
+        "target": "超过 2/3 且为单零点",
+        "label": "证明",
+        "visibleFrom": 2026
+      },
+      {
+        "id": "e54",
+        "source": "阿尔珀格",
+        "target": "超过 2/3 且为单零点",
+        "label": "与弗曼核验",
+        "visibleFrom": 2026
+      },
+      {
+        "id": "e55",
+        "source": "拉姆祖里",
+        "target": "超过 2/3 且为单零点",
+        "label": "新证明",
+        "visibleFrom": 2026
+      },
+      {
+        "id": "e56",
+        "source": "对关联猜想",
+        "target": "超过 2/3 且为单零点",
+        "label": "输入",
+        "visibleFrom": 2026
+      },
+      {
+        "id": "e57",
+        "source": "超过 5/12",
+        "target": "超过 2/3 且为单零点",
+        "label": "改进为",
+        "visibleFrom": 2026
+      },
+      {
+        "id": "e58",
+        "source": "阿尔珀格",
+        "target": "Lean 形式化证明",
+        "label": "发布",
+        "visibleFrom": 2026
+      },
+      {
+        "id": "e59",
+        "source": "Lean 社区",
+        "target": "Lean 形式化证明",
+        "label": "检查编译与陈述",
+        "visibleFrom": 2026
+      },
+      {
+        "id": "e60",
+        "source": "Lean 形式化证明",
+        "target": "千禧年大奖难题",
+        "label": "宣称解决",
+        "visibleFrom": 2026
+      }
+    ],
+    "presentation": [
+      {
+        "id": "ch01",
+        "title": "素数有规律吗？",
+        "narration": "欧拉发现，所有素数的乘积与所有正整数的级数相等。高斯和勒让德数素数表，猜测 x 以内约有 x/ln x 个素数。",
+        "durationSec": 13,
+        "domainAt": 1798,
+        "transitionMs": 900,
+        "camera": {
+          "fitIds": ["欧拉", "欧拉乘积公式", "高斯", "勒让德", "素数定理猜想"]
+        },
+        "highlight": {
+          "nodeIds": ["欧拉", "欧拉乘积公式", "高斯", "勒让德", "素数定理猜想"]
+        }
+      },
+      {
+        "id": "ch02",
+        "title": "从级数到估计",
+        "narration": "狄利克雷把欧拉乘积推广为 L 函数，证明等差数列中有无穷多素数。切比雪夫把素数个数夹在两个常数倍之间。",
+        "durationSec": 12,
+        "domainAt": 1850,
+        "transitionMs": 900,
+        "camera": {
+          "fitIds": ["狄利克雷", "狄利克雷 L 函数", "切比雪夫", "切比雪夫估计"]
+        },
+        "highlight": {
+          "nodeIds": ["欧拉乘积公式", "狄利克雷", "狄利克雷 L 函数", "切比雪夫", "切比雪夫估计"]
+        }
+      },
+      {
+        "id": "ch03",
+        "title": "1859：一篇八页的论文",
+        "narration": "黎曼把 ζ 函数延拓到复平面，写出用零点表示素数的显式公式，并写下：所有非平凡零点“很可能”都在实部为 1/2 的直线上。",
+        "durationSec": 15,
+        "domainAt": 1859,
+        "transitionMs": 900,
+        "camera": {
+          "fitIds": ["黎曼", "ζ 函数的解析延拓", "素数的显式公式", "黎曼猜想", "切比雪夫估计"]
+        },
+        "highlight": {
+          "nodeIds": ["黎曼", "ζ 函数的解析延拓", "素数的显式公式", "黎曼猜想"]
+        }
+      },
+      {
+        "id": "ch04",
+        "title": "素数定理终于证明",
+        "narration": "1896 年，阿达马与德拉瓦莱普桑各自证明素数定理，关键是 Re(s)=1 上没有零点。冯·曼戈尔特严格证明了显式公式和零点计数公式。",
+        "durationSec": 13,
+        "domainAt": 1905,
+        "transitionMs": 900,
+        "camera": {
+          "fitIds": ["冯·曼戈尔特", "零点计数公式", "阿达马", "德拉瓦莱普桑", "素数定理"]
+        },
+        "highlight": {
+          "nodeIds": [
+            "冯·曼戈尔特",
+            "零点计数公式",
+            "阿达马",
+            "德拉瓦莱普桑",
+            "素数定理",
+            "素数的显式公式"
+          ]
+        }
+      },
+      {
+        "id": "ch05",
+        "title": "第八问题与前 15 个零点",
+        "narration": "1900 年，希尔伯特把黎曼猜想列为二十世纪的第八个问题。三年后，格拉姆手算出前 15 个零点，全在临界线上。",
+        "durationSec": 12,
+        "domainAt": 1903,
+        "transitionMs": 900,
+        "camera": {
+          "fitIds": ["希尔伯特", "希尔伯特第八问题", "格拉姆", "前 15 个零点"]
+        },
+        "highlight": {
+          "nodeIds": ["希尔伯特", "希尔伯特第八问题", "黎曼猜想", "格拉姆", "前 15 个零点"]
+        }
+      },
+      {
+        "id": "ch06",
+        "title": "剑桥的两个人",
+        "narration": "哈代证明临界线上有无穷多个零点。李特尔伍德证明 π(x)-li(x) 会无穷多次变号：数值规律再多，也代替不了证明。",
+        "durationSec": 13,
+        "domainAt": 1914,
+        "transitionMs": 900,
+        "camera": {
+          "fitIds": ["哈代", "李特尔伍德", "临界线上无穷多零点", "π(x)-li(x) 变号"]
+        },
+        "highlight": {
+          "nodeIds": ["哈代", "李特尔伍德", "临界线上无穷多零点", "π(x)-li(x) 变号"]
+        }
+      },
+      {
+        "id": "ch07",
+        "title": "遗稿里的计算",
+        "narration": "西格尔整理黎曼的手稿，发现一套高效计算零点的公式。原来黎曼那句“很可能”的背后有亲手的计算。",
+        "durationSec": 12,
+        "domainAt": 1932,
+        "transitionMs": 900,
+        "camera": {
+          "fitIds": ["西格尔", "黎曼–西格尔公式"]
+        },
+        "highlight": {
+          "nodeIds": ["黎曼", "西格尔", "黎曼–西格尔公式"]
+        }
+      },
+      {
+        "id": "ch08",
+        "title": "零点占多少？",
+        "narration": "英厄姆限制了偏离临界线的零点数量。塞尔伯格证明临界线上的零点占全部零点的一个正比例，比例问题由此开始。",
+        "durationSec": 13,
+        "domainAt": 1942,
+        "transitionMs": 900,
+        "camera": {
+          "fitIds": ["英厄姆", "零点密度估计", "塞尔伯格", "正比例零点在临界线上"]
+        },
+        "highlight": {
+          "nodeIds": [
+            "英厄姆",
+            "零点密度估计",
+            "塞尔伯格",
+            "正比例零点在临界线上",
+            "临界线上无穷多零点"
+          ]
+        }
+      },
+      {
+        "id": "ch09",
+        "title": "另一个世界已经证明",
+        "narration": "在有限域上，黎曼猜想有自己的版本。韦伊 1948 年证明了曲线的情形，德利涅 1974 年推广到一般代数簇。",
+        "durationSec": 14,
+        "domainAt": 1974,
+        "transitionMs": 900,
+        "camera": {
+          "fitIds": ["韦伊", "有限域曲线上的黎曼猜想"]
+        },
+        "highlight": {
+          "nodeIds": ["韦伊", "有限域曲线上的黎曼猜想", "德利涅", "韦伊猜想"]
+        },
+        "beats": [
+          {
+            "atSec": 6,
+            "camera": {
+              "fitIds": ["德利涅", "韦伊猜想"]
+            }
+          }
+        ]
+      },
+      {
+        "id": "ch10",
+        "title": "机器开始数零点",
+        "narration": "图灵设计了检验零点的方法，并用曼彻斯特 Mark 1 计算机检查零点。计算从此成为研究的一部分。",
+        "durationSec": 12,
+        "domainAt": 1953,
+        "transitionMs": 900,
+        "camera": {
+          "fitIds": ["图灵", "计算机算零点", "黎曼–西格尔公式"]
+        },
+        "highlight": {
+          "nodeIds": ["图灵", "计算机算零点", "黎曼–西格尔公式"]
+        }
+      },
+      {
+        "id": "ch11",
+        "title": "一次茶歇",
+        "narration": "蒙哥马利研究零点间距。戴森在茶歇时认出，那正是随机矩阵本征值的规律。奥德利兹科在第 10 的 20 次方个零点附近验证了这一点。",
+        "durationSec": 15,
+        "domainAt": 1987,
+        "transitionMs": 900,
+        "camera": {
+          "fitIds": ["蒙哥马利", "戴森", "对关联猜想", "奥德利兹科", "零点间距与随机矩阵"]
+        },
+        "highlight": {
+          "nodeIds": ["蒙哥马利", "戴森", "对关联猜想", "奥德利兹科", "零点间距与随机矩阵"]
+        }
+      },
+      {
+        "id": "ch12",
+        "title": "比例接力",
+        "narration": "莱文森证明超过 1/3 的零点在临界线上，康雷推进到 2/5。2020 年，普拉特等四人把记录提高到约 41.7%。",
+        "durationSec": 14,
+        "domainAt": 2020,
+        "transitionMs": 900,
+        "camera": {
+          "fitIds": ["莱文森", "超过 1/3"]
+        },
+        "highlight": {
+          "nodeIds": ["莱文森", "超过 1/3", "康雷", "超过 2/5", "普拉特等四人", "超过 5/12"]
+        },
+        "beats": [
+          {
+            "atSec": 4.5,
+            "camera": {
+              "fitIds": ["康雷", "超过 2/5"]
+            }
+          },
+          {
+            "atSec": 9,
+            "camera": {
+              "fitIds": ["普拉特等四人", "超过 5/12"]
+            }
+          }
+        ]
+      },
+      {
+        "id": "ch13",
+        "title": "百万美元与一个宣称",
+        "narration": "孔涅尝试用非交换几何寻找“零点的算子”。2000 年它成为千禧年大奖难题。2018 年阿蒂亚宣布证明，未被接受。",
+        "durationSec": 14,
+        "domainAt": 2018,
+        "transitionMs": 900,
+        "camera": {
+          "fitIds": ["孔涅", "迹公式进路", "千禧年大奖难题", "阿蒂亚的宣称"]
+        },
+        "highlight": {
+          "nodeIds": ["孔涅", "迹公式进路", "千禧年大奖难题", "阿蒂亚的宣称"]
+        }
+      },
+      {
+        "id": "ch14",
+        "title": "逼近边界",
+        "narration": "罗杰斯与陶哲轩证明 Λ≥0：黎曼猜想若成立，便是“刚好成立”。普拉特与特鲁吉安严格验证了前 12 万亿个零点。古思与梅纳德改进了英厄姆八十多年未变的界。",
+        "durationSec": 15,
+        "domainAt": 2024,
+        "transitionMs": 900,
+        "camera": {
+          "fitIds": ["罗杰斯与陶哲轩", "Polymath15 合作", "德布鲁因–纽曼常数"]
+        },
+        "highlight": {
+          "nodeIds": [
+            "罗杰斯与陶哲轩",
+            "Polymath15 合作",
+            "德布鲁因–纽曼常数",
+            "普拉特与特鲁吉安",
+            "验证到高度 3·10¹²",
+            "古思与梅纳德",
+            "零点密度新界"
+          ]
+        },
+        "beats": [
+          {
+            "atSec": 5.5,
+            "camera": {
+              "fitIds": ["普拉特与特鲁吉安", "验证到高度 3·10¹²"]
+            }
+          },
+          {
+            "atSec": 10,
+            "camera": {
+              "fitIds": ["古思与梅纳德", "零点密度新界"]
+            }
+          }
+        ]
+      },
+      {
+        "id": "ch15",
+        "title": "2026 年 8 月：越过三分之二",
+        "narration": "Claude 研究版证明：超过 67.25% 的零点是单零点且在临界线上，阿尔珀格与弗曼核验。拉姆祖里随后给出更短的新证明。",
+        "durationSec": 15,
+        "domainAt": 2026,
+        "transitionMs": 900,
+        "camera": {
+          "fitIds": ["Claude 研究版", "阿尔珀格", "拉姆祖里", "超过 2/3 且为单零点"]
+        },
+        "highlight": {
+          "nodeIds": ["Claude 研究版", "阿尔珀格", "拉姆祖里", "超过 2/3 且为单零点", "超过 5/12"]
+        }
+      },
+      {
+        "id": "ch16",
+        "title": "2026 年 11 月：机器检查的证明",
+        "narration": "阿尔珀格发布约 1700 万行的 Lean 证明库。Lean 社区声明：陈述正是黎曼猜想，代码可编译并通过内核检查。证明中的数学思想仍待人们读懂和审阅。",
+        "durationSec": 17,
+        "domainAt": 2026,
+        "transitionMs": 900,
+        "camera": {
+          "fitIds": ["阿尔珀格", "超过 2/3 且为单零点"]
+        },
+        "highlight": {
+          "nodeIds": ["阿尔珀格"]
+        },
+        "beats": [
+          {
+            "atSec": 1.2,
+            "reveal": {
+              "nodeIds": ["Lean 形式化证明", "Lean 社区"]
+            }
+          },
+          {
+            "atSec": 2.4,
+            "camera": {
+              "fitIds": ["阿尔珀格", "Lean 社区", "Lean 形式化证明"]
+            },
+            "highlight": {
+              "nodeIds": ["阿尔珀格", "Lean 社区", "Lean 形式化证明"]
+            }
+          }
+        ]
+      },
+      {
+        "id": "ch17",
+        "title": "167 年",
+        "narration": "从黎曼的一句“很可能”，到机器检查的证明。这条线索穿过了数论、计算、物理与形式化数学。",
+        "durationSec": 14,
+        "domainAt": 2026,
+        "transitionMs": 900,
+        "camera": {
+          "fitIds": ["黎曼", "黎曼猜想", "ζ 函数的解析延拓"]
+        },
+        "highlight": {
+          "nodeIds": ["黎曼", "黎曼猜想", "ζ 函数的解析延拓"]
+        },
+        "beats": [
+          {
+            "atSec": 2,
+            "camera": {
+              "fitIds": ["希尔伯特第八问题", "希尔伯特", "格拉姆", "前 15 个零点"]
+            },
+            "highlight": {
+              "nodeIds": ["希尔伯特第八问题", "希尔伯特", "格拉姆", "前 15 个零点"]
+            }
+          },
+          {
+            "atSec": 4,
+            "camera": {
+              "fitIds": ["塞尔伯格", "正比例零点在临界线上", "英厄姆"]
+            },
+            "highlight": {
+              "nodeIds": ["塞尔伯格", "正比例零点在临界线上", "英厄姆"]
+            }
+          },
+          {
+            "atSec": 6,
+            "camera": {
+              "fitIds": ["蒙哥马利", "对关联猜想", "莱文森", "超过 1/3"]
+            },
+            "highlight": {
+              "nodeIds": ["蒙哥马利", "对关联猜想", "莱文森", "超过 1/3"]
+            }
+          },
+          {
+            "atSec": 8,
+            "camera": {
+              "fitIds": ["千禧年大奖难题", "孔涅", "迹公式进路"]
+            },
+            "highlight": {
+              "nodeIds": ["千禧年大奖难题", "孔涅", "迹公式进路"]
+            }
+          },
+          {
+            "atSec": 10,
+            "camera": {
+              "fitIds": ["Lean 形式化证明", "Lean 社区", "阿尔珀格", "超过 2/3 且为单零点"]
+            },
+            "highlight": {
+              "nodeIds": ["Lean 形式化证明", "Lean 社区", "阿尔珀格", "超过 2/3 且为单零点"]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
