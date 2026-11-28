@@ -1,0 +1,495 @@
+{
+  "format": "relgraph.studio/1",
+  "config": {
+    "view": {
+      "mode": "list"
+    }
+  },
+  "source": {
+    "format": "relgraph.graph/1",
+    "diagram": "timeline",
+    "meta": {
+      "title": "黎曼猜想：从欧拉乘积到机器检查的证明",
+      "description": "列表版：每张卡片是一件事，人物与成果写在一起。",
+      "sourceNote": "与 riemann-hypothesis.graph.json 同一批资料整理；原始文献见该图谱各节点的 evidence。"
+    },
+    "timeline": {
+      "unit": "年"
+    },
+    "nodes": [
+      {
+        "id": "c01",
+        "label": "欧拉",
+        "visibleFrom": 1737,
+        "summary": "欧拉乘积公式：正整数倒数幂之和等于按素数构造的无穷乘积（Re(s)>1）。"
+      },
+      {
+        "id": "c02",
+        "label": "高斯 · 勒让德",
+        "visibleFrom": 1798,
+        "summary": "猜测 x 以内约有 x / ln x 个素数。"
+      },
+      {
+        "id": "c03",
+        "label": "狄利克雷",
+        "visibleFrom": 1837,
+        "summary": "L 函数：等差数列中有无穷多个素数。"
+      },
+      {
+        "id": "c04",
+        "label": "切比雪夫",
+        "visibleFrom": 1850,
+        "summary": "把素数个数夹在 x / ln x 的两个常数倍之间。"
+      },
+      {
+        "id": "c05",
+        "label": "黎曼",
+        "visibleFrom": 1859,
+        "summary": "8 页论文：把 ζ 函数延拓到复平面，写下“很可能所有非平凡零点都在 Re(s)=½ 上”。"
+      },
+      {
+        "id": "c06",
+        "label": "冯·曼戈尔特",
+        "visibleFrom": 1895,
+        "summary": "严格证明显式公式（1895）与零点计数公式（1905）。"
+      },
+      {
+        "id": "c07",
+        "label": "阿达马 · 德拉瓦莱普桑",
+        "visibleFrom": 1896,
+        "summary": "各自证明素数定理：关键是 Re(s)=1 上没有零点。"
+      },
+      {
+        "id": "c08",
+        "label": "希尔伯特",
+        "visibleFrom": 1900,
+        "summary": "把黎曼猜想列为 23 个问题中的第 8 个。"
+      },
+      {
+        "id": "c09",
+        "label": "格拉姆",
+        "visibleFrom": 1903,
+        "summary": "手算前 15 个零点，全在临界线上。"
+      },
+      {
+        "id": "c10",
+        "label": "哈代",
+        "visibleFrom": 1914,
+        "summary": "证明临界线上有无穷多个零点。"
+      },
+      {
+        "id": "c11",
+        "label": "李特尔伍德",
+        "visibleFrom": 1914,
+        "summary": "证明 π(x) 与 li(x) 的大小关系会无穷多次反转。"
+      },
+      {
+        "id": "c12",
+        "label": "西格尔",
+        "visibleFrom": 1932,
+        "summary": "在黎曼遗稿中发现高效计算零点的公式。"
+      },
+      {
+        "id": "c13",
+        "label": "英厄姆",
+        "visibleFrom": 1940,
+        "summary": "限制偏离临界线的零点个数（零点密度估计）。"
+      },
+      {
+        "id": "c14",
+        "label": "塞尔伯格",
+        "visibleFrom": 1942,
+        "summary": "证明临界线上的零点占一个正比例。"
+      },
+      {
+        "id": "c15",
+        "label": "韦伊",
+        "visibleFrom": 1948,
+        "summary": "证明有限域上曲线的“黎曼猜想”。"
+      },
+      {
+        "id": "c16",
+        "label": "德利涅",
+        "visibleFrom": 1974,
+        "summary": "推广到一般代数簇，韦伊猜想全部证明。"
+      },
+      {
+        "id": "c17",
+        "label": "图灵",
+        "visibleFrom": 1953,
+        "summary": "第一次用电子计算机检查零点。"
+      },
+      {
+        "id": "c18",
+        "label": "蒙哥马利 · 戴森",
+        "visibleFrom": 1973,
+        "summary": "茶歇时发现：零点间距像随机矩阵的本征值。"
+      },
+      {
+        "id": "c19",
+        "label": "奥德利兹科",
+        "visibleFrom": 1987,
+        "summary": "研究第 1 万亿个零点后的 10 万个零点，间距统计与预测吻合良好。"
+      },
+      {
+        "id": "c20",
+        "label": "莱文森",
+        "visibleFrom": 1974,
+        "summary": "证明超过 1/3 的零点在临界线上。"
+      },
+      {
+        "id": "c21",
+        "label": "康雷",
+        "visibleFrom": 1989,
+        "summary": "把比例推进到 2/5 以上。"
+      },
+      {
+        "id": "c22",
+        "label": "普拉特等四人",
+        "visibleFrom": 2020,
+        "summary": "把比例提高到 5/12（约 41.7%）以上。"
+      },
+      {
+        "id": "c23",
+        "label": "孔涅",
+        "visibleFrom": 1999,
+        "summary": "用非交换几何寻找“零点的算子”。"
+      },
+      {
+        "id": "c24",
+        "label": "克雷数学研究所",
+        "visibleFrom": 2000,
+        "summary": "列为千禧年大奖难题，奖金 100 万美元。"
+      },
+      {
+        "id": "c25",
+        "label": "阿蒂亚",
+        "visibleFrom": 2018,
+        "summary": "宣布证明，论证未被数学界接受。"
+      },
+      {
+        "id": "c26",
+        "label": "罗杰斯 · 陶哲轩",
+        "visibleFrom": 2018,
+        "summary": "证明 Λ ≥ 0：黎曼猜想若成立，便是“刚好成立”。"
+      },
+      {
+        "id": "c27",
+        "label": "普拉特 · 特鲁吉安",
+        "visibleFrom": 2021,
+        "summary": "严格验证前约 12.4 万亿个零点，全部在临界线上。"
+      },
+      {
+        "id": "c28",
+        "label": "古思 · 梅纳德",
+        "visibleFrom": 2024,
+        "summary": "首次整体改进英厄姆 1940 年的零点密度界。"
+      },
+      {
+        "id": "c29",
+        "label": "Claude 研究版",
+        "visibleFrom": 2026,
+        "summary": "2026 年 8 月：证明超过 67.25% 的零点是单零点且在临界线上；阿尔珀格与弗曼核验。"
+      },
+      {
+        "id": "c30",
+        "label": "拉姆祖里",
+        "visibleFrom": 2026,
+        "summary": "2026 年 9 月：用一个希尔伯特空间不等式给出更短的新证明。"
+      },
+      {
+        "id": "c31",
+        "label": "阿尔珀格",
+        "visibleFrom": 2026,
+        "summary": "2026 年 11 月：发布约 1700 万行的 Lean 证明库，声称证明黎曼猜想。Lean 社区确认陈述即 Mathlib 中的黎曼猜想、可编译并通过内核检查；数学家对证明思想的审阅仍在进行。"
+      }
+    ],
+    "presentation": [
+      {
+        "id": "ch01",
+        "title": "素数有规律吗？",
+        "narration": "欧拉发现，正整数倒数幂之和等于按素数构造的无穷乘积（Re(s)>1）。高斯和勒让德猜测 x 以内约有 x/ln x 个素数。",
+        "durationSec": 13,
+        "domainAt": 1798,
+        "transitionMs": 900,
+        "camera": {
+          "fitIds": ["c01", "c02"]
+        },
+        "highlight": {
+          "nodeIds": ["c01", "c02"]
+        }
+      },
+      {
+        "id": "ch02",
+        "title": "从级数到估计",
+        "narration": "狄利克雷把欧拉乘积推广为 L 函数，证明等差数列中有无穷多素数。切比雪夫把素数个数夹在两个常数倍之间。",
+        "durationSec": 12,
+        "domainAt": 1850,
+        "transitionMs": 900,
+        "camera": {
+          "fitIds": ["c03", "c04"]
+        },
+        "highlight": {
+          "nodeIds": ["c03", "c04"]
+        }
+      },
+      {
+        "id": "ch03",
+        "title": "1859：一篇八页的论文",
+        "narration": "黎曼把 ζ 函数延拓到复平面，写出用零点表示素数的显式公式，并写下：所有非平凡零点“很可能”都在实部为 1/2 的直线上。",
+        "durationSec": 15,
+        "domainAt": 1859,
+        "transitionMs": 900,
+        "camera": {
+          "fitIds": ["c05"]
+        },
+        "highlight": {
+          "nodeIds": ["c05"]
+        }
+      },
+      {
+        "id": "ch04",
+        "title": "素数定理终于证明",
+        "narration": "1896 年，阿达马与德拉瓦莱普桑各自证明素数定理，关键是 Re(s)=1 上没有零点。冯·曼戈尔特严格证明了显式公式和零点计数公式。",
+        "durationSec": 13,
+        "domainAt": 1905,
+        "transitionMs": 900,
+        "camera": {
+          "fitIds": ["c06", "c07"]
+        },
+        "highlight": {
+          "nodeIds": ["c06", "c07"]
+        }
+      },
+      {
+        "id": "ch05",
+        "title": "第八问题与前 15 个零点",
+        "narration": "1900 年，希尔伯特把黎曼猜想列为二十世纪的第八个问题。三年后，格拉姆手算出前 15 个零点，全在临界线上。",
+        "durationSec": 12,
+        "domainAt": 1903,
+        "transitionMs": 900,
+        "camera": {
+          "fitIds": ["c08", "c09"]
+        },
+        "highlight": {
+          "nodeIds": ["c08", "c09"]
+        }
+      },
+      {
+        "id": "ch06",
+        "title": "剑桥的两个人",
+        "narration": "哈代证明临界线上有无穷多个零点。李特尔伍德证明 π(x)-li(x) 会无穷多次变号：数值规律再多，也代替不了证明。",
+        "durationSec": 13,
+        "domainAt": 1914,
+        "transitionMs": 900,
+        "camera": {
+          "fitIds": ["c10", "c11"]
+        },
+        "highlight": {
+          "nodeIds": ["c10", "c11"]
+        }
+      },
+      {
+        "id": "ch07",
+        "title": "遗稿里的计算",
+        "narration": "西格尔整理黎曼的手稿，发现一套高效计算零点的公式。原来黎曼那句“很可能”的背后有亲手的计算。",
+        "durationSec": 12,
+        "domainAt": 1932,
+        "transitionMs": 900,
+        "camera": {
+          "fitIds": ["c12"]
+        },
+        "highlight": {
+          "nodeIds": ["c12"]
+        }
+      },
+      {
+        "id": "ch08",
+        "title": "零点占多少？",
+        "narration": "英厄姆限制了偏离临界线的零点数量。塞尔伯格证明临界线上的零点占全部零点的一个正比例，比例问题由此开始。",
+        "durationSec": 13,
+        "domainAt": 1942,
+        "transitionMs": 900,
+        "camera": {
+          "fitIds": ["c13", "c14"]
+        },
+        "highlight": {
+          "nodeIds": ["c13", "c14"]
+        }
+      },
+      {
+        "id": "ch09",
+        "title": "另一个世界已经证明",
+        "narration": "在有限域上，黎曼猜想有自己的版本。韦伊 1948 年证明了曲线的情形，德利涅 1974 年推广到一般代数簇。",
+        "durationSec": 14,
+        "domainAt": 1974,
+        "transitionMs": 900,
+        "camera": {
+          "fitIds": ["c15", "c16"]
+        },
+        "highlight": {
+          "nodeIds": ["c15", "c16"]
+        }
+      },
+      {
+        "id": "ch10",
+        "title": "机器开始数零点",
+        "narration": "图灵设计了检验零点的方法，并用曼彻斯特 Mark 1 计算机检查零点。计算从此成为研究的一部分。",
+        "durationSec": 12,
+        "domainAt": 1953,
+        "transitionMs": 900,
+        "camera": {
+          "fitIds": ["c17"]
+        },
+        "highlight": {
+          "nodeIds": ["c17"]
+        }
+      },
+      {
+        "id": "ch11",
+        "title": "一次茶歇",
+        "narration": "蒙哥马利研究零点间距。戴森在茶歇时认出随机矩阵的规律。1987 年，奥德利兹科研究第 1 万亿个零点后的 10 万个零点，间距统计与预测吻合良好。",
+        "durationSec": 15,
+        "domainAt": 1987,
+        "transitionMs": 900,
+        "camera": {
+          "fitIds": ["c18", "c19"]
+        },
+        "highlight": {
+          "nodeIds": ["c18", "c19"]
+        }
+      },
+      {
+        "id": "ch12",
+        "title": "比例接力",
+        "narration": "莱文森证明超过 1/3 的零点在临界线上，康雷推进到 2/5。2020 年，普拉特等四人把记录提高到约 41.7%。",
+        "durationSec": 14,
+        "domainAt": 2020,
+        "transitionMs": 900,
+        "camera": {
+          "fitIds": ["c20", "c21", "c22"]
+        },
+        "highlight": {
+          "nodeIds": ["c20", "c21", "c22"]
+        }
+      },
+      {
+        "id": "ch13",
+        "title": "百万美元与一个宣称",
+        "narration": "孔涅尝试用非交换几何寻找“零点的算子”。2000 年它成为千禧年大奖难题。2018 年阿蒂亚宣布证明，未被接受。",
+        "durationSec": 14,
+        "domainAt": 2018,
+        "transitionMs": 900,
+        "camera": {
+          "fitIds": ["c23", "c24", "c25"]
+        },
+        "highlight": {
+          "nodeIds": ["c23", "c24", "c25"]
+        }
+      },
+      {
+        "id": "ch14",
+        "title": "逼近边界",
+        "narration": "罗杰斯与陶哲轩证明 Λ≥0：黎曼猜想若成立，便是“刚好成立”。普拉特与特鲁吉安严格验证了前 12 万亿个零点。古思与梅纳德改进了英厄姆八十多年未变的界。",
+        "durationSec": 15,
+        "domainAt": 2024,
+        "transitionMs": 900,
+        "camera": {
+          "fitIds": ["c26", "c27", "c28"]
+        },
+        "highlight": {
+          "nodeIds": ["c26", "c27", "c28"]
+        }
+      },
+      {
+        "id": "ch15",
+        "title": "2026 年 8 月：越过三分之二",
+        "narration": "Claude 研究版证明：超过 67.25% 的零点是单零点且在临界线上，阿尔珀格与弗曼核验。拉姆祖里随后给出更短的新证明。",
+        "durationSec": 15,
+        "domainAt": 2026,
+        "transitionMs": 900,
+        "camera": {
+          "fitIds": ["c29", "c30"]
+        },
+        "highlight": {
+          "nodeIds": ["c29", "c30"]
+        }
+      },
+      {
+        "id": "ch16",
+        "title": "2026 年 11 月：机器检查的证明",
+        "narration": "阿尔珀格发布约 1700 万行的 Lean 证明库。Lean 社区声明：陈述正是黎曼猜想，代码可编译并通过内核检查。证明中的数学思想仍待人们读懂和审阅。",
+        "durationSec": 17,
+        "domainAt": 2026,
+        "transitionMs": 900,
+        "camera": {
+          "fitIds": ["c31"]
+        },
+        "highlight": {
+          "nodeIds": ["c31"]
+        }
+      },
+      {
+        "id": "ch17",
+        "title": "167 年",
+        "narration": "从黎曼的一句“很可能”，到机器检查的证明。这条线索穿过了数论、计算、物理与形式化数学。",
+        "durationSec": 14,
+        "domainAt": 2026,
+        "transitionMs": 900,
+        "camera": {
+          "fitIds": ["c05"]
+        },
+        "highlight": {
+          "nodeIds": ["c05"]
+        },
+        "beats": [
+          {
+            "atSec": 2,
+            "camera": {
+              "fitIds": ["c10"]
+            },
+            "highlight": {
+              "nodeIds": ["c10"]
+            }
+          },
+          {
+            "atSec": 4,
+            "camera": {
+              "fitIds": ["c14"]
+            },
+            "highlight": {
+              "nodeIds": ["c14"]
+            }
+          },
+          {
+            "atSec": 6,
+            "camera": {
+              "fitIds": ["c18"]
+            },
+            "highlight": {
+              "nodeIds": ["c18"]
+            }
+          },
+          {
+            "atSec": 8,
+            "camera": {
+              "fitIds": ["c22"]
+            },
+            "highlight": {
+              "nodeIds": ["c22"]
+            }
+          },
+          {
+            "atSec": 10,
+            "camera": {
+              "fitIds": ["c31"]
+            },
+            "highlight": {
+              "nodeIds": ["c31"]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

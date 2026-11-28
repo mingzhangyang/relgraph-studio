@@ -51,6 +51,7 @@ import {
   anchoredPoint,
   anchorToTime,
   canDrawTimeVertically,
+  drawsList,
   declaresTimeAxis,
   drawsTimeVertically,
   drawingOrigin,
@@ -60,6 +61,7 @@ import {
   styleForGraph,
   timeAnchor,
   timeDirection,
+  viewMode,
 } from '@relgraph/core';
 import { frameCount } from '@relgraph/core';
 import type { Bio } from '@relgraph/core';
@@ -164,6 +166,7 @@ const canvas = requiredElement('stage', HTMLCanvasElement),
   languageSelect = requiredElement('languageSelect', HTMLSelectElement),
   frameSpecSelect = requiredElement('frameSpecSelect', HTMLSelectElement),
   timeAxisSelect = requiredElement('timeAxisSelect', HTMLSelectElement),
+  viewModeSelect = requiredElement('viewModeSelect', HTMLSelectElement),
   layoutToggle = requiredElement('layoutToggle', HTMLButtonElement),
   layoutReset = requiredElement('layoutReset', HTMLButtonElement),
   layoutExport = requiredElement('layoutExport', HTMLButtonElement),
@@ -286,7 +289,10 @@ function applyProjectHistory({
   // Otherwise the late pointerup could commit stale coordinates over undo/redo.
   cancelActiveLayoutDrag();
   const next = projectHistory.value;
-  if (timeDirection(graph) !== timeDirection({ project: next }))
+  if (
+    timeDirection(graph) !== timeDirection({ project: next }) ||
+    viewMode(graph) !== viewMode({ project: next })
+  )
     transitionStudio('exitPositionEdit');
   graph.project = next;
   if (currentDiagnostics) {
@@ -310,6 +316,7 @@ function applyProjectHistory({
   updateLayoutFields();
   updateLayoutControls();
   renderTimeAxisControl();
+  renderViewModeControl();
 }
 /**
  * The project's direction of time (ADR 004, D7 step 2): a project field,
@@ -327,11 +334,46 @@ function applyTimeAxis(next: string): void {
     return;
   }
   if (next === timeDirection({ project: projectHistory.value })) return;
-  const config: ProjectConfig = { ...projectHistory.value };
   // Horizontal is the default: the field is written only for vertical.
-  if (next === 'vertical') config.view = { ...config.view, timeAxis: 'vertical' };
-  else delete config.view;
+  const config = withView(projectHistory.value, {
+    timeAxis: next === 'vertical' ? 'vertical' : undefined,
+  });
   if (!projectActions.change(config)) renderTimeAxisControl();
+}
+/**
+ * The project's form (`config.view.mode`): the network drawing, or the same
+ * projected graph read as a list in time order. A project field like the
+ * direction of time, committed, undone and saved, never following the
+ * preview's frame spec.
+ */
+function renderViewModeControl(): void {
+  viewModeSelect.value = viewMode(graph ? { project: projectHistory.value } : null);
+  viewModeSelect.disabled = !graph || loading;
+}
+function applyViewMode(next: string): void {
+  if (!graph || (next !== 'graph' && next !== 'list')) {
+    renderViewModeControl();
+    return;
+  }
+  if (next === viewMode({ project: projectHistory.value })) return;
+  // The drawing is the default: the field is written only for a list.
+  const config = withView(projectHistory.value, { mode: next === 'list' ? 'list' : undefined });
+  if (!projectActions.change(config)) renderViewModeControl();
+}
+/** A copy of a project with view fields set or, when undefined, removed; no empty view is kept. */
+function withView(
+  project: ProjectConfig,
+  fields: { timeAxis?: 'vertical'; mode?: 'list' },
+): ProjectConfig {
+  const config: ProjectConfig = { ...project };
+  const view: NonNullable<ProjectConfig['view']> = { ...config.view };
+  for (const [key, value] of Object.entries(fields) as [keyof typeof view, string | undefined][]) {
+    if (value === undefined) delete view[key];
+    else (view as Record<string, string>)[key] = value;
+  }
+  if (Object.keys(view).length) config.view = view;
+  else delete config.view;
+  return config;
 }
 /** A node as the workspace names it: its display label, else its own. */
 function nodeName(id: string): string {
@@ -786,6 +828,7 @@ function clearStudio(): void {
   updateLayoutEditor();
   updateLayoutControls();
   renderTimeAxisControl();
+  renderViewModeControl();
   renderDocumentToolbar();
   currentFrameState = null;
   currentDetailAt = () => undefined;
@@ -841,6 +884,7 @@ function applyResult(result: LoadResult, name: string, sourceText?: string, exam
   setFrame(0);
   refreshUnsavedState();
   renderTimeAxisControl();
+  renderViewModeControl();
 }
 function beginLoad(): number {
   transitionStudio('navigate');
@@ -849,6 +893,7 @@ function beginLoad(): number {
   const serial = ++requestSerial;
   loading = true;
   renderTimeAxisControl();
+  renderViewModeControl();
   renderDocumentToolbar();
   refreshUnsavedState();
   strategyView.render(currentFrameState, projectHistory.value.layout, false, true);
@@ -1282,7 +1327,9 @@ canvas.addEventListener('pointerdown', (event) => {
     const point = pointerLocation(event);
     if (point) projectEditor.pick(renderer.displayListAt(playback.frame), point);
   }
+  // A list has rows, not positions to drag.
   if (!layoutEditing || !renderer || !currentLayout || !currentFrameState || dragging) return;
+  if (graph && drawsList(graph)) return;
   if (event.isPrimary === false || (event.pointerType === 'mouse' && event.button !== 0)) return;
   const point = pointerLocation(event);
   if (!point) return;
@@ -1478,6 +1525,7 @@ themeToggle.addEventListener('click', () => applyTheme(theme === 'light' ? 'dark
 frameSpecSelect.value = previewSpec;
 frameSpecSelect.addEventListener('change', () => applyFrameSpec(frameSpecSelect.value));
 timeAxisSelect.addEventListener('change', () => applyTimeAxis(timeAxisSelect.value));
+viewModeSelect.addEventListener('change', () => applyViewMode(viewModeSelect.value));
 lightQuery?.addEventListener?.('change', (event) => {
   if (!pinnedTheme) applyTheme(event.matches ? 'light' : 'dark', false);
 });

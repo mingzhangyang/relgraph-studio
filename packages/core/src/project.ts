@@ -16,6 +16,11 @@ import { hasTimes } from './graph/time-axis.js';
  * means `horizontal`. `director/time-direction.ts` reads and applies it.
  */
 export const TIME_AXIS_DIRECTIONS = ['horizontal', 'vertical'] as const;
+/**
+ * The forms a project may show its graph in; absent means `graph`.
+ * `director/list-view.ts` reads and applies it.
+ */
+export const VIEW_MODES = ['graph', 'list'] as const;
 
 export interface NodeAppearance {
   image?: string | null;
@@ -70,9 +75,16 @@ export interface ProjectConfig {
    * `timeAxis: "vertical"` draws time from top to bottom: a render-time
    * transpose of the stored coordinates, which do not change. Absent, or
    * `horizontal`, draws them as stored. Never inferred from the frame spec.
+   *
+   * `mode: "list"` shows the same projected graph as a list read top to
+   * bottom instead of a drawing: one row per node in time order, with its
+   * time, name, summary and relations written out. Absent, or `graph`, draws
+   * the network. Like the direction, it is chosen per project, never from the
+   * frame spec, and changes neither the source nor the stored coordinates.
    */
   view?: {
     timeAxis?: (typeof TIME_AXIS_DIRECTIONS)[number];
+    mode?: (typeof VIEW_MODES)[number];
   };
 }
 export interface StudioProject {
@@ -156,7 +168,9 @@ export function validateProjectConfig(value: unknown, graph?: VisualGraph): stri
   };
   if (!keys(value, ['preset', 'nodes', 'edges', 'text', 'layout', 'assets', 'view'], 'config'))
     return errors;
-  if (value.view !== undefined && keys(value.view, ['timeAxis'], 'config.view')) {
+  if (value.view !== undefined && keys(value.view, ['timeAxis', 'mode'], 'config.view')) {
+    if (value.view.mode !== undefined && !enumValue(value.view.mode, VIEW_MODES))
+      fail('config.view.mode');
     const direction = value.view.timeAxis;
     if (direction !== undefined && !enumValue(direction, TIME_AXIS_DIRECTIONS))
       fail('config.view.timeAxis');

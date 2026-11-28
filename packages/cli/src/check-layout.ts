@@ -1,6 +1,7 @@
 import {
   chronologyInversions,
   compileTimeline,
+  drawsList,
   frameCount,
   layoutGraph,
   nodeTimes,
@@ -64,6 +65,12 @@ export interface CheckLayoutSummary {
   clearance: number;
   crowding: number;
   shotIssues: ShotLayoutIssues[];
+  /**
+   * The project shows its graph as a list (`config.view.mode: "list"`): no
+   * glyphs or relation lines are drawn to check, and rows are in time order
+   * by construction, so nothing is sampled.
+   */
+  list?: true;
   /** Present when a chronology tolerance was given. */
   chronology?: {
     tolerance: number;
@@ -111,6 +118,16 @@ export async function checkLayout(request: CheckLayoutRequest): Promise<CheckLay
   const spec = frameSpecFor(request.frameSpec);
   const filmFrames = frameCount(graph, spec.fps);
   const timeline = compileTimeline(graph, spec.fps);
+  if (drawsList(graph))
+    return {
+      frames: [],
+      shots: timeline.shots.length,
+      unsettled: [],
+      clearance,
+      crowding,
+      shotIssues: [],
+      list: true,
+    };
   const positions = layoutGraph(graph);
   const renderer = createHeadlessRenderer(graph, positions, {
     detailAt: result.detailAt,
@@ -220,6 +237,8 @@ export const layoutIssueCount = (summary: CheckLayoutSummary): number =>
 
 /** The summary as the CLI prints it. */
 export function formatLayoutIssues(summary: CheckLayoutSummary): string {
+  if (summary.list)
+    return `项目以列表形式显示（config.view.mode: "list"）：不绘制节点图形与连线，各行按时间排列，没有可检查的布局。\n`;
   const lines = [
     `检查了 ${summary.shots} 个镜头的 ${summary.frames.length} 个稳定帧（连线净空 ${summary.clearance}、节点间距 ${summary.crowding}，单位为 720p 像素）` +
       (summary.unsettled.length
