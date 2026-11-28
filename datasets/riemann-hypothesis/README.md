@@ -97,3 +97,16 @@ npm run relgraph -- render $F --frame-spec portrait-1080x1920 --theme light \
 python3 datasets/riemann-hypothesis/xiaohongshu/make_cards.py   # 写出 cards.html（不入库）
 node datasets/riemann-hypothesis/xiaohongshu/shoot.mjs          # 截图为 01-cover.png … 09-end.png
 ```
+
+## 列表式时间线版本
+
+[观看列表版](./riemann-hypothesis-timeline.mp4)：同一份 17 章分镜、同一段配乐、同样 3 分 53 秒，画面换成与小红书配图一致的纵向列表。每条记录只有年份、人物和一句话；本章的条目依次滑入它在时间轴上的位置并加底色，前几章的条目变淡，列表随之滚动；最后一章从头到尾回顾全部 31 条。读图式的关系网络适合在 Studio 里探索，第一次接触的观众读这一版更快。
+
+这一版不经过 RelGraph Studio 的渲染器。`card-film/make_film.py` 从 `build_graph.py` 读取章节标题、解说和时长，写出 `film.html`；页面的 `setTime(秒)` 是时间的纯函数，`card-film/render.mjs` 在无头 Chromium 中逐帧调用它并截图，交给 FFmpeg 分段编码后拼接并混入配乐。
+
+```sh
+python3 datasets/riemann-hypothesis/card-film/make_film.py      # 写出 film.html（不入库）
+node datasets/riemann-hypothesis/card-film/render.mjs output/timeline.mp4 \
+  --audio datasets/riemann-hypothesis/score.m4a --jobs 4
+node datasets/riemann-hypothesis/card-film/render.mjs output/still.mp4 --stills 30,120   # 只截几张静帧
+```
