@@ -88,3 +88,12 @@ npm run relgraph -- render $F --frame-spec portrait-1080x1920 --theme light \
 - `relgraph render` 没有报告字体缺字（起初的上标 ⁰ 和数学减号 − 已改写为内置字体覆盖的字符）。
 - `ffprobe`：H.264 1080 × 1920、24 fps、5,592 帧、233.0 秒；AAC 音轨 233.0 秒。
 - 抽取每章中段的画面，在手机尺寸下逐章检查了字幕、聚焦节点与关系箭头。
+
+## 小红书配图与文案
+
+[`xiaohongshu/`](./xiaohongshu/) 收录 9 张 1080 × 1440（3:4）配图和[发布文案](./xiaohongshu/文案.md)。配图用 HTML 排版、仓库内置的 Noto CJK 字体，由 Playwright 的无头 Chromium 截图；封面曲线是用黎曼–西格尔公式算出的 Hardy Z(t)。重新生成：
+
+```sh
+python3 datasets/riemann-hypothesis/xiaohongshu/make_cards.py   # 写出 cards.html（不入库）
+node datasets/riemann-hypothesis/xiaohongshu/shoot.mjs          # 截图为 01-cover.png … 09-end.png
+```
