@@ -346,8 +346,14 @@
       "id": "欧拉乘积公式",
       "kind": "理论与成果",
       "visibleFrom": 1737,
-      "summary": "对所有素数 p 的乘积 ∏(1-p^-s)^-1 等于对所有正整数 n 的和 Σ n^-s。素数第一次与一个解析函数绑在一起。",
-      "evidence": ["Euler, Variae observationes circa series infinitas (1737/1744)"],
+      "summary": "当 Re(s)>1 时，ζ(s)=Σ n^-s=∏(1-p^-s)^-1，求和遍历所有正整数 n，乘积遍历所有素数 p。素数由此与解析函数相连。",
+      "evidence": [
+        "Euler, Variae observationes circa series infinitas (1737/1744)",
+        {
+          "cite": "NIST DLMF §27.4, Eq. 27.4.3",
+          "url": "https://dlmf.nist.gov/27.4.E3"
+        }
+      ],
       "position": {
         "y": 210
       }
@@ -566,8 +572,13 @@
       "id": "零点间距与随机矩阵",
       "kind": "数值验证",
       "visibleFrom": 1987,
-      "summary": "奥德利兹科在第 10 的 20 次方个零点附近计算大量零点，其间距分布与 GUE 随机矩阵预测高度吻合。",
-      "evidence": ["Odlyzko, Math. Comp. 48 (1987)"],
+      "summary": "奥德利兹科研究最初 10 万个零点和第 10^12 个零点之后的 10 万个零点。其间距统计与 GUE 随机矩阵理论预测总体吻合良好，在更高处吻合得更好。",
+      "evidence": [
+        {
+          "cite": "Odlyzko, Math. Comp. 48 (1987), 273–308",
+          "url": "https://doi.org/10.1090/S0025-5718-1987-0866115-0"
+        }
+      ],
       "position": {
         "y": 468
       }
@@ -1121,7 +1132,7 @@
     {
       "id": "ch01",
       "title": "素数有规律吗？",
-      "narration": "欧拉发现，所有素数的乘积与所有正整数的级数相等。高斯和勒让德数素数表，猜测 x 以内约有 x/ln x 个素数。",
+      "narration": "欧拉发现，正整数倒数幂之和等于按素数构造的无穷乘积（Re(s)>1）。高斯和勒让德猜测 x 以内约有 x/ln x 个素数。",
       "durationSec": 13,
       "domainAt": 1798,
       "transitionMs": 900,
@@ -1282,7 +1293,7 @@
     {
       "id": "ch11",
       "title": "一次茶歇",
-      "narration": "蒙哥马利研究零点间距。戴森在茶歇时认出，那正是随机矩阵本征值的规律。奥德利兹科在第 10 的 20 次方个零点附近验证了这一点。",
+      "narration": "蒙哥马利研究零点间距。戴森在茶歇时认出随机矩阵的规律。1987 年，奥德利兹科研究第 1 万亿个零点后的 10 万个零点，间距统计与预测吻合良好。",
       "durationSec": 15,
       "domainAt": 1987,
       "transitionMs": 900,
